@@ -1,0 +1,303 @@
+import { Wallet, fromMembership } from "@akord/crypto";
+import AWSAppSyncClient, { AUTH_TYPE } from "aws-appsync";
+import gql from "graphql-tag";
+import { ClientConfig, LedgerVersion } from "../../client-config";
+import { Api } from "../api";
+import { awsConfig, AWSConfig } from "./aws-config";
+import * as queries from "./graphql/graphql";
+import { PermapostExecutor } from "./permapost";
+
+let client: any;
+
+// initializes our graphql client
+function initializeClient(config: AWSConfig, jwtToken: string) {
+  client = new AWSAppSyncClient({
+    url: config.aws_appsync_graphqlEndpoint,
+    region: config.aws_appsync_region,
+    auth: {
+      type: AUTH_TYPE.AMAZON_COGNITO_USER_POOLS,
+      jwtToken: jwtToken
+    },
+    disableOffline: true
+  });
+}
+
+export default class AkordApi extends Api {
+
+  public config!: AWSConfig;
+  public jwtToken: string;
+
+  constructor(config: ClientConfig, jwtToken: string) {
+    super();
+    this.config = awsConfig(config.env);
+    this.jwtToken = jwtToken;
+  }
+
+  public async uploadData(data: any[]): Promise<Array<{ resourceId: string, resourceTx: string }>> {
+    const resources = [];
+
+    await Promise.all(data.map(async (item, index) => {
+      const resource = await new PermapostExecutor()
+        .env(this.config.env, this.config.domain)
+        .auth(this.jwtToken)
+        .data(item.body)
+        .tags(item.tags)
+        .bundle(true)
+        .metadata(item.metadata)
+        .uploadState()
+      console.log(`File uploaded successfully.`);
+      resources[index] = resource;
+    }));
+    return resources;
+  };
+
+  public async postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string> {
+    return await new PermapostExecutor()
+      .env(this.config.env, this.config.domain)
+      .auth(this.jwtToken)
+      .contractId(contractId)
+      .input(JSON.stringify(input))
+      .metadata(JSON.stringify(metadata ? metadata : {}))
+      .tags(tags)
+      .transaction()
+  };
+
+  public async postLedgerTransaction(transactions: any): Promise<any> {
+    const result = await this.executeMutation(queries.postLedgerTransaction,
+      { transactions: transactions })
+    return result.data.postLedgerTransaction[0];
+  };
+
+  public async preInviteCheck(emails: string[], dataRoomId: string): Promise<any> {
+    const result = await this.executeQuery(queries.preInviteCheck,
+      { emails: emails, dataRoomId: dataRoomId })
+    return result.data.preInviteCheck;
+  };
+
+  public async initContractId(tags: any): Promise<string> {
+    return await new PermapostExecutor()
+      .env(this.config.env, this.config.domain)
+      .auth(this.jwtToken)
+      .tags(tags)
+      .contract()
+  };
+
+  public async getUserFromEmail(email: string): Promise<any> {
+    const result = await this.executeQuery(queries.usersByEmail,
+      {
+        emails: [email]
+      })
+    return result.data.usersByEmail[0];
+  };
+
+  public async getPublicKeyFromAddress(address: string): Promise<string> {
+    return "";
+  };
+
+  public getLedgerVersion(vault: any): LedgerVersion {
+    const ledgerVersion = vault.state.isContract ? LedgerVersion.V2 : LedgerVersion.V1;
+    return ledgerVersion;
+  }
+
+  public async uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
+    const resource = await new PermapostExecutor()
+      .env(this.config.env, this.config.domain)
+      .auth(this.jwtToken)
+      .data(file)
+      .tags(tags)
+      .public(isPublic)
+      .bundle(shouldBundleTransaction)
+      .progressHook(progressHook)
+      .cancelHook(cancelHook)
+      .uploadFile()
+    console.log(`File uploaded successfully.`);
+
+    return resource;
+  };
+
+  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any> {
+    const { response } = await new PermapostExecutor()
+      .env(this.config.env, this.config.domain)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .public(isPublic)
+      .progressHook(progressHook)
+      .cancelHook(cancelHook)
+      .asArrayBuffer()
+      .downloadFile()
+
+    return { fileData: this._getResponseData(response), headers: response.headers };
+  };
+
+  private _getResponseData(response: any): any {
+    if (response.headers['x-amz-meta-encryptedkey']) {
+      return response.data;
+    } else {
+      return Buffer.from(response.data).toJSON();
+    }
+  };
+
+  public async getProfileByPublicSigningKey(publicSigningKey: string): Promise<any> {
+    const result = await this.paginatedQuery('profilesByPublicSigningKey',
+      queries.profilesByPublicSigningKey,
+      { publicSigningKey: publicSigningKey }, {})
+    if (!result || result.length === 0) {
+      return {};
+      // throw new Error("Cannot find profile with the given public signing key.")
+    }
+    return result[0];
+  };
+
+  private async getStateRef(objectId: string, objectType: string): Promise<any> {
+    let queryName = "get" + objectType;
+    const result = await this.executeQuery(queries[queryName + "StateRef"],
+      {
+        id: objectId
+      })
+    return result.data[queryName === "getVault" ? "getDataRoom" : queryName].stateRef;
+  };
+
+  public async getObject(objectId: string, objectType: string): Promise<any> {
+    let queryName = "get" + objectType;
+    const result = await this.executeQuery(queries[queryName],
+      {
+        id: objectId
+      })
+    const object = result && result.data[queryName === "getVault" ? "getDataRoom" : queryName];
+    if (!object) {
+      throw new Error("Cannot find object with id: " + objectId + " and type: " + objectType);
+    }
+    return object;
+  };
+
+  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<any> {
+    const publicSigningKey = await wallet.signingPublicKey();
+    const result = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
+      queries.membershipsByMemberPublicSigningKey,
+      { memberPublicSigningKey: publicSigningKey }, { dataRoomId: { eq: vaultId } });
+    if (!result || result.length === 0) {
+      throw new Error("Cannot find membership for vault: " + vaultId +
+        ", with the given public signing key: " + publicSigningKey);
+    }
+    const membership = result[0];
+    return fromMembership(membership);
+  };
+
+  public async getNodeState(objectId: string, objectType: string): Promise<any> {
+    const stateRef = await this.getStateRef(objectId, objectType);
+    const { response } = await new PermapostExecutor()
+      .env(this.config.env, this.config.domain)
+      .auth(this.jwtToken)
+      .resourceId(stateRef)
+      .downloadState()
+
+    return response.data
+  };
+
+  public async getContractState(objectId: string): Promise<any> {
+    return "";
+  };
+
+  public async executeMutation(mutation: string | readonly string[], variables: any) {
+    if (!client) {
+      initializeClient(this.config, this.jwtToken);
+    }
+
+    try {
+      const response = await client.mutate({
+        mutation: gql(mutation),
+        variables,
+        fetchPolicy: "no-cache",
+      });
+      return response;
+    } catch (err) {
+      console.log("Error while trying to mutate data", err);
+      throw Error(JSON.stringify(err));
+    }
+  };
+
+  public async getMemberships(wallet: Wallet): Promise<any> {
+    const publicSigningKey = await wallet.signingPublicKey();
+    const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
+      queries.membershipsByMemberPublicSigningKey,
+      { memberPublicSigningKey: publicSigningKey }, { status: { eq: 'ACCEPTED' } });
+    return results;
+  };
+
+  public async getVaults(wallet: Wallet): Promise<any> {
+    const publicSigningKey = await wallet.signingPublicKey();
+    const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
+      queries.membershipsByMemberPublicSigningKey,
+      { memberPublicSigningKey: publicSigningKey }, { status: { eq: 'ACCEPTED' } });
+    const vaults = results.map(membership => membership.dataRoomId);
+    return vaults;
+  };
+
+  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
+    let queryName = objectType.toLowerCase() + "sByDataRoomId";
+    const results = await this.paginatedQuery(
+      queryName,
+      queries[queryName],
+      {
+        dataRoomId: vaultId
+      }, {})
+    return results;
+  };
+
+  public async executeQuery(query: string | readonly string[], variables: any) {
+    if (!client) {
+      initializeClient(this.config, this.jwtToken);
+    }
+
+    try {
+      const response = await client.query({
+        query: gql(query),
+        variables,
+        fetchPolicy: "no-cache",
+      });
+      return response;
+    } catch (err) {
+      console.log("Error while trying to query data", err);
+      throw new Error(JSON.stringify(err));
+    }
+  };
+
+  public async simpleQuery(queryName: string | number, query: any, args: { [x: string]: any; }, filter: {}) {
+    let variables = {
+      filter: null
+    };
+    for (let index in args) {
+      variables[index] = args[index];
+    }
+    if (filter && Object.keys(filter).length != 0)
+      variables.filter = filter;
+    let queryResult = await this.executeQuery(query, variables);
+    return queryResult.data[queryName].items;
+  };
+
+  public async paginatedQuery(queryName: string | number, query: any, args: { [x: string]: any; }, filter: {}) {
+    let variables = {
+      filter: null,
+      nextToken: null
+    };
+    for (let index in args) {
+      variables[index] = args[index];
+    }
+    if (filter && Object.keys(filter).length != 0)
+      variables.filter = filter;
+    let queryResult = await this.executeQuery(query, variables);
+    let nextToken = queryResult.data[queryName].nextToken;
+    let results = queryResult.data[queryName].items;
+    while (nextToken) {
+      variables.nextToken = nextToken;
+      queryResult = await this.executeQuery(query, variables);
+      results = results.concat(queryResult.data[queryName].items);
+      nextToken = queryResult.data[queryName].nextToken;
+    }
+    return results;
+  };
+}
+
+export {
+  AkordApi
+}
