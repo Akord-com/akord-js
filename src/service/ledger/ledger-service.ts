@@ -641,6 +641,9 @@ class LedgerService extends Service {
       fullName: profileDetails.fullName || currentProfileDetails.fullName,
       avatarTx: profileDetails.avatarTx || currentProfileDetails.avatarTx,
     }
+
+    this.tags = { ["Signer-Address"]: await this.wallet.getAddress() };
+
     // upload profile state to Arweave
     const { metadata } = await this._uploadBody({ profileDetails: mergedProfileDetails });
     const header = {
