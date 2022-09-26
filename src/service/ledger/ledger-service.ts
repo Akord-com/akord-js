@@ -633,7 +633,7 @@ class LedgerService extends Service {
 
     this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
     this.setIsPublic(false);
-    const profileDetails = await this.processMemberDetails({ fullName: name, avatar });
+    const profileDetails = await this.processMemberDetails({ fullName: name, avatar }, false);
 
     // merge & upload current profile state to Arweave
     const currentProfileDetails = profile.state.profileDetails;
@@ -642,13 +642,11 @@ class LedgerService extends Service {
       avatarTx: profileDetails.avatarTx || currentProfileDetails.avatarTx,
     }
 
-    this.tags = { ["Signer-Address"]: await this.wallet.getAddress() };
+    const ids = await this.api.uploadData([{ body: { profileDetails: mergedProfileDetails }, tags: {} }], false);
 
-    // upload profile state to Arweave
-    const { metadata } = await this._uploadBody({ profileDetails: mergedProfileDetails });
     const header = {
       schemaUri: commands.PROFILE_WRITE,
-      stateRef: metadata.dataRefs[0].resourceUrl,
+      stateRef: ids[0].resourceId,
       ...await this.prepareHeader()
     }
     const encodedTransaction = await this.encodeTransaction(header, { profileDetails, encryptionType: EncryptionType.KEYS_STRUCTURE });

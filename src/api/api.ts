@@ -58,7 +58,7 @@ abstract class Api {
 
   abstract uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 
-  abstract uploadData(data: any[]): Promise<any[]>
+  abstract uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<any[]>
 
   abstract getContractState(objectId: string): Promise<any>
 
