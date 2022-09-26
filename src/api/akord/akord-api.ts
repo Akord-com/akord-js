@@ -33,7 +33,7 @@ export default class AkordApi extends Api {
     this.jwtToken = jwtToken;
   }
 
-  public async uploadData(data: any[]): Promise<Array<{ resourceId: string, resourceTx: string }>> {
+  public async uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<Array<{ resourceId: string, resourceTx: string }>> {
     const resources = [];
 
     await Promise.all(data.map(async (item, index) => {
@@ -42,7 +42,7 @@ export default class AkordApi extends Api {
         .auth(this.jwtToken)
         .data(item.body)
         .tags(item.tags)
-        .bundle(true)
+        .bundle(shouldBundleTransaction)
         .metadata(item.metadata)
         .uploadState()
       console.log(`File uploaded successfully.`);

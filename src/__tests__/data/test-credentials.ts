@@ -1,3 +1,4 @@
+require("dotenv").config();
 // User 1
 export const email = process.env.EMAIL || "";
 export const password = process.env.PASSWORD || "";

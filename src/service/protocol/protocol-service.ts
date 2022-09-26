@@ -242,7 +242,7 @@ class ProtocolService extends Service {
 
   async membershipAccept(memberDetails: any): Promise<{ transactionId: string }> {
     const body = {
-      memberDetails: await this.processMemberDetails(memberDetails),
+      memberDetails: await this.processMemberDetails(memberDetails, true),
       encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())]
     }
     this.setCommand(commands.MEMBERSHIP_ACCEPT);
@@ -254,7 +254,7 @@ class ProtocolService extends Service {
       throw new Error("Nothing to update.");
     }
 
-    const memberDetails = await this.processMemberDetails({ fullName: name, avatar });
+    const memberDetails = await this.processMemberDetails({ fullName: name, avatar }, true);
 
     this.setCommand(commands.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
@@ -355,14 +355,18 @@ class ProtocolService extends Service {
           const signature = await this.signData(newState);
           newMembershipStates.push({
             body: newState, tags: {
+              "Data-Type": "State",
               [protocolTags.SIGNATURE]: signature,
-              [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS]
+              [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
+              [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
+              [protocolTags.NODE_TYPE]: objectTypes.MEMBERSHIP,
+              [protocolTags.MEMBERSHIP_ID]: member.id,
             }
           });
           newMembershipRefs.push(member.id);
         }
       }
-      const ids = await this.api.uploadData(newMembershipStates);
+      const ids = await this.api.uploadData(newMembershipStates, true);
       data = [];
       metadata = {
         dataRefs: [],
@@ -432,26 +436,33 @@ class ProtocolService extends Service {
     const membershipData = {
       keys,
       encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())],
-      memberDetails: await this.processMemberDetails(memberDetails)
+      memberDetails: await this.processMemberDetails(memberDetails, true)
     }
     const membershipSignature = await this.signData(membershipData);
     const ids = await this.api.uploadData([
       {
         body: vaultData, tags: {
+          "Data-Type": "State",
           [protocolTags.SIGNATURE]: vaultSignature,
-          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS]
+          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
+          [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
+          [protocolTags.NODE_TYPE]: objectTypes.VAULT,
         }
       },
       {
         body: membershipData, tags: {
+          "Data-Type": "State",
           [protocolTags.SIGNATURE]: membershipSignature,
-          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS]
+          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
+          [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
+          [protocolTags.NODE_TYPE]: objectTypes.MEMBERSHIP,
+          [protocolTags.MEMBERSHIP_ID]: membershipId,
         }
-      }]);
+      }], true);
     const metadata = {
       dataRefs: [
-        { ...ids[0], modelId: this.vaultId, modelType: "Vault" },
-        { ...ids[1], modelId: membershipId, modelType: "Membership" }
+        { ...ids[0], modelId: this.vaultId, modelType: objectTypes.VAULT },
+        { ...ids[1], modelId: membershipId, modelType: objectTypes.MEMBERSHIP }
       ],
       publicKeys
     }

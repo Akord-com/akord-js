@@ -16,7 +16,7 @@ import {
   base64ToJson
 } from "@akord/crypto"
 import * as mime from "mime-types";
-import { reactionEmoji } from '../constants';
+import { reactionEmoji, objectTypes } from '../constants';
 import { protocolTags } from './protocol/protocol-constants';
 import lodash from "lodash";
 import { createThumbnail } from './thumbnail'
@@ -281,6 +281,8 @@ class Service implements ServiceInterface {
     tags['File-Size'] = file.size;
     tags['File-Type'] = file.type;
     tags['Timestamp'] = JSON.stringify(Date.now());
+    tags['Data-Type'] = "File";
+    tags[protocolTags.VAULT_ID] = this.vaultId;
     return this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook);
   }
 
@@ -354,18 +356,18 @@ class Service implements ServiceInterface {
     return jsonToBase64(decodedPayload);
   }
 
-  async processAvatar(avatar: any) {
+  async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, false, true);
+    return this.api.uploadFile(processedData, encryptionTags, false, shouldBundleTransaction);
   }
 
-  async processMemberDetails(memberDetails: any) {
+  async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
     let processedMemberDetails = {} as any;
     if (memberDetails.fullName) {
       processedMemberDetails.fullName = await this.processWriteString(memberDetails.fullName);
     }
     if (memberDetails.avatar) {
-      const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar);
+      const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, shouldBundleTransaction);
       processedMemberDetails.avatarUrl = resourceUrl;
       processedMemberDetails.avatarTx = resourceTx;
     }
@@ -436,12 +438,19 @@ class Service implements ServiceInterface {
 
   async _uploadBody(body: any) {
     const signature = await this.signData(body);
-    const ids = await this.api.uploadData([{
-      body, tags: {
-        [protocolTags.SIGNATURE]: signature,
-        [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS]
-      }
-    }]);
+    const tags = {
+      "Data-Type": "State",
+      [protocolTags.SIGNATURE]: signature,
+      [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
+      [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
+      [protocolTags.NODE_TYPE]: this.tags[protocolTags.NODE_TYPE],
+    }
+    if (this.objectType === objectTypes.MEMBERSHIP) {
+      tags[protocolTags.MEMBERSHIP_ID] = this.tags[protocolTags.MEMBERSHIP_ID];
+    } else if (this.objectType !== objectTypes.VAULT) {
+      tags[protocolTags.NODE_ID] = this.tags[protocolTags.NODE_ID];
+    }
+    const ids = await this.api.uploadData([{ body, tags }], true);
     const metadata = {
       dataRefs: [
         { ...ids[0], modelId: this.objectId, modelType: this.objectType }
