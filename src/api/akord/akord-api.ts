@@ -6,6 +6,7 @@ import { Api } from "../api";
 import { awsConfig, AWSConfig } from "./aws-config";
 import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
+import { Logger } from "../../logger";
 
 let client: any;
 
@@ -45,14 +46,14 @@ export default class AkordApi extends Api {
         .bundle(shouldBundleTransaction)
         .metadata(item.metadata)
         .uploadState()
-      console.log(`File uploaded successfully.`);
+      Logger.log("Uploaded state with id: " + resource.id);
       resources[index] = resource;
     }));
     return resources;
   };
 
   public async postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string> {
-    return await new PermapostExecutor()
+    const txId = await new PermapostExecutor()
       .env(this.config.env, this.config.domain)
       .auth(this.jwtToken)
       .contractId(contractId)
@@ -60,6 +61,8 @@ export default class AkordApi extends Api {
       .metadata(JSON.stringify(metadata ? metadata : {}))
       .tags(tags)
       .transaction()
+    Logger.log("Uploaded contract interaction with id: " + txId);
+    return txId;
   };
 
   public async postLedgerTransaction(transactions: any): Promise<any> {
@@ -75,11 +78,13 @@ export default class AkordApi extends Api {
   };
 
   public async initContractId(tags: any): Promise<string> {
-    return await new PermapostExecutor()
+    const contractId = await new PermapostExecutor()
       .env(this.config.env, this.config.domain)
       .auth(this.jwtToken)
       .tags(tags)
       .contract()
+    Logger.log("Created contract with id: " + contractId);
+    return contractId;
   };
 
   public async getUserFromEmail(email: string): Promise<any> {
@@ -110,7 +115,7 @@ export default class AkordApi extends Api {
       .progressHook(progressHook)
       .cancelHook(cancelHook)
       .uploadFile()
-    console.log(`File uploaded successfully.`);
+    Logger.log("Uploaded file with id: " + resource.id);
 
     return resource;
   };
@@ -211,7 +216,8 @@ export default class AkordApi extends Api {
       });
       return response;
     } catch (err) {
-      console.log("Error while trying to mutate data", err);
+      Logger.log("Error while trying to mutate data");
+      Logger.log(err);
       throw Error(JSON.stringify(err));
     }
   };
@@ -257,7 +263,8 @@ export default class AkordApi extends Api {
       });
       return response;
     } catch (err) {
-      console.log("Error while trying to query data", err);
+      Logger.log("Error while trying to query data");
+      Logger.log(err);
       throw new Error(JSON.stringify(err));
     }
   };

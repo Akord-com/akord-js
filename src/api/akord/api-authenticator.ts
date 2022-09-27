@@ -2,6 +2,7 @@ import 'cross-fetch/polyfill';
 import * as AmazonCognitoIdentity from 'amazon-cognito-identity-js';
 import { EnvType } from "../../client-config";
 import { awsConfig, AWSConfig } from "./aws-config";
+import { Logger } from '../../logger';
 
 export default class ApiAuthenticator {
   public config!: AWSConfig;
@@ -45,8 +46,9 @@ export default class ApiAuthenticator {
           resolve({ user: cognitoUser, session: result })
         },
         onFailure: function (err) {
-          console.log(err);
-          return reject;
+          Logger.log(err.message);
+          Logger.log(JSON.stringify(err));
+          return reject(err.message);
         }
       })
     }
@@ -58,8 +60,9 @@ export default class ApiAuthenticator {
     return new Promise((resolve, reject) => {
       user.getUserAttributes(async function (err, result) {
         if (err) {
-          console.log(err.message || JSON.stringify(err));
-          reject();
+          Logger.log(err.message);
+          Logger.log(JSON.stringify(err));
+          reject(err.message);
         }
         const attributes = result.reduce(function (
           attributesObject,

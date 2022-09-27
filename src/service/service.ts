@@ -20,6 +20,7 @@ import { reactionEmoji, objectTypes } from '../constants';
 import { protocolTags } from './protocol/protocol-constants';
 import lodash from "lodash";
 import { createThumbnail } from './thumbnail'
+import { Logger } from '../logger'
 
 declare const Buffer;
 class Service implements ServiceInterface {
@@ -305,7 +306,7 @@ class Service implements ServiceInterface {
         return await filePromise;
       }
     } catch (e) {
-      console.log(e);
+      Logger.log(e);
     }
   }
 

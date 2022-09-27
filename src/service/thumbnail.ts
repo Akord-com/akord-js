@@ -1,4 +1,5 @@
 import loadImage from 'blueimp-load-image';
+import { Logger } from '../logger';
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
 export const THUMBNAIL_WIDTH = 438
@@ -25,7 +26,8 @@ const makeImageThumbnail = async (fileUrl: any) => {
     })
 
     image.addEventListener('error', error => {
-      console.log('Make image thumbnail error', error)
+      Logger.log('Make image thumbnail error')
+      Logger.log(error)
       reject(error)
     })
   })
@@ -38,7 +40,8 @@ const makeVideoThumbnail = async (fileUrl: string) => {
     video.load()
 
     video.addEventListener('error', error => {
-      console.log('Make video thumbnail error', error)
+      Logger.log('Make video thumbnail error')
+      Logger.log(error)
       reject('Make video thumbnail error: ' + error)
     })
 
@@ -103,7 +106,7 @@ export const createThumbnail = async (file: any) => {
         try {
           thumbnail = await makePdfThumbnail(fileUrl)
         } catch (error) {
-          console.log('PDF thumbnail error: ' + error)
+          Logger.log('PDF thumbnail error: ' + error)
         }
         break
       case 'image/jpeg':
@@ -113,7 +116,7 @@ export const createThumbnail = async (file: any) => {
         try {
           thumbnail = await makeImageThumbnail(fileUrl)
         } catch (error) {
-          console.log('Image thumbnail error: ' + error)
+          Logger.log('Image thumbnail error: ' + error)
         }
         break
       case 'video/mp4':
@@ -121,11 +124,11 @@ export const createThumbnail = async (file: any) => {
         try {
           thumbnail = await makeVideoThumbnail(fileUrl)
         } catch (error) {
-          console.log('Video thumbnail error: ' + error)
+          Logger.log('Video thumbnail error: ' + error)
         }
         break
       default:
-        console.log('Thumbnail not supported for this file type: ' + file.type)
+        Logger.log('Thumbnail not supported for this file type: ' + file.type)
         return null;
         break
     }
