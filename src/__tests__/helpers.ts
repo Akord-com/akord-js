@@ -7,5 +7,5 @@ export async function initInstance(email: string, password: string) : Promise<Ak
   const jwtToken = await apiAuthenticator.getJWTToken(email, password);
   const userAttributes = await apiAuthenticator.getUserAttributes(email, password);
   const wallet = await AkordWallet.importFromEncBackupPhrase(password, userAttributes["custom:encBackupPhrase"]);
-  return new Akord({}, wallet, jwtToken);
+  return new Akord({ debug: true }, wallet, jwtToken);
 }

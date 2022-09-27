@@ -4,6 +4,7 @@ import { ServiceInterface, ServiceFactory } from "./service";
 import { Wallet } from "@akord/crypto";
 import { reactionEmoji, actionRefs, status, objectTypes } from "./constants";
 import { v4 as uuidv4 } from "uuid";
+import { Logger } from "./logger";
 
 export default class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -20,6 +21,7 @@ export default class Akord {
    * @param  {string} [jwtToken]
    */
   constructor(config: ClientConfig, wallet?: Wallet, jwtToken?: string) {
+    Logger.debug = config.debug;
     this.api = new ApiFactory(config, wallet, jwtToken).apiInstance();
     this.service = new ServiceFactory(config.ledgerVersion, wallet, this.api).serviceInstance();
   }
@@ -848,7 +850,7 @@ export default class Akord {
           currentChunk++;
         }
       } catch (e) {
-        console.log(e);
+        Logger.log(e);
         throw new Error(
           "Failed to download. Please check your network connection." +
           " Please upload the file again if problem persists and/or contact Akord support."
@@ -883,7 +885,7 @@ export default class Akord {
           currentChunk++;
         }
       } catch (e) {
-        console.log(e);
+        Logger.log(e);
         throw new Error(
           "Failed to download. Please check your network connection." +
           " Please upload the file again if problem persists and/or contact Akord support."
