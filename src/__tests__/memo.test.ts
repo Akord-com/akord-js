@@ -11,7 +11,7 @@ jest.setTimeout(3000000);
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
   const membership = await akord.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -34,14 +34,14 @@ describe("Testing memo commands", () => {
 
   it("should create new memo", async () => {
     const message = faker.lorem.sentences(50);
-    memoId = (await akord.memoCreate(vaultId, message)).memoId;
+    memoId = (await akord.memo.create(vaultId, message)).memoId;
 
     const memo = await akord.decryptObject(memoId, "Memo");
     expect(memo.state.message).toEqual(message);
   });
 
   it("should add JOY reaction emoji", async () => {
-    await akord.memoAddReaction(memoId, reactionEmoji.JOY);
+    await akord.memo.addReaction(memoId, reactionEmoji.JOY);
 
     const memo = await akord.decryptObject(memoId, "Memo");
     expect(memo.state.reactions.length).toEqual(1);
@@ -49,7 +49,7 @@ describe("Testing memo commands", () => {
   });
 
   it("should add FIRE reaction emoji", async () => {
-    await akord.memoAddReaction(memoId, reactionEmoji.FIRE);
+    await akord.memo.addReaction(memoId, reactionEmoji.FIRE);
 
     const memo = await akord.decryptObject(memoId, "Memo");
     expect(memo.state.reactions.length).toEqual(2);
@@ -57,7 +57,7 @@ describe("Testing memo commands", () => {
   });
 
   it("should remove JOY reaction emoji", async () => {
-    await akord.memoRemoveReaction(memoId, reactionEmoji.JOY);
+    await akord.memo.removeReaction(memoId, reactionEmoji.JOY);
 
     const memo = await akord.decryptObject(memoId, "Memo");
     expect(memo.state.reactions.length).toEqual(1);

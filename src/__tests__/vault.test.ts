@@ -10,7 +10,7 @@ jest.setTimeout(3000000);
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
   const membership = await akord.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -33,7 +33,7 @@ describe("Testing vault commands", () => {
   it("should rename the vault", async () => {
     const name = faker.random.words();
 
-    await akord.vaultRename(vaultId, name);
+    await akord.vault.rename(vaultId, name);
 
     const vault = await akord.api.getObject(vaultId, "Vault");
     expect(vault.status).toEqual("ACTIVE");
@@ -43,7 +43,7 @@ describe("Testing vault commands", () => {
   });
 
   it("should archive the vault", async () => {
-    await akord.vaultArchive(vaultId);
+    await akord.vault.archive(vaultId);
 
     const vault = await akord.api.getObject(vaultId, "Vault");
     expect(vault.status).toEqual("ARCHIVED");
@@ -52,12 +52,12 @@ describe("Testing vault commands", () => {
   it("should fail renaming the archived vault", async () => {
     const name = faker.random.words();
     await expect(async () =>
-      await akord.vaultRename(vaultId, name)
+      await akord.vault.rename(vaultId, name)
     ).rejects.toThrow(Error);
   });
 
   it("should restore the vault", async () => {
-    await akord.vaultRestore(vaultId);
+    await akord.vault.restore(vaultId);
 
     const vault = await akord.api.getObject(vaultId, "Vault");
     expect(vault.status).toEqual("ACTIVE");

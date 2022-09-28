@@ -11,7 +11,7 @@ jest.setTimeout(3000000);
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord1.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord1.vault.create(name, termsOfAccess);
 
   const membership = await akord1.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -34,7 +34,7 @@ describe("Testing membership commands", () => {
   });
 
   it("should invite new member", async () => {
-    membershipId = (await akord1.membershipInvite(vaultId, email2, "CONTRIBUTOR")).membershipId;
+    membershipId = (await akord1.membership.invite(vaultId, email2, "CONTRIBUTOR")).membershipId;
 
     const membership = await akord1.api.getObject(membershipId, "Membership");
     expect(membership.status).toEqual("PENDING");
@@ -42,7 +42,7 @@ describe("Testing membership commands", () => {
   });
 
   it("should accept the invite", async () => {
-    await akord2.membershipAccept(membershipId);
+    await akord2.membership.accept(membershipId);
 
     const membership = await akord2.api.getObject(membershipId, "Membership");
     expect(membership.status).toEqual("ACCEPTED");
@@ -53,19 +53,19 @@ describe("Testing membership commands", () => {
 
   it("should fail inviting the same member twice", async () => {
     await expect(async () =>
-      akord1.membershipInvite(vaultId, email2, "VIEWER")
+      akord1.membership.invite(vaultId, email2, "VIEWER")
     ).rejects.toThrow(Error);
   });
 
   it("should change access", async () => {
-    await akord1.membershipChangeRole(membershipId, "VIEWER");
+    await akord1.membership.changeRole(membershipId, "VIEWER");
 
     const membership = await akord1.api.getObject(membershipId, "Membership");
     expect(membership.state.role).toEqual("VIEWER");
   });
 
   it("should revoke the invite", async () => {
-    await akord1.membershipRevoke(membershipId);
+    await akord1.membership.revoke(membershipId);
 
     const membership = await akord1.api.getObject(membershipId, "Membership");
     expect(membership.status).toEqual("REVOKED");

@@ -10,7 +10,7 @@ jest.setTimeout(3000000);
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
   const membership = await akord.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -35,7 +35,7 @@ describe("Testing note commands", () => {
     const name = faker.random.words();
     const content = faker.lorem.sentences();
 
-    noteId = (await akord.noteCreate(vaultId, name, content)).noteId;
+    noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
     const note = await akord.decryptObject(noteId, "Note");
     expect(note.state.revisions.length).toEqual(1);
@@ -46,21 +46,21 @@ describe("Testing note commands", () => {
     const name = faker.random.words();
     const content = faker.lorem.sentences();
 
-    await akord.noteUploadRevision(noteId, name, content);
+    await akord.note.uploadRevision(noteId, name, content);
 
     const note = await akord.api.getObject(noteId, "Note");
     expect(note.state.revisions.length).toEqual(2);
   });
 
   it("should revoke the note", async () => {
-    await akord.noteRevoke(noteId);
+    await akord.note.revoke(noteId);
 
     const note = await akord.api.getObject(noteId, "Note");
     expect(note.status).toEqual("REVOKED");
   });
 
   it("should restore the note", async () => {
-    await akord.noteRestore(noteId);
+    await akord.note.restore(noteId);
 
     const note = await akord.api.getObject(noteId, "Note");
     expect(note.status).toEqual("ACTIVE");

@@ -1,20 +1,43 @@
-import { EncryptionKeys, Wallet, AkordWallet } from "@akord/crypto";
-import { ServiceInterface, LedgerService, ProtocolService } from "../service"
-import { LedgerVersion } from "../client-config"
-import { Api, AkordApi } from "../api";
+import { EncryptionKeys, Wallet } from "@akord/crypto";
+import { Api } from "../api";
+import { VaultService } from "./vault";
+import { StackService } from "./stack";
+import { MemoService } from "./memo";
+import { MembershipService } from "./membership";
+import { FolderService } from "./folder";
+import { NoteService } from "./note"
+import { ProfileService } from "./profile";
+import { NodeService } from "./node";
 
 export class ServiceFactory {
 
-  service: ServiceInterface
+  service: NodeService
 
-  constructor(ledgerVersion: LedgerVersion, wallet: Wallet, api: Api, encryptionKeys?: EncryptionKeys) {
-    switch (ledgerVersion) {
-      case LedgerVersion.V1:
-        this.service = new LedgerService(<AkordWallet>wallet, <AkordApi>api, encryptionKeys);
+  constructor(wallet: Wallet, api: Api, objectType: string, encryptionKeys?: EncryptionKeys) {
+    switch (objectType) {
+      case "Vault":
+        this.service = new VaultService(wallet, api, encryptionKeys);
         break
-      case LedgerVersion.V2:
+      case "Membership":
+        this.service = new MembershipService(wallet, api, encryptionKeys);
+        break
+      case "Stack":
+        this.service = new StackService(wallet, api, encryptionKeys);
+        break
+      case "Folder":
+        this.service = new FolderService(wallet, api, encryptionKeys);
+        break
+      case "Memo":
+        this.service = new MemoService(wallet, api, encryptionKeys);
+        break
+      case "Note":
+        this.service = new NoteService(wallet, api, encryptionKeys);
+        break
+      case "Profile":
+        this.service = new ProfileService(wallet, api, encryptionKeys);
+        break
       default:
-        this.service = new ProtocolService(wallet, api, encryptionKeys);
+        this.service = new NodeService(wallet, api, encryptionKeys);
         break
     }
   }

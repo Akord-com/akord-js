@@ -31,6 +31,10 @@ describe("Testing profile commands", () => {
     const name = faker.random.words();
 
     const file = getFileFromPath("./src/__tests__/data/logo.png");
-    await akord.profileUpdate(name, file.data);
+    await akord.profile.update(name, file.data);
+
+    const profileDetails = await akord.getProfileDetails();
+    expect(profileDetails.fullName).toEqual(name);
+    expect(Buffer.from(profileDetails.avatar)).toEqual(file.data);
   });
 });
