@@ -1,6 +1,7 @@
 # akord-js
 
-Akord Client for interacting with Akord.
+Akord Client for interacting with Akord.\
+This package can be used in both browser and Node.js environments.
 
 - [Usage](#usage)
   - [Import](#import)
@@ -36,17 +37,17 @@ const akord = Akord.signIn(email, password);
 ```
 ##### with Akord Wallet & JWT
 ```js
-const akord = Akord.init({}, akordWallet, jwtToken);
+const akord = Akord.init(akordWallet, jwtToken);
 ```
 
 #### Create vault
 ```js
-const { vaultId } = await akord.vaultCreate("my first vault");
+const { vaultId } = await akord.vault.create("my first vault");
 ```
 
 #### Upload file to the vault by creating new stack
 ```js
-const { stackId } = await akord.stackCreate(vaultId, file, "my first file stack");
+const { stackId } = await akord.stack.create(vaultId, file, "my first file stack");
 ```
 
 #### Download latest file version of the stack
@@ -70,37 +71,77 @@ We also have some example flows in our [tests](src/__tests__) repository.
 
 #### Vault
 
-##### `vaultCreate(name, termsOfAccess, isPublic)`
+##### `create(name, termsOfAccess, isPublic)`
 
-- `name` (`string`, required)
-- `termsOfAccess` (`string`, optional)
+- `name` (`string`, required) - new vault name
+- `termsOfAccess` (`string`, optional) - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
 - `isPublic` (`boolean`, optional)
-- returns `Promise<{ vaultId, membershipId, transactionId }>` - Promise with new vault id, membership id & corresponding transaction id
+- returns `Promise<{ vaultId, membershipId, transactionId }>` - Promise with new vault id, owner membership id & corresponding transaction id
 
-##### `vaultRename(vaultId, name)`
+<details>
+  <summary>example</summary>
+
+```js
+const { vaultId, membershipId } = await akord.vault.create("my first vault", "terms of access");
+```
+</details>
+
+##### `rename(vaultId, name)`
 
 - `vaultId` (`string`, required)
 - `name` (`string`, required) - new vault name
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `vaultArchive(vaultId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.rename(vaultId, "updated name");
+```
+</details>
+
+##### `archive(vaultId)`
 
 - `vaultId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `vaultRestore(vaultId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.archive(vaultId);
+```
+</details>
+
+##### `restore(vaultId)`
 
 - `vaultId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `vaultDelete(vaultId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.restore(vaultId);
+```
+</details>
+
+##### `delete(vaultId)`
 
 - `vaultId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.delete(vaultId);
+```
+</details>
 
 #### Membership
 
-##### `membershipInvite(vaultId, email, role)`
+##### `invite(vaultId, email, role)`
 
 Invite user with an Akord account
 
@@ -109,7 +150,15 @@ Invite user with an Akord account
 - `role` (`string`, required) - CONTRIBUTOR or VIEWER
 - returns `Promise<{ membershipId, transactionId }>` - Promise with new membership id & corresponding transaction id
 
-##### `membershipInviteNewUser(vaultId, email, role)`
+<details>
+  <summary>example</summary>
+
+```js
+const { membershipId } = await akord.membership.invite(vaultId, "winston@gmail.com", "VIEWER");
+```
+</details>
+
+##### `inviteNewUser(vaultId, email, role)`
 
 Invite user without an Akord account
 
@@ -118,65 +167,165 @@ Invite user without an Akord account
 - `role` (`string`, required) - CONTRIBUTOR or VIEWER
 - returns `Promise<{ transactionId }>` - Promise with new membership id & corresponding transaction id
 
-##### `membershipAccept(membershipId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { membershipId } = await akord.membership.inviteNewUser(vaultId, "winston@gmail.com", "VIEWER");
+```
+</details>
+
+##### `accept(membershipId)`
 
 - `membershipId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `membershipConfirm(membershipId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.accept(membershipId);
+```
+</details>
+
+##### `confirm(membershipId)`
 
 - `membershipId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `membershipReject(membershipId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.confirm(membershipId);
+```
+</details>
+
+##### `reject(membershipId)`
+
+Reject pending invitation
 
 - `membershipId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `membershipLeave(membershipId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.reject(membershipId);
+```
+</details>
+
+##### `leave(membershipId)`
+
+Reject already accepted invitation
 
 - `membershipId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `membershipRevoke(membershipId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.leave(membershipId);
+```
+</details>
+
+##### `revoke(membershipId)`
+
+Revoke a membership, update also each valid membership with new rotated keys
 
 - `membershipId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `membershipChangeRole(membershipId, role)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.revoke(membershipId);
+```
+</details>
+
+##### `changeRole(membershipId, role)`
 
 - `membershipId` (`string`, required)
 - `role` (`string`, required) - CONTRIBUTOR or VIEWER
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `membershipInviteResend(membershipId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.changeRole(membershipId, "CONTRIBUTOR");
+```
+</details>
+
+##### `inviteResend(membershipId)`
+
+Resend email invitation
 
 - `membershipId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.membership.inviteResend(membershipId);
+```
+</details>
+
 #### Memo
 
-##### `memoCreate(vaultId, message)`
+##### `create(vaultId, message)`
 
 - `vaultId` (`string`, required)
 - `message` (`string`, required) - memo content
 - returns `Promise<{ memoId, transactionId }>` - Promise with new memo id & corresponding transaction id
 
-##### `memoAddReaction(memoId, reaction)`
+<details>
+  <summary>example</summary>
+
+```js
+const { memoId } = await akord.memo.create(vaultId, "Suspendisse ut lorem vitae lectus faucibus lacinia");
+```
+</details>
+
+##### `addReaction(memoId, reaction)`
 
 - `memoId` (`string`, required)
 - `reaction` (`reactionEmoji`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `memoRemoveReaction(memoId, reaction)`
+<details>
+  <summary>example</summary>
+
+```js
+import Akord from "@akord/akord-js"
+// valid values: [JOY, ASTONISHED, CRY, HEART, FIRE, THUMBS_UP, THUMBS_DOWN, PRAY]
+const { transactionId } = await akord.memo.addReaction(memoId, Akord.reactionEmoji.FIRE);
+```
+</details>
+
+##### `removeReaction(memoId, reaction)`
 
 - `memoId` (`string`, required)
 - `reaction` (`reactionEmoji`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+import Akord from "@akord/akord-js"
+// valid values: [JOY, ASTONISHED, CRY, HEART, FIRE, THUMBS_UP, THUMBS_DOWN, PRAY]
+const { transactionId } = await akord.memo.removeReaction(memoId, Akord.reactionEmoji.FIRE);
+```
+</details>
 
 #### Stack
 
-##### `stackCreate(vaultId, file, name, parentId, progressHook, cancelHook)`
+##### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
 
 - `vaultId` (`string`, required)
 - `file` (`any`, required) - file object
@@ -186,79 +335,197 @@ Invite user without an Akord account
 - `cancelHook` (`AbortController`, optional)
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
-##### `stackRename(stackId, name)`
+<details>
+  <summary>example</summary>
+
+```js
+const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
+```
+</details>
+
+##### `rename(stackId, name)`
 
 - `stackId` (`string`, required)
 - `name` (`string`, required) - new stack name
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `stackUploadRevision(stackId, file, progressHook)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.stack.rename(vaultId, "new name for your stack");
+```
+</details>
+
+##### `uploadRevision(stackId, file, progressHook)`
 
 - `stackId` (`string`, required)
 - `file` (`any`, required) - file object
 - `progressHook` (`(progress:number)=>void`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `stackRevoke(stackId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.stack.uploadRevision(vaultId, file);
+```
+</details>
+
+##### `revoke(stackId)`
 
 - `stackId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `stackMove(stackId, parentId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.stack.revoke(stackId);
+```
+</details>
+
+##### `move(stackId, parentId)`
 
 - `stackId` (`string`, required)
 - `parentId` (`string`, required) - new parent folder id
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `stackRestore(stackId)`
+<details>
+  <summary>example</summary>
+
+```js
+// create new folder
+const { folderId } = await akord.folder.create(vaultId, "new folder");
+// move the stack to newly created folder
+const { transactionId } = await akord.stack.move(stackId, folderId);
+```
+</details>
+
+##### `restore(stackId)`
 
 - `stackId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `stackDelete(stackId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.stack.restore(stackId);
+```
+</details>
+
+##### `delete(stackId)`
 
 - `stackId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.stack.delete(stackId);
+```
+</details>
 
 #### Folder
 
-##### `folderCreate(vaultId, name, parentId)`
+##### `create(vaultId, name, parentId)`
 
 - `vaultId` (`string`, required)
 - `name` (`string`, required) - folder name
 - `parentId` (`string`, optional) - parent folder id
 - returns `Promise<{ folderId, transactionId }>` - Promise with new folder id & corresponding transaction id
 
-##### `folderRename(folderId, name)`
+<details>
+  <summary>example</summary>
+
+```js
+const { folderId } = await akord.folder.create(vaultId, "my first folder");
+```
+</details>
+
+##### `rename(folderId, name)`
 
 - `folderId` (`string`, required)
 - `name` (`string`, required) - new folder name
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `folderMove(folderId, parentId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.folder.rename(folderId, "my first folder");
+```
+</details>
+
+##### `move(folderId, parentId)`
+
+Move the given folder along with its content to a different folder (parent)
 
 - `folderId` (`string`, required)
 - `parentId` (`string`, required) - new parent folder id
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `folderRevoke(folderId)`
+<details>
+  <summary>example</summary>
+
+```js
+// create root folder
+const rootFolderId = (await akord.folder.create(vaultId, "root folder")).folderId;
+// move the folder to newly created root folder
+const { transactionId } = await akord.folder.move(folderId, rootFolderId);
+```
+</details>
+
+##### `revoke(folderId)`
+
+Revoke the given folder along with the sub-tree of stacks and folders
 
 - `folderId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `folderRestore(folderId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.folder.revoke(folderId);
+```
+</details>
+
+##### `restore(folderId)`
+
+Restore the given folder along with the sub-tree of stacks and folders
 
 - `folderId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `folderDelete(folderId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.folder.restore(folderId);
+```
+</details>
+
+##### `delete(folderId)`
+
+Remove the folder along with the sub-tree of stacks and folders from the vault
 
 - `folderId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.folder.delete(folderId);
+```
+</details>
 
 #### Note
 
-##### `noteCreate(vaultId, name, content, parentId)`
+##### `create(vaultId, name, content, parentId)`
 
 - `vaultId` (`string`, required)
 - `name` (`string`, required) - note name
@@ -266,37 +533,88 @@ Invite user without an Akord account
 - `parentId` (`string`, optional) - parent folder id
 - returns `Promise<{ noteId, transactionId }>` - Promise with new note id & corresponding transaction id
 
-##### `noteUploadRevision(noteId, name, content)`
+<details>
+  <summary>example</summary>
+
+```js
+const { noteId } = await akord.note.create(vaultId, "Hello World note", "# Hello World");
+```
+</details>
+
+##### `uploadRevision(noteId, name, content)`
 
 - `noteId` (`string`, required)
 - `name` (`string`, required) - note name
 - `content` (`string`, required) - JSON note content
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `noteMove(noteId[, parentId])`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.note.uploadRevision(vaultId, "Hello World note bis", "# Hello World bis");
+```
+</details>
+
+##### `move(noteId, parentId)`
 
 - `noteId` (`string`, required)
 - `parentId` (`string`, optional) - new parent folder id
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `noteRevoke(noteId)`
+<details>
+  <summary>example</summary>
+
+```js
+// create new folder
+const { folderId } = await akord.folder.create(vaultId, "new folder");
+// move the note to newly created folder
+const { transactionId } = await akord.note.move(noteId, folderId);
+```
+</details>
+
+##### `revoke(noteId)`
 
 - `noteId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `noteRestore(noteId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.note.revoke(noteId);
+```
+</details>
+
+##### `restore(noteId)`
 
 - `noteId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
-##### `noteDelete(noteId)`
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.note.restore(noteId);
+```
+</details>
+
+##### `delete(noteId)`
 
 - `noteId` (`string`, required)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.note.delete(noteId);
+```
+</details>
 
 #### Profile
 
-##### `profileUpdate(name, avatar)`
+##### `update(name, avatar)`
 
 Update user profile along with all active memberships
 

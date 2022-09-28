@@ -7,10 +7,10 @@ class VaultService extends NodeService {
   objectType: string = objectTypes.VAULT;
 
   /**
-   * @param  {string} name
-   * @param  {string} [termsOfAccess]
+   * @param  {string} name new vault name
+   * @param  {string} [termsOfAccess] if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
    * @param  {boolean} [isPublic]
-   * @returns Promise with new vault id, membership id & corresponding transaction id
+   * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
    public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<{
     transactionId: string,
