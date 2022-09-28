@@ -25,7 +25,7 @@ function getFileFromPath(filePath: string) {
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
   const membership = await akord.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -52,7 +52,7 @@ describe("Testing batch actions", () => {
   describe("Batch revoke/restore actions", () => {
     it("should create folder", async () => {
       const name = faker.random.words();
-      folderId = (await akord.folderCreate(vaultId, name)).folderId;
+      folderId = (await akord.folder.create(vaultId, name)).folderId;
 
       const folder = await akord.api.getObject(folderId, "Folder");
       expect(folder.status).toEqual("ACTIVE");
@@ -66,7 +66,7 @@ describe("Testing batch actions", () => {
       const name = faker.random.words();
       const content = faker.lorem.sentences();
 
-      noteId = (await akord.noteCreate(vaultId, name, content)).noteId;
+      noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
       const note = await akord.api.getObject(noteId, "Note");
       expect(note.state.revisions.length).toEqual(1);
@@ -108,10 +108,10 @@ describe("Testing batch actions", () => {
 
       for (let i = 0; i < 10; i++) {
         const name = faker.random.words();
-        items.push({ file: file, name });
+        items.push({ file, name });
       }
 
-      const response = (await akord.batchStackCreate(vaultId, items));
+      const response = await akord.batchStackCreate(vaultId, items);
 
       for (let index in items) {
         const stack = await akord.decryptObject(response[index].stackId, "Stack");

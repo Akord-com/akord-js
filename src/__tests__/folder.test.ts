@@ -10,7 +10,7 @@ jest.setTimeout(3000000);
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
   const membership = await akord.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -34,7 +34,7 @@ describe("Testing folder commands", () => {
 
   it("should create root folder", async () => {
     const name = faker.random.words();
-    const { folderId } = await akord.folderCreate(vaultId, name);
+    const { folderId } = await akord.folder.create(vaultId, name);
 
     rootFolderId = folderId;
 
@@ -48,7 +48,7 @@ describe("Testing folder commands", () => {
 
   it("should create a sub folder", async () => {
     const name = faker.random.words();
-    const { folderId } = await akord.folderCreate(vaultId, name, rootFolderId);
+    const { folderId } = await akord.folder.create(vaultId, name, rootFolderId);
 
     subFolderId = folderId;
 
@@ -61,7 +61,7 @@ describe("Testing folder commands", () => {
   });
 
   it("should revoke root folder", async () => {
-    await akord.folderRevoke(rootFolderId);
+    await akord.folder.revoke(rootFolderId);
 
     const rootFolder = await akord.api.getObject(rootFolderId, "Folder");
     expect(rootFolder.status).toEqual("REVOKED");
@@ -73,12 +73,12 @@ describe("Testing folder commands", () => {
   it("should fail adding new sub-folder to the revoked root folder", async () => {
     const name = faker.random.words();
     await expect(async () =>
-      await akord.folderCreate(vaultId, name, rootFolderId)
+      await akord.folder.create(vaultId, name, rootFolderId)
     ).rejects.toThrow(Error);
   });
 
   it("should restore root folder", async () => {
-    await akord.folderRestore(rootFolderId);
+    await akord.folder.restore(rootFolderId);
 
     const rootFolder = await akord.api.getObject(rootFolderId, "Folder");
     expect(rootFolder.status).toEqual("ACTIVE");

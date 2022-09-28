@@ -10,13 +10,13 @@ jest.setTimeout(3000000);
 describe("Testing Akord Client without Akord API, only arweave", () => {
   beforeAll(async () => {
     const arweaveWallet = new ArweaveWallet(wallet);
-    akord = new Akord({ wallet: <any>"Arweave", network: <any>"mainnet" }, arweaveWallet);
+    akord = new Akord(arweaveWallet, undefined, { wallet: <any>"Arweave", network: <any>"mainnet" });
   });
 
   it("Testing vault:init command", async () => {
     const name = faker.random.words();
     const termsOfAccess = faker.lorem.sentences();
-    const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+    const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
     const vault = await akord.api.getContractState(vaultId);
 

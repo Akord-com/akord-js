@@ -25,7 +25,7 @@ function getFileFromPath(filePath: string) {
 async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vaultCreate(name, termsOfAccess);
+  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
   const membership = await akord.api.getObject(membershipId, "Membership");
   expect(membership.status).toEqual("ACCEPTED");
@@ -52,7 +52,7 @@ describe("Testing stack commands", () => {
     const file = getFileFromPath("./src/__tests__/data/logo.png");
     file.type = "image/png";
 
-    stackId = (await akord.stackCreate(vaultId, file, name)).stackId;
+    stackId = (await akord.stack.create(vaultId, file, name)).stackId;
 
     const stack = await akord.decryptObject(stackId, "Stack");
     expect(stack.status).toEqual("ACTIVE");
@@ -68,7 +68,7 @@ describe("Testing stack commands", () => {
     const file = getFileFromPath("./src/__tests__/data/avatar.jpeg");
     file.type = "image/jpeg";
 
-    await akord.stackUploadRevision(stackId, file);
+    await akord.stack.uploadRevision(stackId, file);
 
     const stack = await akord.decryptObject(stackId, "Stack");
     expect(stack.state.files.length).toEqual(2);
@@ -86,7 +86,7 @@ describe("Testing stack commands", () => {
   it("should rename the stack", async () => {
     const name = faker.random.words();
 
-    await akord.stackRename(stackId, name);
+    await akord.stack.rename(stackId, name);
 
     const stack = await akord.decryptObject(stackId, "Stack");
     expect(stack.state.title).toEqual(name);
@@ -104,13 +104,13 @@ describe("Testing stack commands", () => {
   });
 
   it("should revoke the stack", async () => {
-    await akord.stackRevoke(stackId)
+    await akord.stack.revoke(stackId)
     const stack = await akord.api.getObject(stackId, "Stack");
     expect(stack.status).toEqual("REVOKED");
   });
 
   it("should restore the stack", async () => {
-    await akord.stackRestore(stackId)
+    await akord.stack.restore(stackId)
     const stack = await akord.api.getObject(stackId, "Stack");
     expect(stack.status).toEqual("ACTIVE");
   });

@@ -31,8 +31,8 @@ describe("Testing querying directly from permaweb", () => {
     const jwtToken = await apiAuthenticator.getJWTToken(email, password);
     const userAttributes = await apiAuthenticator.getUserAttributes(email, password);
     const wallet = await AkordWallet.importFromEncBackupPhrase(password, userAttributes["custom:encBackupPhrase"]);
-    akord1 = new Akord({ wallet: <any>"Akord" }, wallet, jwtToken);
-    akord2 = new Akord({ wallet: <any>"Arweave" }, wallet);
+    akord1 = new Akord(wallet, jwtToken, { wallet: <any>"Akord" });
+    akord2 = new Akord(wallet, undefined, { wallet: <any>"Arweave" });
   });
 
   it("Query all vaults from Akord API", async () => {

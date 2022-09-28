@@ -1,29 +1,26 @@
-import { ServiceInterface } from '.';
 import { Api } from "../api";
 import {
   Wallet,
+  ArweaveWallet,
   EncrypterFactory,
   fromProfileState,
   Encrypter,
   EncryptionKeys,
-  digestRaw,
   signString,
   jsonToBase64,
   base64ToArray,
   arrayToString,
   stringToArray,
   arrayToBase64,
-  base64ToJson
-} from "@akord/crypto"
-import * as mime from "mime-types";
-import { reactionEmoji, objectTypes } from '../constants';
-import { protocolTags } from './protocol/protocol-constants';
+  base64ToJson,
+} from "@akord/crypto";
+import { v4 as uuidv4 } from "uuid";
+import { objectTypes, protocolTags, commands } from '../constants';
 import lodash from "lodash";
-import { createThumbnail } from './thumbnail'
-import { Logger } from '../logger'
 
 declare const Buffer;
-class Service implements ServiceInterface {
+
+class Service {
   api: Api
   wallet: Wallet
 
@@ -56,88 +53,85 @@ class Service implements ServiceInterface {
       encryptionKeys
     ).encrypterInstance()
   }
-  membershipInviteNewUserResend(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
+
+  public async setVaultContext(vaultId: string) {
+    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.state?.isPublic);
+    if (!this.isPublic) {
+      const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.wallet);
+      this.setKeys(encryptionKeys.keys);
+      this.setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
+    }
   }
-  membershipInviteResend(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
+
+  public async setVaultContextFromObjectId(objectId: string, objectType: string) {
+    const object = await this.api.getObject(objectId, objectType);
+    await this.setVaultContext(object.dataRoomId);
+    this.setPrevHash(object.hash);
+    this.setObject(object);
+    this.setObjectId(objectId);
+    this.setObjectType(objectType);
   }
-  vaultDelete(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
+
+  async nodeRename(name: string): Promise<{ transactionId: string }> {
+    const body = {
+      name: await this.processWriteString(name)
+    };
+    this.setCommand(this.objectType === "Vault" ? commands.VAULT_UPDATE : commands.NODE_UPDATE);
+    return this.nodeUpdate(body);
   }
-  profileUpdate(name: string, avatar: any): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
+
+  async nodeUpdate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{ transactionId: string }> {
+    const input = {
+      function: this.command,
+      ...clientInput
+    };
+
+    this.tags = await this.getTags();
+
+    if (body) {
+      const { data, metadata } = await this._mergeAndUploadBody(body);
+      input.data = data;
+      clientMetadata = {
+        ...clientMetadata,
+        ...metadata
+      }
+    }
+    const txId = await this.api.postContractTransaction(
+      this.vaultId,
+      input,
+      this.tags,
+      { ...clientMetadata, ...this.metadata() }
+    );
+    return { transactionId: txId }
   }
-  stackCreate(name: string, file: any, parentId?: string, progressHook?: (progress: number) => void): Promise<{ stackId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  stackUploadRevision(file: any, progressHook?: (progress: number) => void): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  noteCreate(name: string, content: string, parentId?: string): Promise<{ noteId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipProfileUpdate(name: string, avatar: any): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  vaultCreate(name: string, termsOfAccess: string, memberDetails: any, isPublic?: boolean): Promise<{ vaultId: string; membershipId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  vaultArchive(): Promise<{
-    transactionId: string; // for the data encryption
+
+  async nodeCreate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{
+    nodeId: string,
+    transactionId: string
   }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipInvite(email: string, role: string): Promise<{ membershipId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipAccept(memberDetails: any): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipReject(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipRevoke(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipChangeRole(role: string): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipInviteNewUser(email: string, role: string): Promise<{ membershipId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  membershipConfirm(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  nodeRevoke(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  nodeRestore(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  nodeDelete(): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  nodeMove(parentId?: string): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  nodeRename(name: string): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  folderCreate(name: string, parentId?: string): Promise<{ folderId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  noteUploadRevision(name: string, content: string): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  memoCreate(message: string): Promise<{ memoId: string; transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  memoAddReaction(reaction: reactionEmoji, author: string): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
-  }
-  memoRemoveReaction(reaction: reactionEmoji): Promise<{ transactionId: string; }> {
-    throw new Error('Method not implemented.');
+    const nodeId = uuidv4();
+    this.setObjectId(nodeId);
+    this.setCommand(commands.NODE_CREATE);
+
+    this.tags = await this.getTags();
+
+    const { metadata, data } = await this._uploadBody(body);
+
+    const input = {
+      function: this.command,
+      data,
+      ...clientInput
+    };
+    const txId = await this.api.postContractTransaction(
+      this.vaultId,
+      input,
+      this.tags,
+      { ...metadata, ...clientMetadata, ...this.metadata() }
+    );
+    return { nodeId, transactionId: txId };
   }
 
   setKeys(keys: any) {
@@ -235,79 +229,6 @@ class Service implements ServiceInterface {
       }
     }
     return {};
-  }
-
-  async _getReactionIndex(reactions: any[], reaction: string) {
-    const publicSigningKey = await this.wallet.signingPublicKey();
-    for (const [key, value] of Object.entries(reactions)) {
-      if ((<any>value).status === 'ACTIVE'
-        && (<any>value).publicSigningKey === publicSigningKey
-        && reaction === await this.processReadString((<any>value).reaction)) {
-        return <any>(<unknown>key);
-      }
-    }
-    return -1;
-  }
-
-  async getReaction(reaction: string) {
-    const index = await this._getReactionIndex(this.object.state.reactions, reaction);
-    if (index < 0) {
-      throw new Error("Could not find reaction: " + reaction + " for given user.")
-    }
-    const reactionObject = this.object.state.reactions[index];
-    delete reactionObject.__typename;
-    return reactionObject;
-  }
-
-  async _uploadFile(file: any, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl: string }> {
-    let tags = {};
-    if (this.isPublic) {
-      const hash = await digestRaw(file.data);
-      tags['File-Hash'] = hash;
-      tags['File-Name'] = encodeURIComponent(file.name);
-      if (file.lastModified) {
-        tags['File-Modified-At'] = file.lastModified.toString();
-      }
-    }
-    const { processedData, encryptionTags } = await this.processWriteRaw(file.data);
-    const mimeType = mime.lookup(file.name);
-    if (!file.type) {
-      try {
-        file.type = mimeType;
-      } catch (e) {
-        file = file.slice(0, file.size, mimeType);
-      }
-    }
-    tags['Content-Type'] = mimeType;
-    tags['File-Size'] = file.size;
-    tags['File-Type'] = file.type;
-    tags['Timestamp'] = JSON.stringify(Date.now());
-    tags['Data-Type'] = "File";
-    tags[protocolTags.VAULT_ID] = this.vaultId;
-    return this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook);
-  }
-
-  async _postFile(file: any, progressHook?: (progress: number) => void, cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, thumbnailTx?: string, thumbnailUrl?: string }> {
-
-    const filePromise = this._uploadFile(file, true, progressHook, cancelHook);
-    try {
-      const thumbnail = await createThumbnail(file);
-      if (thumbnail) {
-        const thumbnailPromise = this._uploadFile(thumbnail, false, progressHook);
-        const results = await Promise.all([filePromise, thumbnailPromise]);
-        return {
-          resourceTx: results[0].resourceTx,
-          resourceUrl: results[0].resourceUrl,
-          thumbnailTx: results[1].resourceTx,
-          thumbnailUrl: results[1].resourceUrl
-        };
-      } else {
-        return await filePromise;
-      }
-    } catch (e) {
-      Logger.log(e);
-    }
   }
 
   async processWriteRaw(data: any) {
@@ -473,6 +394,71 @@ class Service implements ServiceInterface {
         }
       });
     return newState;
+  }
+
+  async getUserEncryptionInfo(email?: string, address?: string) {
+    if (email) {
+      const { address, publicKey } = await this.api.getUserFromEmail(email);
+      return { address, publicKey: base64ToArray(publicKey) }
+    } else {
+      const publicKey = await (<ArweaveWallet>this.wallet).getPublicKeyFromAddress(address);
+      return { address, publicKey }
+    }
+  }
+
+  async getTags() {
+    const tags = {
+      [protocolTags.COMMAND]: this.command,
+      [protocolTags.SIGNER_ADDRESS]: await this.wallet.getAddress(),
+      [protocolTags.VAULT_ID]: this.vaultId,
+      [protocolTags.TIMESTAMP]: JSON.stringify(Date.now()),
+      [protocolTags.NODE_TYPE]: this.objectType
+    };
+    if (this.objectType === objectTypes.MEMBERSHIP) {
+      tags[protocolTags.MEMBERSHIP_ID] = this.objectId;
+    } else if (this.objectType !== objectTypes.VAULT) {
+      tags[protocolTags.NODE_ID] = this.objectId;
+    }
+    return tags;
+  }
+
+  metadata() {
+    const metadata = {
+      actionRef: this.actionRef,
+      groupRef: this.groupRef
+    };
+    return metadata;
+  }
+
+  async prepareHeader() {
+    const header = {
+      prevHash: this.prevHash,
+      publicSigningKey: await this.wallet.signingPublicKey(),
+      postedAt: new Date(),
+      groupRef: this.groupRef,
+      actionRef: this.actionRef
+    };
+    return header;
+  }
+
+  /**
+  * Post ledger transaction preparation
+  * - encode & sign the transaction payload
+  * @param {Object} headerPayload
+  * @param {Object} bodyPayload
+  */
+  async encodeTransaction(header: any, body: any) {
+    const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
+    const publicKey = await this.wallet.signingPublicKey()
+
+    // encode the header and body as BASE64 and sign it
+    const encodedHeader = jsonToBase64(header)
+    const encodedBody = jsonToBase64(body)
+    const signature = await signString(
+      `${encodedHeader}${encodedBody}`,
+      privateKeyRaw
+    )
+    return { encodedHeader, encodedBody, publicKey, signature }
   }
 }
 
