@@ -60,8 +60,9 @@ describe("Testing stack commands", () => {
     expect(stack.state.files.length).toEqual(1);
     expect(stack.state.files[0].title).toEqual("logo.png");
 
-    const decryptedFile = await akord.getStackFile(stackId);
-    expect(Buffer.from(decryptedFile)).toEqual(file.data);
+    const { name: fileName, data } = await akord.getStackFile(stackId);
+    expect(Buffer.from(data)).toEqual(file.data);
+    expect(fileName).toEqual("logo.png");
   });
 
   it("should upload new revision", async () => {
@@ -75,8 +76,9 @@ describe("Testing stack commands", () => {
     expect(stack.state.files[0].title).toEqual("logo.png");
     expect(stack.state.files[1].title).toEqual("avatar.jpeg");
 
-    const decryptedFile = await akord.getStackFile(stackId);
-    expect(Buffer.from(decryptedFile)).toEqual(file.data);
+    const { name: fileName, data } = await akord.getStackFile(stackId);
+    expect(Buffer.from(data)).toEqual(file.data);
+    expect(fileName).toEqual("avatar.jpeg");
 
     const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
     const decryptedFirstFile = await akord.getFile(stack.state.files[0].resourceUrl, vaultId);
