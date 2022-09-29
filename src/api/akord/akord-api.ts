@@ -8,30 +8,18 @@ import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
 import { Logger } from "../../logger";
 
-let client: any;
-
-// initializes our graphql client
-function initializeClient(config: AWSConfig, jwtToken: string) {
-  client = new AWSAppSyncClient({
-    url: config.aws_appsync_graphqlEndpoint,
-    region: config.aws_appsync_region,
-    auth: {
-      type: AUTH_TYPE.AMAZON_COGNITO_USER_POOLS,
-      jwtToken: jwtToken
-    },
-    disableOffline: true
-  });
-}
 
 export default class AkordApi extends Api {
 
   public config!: AWSConfig;
   public jwtToken: string;
+  private gqlClient: any;
 
   constructor(config: ClientConfig, jwtToken: string) {
     super();
     this.config = awsConfig(config.env);
     this.jwtToken = jwtToken;
+    this.initGqlClient()
   }
 
   public async uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<Array<{ resourceId: string, resourceTx: string }>> {
@@ -129,17 +117,15 @@ export default class AkordApi extends Api {
       .progressHook(progressHook)
       .cancelHook(cancelHook)
       .asArrayBuffer()
-      .downloadFile()
-
-    return { fileData: this._getResponseData(response), headers: response.headers };
-  };
-
-  private _getResponseData(response: any): any {
-    if (response.headers['x-amz-meta-encryptedkey']) {
-      return response.data;
-    } else {
-      return Buffer.from(response.data).toJSON();
-    }
+      .downloadFile();
+    
+    let fileData: any;
+      if (response.headers['x-amz-meta-encryptedkey']) {
+        fileData = response.data;
+      } else {
+        fileData = Buffer.from(response.data).toJSON();
+      }
+    return { fileData: fileData, headers: response.headers };
   };
 
   public async getProfileByPublicSigningKey(publicSigningKey: string): Promise<any> {
@@ -151,15 +137,6 @@ export default class AkordApi extends Api {
       // throw new Error("Cannot find profile with the given public signing key.")
     }
     return result[0];
-  };
-
-  private async getStateRef(objectId: string, objectType: string): Promise<any> {
-    let queryName = "get" + objectType;
-    const result = await this.executeQuery(queries[queryName + "StateRef"],
-      {
-        id: objectId
-      })
-    return result.data[queryName === "getVault" ? "getDataRoom" : queryName].stateRef;
   };
 
   public async getObject(objectId: string, objectType: string): Promise<any> {
@@ -200,26 +177,11 @@ export default class AkordApi extends Api {
   };
 
   public async getContractState(objectId: string): Promise<any> {
-    return "";
-  };
-
-  public async executeMutation(mutation: string | readonly string[], variables: any) {
-    if (!client) {
-      initializeClient(this.config, this.jwtToken);
-    }
-
-    try {
-      const response = await client.mutate({
-        mutation: gql(mutation),
-        variables,
-        fetchPolicy: "no-cache",
-      });
-      return response;
-    } catch (err) {
-      Logger.log("Error while trying to mutate data");
-      Logger.log(err);
-      throw Error(JSON.stringify(err));
-    }
+    return new PermapostExecutor()
+      .env(this.config.env, this.config.domain)
+      .auth(this.jwtToken)
+      .contractId(objectId)
+      .getContract();
   };
 
   public async getMemberships(wallet: Wallet): Promise<any> {
@@ -250,13 +212,33 @@ export default class AkordApi extends Api {
     return results;
   };
 
-  public async executeQuery(query: string | readonly string[], variables: any) {
-    if (!client) {
-      initializeClient(this.config, this.jwtToken);
-    }
+  private async getStateRef(objectId: string, objectType: string): Promise<any> {
+    let queryName = "get" + objectType;
+    const result = await this.executeQuery(queries[queryName + "StateRef"],
+      {
+        id: objectId
+      })
+    return result.data[queryName === "getVault" ? "getDataRoom" : queryName].stateRef;
+  };
 
+  private async executeMutation(mutation: string | readonly string[], variables: any) {
     try {
-      const response = await client.query({
+      const response = await this.gqlClient.mutate({
+        mutation: gql(mutation),
+        variables,
+        fetchPolicy: "no-cache",
+      });
+      return response;
+    } catch (err) {
+      Logger.log("Error while trying to mutate data");
+      Logger.log(err);
+      throw Error(JSON.stringify(err));
+    }
+  };
+
+  private async executeQuery(query: string | readonly string[], variables: any) {
+    try {
+      const response = await this.gqlClient.query({
         query: gql(query),
         variables,
         fetchPolicy: "no-cache",
@@ -269,20 +251,7 @@ export default class AkordApi extends Api {
     }
   };
 
-  public async simpleQuery(queryName: string | number, query: any, args: { [x: string]: any; }, filter: {}) {
-    let variables = {
-      filter: null
-    };
-    for (let index in args) {
-      variables[index] = args[index];
-    }
-    if (filter && Object.keys(filter).length != 0)
-      variables.filter = filter;
-    let queryResult = await this.executeQuery(query, variables);
-    return queryResult.data[queryName].items;
-  };
-
-  public async paginatedQuery(queryName: string | number, query: any, args: { [x: string]: any; }, filter: {}) {
+  private async paginatedQuery(queryName: string | number, query: any, args: { [x: string]: any; }, filter: {}) {
     let variables = {
       filter: null,
       nextToken: null
@@ -303,6 +272,18 @@ export default class AkordApi extends Api {
     }
     return results;
   };
+
+  private initGqlClient() {
+    this.gqlClient = new AWSAppSyncClient({
+      url: this.config.aws_appsync_graphqlEndpoint,
+      region: this.config.aws_appsync_region,
+      auth: {
+        type: AUTH_TYPE.AMAZON_COGNITO_USER_POOLS,
+        jwtToken: this.jwtToken
+      },
+      disableOffline: true
+    });
+  }
 }
 
 export {
