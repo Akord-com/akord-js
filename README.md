@@ -709,7 +709,7 @@ Decrypt given state (require encryption context)
 - `numberOfChunks` (`number`, optional)
 - `progressHook` (`(progress:number)=>void`, optional)
 - `cancelHook` (`AbortController`, optional)
-- returns `Promise<any>` - Promise with file buffer
+- returns `Promise<ArrayBuffer>` - Promise with file buffer
 
 ##### `getPublicFile(id, isChunked, numberOfChunks, progressHook, cancelHook)`
 
@@ -718,7 +718,7 @@ Decrypt given state (require encryption context)
 - `numberOfChunks` (`number`, optional)
 - `progressHook` (`(progress:number)=>void`, optional)
 - `cancelHook` (`AbortController`, optional)
-- returns `Promise<any>` - Promise with file buffer
+- returns `Promise<ArrayBuffer>` - Promise with file buffer
 
 ##### `getStackFile(stackId, index)`
 
@@ -726,7 +726,7 @@ Get file stack version by index, return the latest version by default
 
 - `stackId` (`string`, required)
 - `index` (`string`, optional) - file version index
-- returns `Promise<any>` - Promise with file buffer
+- returns `Promise<{ name: string, data: ArrayBuffer }>` - Promise with file name & data buffer
 
 ### Development
 > requires Node.js 16

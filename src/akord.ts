@@ -291,7 +291,7 @@ export default class Akord {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async getFile(id: string, vaultId: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any> {
+  public async getFile(id: string, vaultId: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
     const service = await this.setVaultContext(vaultId);
     let fileBinary
     if (isChunked) {
@@ -326,7 +326,7 @@ export default class Akord {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async getPublicFile(id: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any> {
+  public async getPublicFile(id: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
     this.service.setIsPublic(true);
     let fileBinary
     if (isChunked) {
@@ -357,9 +357,9 @@ export default class Akord {
    * Get file stack version by index, return the latest version by default
    * @param  {string} stackId
    * @param  {string} [index] file version index
-   * @returns Promise with file buffer
+   * @returns Promise with file name & data buffer
    */
-  public async getStackFile(stackId: string, index?: string): Promise<any> {
+  public async getStackFile(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
     const stack = await this.api.getObject(stackId, objectTypes.STACK);
     let file: any;
     if (index) {
@@ -371,7 +371,9 @@ export default class Akord {
     } else {
       file = stack.state.files[stack.state.files.length - 1];
     }
-    return this.getFile(file.resourceUrl, stack.dataRoomId);
+    const fileBuffer = await this.getFile(file.resourceUrl, stack.dataRoomId);
+    const fileName = await this.service.processReadString(file.title);
+    return { name: fileName, data: fileBuffer };
   }
 
   private async batchAction(
