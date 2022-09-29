@@ -1,7 +1,7 @@
 import Akord from "./akord";
 import { ClientConfig } from "./client-config";
-import { Wallet, AkordWallet } from "@akord/crypto";
-import ApiAuthenticator from "./api/akord/api-authenticator";
+import { Wallet } from "@akord/crypto";
+import { Auth } from "./auth";
 
 /**
  * @param  {Wallet} wallet
@@ -13,17 +13,6 @@ Akord.init = async function (wallet: Wallet, jwtToken?: string, config: ClientCo
   return new Akord(wallet, jwtToken, config);
 };
 
-/**
- * @param  {string} email
- * @param  {string} password
- * @returns Promise with Akord Client instance
- */
-Akord.signIn = async function (email: string, password: string): Promise<Akord> {
-  const apiAuthenticator = new ApiAuthenticator();
-  const jwtToken = await apiAuthenticator.getJWTToken(email, password);
-  const userAttributes = await apiAuthenticator.getUserAttributes(email, password);
-  const wallet = await AkordWallet.importFromEncBackupPhrase(password, userAttributes["custom:encBackupPhrase"]);
-  return new Akord(wallet, jwtToken);
-};
+Akord.auth = new Auth();
 
 export default Akord;

@@ -33,11 +33,11 @@ import Akord from "@akord/akord-js";
 #### Init Akord
 ##### with email & password
 ```js
-const akord = Akord.signIn(email, password);
+const { akord, wallet, jwtToken } = Akord.auth.signIn(email, password);
 ```
 ##### with Akord Wallet & JWT
 ```js
-const akord = Akord.init(akordWallet, jwtToken);
+const akord = Akord.init(wallet, jwtToken);
 ```
 
 #### Create vault
