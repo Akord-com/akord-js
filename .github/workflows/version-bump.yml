@@ -1,6 +1,9 @@
 name: "Start new build"
 
-on: workflow_dispatch
+on:
+  push:
+    branches:
+      - "main"
 
 jobs:
   bump-version:
