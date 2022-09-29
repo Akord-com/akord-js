@@ -1,11 +1,6 @@
-import Akord from "../akord";
-import { AkordWallet } from "@akord/crypto";
-import ApiAuthenticator from "../api/akord/api-authenticator";
+import Akord from "../index";
 
 export async function initInstance(email: string, password: string) : Promise<Akord> {
-  const apiAuthenticator = new ApiAuthenticator();
-  const jwtToken = await apiAuthenticator.getJWTToken(email, password);
-  const userAttributes = await apiAuthenticator.getUserAttributes(email, password);
-  const wallet = await AkordWallet.importFromEncBackupPhrase(password, userAttributes["custom:encBackupPhrase"]);
+  const { wallet, jwtToken } = await Akord.auth.signIn(email, password);
   return new Akord(wallet, jwtToken, { debug: true });
 }

@@ -13,6 +13,7 @@ import { StackService } from "./service/stack";
 import { NoteService } from "./service/note";
 import { ProfileService } from "./service/profile";
 import { Contract } from "./model/contract";
+import { Auth } from "./auth";
 
 export default class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -21,14 +22,14 @@ export default class Akord {
   public memo: MemoService;
   public folder: FolderService;
   public membership: MembershipService;
-  public vault: VaultService;;
+  public vault: VaultService;
   public stack: StackService;
   public note: NoteService;
   public profile: ProfileService;
   public service: Service;
 
   public static init: (wallet: Wallet, jwtToken?: string, apiConfig?: ClientConfig) => Promise<Akord>;
-  static signIn: (email: string, password: string) => Promise<Akord>;
+  public static auth: Auth;
 
   // TODO: JWT token provider
   /**
