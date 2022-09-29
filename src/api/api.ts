@@ -1,6 +1,7 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
 import { LedgerVersion } from '../client-config';
+import { Contract } from '../model/contract';
 
 abstract class Api {
   getMembershipKeys(vaultId: string, wallet: any): Promise<any> {
@@ -60,7 +61,7 @@ abstract class Api {
 
   abstract uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<any[]>
 
-  abstract getContractState(objectId: string): Promise<any>
+  abstract getContractState(objectId: string): Promise<Contract>
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 

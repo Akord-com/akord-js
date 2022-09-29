@@ -4,10 +4,11 @@ import ApiAuthenticator from "../api/akord/api-authenticator";
 import fs from "fs";
 import path from "path";
 import { email, password } from './data/test-credentials';
-import { vaults, fileId, message } from './data/content';
+import { vaults, fileId, message, publicVaultId } from './data/content';
 
-let akord1: Akord;
-let akord2: Akord;
+let clientWithAkordWallet: Akord;
+let clientWithArweaveWallet: Akord;
+let clientWithoutWallet: Akord;
 
 jest.setTimeout(3000000);
 
@@ -31,28 +32,46 @@ describe("Testing querying directly from permaweb", () => {
     const jwtToken = await apiAuthenticator.getJWTToken(email, password);
     const userAttributes = await apiAuthenticator.getUserAttributes(email, password);
     const wallet = await AkordWallet.importFromEncBackupPhrase(password, userAttributes["custom:encBackupPhrase"]);
-    akord1 = new Akord(wallet, jwtToken, { wallet: <any>"Akord" });
-    akord2 = new Akord(wallet, undefined, { wallet: <any>"Arweave" });
+    clientWithAkordWallet = new Akord(wallet, jwtToken, { wallet: <any>"Akord" });
+    clientWithArweaveWallet = new Akord(wallet, undefined, { wallet: <any>"Arweave" });
+    clientWithoutWallet = new Akord(undefined, undefined, { wallet: <any>"Akord" });
+
   });
 
   it("Query all vaults from Akord API", async () => {
-    const result = await akord1.getVaults();
+    const result = await clientWithAkordWallet.getVaults();
     expect(result).toEqual(vaults);
   });
 
+
+  it("Should query public vault - contract state from Akord API", async () => {
+    const result = await clientWithoutWallet.getContractState(publicVaultId);
+    expect(result.name).not.toBeNull();
+    expect(result.isPublic).toBeTruthy();
+    expect(result.folders.length).toBeTruthy();
+    expect(result.stacks.length).toBeTruthy();
+    expect(result.notes.length).toBeTruthy();
+  });
+
   it("Query all vaults from Arweave API", async () => {
-    const result = await akord2.getVaults();
+    const result = await clientWithArweaveWallet.getVaults();
     expect(result).toEqual(vaults);
   });
 
   it("Query memos from Arweave API", async () => {
-    const result = await akord2.getNodes(vaults[0].id, 'Memo');
+    const result = await clientWithArweaveWallet.getNodes(vaults[0].id, 'Memo');
     expect(result.length).toEqual(1);
     expect(result[0].message).toEqual(message);
   });
 
   it("Query chunked file from Akord API", async () => {
-    const decryptedFile = await akord1.getFile(fileId, vaults[0].id, true, 3);
+    const decryptedFile = await clientWithAkordWallet.getFile(fileId, vaults[0].id, true, 3);
+    const file = getFileFromPath("./src/__tests__/data/chunked-file.test");
+    expect(Buffer.from(decryptedFile)).toEqual(file.data);
+  });
+
+  it("Query chunked file from Akord API", async () => {
+    const decryptedFile = await clientWithAkordWallet.getFile(fileId, vaults[0].id, true, 3);
     const file = getFileFromPath("./src/__tests__/data/chunked-file.test");
     expect(Buffer.from(decryptedFile)).toEqual(file.data);
   });

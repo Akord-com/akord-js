@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
+import { Contract } from "../../model/contract";
 
 export class PermapostExecutor {
     private _env: string = "dev";
@@ -139,6 +140,19 @@ export class PermapostExecutor {
         return response.data.contractTx
     }
 
+    async getContract() : Promise<Contract> {
+        const config = {
+            method: 'get',
+            url: `${this._url}/${this._contractUri}/${this._contractId}`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response.data
+    }
+
     /**
      * 
      * @requires: 
@@ -191,9 +205,9 @@ export class PermapostExecutor {
             throw Error('Reource id is required to use permapost')
         }
 
-        const tags = this._tags.filter(function(tag) {
-            return tag.name !== "Public-Key";
-        })
+        const tags = this._tags.filter((tag) =>
+            tag.name !== "Public-Key"
+        )
 
         const config = {
             method: 'post',
@@ -281,7 +295,7 @@ export class PermapostExecutor {
             config.headers['x-amz-meta-skipbundle'] = "true";
         }
         if (this._tags) {
-            for(let tag of this._tags) {
+            for (let tag of this._tags) {
                 // TODO: move it into the API
                 // ensure S3 backward compatibility
                 if (tag.name === "Encrypted-Key") {
@@ -294,9 +308,9 @@ export class PermapostExecutor {
                     config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
                 }
             }
-            config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter(function(tag) {
-                return tag.name !== "Public-Key";
-            }));
+            config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter((tag) => 
+                tag.name !== "Public-Key"
+            ));
         }
 
         await axios(config);

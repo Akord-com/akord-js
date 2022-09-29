@@ -12,6 +12,7 @@ import { VaultService } from "./service/vault";
 import { StackService } from "./service/stack";
 import { NoteService } from "./service/note";
 import { ProfileService } from "./service/profile";
+import { Contract } from "./model/contract";
 
 export default class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -46,20 +47,6 @@ export default class Akord {
     this.note = new NoteService(wallet, this.api);
     this.membership = new MembershipService(wallet, this.api);
     this.profile = new ProfileService(wallet, this.api);
-  }
-
-  private async setVaultContext(vaultId: string) {
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
-    const service = new Service(this.service.wallet, this.api);
-    service.setVault(vault);
-    service.setVaultId(vaultId);
-    service.setIsPublic(vault.state?.isPublic);
-    if (!service.isPublic) {
-      const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-      service.setKeys(encryptionKeys.keys);
-      (<any>service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
-    }
-    return service;
   }
 
   /**
@@ -144,42 +131,6 @@ export default class Akord {
     return response;
   }
 
-  private async batchAction(
-    items: { id: string, objectType: string, role?: string }[],
-    actionType: string,
-    parentId?: string,
-  ): Promise<{ transactionId: string }[]> {
-    const groupRef = items && items.length > 1 ? uuidv4() : null;
-    const vaultId = (await this.api.getObject(items[0].id, items[0].objectType)).dataRoomId;
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
-    let encryptionKeys = {} as any;
-    if (!vault.state?.isPublic) {
-      encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-    }
-    const transactionIds = [] as { transactionId: string }[];
-    await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.service.wallet, this.api, item.objectType).serviceInstance();
-      service.setGroupRef(groupRef);
-      switch (actionType) {
-        case "REVOKE":
-          transactionIds.push(await service.revoke(item.id));
-          break;
-        case "RESTORE":
-          transactionIds.push(await service.restore(item.id));
-          break;
-        case "MOVE":
-          transactionIds.push(await service.move(item.id, parentId));
-          break;
-        case "DELETE":
-          transactionIds.push(await service.delete(item.id));
-          break;
-        default:
-          break;
-      }
-    }));
-    return transactionIds;
-  }
-
   /**
    * @param  {string} vaultId
    * @param  {{email:string,role:string}[]} items
@@ -242,21 +193,15 @@ export default class Akord {
     return vaultTable;
   }
 
-  private async setVaultEncryptionContext(vaultId: string): Promise<any> {
-    const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-    if (encryptionKeys.encryptionType) {
-      const keys = encryptionKeys.keys.map(((keyPair) => {
-        return {
-          encPrivateKey: keyPair.encPrivateKey,
-          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
-        }
-      }))
-      this.service.setKeys(keys);
-      (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
-      this.service.setIsPublic(false);
-    } else {
-      this.service.setIsPublic(true);
-    }
+  public async getContractState(id: string): Promise<Contract> {
+    const state = await this.api.getContractState(id);
+    this.service.setIsPublic(state.isPublic);
+    const contract = await this.decryptState(state);
+    contract.folders = await this.decryptState(state.folders);
+    contract.stacks = await this.decryptState(state.stacks);
+    contract.notes = await this.decryptState(state.notes);
+    contract.memos = await this.decryptState(state.memos);
+    return contract;
   }
 
   /**
@@ -313,7 +258,7 @@ export default class Akord {
    * @param  {any} state
    * @returns Promise with decrypted state
    */
-  public async decryptState(state: any): Promise<any> {
+  public async decryptState<T>(state: T): Promise<T> {
     const decryptedState = await this.service.processReadObject(state, ["title", "name", "message", "content"]);
     if (decryptedState.files && decryptedState.files.length > 0) {
       for (const [index, file] of decryptedState.files.entries()) {
@@ -355,7 +300,7 @@ export default class Akord {
           const url = `${id}_${currentChunk}`;
           const file = await this.api.downloadFile(url, service.isPublic, progressHook, cancelHook);
           const fileData = await service.processReadRaw(file.fileData, file.headers)
-          fileBinary = this._appendBuffer(fileBinary, fileData);
+          fileBinary = this.appendBuffer(fileBinary, fileData);
           currentChunk++;
         }
       } catch (e) {
@@ -390,7 +335,7 @@ export default class Akord {
           const url = `${id}_${currentChunk}`;
           const file = await this.api.downloadFile(url, true, progressHook, cancelHook);
           const fileData = await this.service.processReadRaw(file.fileData, file.headers)
-          fileBinary = this._appendBuffer(fileBinary, fileData);
+          fileBinary = this.appendBuffer(fileBinary, fileData);
           currentChunk++;
         }
       } catch (e) {
@@ -428,7 +373,74 @@ export default class Akord {
     return this.getFile(file.resourceUrl, stack.dataRoomId);
   }
 
-  private _appendBuffer(buffer1: Uint8Array, buffer2: Uint8Array): ArrayBufferLike {
+  private async batchAction(
+    items: { id: string, objectType: string, role?: string }[],
+    actionType: string,
+    parentId?: string,
+  ): Promise<{ transactionId: string }[]> {
+    const groupRef = items && items.length > 1 ? uuidv4() : null;
+    const vaultId = (await this.api.getObject(items[0].id, items[0].objectType)).dataRoomId;
+    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
+    let encryptionKeys = {} as any;
+    if (!vault.state?.isPublic) {
+      encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
+    }
+    const transactionIds = [] as { transactionId: string }[];
+    await Promise.all(items.map(async (item) => {
+      const service = new ServiceFactory(this.service.wallet, this.api, item.objectType).serviceInstance();
+      service.setGroupRef(groupRef);
+      switch (actionType) {
+        case "REVOKE":
+          transactionIds.push(await service.revoke(item.id));
+          break;
+        case "RESTORE":
+          transactionIds.push(await service.restore(item.id));
+          break;
+        case "MOVE":
+          transactionIds.push(await service.move(item.id, parentId));
+          break;
+        case "DELETE":
+          transactionIds.push(await service.delete(item.id));
+          break;
+        default:
+          break;
+      }
+    }));
+    return transactionIds;
+  }
+
+  private async setVaultContext(vaultId: string) {
+    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
+    const service = new Service(this.service.wallet, this.api);
+    service.setVault(vault);
+    service.setVaultId(vaultId);
+    service.setIsPublic(vault.state?.isPublic);
+    if (!service.isPublic) {
+      const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
+      service.setKeys(encryptionKeys.keys);
+      (<any>service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
+    }
+    return service;
+  }
+
+  private async setVaultEncryptionContext(vaultId: string): Promise<any> {
+    const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
+    if (encryptionKeys.encryptionType) {
+      const keys = encryptionKeys.keys.map(((keyPair) => {
+        return {
+          encPrivateKey: keyPair.encPrivateKey,
+          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+        }
+      }))
+      this.service.setKeys(keys);
+      (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
+      this.service.setIsPublic(false);
+    } else {
+      this.service.setIsPublic(true);
+    }
+  }
+
+  private appendBuffer(buffer1: Uint8Array, buffer2: Uint8Array): ArrayBufferLike {
     if (!buffer1 && !buffer2) return;
     if (!buffer1) return buffer2;
     if (!buffer2) return buffer1;
