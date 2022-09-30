@@ -1,7 +1,8 @@
 import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
-import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION } from "warp-contracts";
+import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
+import { Contract as Vault } from "../../model/contract";
 
 const pstContractTxId = "e-2xAH0w1NVrNZWKRRmzfcgWuj3ER0_RIIIc5ACCiSA";
 const protocolName = "Test";
@@ -13,11 +14,11 @@ const arweave = Arweave.init(arweaveConfig());
 
 // Set up SmartWeave client
 LoggerFactory.INST.logLevel("error");
-const smartweave = WarpFactory.custom(<any>arweave, { inMemory: true, dbLocation: DEFAULT_LEVEL_DB_LOCATION }, "mainnet").build();
+const smartweave = WarpFactory.forMainnet({ inMemory: true, dbLocation: DEFAULT_LEVEL_DB_LOCATION });
 
-const getContract = (contractTxId, wallet) => {
-  const contract = smartweave
-    .contract(contractTxId)
+const getContract = (contractId, wallet): Contract<Vault> => {
+  const contract = <any>smartweave
+    .contract(contractId)
     // .setEvaluationOptions({
     //   useIVM: true
     // })

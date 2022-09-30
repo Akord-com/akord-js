@@ -61,7 +61,7 @@ abstract class Api {
 
   abstract uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<any[]>
 
-  abstract getContractState(objectId: string): Promise<Contract>
+  abstract getContractState(vaultId: string): Promise<Contract>
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 

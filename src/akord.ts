@@ -1,4 +1,4 @@
-import { Api, ApiFactory } from "./api";
+import { Api, ApiFactory, AkordApi } from "./api";
 import { ClientConfig } from "./client-config";
 import { Service, ServiceFactory } from "./service";
 import { Wallet } from "@akord/crypto";
@@ -192,11 +192,26 @@ export class Akord {
   public async getContractState(id: string): Promise<Contract> {
     const contract = await this.api.getContractState(id);
     this.service.setIsPublic(contract.state.isPublic);
+    // if private vault, set encryption context
+    if (!this.service.isPublic) {
+      const encryptionKeys = await this.api.getMembershipKeys(id, this.service.wallet);
+      const keys = encryptionKeys.keys.map(((keyPair: any) => {
+        return {
+          encPrivateKey: keyPair.encPrivateKey,
+          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+        }
+      }))
+      this.service.setKeys(keys);
+      (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
+    }
     contract.state = await this.decryptState(contract.state);
-    contract.state.folders = await this.decryptState(contract.state.folders);
-    contract.state.stacks = await this.decryptState(contract.state.stacks);
-    contract.state.notes = await this.decryptState(contract.state.notes);
-    contract.state.memos = await this.decryptState(contract.state.memos);
+    if (contract.state.memberships) {
+      await Promise.all(contract.state.memberships.map(async (membership) => await this.decryptState(membership)));
+    }
+    await Promise.all(contract.state.memos.map(async (memo) => await this.decryptState(memo)));
+    await Promise.all(contract.state.folders.map(async (folder) => await this.decryptState(folder)));
+    await Promise.all(contract.state.stacks.map(async (stack) => await this.decryptState(stack)));
+    await Promise.all(contract.state.notes.map(async (note) => await this.decryptState(note)));
     return contract;
   }
 
