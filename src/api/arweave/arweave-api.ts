@@ -7,17 +7,14 @@ import {
   getContract,
   prepareArweaveTransaction,
   uploadChunksArweaveTransaction,
-  getPublicKeyFromAddress,
-  getAddress
+  getPublicKeyFromAddress
 } from "./arweave-helpers";
 import { GraphQLClient } from 'graphql-request';
 import { membershipsQuery } from "./graphql";
 import Arweave from 'arweave';
 import { EncryptionKeys, Wallet } from "@akord/crypto";
 import { Contract } from "../../model/contract";
-
-const AVPcodeSource = "zIq1JG4Yu9lETo-B494Q5JbY1hb3vl9T4PdxY7W502M";
-const pstContractTxId = "e-2xAH0w1NVrNZWKRRmzfcgWuj3ER0_RIIIc5ACCiSA";
+import { srcTxId } from './config';
 
 export default class ArweaveApi extends Api {
   public config!: ArweaveConfig;
@@ -46,7 +43,7 @@ export default class ArweaveApi extends Api {
   };
 
   public async initContractId(tags: any): Promise<string> {
-    return initContract(AVPcodeSource, tags, {}, this.jwk);
+    return initContract(srcTxId, tags, {}, this.jwk);
   };
 
   public async getUserFromEmail(email: string): Promise<string> {
