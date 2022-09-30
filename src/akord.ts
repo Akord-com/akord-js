@@ -30,7 +30,7 @@ export default class Akord {
   public service: Service;
 
   public static init: (wallet: Wallet, jwtToken?: string, apiConfig?: ClientConfig) => Promise<Akord>;
-  public static auth: Auth;
+  public static auth = new Auth();
 
   // TODO: JWT token provider
   /**
