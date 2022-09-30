@@ -14,6 +14,7 @@ import { NoteService } from "./service/note";
 import { ProfileService } from "./service/profile";
 import { Contract } from "./model/contract";
 import { Auth } from "./auth";
+import { CacheBusters } from "./model/cacheable";
 
 export default class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -39,6 +40,7 @@ export default class Akord {
    */
   constructor(wallet?: Wallet, jwtToken?: string, config: ClientConfig = {}) {
     Logger.debug = config.debug;
+    CacheBusters.cache = config.cache
     this.api = new ApiFactory(config, wallet, jwtToken).apiInstance();
     this.service = new Service(wallet, this.api);
     this.vault = new VaultService(wallet, this.api);
@@ -172,13 +174,6 @@ export default class Akord {
   }
 
   /**
-   * @returns Promise with profile details
-   */
-  public async getProfileDetails(): Promise<any> {
-    return await this.service.getProfileDetails();
-  }
-
-  /**
    * @returns Promise with user vaults array
    */
   public async getVaults(): Promise<{ id: string, name: string }[]> {
@@ -195,13 +190,13 @@ export default class Akord {
   }
 
   public async getContractState(id: string): Promise<Contract> {
-    const state = await this.api.getContractState(id);
-    this.service.setIsPublic(state.isPublic);
-    const contract = await this.decryptState(state);
-    contract.folders = await this.decryptState(state.folders);
-    contract.stacks = await this.decryptState(state.stacks);
-    contract.notes = await this.decryptState(state.notes);
-    contract.memos = await this.decryptState(state.memos);
+    const contract = await this.api.getContractState(id);
+    this.service.setIsPublic(contract.state.isPublic);
+    contract.state = await this.decryptState(contract.state);
+    contract.state.folders = await this.decryptState(contract.state.folders);
+    contract.state.stacks = await this.decryptState(contract.state.stacks);
+    contract.state.notes = await this.decryptState(contract.state.notes);
+    contract.state.memos = await this.decryptState(contract.state.memos);
     return contract;
   }
 

@@ -5,7 +5,8 @@ export interface ClientConfig {
   network?: NetworkType,
   wallet?: WalletType,
   ledgerVersion?: LedgerVersion,
-  debug?: boolean
+  debug?: boolean,
+  cache?: boolean,
 }
 
 export enum EnvType {

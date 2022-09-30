@@ -33,8 +33,9 @@ describe("Testing profile commands", () => {
     const file = getFileFromPath("./src/__tests__/data/logo.png");
     await akord.profile.update(name, file.data);
 
-    const profileDetails = await akord.getProfileDetails();
+    const profileDetails = await akord.profile.get();
     expect(profileDetails.fullName).toEqual(name);
-    expect(Buffer.from(profileDetails.avatar)).toEqual(file.data);
+    expect(profileDetails.avatar).not.toBeNull();
+    expect(Buffer.from(profileDetails.avatar || new ArrayBuffer(1))).toEqual(file.data);
   });
 });

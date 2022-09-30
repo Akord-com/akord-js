@@ -22,12 +22,12 @@ describe("Testing Akord Client without Akord API, only arweave", () => {
 
     expect(vault.state.status).toEqual("ACTIVE");
     expect(vault.state.owner).toEqual(address);
-    expect(vault.state.data.length).toEqual(1);
+    expect(vault.state.data?.length).toEqual(1);
     expect(vault.state.memberships.length).toEqual(1);
     expect(vault.state.memberships[0].id).toEqual(membershipId);
     expect(vault.state.memberships[0].address).toEqual(address);
     expect(vault.state.memberships[0].status).toEqual("ACCEPTED");
     expect(vault.state.memberships[0].role).toEqual("OWNER");
-    expect(vault.state.memberships[0].data.length).toEqual(1);
+    expect(vault.state.memberships[0].data?.length).toEqual(1);
   });
 });
