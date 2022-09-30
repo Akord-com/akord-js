@@ -1,5 +1,5 @@
 import { AkordWallet } from "@akord/crypto";
-import Akord from "../../akord";
+import { Akord } from "../../akord";
 import { AkordApi } from "../../api";
 import { CacheBusters } from "../../model/cacheable";
 import { Service } from "../../service";

@@ -1,4 +1,4 @@
-import Akord from "../akord";
+import { Akord } from "../index";
 import { AkordWallet } from "@akord/crypto";
 import ApiAuthenticator from "../api/akord/api-authenticator";
 import fs from "fs";

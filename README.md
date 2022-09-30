@@ -25,7 +25,11 @@ This package can be used in both browser and Node.js environments.
 
 ### Import
 ```js
-import Akord from "@akord/akord-js";
+import { Akord } from "@akord/akord-js";
+```
+or
+```js
+const { Akord } = require("@akord/akord-js");
 ```
 
 ### Quick start
@@ -301,7 +305,7 @@ const { memoId } = await akord.memo.create(vaultId, "Suspendisse ut lorem vitae 
   <summary>example</summary>
 
 ```js
-import Akord from "@akord/akord-js"
+import { Akord } from "@akord/akord-js"
 // valid values: [JOY, ASTONISHED, CRY, HEART, FIRE, THUMBS_UP, THUMBS_DOWN, PRAY]
 const { transactionId } = await akord.memo.addReaction(memoId, Akord.reactionEmoji.FIRE);
 ```
@@ -317,7 +321,7 @@ const { transactionId } = await akord.memo.addReaction(memoId, Akord.reactionEmo
   <summary>example</summary>
 
 ```js
-import Akord from "@akord/akord-js"
+import { Akord } from "@akord/akord-js"
 // valid values: [JOY, ASTONISHED, CRY, HEART, FIRE, THUMBS_UP, THUMBS_DOWN, PRAY]
 const { transactionId } = await akord.memo.removeReaction(memoId, Akord.reactionEmoji.FIRE);
 ```

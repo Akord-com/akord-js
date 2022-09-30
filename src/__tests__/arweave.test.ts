@@ -1,4 +1,4 @@
-import Akord from "../akord";
+import { Akord } from "../index";
 import { ArweaveWallet } from "@akord/crypto";
 import faker from '@faker-js/faker';
 import { wallet, address } from './data/test-credentials';

@@ -16,7 +16,7 @@ import { Contract } from "./model/contract";
 import { Auth } from "./auth";
 import { CacheBusters } from "./model/cacheable";
 
-export default class Akord {
+export class Akord {
   static readonly reactionEmoji = reactionEmoji;
 
   public api: Api;
