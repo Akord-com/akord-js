@@ -44,6 +44,8 @@
     "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
     "pdfjs-dist": "^2.16.105",
+    "rxjs": "^7.5.6",
+    "ts-cacheable": "^1.0.6",
     "uuid": "^8.3.2",
     "warp-contracts": "1.2.4"
   },

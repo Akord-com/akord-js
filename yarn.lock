@@ -5330,6 +5330,13 @@ run-parallel-limit@^1.1.0:
   dependencies:
     queue-microtask "^1.2.2"
 
+rxjs@^7.5.6:
+  version "7.5.7"
+  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.5.7.tgz#2ec0d57fdc89ece220d2e702730ae8f1e49def39"
+  integrity sha512-z9MzKh/UcOqB3i20H6rtrlaE/CgjLOvheWK/9ILrbhROGTweAi1BaFsTT9FbwZi5Trr1qNRs+MXkhmR06awzQA==
+  dependencies:
+    tslib "^2.1.0"
+
 safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.2.1.tgz#1eaf9fa9bdb1fdd4ec75f58f9cdb4e6b7827eec6"
@@ -5640,6 +5647,13 @@ tr46@~0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/tr46/-/tr46-0.0.3.tgz#8184fd347dac9cdc185992f3a6622e14b9d9ab6a"
   integrity sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==
+
+ts-cacheable@^1.0.6:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/ts-cacheable/-/ts-cacheable-1.0.7.tgz#7eb5c3404e285369801b55dda2d1a44cb282345c"
+  integrity sha512-4pJC2/tDZlIXzhrfCoKIMMgM1D1f1Pf+87FH+RN0HeV4RrArANGX/iBcJGZ8LRY/P7Nbzb60VL5u2O1iWwldng==
+  dependencies:
+    rxjs "^7.5.6"
 
 ts-invariant@^0.4.0:
   version "0.4.4"

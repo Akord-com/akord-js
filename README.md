@@ -614,6 +614,12 @@ const { transactionId } = await akord.note.delete(noteId);
 
 #### Profile
 
+##### `get()`
+
+Fetch currently authenticated user's profile details
+
+- returns `Promise<ProfileDetails>` - Promise with profile details
+
 ##### `update(name, avatar)`
 
 Update user profile along with all active memberships
@@ -666,10 +672,6 @@ Update user profile along with all active memberships
 - returns `Promise<Array<{ transactionId }>>` - Promise with new membership ids & their corresponding transaction ids
 
 ### Reads
-
-##### `getProfileDetails()`
-
-- returns `Promise<any>` - Promise with profile details
 
 ##### `getVaults()`
 

@@ -2,9 +2,26 @@ import { NodeService } from "./node";
 import { MembershipService } from "./membership";
 import { actionRefs } from "../constants";
 import { EncryptionType } from "@akord/crypto";
+import { ProfileDetails } from "../model/profile-details";
+import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "ts-cacheable";
+import { CacheBusters } from "../model/cacheable";
 
 class ProfileService extends NodeService {
   objectType: string = "Profile";
+
+  /**
+   * Fetch currently authenticated user's profile details
+   * @returns Promise with profile details
+   */
+  @PCacheable({
+    storageStrategy: InMemoryStorageStrategy,
+    cacheBusterObserver: CacheBusters.profile,
+    shouldCacheDecider: (res) => res && res._cached
+  })
+  public async get(): Promise<ProfileDetails> {
+    this.api.config
+    return { ...this.getProfileDetails(), _cached: CacheBusters.cache };
+  }
 
   /**
    * Update user profile along with all active memberships
@@ -12,6 +29,9 @@ class ProfileService extends NodeService {
    * @param  {any} avatar new avatar buffer
    * @returns Promise with corresponding transaction ids
    */
+  @PCacheBuster({
+    cacheBusterNotifier: CacheBusters.profile
+  })
   public async update(name: string, avatar: any): Promise<{ transactionId: string }[]> {
     let transactions = [];
 
