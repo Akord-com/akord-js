@@ -372,7 +372,8 @@ export default class Akord {
       file = stack.state.files[stack.state.files.length - 1];
     }
     const fileBuffer = await this.getFile(file.resourceUrl, stack.dataRoomId);
-    const fileName = await this.service.processReadString(file.title);
+    const service = await this.setVaultContext(stack.dataRoomId);
+    const fileName = await service.processReadString(file.title);
     return { name: fileName, data: fileBuffer };
   }
 
