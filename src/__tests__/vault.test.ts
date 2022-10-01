@@ -1,4 +1,4 @@
-import Akord from "../akord";
+import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
 import { email, password } from './data/test-credentials';

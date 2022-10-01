@@ -1,4 +1,4 @@
-import Akord from "./akord";
+import { Akord } from "./akord";
 import { ClientConfig } from "./client-config";
 import { Wallet } from "@akord/crypto";
 
@@ -12,4 +12,4 @@ Akord.init = async function (wallet: Wallet, jwtToken?: string, config: ClientCo
   return new Akord(wallet, jwtToken, config);
 };
 
-export default Akord;
+export { Akord };
