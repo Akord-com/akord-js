@@ -7,16 +7,14 @@ import {
   getContract,
   prepareArweaveTransaction,
   uploadChunksArweaveTransaction,
-  getPublicKeyFromAddress,
-  getAddress
+  getPublicKeyFromAddress
 } from "./arweave-helpers";
 import { GraphQLClient } from 'graphql-request';
 import { membershipsQuery } from "./graphql";
 import Arweave from 'arweave';
 import { EncryptionKeys, Wallet } from "@akord/crypto";
-
-const AVPcodeSource = "zIq1JG4Yu9lETo-B494Q5JbY1hb3vl9T4PdxY7W502M";
-const pstContractTxId = "e-2xAH0w1NVrNZWKRRmzfcgWuj3ER0_RIIIc5ACCiSA";
+import { Contract } from "../../model/contract";
+import { srcTxId } from './config';
 
 export default class ArweaveApi extends Api {
   public config!: ArweaveConfig;
@@ -45,7 +43,7 @@ export default class ArweaveApi extends Api {
   };
 
   public async initContractId(tags: any): Promise<string> {
-    return initContract(AVPcodeSource, tags, {}, this.jwk);
+    return initContract(srcTxId, tags, {}, this.jwk);
   };
 
   public async getUserFromEmail(email: string): Promise<string> {
@@ -85,10 +83,38 @@ export default class ArweaveApi extends Api {
     return resourceTxs;
   };
 
-  public async getContractState(objectId: string): Promise<any> {
-    const contract = getContract(objectId, this.jwk);
-    return contract.readState();
+  public async getContractState(contractId: string): Promise<any> {
+    const contractObject = getContract(contractId, null);
+    const contract = (await contractObject.readState()).cachedValue;
+    const vault = Object.assign(contract) as Contract;
+    const vaultData = await this.downloadFile(vault.state.data[vault.state.data.length - 1])
+    vault.state = { ...vault.state, ...vaultData };
+
+    await this.downloadMemberships(vault)
+    await this.downloadNodes(vault)
+    return vault;
   };
+
+  private async downloadMemberships(vault: Contract) {
+    for (let membership of vault.state.memberships) {
+      const dataTx = membership.data[membership.data.length - 1];
+      const state = await this.downloadFile(dataTx);
+      membership = { ...membership, ...state };
+    }
+  }
+
+  private async downloadNodes(vault: Contract) {
+    vault.state.folders = [];
+    vault.state.stacks = [];
+    vault.state.notes = [];
+    vault.state.memos = [];
+    for (let node of (<any>vault.state).nodes) {
+      const dataTx = node.data[node.data.length - 1];
+      const state = await this.downloadFile(dataTx);
+      node = { ...node, ...state };
+      vault.state[node.type.toLowerCase() + "s"].push(node);
+    }
+  }
 
   public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<any> {
     const state = await this.getContractState(vaultId);

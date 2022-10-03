@@ -1,23 +1,20 @@
 import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
-import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION } from "warp-contracts";
+import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
-
-const pstContractTxId = "e-2xAH0w1NVrNZWKRRmzfcgWuj3ER0_RIIIc5ACCiSA";
-const protocolName = "Test";
-const protocolVersion = "0.1";
-const appName = "CLI-Test";
+import { Contract as Vault } from "../../model/contract";
+import { clientName, protocolName, protocolVersion } from "./config";
 
 // Set up Arweave client
 const arweave = Arweave.init(arweaveConfig());
 
 // Set up SmartWeave client
 LoggerFactory.INST.logLevel("error");
-const smartweave = WarpFactory.custom(<any>arweave, { inMemory: true, dbLocation: DEFAULT_LEVEL_DB_LOCATION }, "mainnet").build();
+const smartweave = WarpFactory.forMainnet({ inMemory: true, dbLocation: DEFAULT_LEVEL_DB_LOCATION });
 
-const getContract = (contractTxId, wallet) => {
-  const contract = smartweave
-    .contract(contractTxId)
+const getContract = (contractId, wallet): Contract<Vault> => {
+  const contract = <any>smartweave
+    .contract(contractId)
     // .setEvaluationOptions({
     //   useIVM: true
     // })
@@ -49,64 +46,64 @@ async function deployContract(contractCodeSourceTxId, contractInitStateJSON, tag
   return contractTxId;
 }
 
-async function preparePstRewardTransfer(wallet) {
-  const contract = getContract(pstContractTxId, wallet);
-  const currentState = (await contract.readState()).cachedValue.state;
-  const holder = selectWeightedPstHolder(currentState);
-  return {
-    target: holder,
-    winstonQty: '0.15'
-  }
-}
+// async function preparePstRewardTransfer(wallet) {
+//   const contract = getContract(pstContractTxId, wallet);
+//   const currentState = (await contract.readState()).cachedValue.state;
+//   const holder = selectWeightedPstHolder(currentState);
+//   return {
+//     target: holder,
+//     winstonQty: '0.15'
+//   }
+// }
 
-function selectWeightedPstHolder(state) {
-  const balances = state.balances;
-  const vault = state.vault;
-  let total = 0;
-  for (const addr of Object.keys(balances)) {
-    total += balances[addr];
-  }
-  for (const addr of Object.keys(vault)) {
-    if (!vault[addr].length) continue;
-    const vaultBalance = vault[addr]
-      .map((a) => a.balance)
-      .reduce((a, b) => a + b, 0);
-    total += vaultBalance;
-    if (addr in balances) {
-      balances[addr] += vaultBalance;
-    } else {
-      balances[addr] = vaultBalance;
-    }
-  }
-  const weighted = {};
-  for (const addr of Object.keys(balances)) {
-    weighted[addr] = balances[addr] / total;
-  }
-  const randomHolder = weightedRandom(weighted);
-  return randomHolder;
-}
+// function selectWeightedPstHolder(state) {
+//   const balances = state.balances;
+//   const vault = state.vault;
+//   let total = 0;
+//   for (const addr of Object.keys(balances)) {
+//     total += balances[addr];
+//   }
+//   for (const addr of Object.keys(vault)) {
+//     if (!vault[addr].length) continue;
+//     const vaultBalance = vault[addr]
+//       .map((a) => a.balance)
+//       .reduce((a, b) => a + b, 0);
+//     total += vaultBalance;
+//     if (addr in balances) {
+//       balances[addr] += vaultBalance;
+//     } else {
+//       balances[addr] = vaultBalance;
+//     }
+//   }
+//   const weighted = {};
+//   for (const addr of Object.keys(balances)) {
+//     weighted[addr] = balances[addr] / total;
+//   }
+//   const randomHolder = weightedRandom(weighted);
+//   return randomHolder;
+// }
 
-function weightedRandom(dict) {
-  let sum = 0;
-  const r = Math.random();
-  for (const addr of Object.keys(dict)) {
-    sum += dict[addr];
-    if (r <= sum && dict[addr] > 0) {
-      return addr;
-    }
-  }
-  return;
-}
+// function weightedRandom(dict) {
+//   let sum = 0;
+//   const r = Math.random();
+//   for (const addr of Object.keys(dict)) {
+//     sum += dict[addr];
+//     if (r <= sum && dict[addr] > 0) {
+//       return addr;
+//     }
+//   }
+//   return;
+// }
 
 async function postContractTransaction(contractId, input, tags, wallet) {
   try {
     const contract = getContract(contractId, wallet);
-    const pstTransfer = await preparePstRewardTransfer(wallet);
+    // const pstTransfer = await preparePstRewardTransfer(wallet);
     const { originalTxId } = await contract.writeInteraction(input, {
       tags: getTagsFromObject(constructHeader(tags)),
       strict: true
     });
-    return { txId: originalTxId, pstTransfer }
+    return { txId: originalTxId }
   } catch (error) {
     console.log(error)
     throw new Error("Cannot perform the operation: " + error);
@@ -122,7 +119,7 @@ const initContract = async (contractSrc, additionalTags, initialState, wallet) =
 function constructHeader(headerPayload) {
   return {
     ...(headerPayload ? headerPayload : {}),
-    [protocolTags.CLIENT_NAME]: appName,
+    [protocolTags.CLIENT_NAME]: clientName,
     [protocolTags.PROTOCOL_NAME]: protocolName,
     [protocolTags.PROTOCOL_VERSION]: protocolVersion,
     [protocolTags.TIMESTAMP]: JSON.stringify(Date.now()),
