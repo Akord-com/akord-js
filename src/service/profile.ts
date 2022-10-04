@@ -3,7 +3,7 @@ import { MembershipService } from "./membership";
 import { actionRefs } from "../constants";
 import { EncryptionType } from "@akord/crypto";
 import { ProfileDetails } from "../model/profile-details";
-import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "ts-cacheable";
+import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
 import { CacheBusters } from "../model/cacheable";
 
 class ProfileService extends NodeService {
@@ -19,8 +19,8 @@ class ProfileService extends NodeService {
     shouldCacheDecider: (res) => res && res._cached
   })
   public async get(): Promise<ProfileDetails> {
-    this.api.config
-    return { ...this.getProfileDetails(), _cached: CacheBusters.cache };
+    const profileDetails = await this.getProfileDetails();
+    return { ...profileDetails, _cached: CacheBusters.cache };
   }
 
   /**
