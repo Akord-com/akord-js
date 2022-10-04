@@ -118,13 +118,13 @@ export default class AkordApi extends Api {
       .cancelHook(cancelHook)
       .asArrayBuffer()
       .downloadFile();
-    
+
     let fileData: any;
-      if (response.headers['x-amz-meta-encryptedkey']) {
-        fileData = response.data;
-      } else {
-        fileData = Buffer.from(response.data).toJSON();
-      }
+    if (response.headers['x-amz-meta-encryptedkey']) {
+      fileData = response.data;
+    } else {
+      fileData = Buffer.from(response.data).toJSON();
+    }
     return { fileData: fileData, headers: response.headers };
   };
 
@@ -197,7 +197,9 @@ export default class AkordApi extends Api {
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.membershipsByMemberPublicSigningKey,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: 'ACCEPTED' } });
-    const vaults = results.map(membership => membership.dataRoomId);
+    const vaults = results
+      .filter((membership: any) => membership.dataRoom.status !== 'ARCHIVED')
+      .map((membership: any) => membership.dataRoomId);
     return vaults;
   };
 
@@ -208,7 +210,7 @@ export default class AkordApi extends Api {
       queries[queryName],
       {
         dataRoomId: vaultId
-      }, {})
+      }, { status: { eq: 'ACTIVE' } })
     return results;
   };
 
