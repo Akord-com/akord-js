@@ -309,6 +309,7 @@ class Service {
   }
 
   async processReadString(data: any) {
+    if (this.isPublic) return data;
     const decryptedDataRaw = await this.processReadRaw(data, {});
     return arrayToString(decryptedDataRaw);
   }
