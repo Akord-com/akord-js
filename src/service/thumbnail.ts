@@ -133,10 +133,12 @@ export const createThumbnail = async (file: any) => {
         break
     }
     URL.revokeObjectURL(fileUrl)
-    // converting recieved Blob to File and adding `data` field with ArrayBuffer
-    let myFile = <any>new File([thumbnail], `thumb_${file.name}`, { type: thumbnail.type })
-    myFile.data = await thumbnail.arrayBuffer();
-    return myFile
+    if (thumbnail) {
+      // converting recieved Blob to File and adding `data` field with ArrayBuffer
+      let thumbnailFile = <any>new File([thumbnail], `thumb_${file.name}`, { type: thumbnail.type })
+      thumbnailFile.data = await thumbnail.arrayBuffer();
+      return thumbnailFile
+    }
   }
   return null;
 }
