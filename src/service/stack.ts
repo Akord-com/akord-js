@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, commands, objectTypes, protocolTags} from "../constants";
+import { actionRefs, commands, objectTypes, protocolTags } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import * as mime from "mime-types";
 import { digestRaw } from "@akord/crypto";
@@ -76,6 +76,31 @@ class StackService extends NodeService {
     };
     this.setCommand(commands.NODE_UPDATE);
     return this.nodeUpdate(body, null, { resourceUrl, thumbnailUrl });
+  }
+
+  /**
+   * Get file stack version by index, return the latest version by default
+   * @param  {string} stackId
+   * @param  {string} [index] file version index
+   * @returns Promise with file name & data buffer
+   */
+  public async getFile(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
+    const stack = await this.api.getObject(stackId, objectTypes.STACK);
+    let file: any;
+    if (index) {
+      if (stack.state.files && stack.state.files[index]) {
+        file = stack.state.files[index];
+      } else {
+        throw new Error("Given index: " + index + " does not exist for stack: " + stackId);
+      }
+    } else {
+      file = stack.state.files[stack.state.files.length - 1];
+    }
+    await this.setVaultContext(stack.dataRoomId);
+    const fileRes = await this.api.downloadFile(file.resourceUrl, this.isPublic);
+    const fileBuffer = await this.processReadRaw(fileRes.fileData, fileRes.headers);
+    const fileName = await this.processReadString(file.title);
+    return { name: fileName, data: fileBuffer };
   }
 
   async _uploadFile(file: any, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl: string }> {

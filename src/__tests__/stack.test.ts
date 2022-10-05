@@ -27,11 +27,11 @@ async function vaultCreate() {
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
-  const membership = await akord.api.getObject(membershipId, "Membership");
+  const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.state.role).toEqual("OWNER");
 
-  const vault = await akord.decryptObject(vaultId, "Vault");
+  const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.state.title).toEqual(name);
   return { vaultId };
@@ -54,13 +54,13 @@ describe("Testing stack commands", () => {
 
     stackId = (await akord.stack.create(vaultId, file, name)).stackId;
 
-    const stack = await akord.decryptObject(stackId, "Stack");
+    const stack = await akord.stack.get(stackId);
     expect(stack.status).toEqual("ACTIVE");
     expect(stack.state.title).toEqual(name);
     expect(stack.state.files.length).toEqual(1);
     expect(stack.state.files[0].title).toEqual("logo.png");
 
-    const { name: fileName, data } = await akord.getStackFile(stackId);
+    const { name: fileName, data } = await akord.stack.getFile(stackId);
     expect(Buffer.from(data)).toEqual(file.data);
     expect(fileName).toEqual("logo.png");
   });
@@ -71,12 +71,12 @@ describe("Testing stack commands", () => {
 
     await akord.stack.uploadRevision(stackId, file);
 
-    const stack = await akord.decryptObject(stackId, "Stack");
+    const stack = await akord.stack.get(stackId);
     expect(stack.state.files.length).toEqual(2);
     expect(stack.state.files[0].title).toEqual("logo.png");
     expect(stack.state.files[1].title).toEqual("avatar.jpeg");
 
-    const { name: fileName, data } = await akord.getStackFile(stackId);
+    const { name: fileName, data } = await akord.stack.getFile(stackId);
     expect(Buffer.from(data)).toEqual(file.data);
     expect(fileName).toEqual("avatar.jpeg");
 
@@ -90,7 +90,7 @@ describe("Testing stack commands", () => {
 
     await akord.stack.rename(stackId, name);
 
-    const stack = await akord.decryptObject(stackId, "Stack");
+    const stack = await akord.stack.get(stackId);
     expect(stack.state.title).toEqual(name);
     expect(stack.state.files.length).toEqual(2);
     expect(stack.state.files[0].title).toEqual("logo.png");
@@ -107,13 +107,13 @@ describe("Testing stack commands", () => {
 
   it("should revoke the stack", async () => {
     await akord.stack.revoke(stackId)
-    const stack = await akord.api.getObject(stackId, "Stack");
+    const stack = await akord.stack.get(stackId);
     expect(stack.status).toEqual("REVOKED");
   });
 
   it("should restore the stack", async () => {
     await akord.stack.restore(stackId)
-    const stack = await akord.api.getObject(stackId, "Stack");
+    const stack = await akord.stack.get(stackId);
     expect(stack.status).toEqual("ACTIVE");
   });
 });

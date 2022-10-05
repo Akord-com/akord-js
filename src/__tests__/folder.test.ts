@@ -12,11 +12,11 @@ async function vaultCreate() {
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
-  const membership = await akord.api.getObject(membershipId, "Membership");
+  const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.state.role).toEqual("OWNER");
 
-  const vault = await akord.decryptObject(vaultId, "Vault");
+  const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.state.title).toEqual(name);
   return { vaultId };
@@ -38,12 +38,10 @@ describe("Testing folder commands", () => {
 
     rootFolderId = folderId;
 
-    const rootFolder = await akord.api.getObject(rootFolderId, "Folder");
+    const rootFolder = await akord.folder.get(rootFolderId);
     expect(rootFolder.status).toEqual("ACTIVE");
     expect(rootFolder.folderId).toEqual(null);
-
-    const decryptedState = await akord.service.processReadObject(rootFolder.state, ["title"]);
-    expect(decryptedState.title).toEqual(name);
+    expect(rootFolder.state.title).toEqual(name);
   });
 
   it("should create a sub folder", async () => {
@@ -52,21 +50,19 @@ describe("Testing folder commands", () => {
 
     subFolderId = folderId;
 
-    const subFolder = await akord.api.getObject(subFolderId, "Folder");
+    const subFolder = await akord.folder.get(subFolderId);
     expect(subFolder.status).toEqual("ACTIVE");
     expect(subFolder.folderId).toEqual(rootFolderId);
-
-    const decryptedState = await akord.service.processReadObject(subFolder.state, ["title"]);
-    expect(decryptedState.title).toEqual(name);
+    expect(subFolder.state.title).toEqual(name);
   });
 
   it("should revoke root folder", async () => {
     await akord.folder.revoke(rootFolderId);
 
-    const rootFolder = await akord.api.getObject(rootFolderId, "Folder");
+    const rootFolder = await akord.folder.get(rootFolderId);
     expect(rootFolder.status).toEqual("REVOKED");
 
-    const subFolder = await akord.api.getObject(subFolderId, "Folder");
+    const subFolder = await akord.folder.get(subFolderId);
     expect(subFolder.status).toEqual("REVOKED");
   });
 
@@ -80,10 +76,10 @@ describe("Testing folder commands", () => {
   it("should restore root folder", async () => {
     await akord.folder.restore(rootFolderId);
 
-    const rootFolder = await akord.api.getObject(rootFolderId, "Folder");
+    const rootFolder = await akord.folder.get(rootFolderId);
     expect(rootFolder.status).toEqual("ACTIVE");
 
-    const subFolder = await akord.api.getObject(subFolderId, "Folder");
+    const subFolder = await akord.folder.get(subFolderId);
     expect(subFolder.status).toEqual("ACTIVE");
   });
 });

@@ -54,7 +54,7 @@ class Service {
     ).encrypterInstance()
   }
 
-  public async setVaultContext(vaultId: string) {
+  protected async setVaultContext(vaultId: string) {
     const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
     this.setVault(vault);
     this.setVaultId(vaultId);
@@ -66,7 +66,7 @@ class Service {
     }
   }
 
-  public async setVaultContextFromObjectId(objectId: string, objectType: string) {
+  protected async setVaultContextFromObjectId(objectId: string, objectType: string) {
     const object = await this.api.getObject(objectId, objectType);
     await this.setVaultContext(object.dataRoomId);
     this.setPrevHash(object.hash);
@@ -75,7 +75,39 @@ class Service {
     this.setObjectType(objectType);
   }
 
-  async nodeRename(name: string): Promise<{ transactionId: string }> {
+  /**
+  * Decrypt given state (require encryption context)
+  * @param  {any} state
+  * @returns Promise with decrypted state
+  */
+  public async decryptState<T>(state: T): Promise<T> {
+    const decryptedState = await this.processReadObject(state, ["title", "name", "message", "content"]);
+    if (decryptedState.files && decryptedState.files.length > 0) {
+      for (const [index, file] of decryptedState.files.entries()) {
+        const decryptedFile = await this.processReadObject(file, ["title", "name"]);
+        delete decryptedFile.__typename;
+        decryptedState.files[index] = decryptedFile;
+      }
+    }
+    if (decryptedState.reactions && decryptedState.reactions.length > 0) {
+      for (const [index, reaction] of decryptedState.reactions.entries()) {
+        const decryptedReaction = await this.processReadObject(reaction, ["reaction"]);
+        delete decryptedReaction.__typename;
+        decryptedState.reactions[index] = decryptedReaction;
+      }
+    }
+    if (decryptedState.revisions && decryptedState.revisions.length > 0) {
+      for (const [index, revision] of decryptedState.revisions.entries()) {
+        const decryptedRevision = await this.processReadObject(revision, ["content"]);
+        delete decryptedRevision.__typename;
+        decryptedState.revisions[index] = decryptedRevision;
+      }
+    }
+    delete decryptedState.__typename;
+    return decryptedState;
+  }
+
+  protected async nodeRename(name: string): Promise<{ transactionId: string }> {
     const body = {
       name: await this.processWriteString(name)
     };
@@ -83,7 +115,7 @@ class Service {
     return this.nodeUpdate(body);
   }
 
-  async nodeUpdate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{ transactionId: string }> {
+  protected async nodeUpdate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{ transactionId: string }> {
     const input = {
       function: this.command,
       ...clientInput
@@ -108,7 +140,7 @@ class Service {
     return { transactionId: txId }
   }
 
-  async nodeCreate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{
+  protected async nodeCreate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{
     nodeId: string,
     transactionId: string
   }> {
@@ -143,19 +175,19 @@ class Service {
     this.vaultId = vaultId;
   }
 
-  setObjectId(objectId: string) {
+  protected setObjectId(objectId: string) {
     this.objectId = objectId;
   }
 
-  setObjectType(objectType: string) {
+  protected setObjectType(objectType: string) {
     this.objectType = objectType;
   }
 
-  setCommand(command: string) {
+  protected setCommand(command: string) {
     this.command = command;
   }
 
-  setActionRef(actionRef: string) {
+  protected setActionRef(actionRef: string) {
     this.actionRef = actionRef;
   }
 
@@ -163,7 +195,7 @@ class Service {
     this.groupRef = groupRef;
   }
 
-  setPrevHash(hash: string) {
+  protected setPrevHash(hash: string) {
     this.prevHash = hash;
   }
 
@@ -175,23 +207,23 @@ class Service {
     this.vault = vault;
   }
 
-  setObject(object: any) {
+  protected setObject(object: any) {
     this.object = object;
   }
 
-  setRawDataEncryptionPublicKey(publicKey) {
+  protected setRawDataEncryptionPublicKey(publicKey) {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
-  setDataEncryptionPublicKey(publicKey) {
+  protected setDataEncryptionPublicKey(publicKey) {
     this.dataEncrypter.setPublicKey(publicKey);
   }
 
-  setKeysEncryptionPublicKey(publicKey) {
+  protected setKeysEncryptionPublicKey(publicKey) {
     this.keysEncrypter.setPublicKey(publicKey);
   }
 
-  setRawKeysEncryptionPublicKey(publicKey) {
+  protected setRawKeysEncryptionPublicKey(publicKey) {
     this.keysEncrypter.setRawPublicKey(publicKey);
   }
 
@@ -231,7 +263,7 @@ class Service {
     return {};
   }
 
-  async processWriteRaw(data: any) {
+  protected async processWriteRaw(data: any) {
     let processedData: any;
     const encryptionTags = {};
     if (this.isPublic) {
@@ -247,7 +279,7 @@ class Service {
     return { processedData, encryptionTags }
   }
 
-  async _getActiveKey() {
+  protected async _getActiveKey() {
     await (<any>this.dataEncrypter)._decryptKeys();
     const activePublicKey = arrayToBase64(<any>this.dataEncrypter.publicKey);
     const activeKeyIndex = this.dataEncrypter.decryptedKeys.findIndex(
@@ -269,7 +301,7 @@ class Service {
     };
   }
 
-  async processWriteString(data: string) {
+  protected async processWriteString(data: string) {
     if (this.isPublic) return data;
     const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data));
     const decodedPayload = base64ToJson(encryptedPayload);
@@ -278,12 +310,12 @@ class Service {
     return jsonToBase64(decodedPayload);
   }
 
-  async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
+  protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
     return this.api.uploadFile(processedData, encryptionTags, false, shouldBundleTransaction);
   }
 
-  async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
+  protected async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
     let processedMemberDetails = {} as any;
     if (memberDetails.fullName) {
       processedMemberDetails.fullName = await this.processWriteString(memberDetails.fullName);
@@ -296,7 +328,7 @@ class Service {
     return processedMemberDetails;
   }
 
-  async processReadObject(object: any, fieldsToDecrypt: any) {
+  protected async processReadObject(object: any, fieldsToDecrypt: any) {
     if (this.isPublic) return object;
     const decryptedObject = object;
     const promises = fieldsToDecrypt.map(async fieldName => {
@@ -308,7 +340,7 @@ class Service {
     return Promise.all(promises).then(() => decryptedObject);
   }
 
-  async processReadString(data: any) {
+  protected async processReadString(data: any) {
     if (this.isPublic) return data;
     const decryptedDataRaw = await this.processReadRaw(data, {});
     return arrayToString(decryptedDataRaw);
@@ -327,7 +359,7 @@ class Service {
     }
   }
 
-  _getEncryptedData(data: any, headers: any) {
+  protected _getEncryptedData(data: any, headers: any) {
     const encryptedKey = headers['x-amz-meta-encryptedkey'];
     const iv = headers['x-amz-meta-iv'];
     const publicKeyIndex = headers['x-amz-meta-public-key-index'];
@@ -344,12 +376,12 @@ class Service {
     return null;
   }
 
-  async _mergeAndUploadBody(body: any) {
+  protected async _mergeAndUploadBody(body: any) {
     const mergedBody = await this.mergeState(this.objectId, this.objectType, body);
     return this._uploadBody(mergedBody);
   }
 
-  async signData(data: any) {
+  protected async signData(data: any) {
     const encodedBody = jsonToBase64(data)
     const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
     const signature = await signString(
@@ -359,7 +391,7 @@ class Service {
     return signature;
   }
 
-  async _uploadBody(body: any) {
+  protected async _uploadBody(body: any) {
     const signature = await this.signData(body);
     const tags = {
       "Data-Type": "State",
@@ -383,7 +415,7 @@ class Service {
     return { metadata, data }
   }
 
-  async mergeState(objectId: string, objectType: string, stateUpdates: any) {
+  protected async mergeState(objectId: string, objectType: string, stateUpdates: any) {
     const currentState = await this.api.getNodeState(objectId, objectType, this.vaultId);
     let newState = lodash.cloneDeepWith(currentState);
     lodash.mergeWith(
@@ -397,7 +429,7 @@ class Service {
     return newState;
   }
 
-  async getUserEncryptionInfo(email?: string, address?: string) {
+  protected async getUserEncryptionInfo(email?: string, address?: string) {
     if (email) {
       const { address, publicKey } = await this.api.getUserFromEmail(email);
       return { address, publicKey: base64ToArray(publicKey) }
@@ -407,7 +439,7 @@ class Service {
     }
   }
 
-  async getTags() {
+  protected async getTags() {
     const tags = {
       [protocolTags.COMMAND]: this.command,
       [protocolTags.SIGNER_ADDRESS]: await this.wallet.getAddress(),
@@ -423,7 +455,7 @@ class Service {
     return tags;
   }
 
-  metadata() {
+  protected metadata() {
     const metadata = {
       actionRef: this.actionRef,
       groupRef: this.groupRef
@@ -431,7 +463,7 @@ class Service {
     return metadata;
   }
 
-  async prepareHeader() {
+  protected async prepareHeader() {
     const header = {
       prevHash: this.prevHash,
       publicSigningKey: await this.wallet.signingPublicKey(),
@@ -448,7 +480,7 @@ class Service {
   * @param {Object} headerPayload
   * @param {Object} bodyPayload
   */
-  async encodeTransaction(header: any, body: any) {
+   protected async encodeTransaction(header: any, body: any) {
     const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
     const publicKey = await this.wallet.signingPublicKey()
 

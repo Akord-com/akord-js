@@ -144,11 +144,6 @@ export class Akord {
     transactionId: string
   }[]> {
     const groupRef = items && items.length > 1 ? uuidv4() : null;
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
-    let encryptionKeys = {} as any;
-    if (!vault.state?.isPublic) {
-      encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-    }
     const emails = items.reduce((accumulator, currentValue) => {
       accumulator.push(currentValue.email);
       return accumulator;
@@ -173,22 +168,6 @@ export class Akord {
     return response;
   }
 
-  /**
-   * @returns Promise with user vaults array
-   */
-  public async getVaults(): Promise<{ id: string, name: string }[]> {
-    const vaults = await this.api.getVaults(this.service.wallet);
-    let vaultTable = [];
-    for (let vault of vaults) {
-      const decryptedState = await this.decryptNode(vault, objectTypes.VAULT, vault);
-      vaultTable.push({
-        id: vault,
-        name: decryptedState.name
-      });
-    }
-    return vaultTable;
-  }
-
   public async getContractState(id: string): Promise<Contract> {
     const contract = await this.api.getContractState(id);
     this.service.setIsPublic(contract.state.isPublic);
@@ -204,92 +183,15 @@ export class Akord {
       this.service.setKeys(keys);
       (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
     }
-    contract.state = await this.decryptState(contract.state);
+    contract.state = await this.service.decryptState(contract.state);
     if (contract.state.memberships) {
-      await Promise.all(contract.state.memberships.map(async (membership) => await this.decryptState(membership)));
+      await Promise.all(contract.state.memberships.map(async (membership) => await this.service.decryptState(membership)));
     }
-    await Promise.all(contract.state.memos.map(async (memo) => await this.decryptState(memo)));
-    await Promise.all(contract.state.folders.map(async (folder) => await this.decryptState(folder)));
-    await Promise.all(contract.state.stacks.map(async (stack) => await this.decryptState(stack)));
-    await Promise.all(contract.state.notes.map(async (note) => await this.decryptState(note)));
+    await Promise.all(contract.state.memos.map(async (memo) => await this.service.decryptState(memo)));
+    await Promise.all(contract.state.folders.map(async (folder) => await this.service.decryptState(folder)));
+    await Promise.all(contract.state.stacks.map(async (stack) => await this.service.decryptState(stack)));
+    await Promise.all(contract.state.notes.map(async (note) => await this.service.decryptState(note)));
     return contract;
-  }
-
-  /**
-   * @param  {string} vaultId
-   * @param  {string} objectType
-   * @returns Promise with nodes array
-   */
-  public async getNodes(vaultId: string, objectType: string): Promise<any> {
-    const nodes = await this.api.getObjectsByVaultId(vaultId, objectType);
-    let nodeTable = [];
-    await this.setVaultEncryptionContext(vaultId);
-    for (let node of nodes) {
-      const decryptedState = await this.service.processReadObject(node.state, ["title", "name", "message"]);
-      nodeTable.push({
-        id: node.id,
-        createdAt: node.createdAt,
-        ...decryptedState
-      });
-    }
-    return nodeTable;
-  }
-
-  /**
-   * @param  {string} objectId
-   * @param  {string} objectType
-   * @param  {string} [vaultId]
-   * @returns Promise with decrypted node state
-   */
-  public async decryptNode(objectId: string, objectType: string, vaultId?: string): Promise<any> {
-    const state = await this.api.getNodeState(objectId, objectType, vaultId);
-    if (vaultId) {
-      await this.setVaultEncryptionContext(vaultId);
-    } else {
-      const object = await this.api.getObject(objectId, objectType);
-      await this.setVaultEncryptionContext(object.dataRoomId || object.id);
-    }
-    return this.decryptState(state);
-  }
-
-  /**
-   * @param  {string} objectId
-   * @param  {string} objectType
-   * @returns Promise with decrypted object
-   */
-  public async decryptObject(objectId: string, objectType: string): Promise<any> {
-    const object = await this.api.getObject(objectId, objectType);
-    await this.setVaultEncryptionContext(object.dataRoomId || object.id);
-    object.state = await this.decryptState(object.state);
-    return object;
-  }
-
-  /**
-   * Decrypt given state (require encryption context)
-   * @param  {any} state
-   * @returns Promise with decrypted state
-   */
-  public async decryptState<T>(state: T): Promise<T> {
-    const decryptedState = await this.service.processReadObject(state, ["title", "name", "message", "content"]);
-    if (decryptedState.files && decryptedState.files.length > 0) {
-      for (const [index, file] of decryptedState.files.entries()) {
-        const decryptedFile = await this.service.processReadObject(file, ["title", "name"]);
-        decryptedState.files[index] = decryptedFile;
-      }
-    }
-    if (decryptedState.reactions && decryptedState.reactions.length > 0) {
-      for (const [index, reaction] of decryptedState.reactions.entries()) {
-        const decryptedReaction = await this.service.processReadObject(reaction, ["reaction"]);
-        decryptedState.reactions[index] = decryptedReaction;
-      }
-    }
-    if (decryptedState.revisions && decryptedState.revisions.length > 0) {
-      for (const [index, revision] of decryptedState.revisions.entries()) {
-        const decryptedRevision = await this.service.processReadObject(revision, ["content"]);
-        decryptedState.revisions[index] = decryptedRevision;
-      }
-    }
-    return decryptedState;
   }
 
   /**
@@ -363,30 +265,6 @@ export class Akord {
     return fileBinary;
   }
 
-  /**
-   * Get file stack version by index, return the latest version by default
-   * @param  {string} stackId
-   * @param  {string} [index] file version index
-   * @returns Promise with file name & data buffer
-   */
-  public async getStackFile(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = await this.api.getObject(stackId, objectTypes.STACK);
-    let file: any;
-    if (index) {
-      if (stack.state.files && stack.state.files[index]) {
-        file = stack.state.files[index];
-      } else {
-        throw new Error("Given index: " + index + " does not exist for stack: " + stackId);
-      }
-    } else {
-      file = stack.state.files[stack.state.files.length - 1];
-    }
-    const fileBuffer = await this.getFile(file.resourceUrl, stack.dataRoomId);
-    const service = await this.setVaultContext(stack.dataRoomId);
-    const fileName = await service.processReadString(file.title);
-    return { name: fileName, data: fileBuffer };
-  }
-
   private async batchAction(
     items: { id: string, objectType: string, role?: string }[],
     actionType: string,
@@ -435,23 +313,6 @@ export class Akord {
       (<any>service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
     }
     return service;
-  }
-
-  private async setVaultEncryptionContext(vaultId: string): Promise<any> {
-    const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-    if (encryptionKeys.encryptionType) {
-      const keys = encryptionKeys.keys.map(((keyPair) => {
-        return {
-          encPrivateKey: keyPair.encPrivateKey,
-          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
-        }
-      }))
-      this.service.setKeys(keys);
-      (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
-      this.service.setIsPublic(false);
-    } else {
-      this.service.setIsPublic(true);
-    }
   }
 
   private appendBuffer(buffer1: Uint8Array, buffer2: Uint8Array): ArrayBufferLike {

@@ -12,11 +12,11 @@ async function vaultCreate() {
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
-  const membership = await akord.api.getObject(membershipId, "Membership");
+  const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.state.role).toEqual("OWNER");
 
-  const vault = await akord.decryptObject(vaultId, "Vault");
+  const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.state.title).toEqual(name);
   return { vaultId };
@@ -37,7 +37,7 @@ describe("Testing note commands", () => {
 
     noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
-    const note = await akord.decryptObject(noteId, "Note");
+    const note = await akord.note.get(noteId);
     expect(note.state.revisions.length).toEqual(1);
     expect(JSON.parse(note.state.content)).toEqual(content);
   });
@@ -48,21 +48,21 @@ describe("Testing note commands", () => {
 
     await akord.note.uploadRevision(noteId, name, content);
 
-    const note = await akord.api.getObject(noteId, "Note");
+    const note = await akord.note.get(noteId);
     expect(note.state.revisions.length).toEqual(2);
   });
 
   it("should revoke the note", async () => {
     await akord.note.revoke(noteId);
 
-    const note = await akord.api.getObject(noteId, "Note");
+    const note = await akord.note.get(noteId);
     expect(note.status).toEqual("REVOKED");
   });
 
   it("should restore the note", async () => {
     await akord.note.restore(noteId);
 
-    const note = await akord.api.getObject(noteId, "Note");
+    const note = await akord.note.get(noteId);
     expect(note.status).toEqual("ACTIVE");
     expect(note.state.revisions.length).toEqual(2);
   });
