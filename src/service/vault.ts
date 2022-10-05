@@ -178,7 +178,7 @@ class VaultService extends NodeService {
       const decryptedState = await this.decryptState(this.vault.state);
       vaultTable.push({
         id: vaultId,
-        name: decryptedState.name
+        name: decryptedState.title
       });
     }
     return vaultTable;
