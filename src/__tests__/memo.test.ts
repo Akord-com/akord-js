@@ -13,11 +13,11 @@ async function vaultCreate() {
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
-  const membership = await akord.api.getObject(membershipId, "Membership");
+  const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.state.role).toEqual("OWNER");
 
-  const vault = await akord.decryptObject(vaultId, "Vault");
+  const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.state.title).toEqual(name);
   return { vaultId };
@@ -36,14 +36,14 @@ describe("Testing memo commands", () => {
     const message = faker.lorem.sentences(50);
     memoId = (await akord.memo.create(vaultId, message)).memoId;
 
-    const memo = await akord.decryptObject(memoId, "Memo");
+    const memo = await akord.memo.get(memoId);
     expect(memo.state.message).toEqual(message);
   });
 
   it("should add JOY reaction emoji", async () => {
     await akord.memo.addReaction(memoId, reactionEmoji.JOY);
 
-    const memo = await akord.decryptObject(memoId, "Memo");
+    const memo = await akord.memo.get(memoId);
     expect(memo.state.reactions.length).toEqual(1);
     expect(memo.state.reactions[0].reaction).toEqual(reactionEmoji.JOY);
   });
@@ -51,7 +51,7 @@ describe("Testing memo commands", () => {
   it("should add FIRE reaction emoji", async () => {
     await akord.memo.addReaction(memoId, reactionEmoji.FIRE);
 
-    const memo = await akord.decryptObject(memoId, "Memo");
+    const memo = await akord.memo.get(memoId);
     expect(memo.state.reactions.length).toEqual(2);
     expect(memo.state.reactions[1].reaction).toEqual(reactionEmoji.FIRE);
   });
@@ -59,7 +59,7 @@ describe("Testing memo commands", () => {
   it("should remove JOY reaction emoji", async () => {
     await akord.memo.removeReaction(memoId, reactionEmoji.JOY);
 
-    const memo = await akord.decryptObject(memoId, "Memo");
+    const memo = await akord.memo.get(memoId);
     expect(memo.state.reactions.length).toEqual(1);
     expect(memo.state.reactions[0].reaction).toEqual(reactionEmoji.FIRE);
   });

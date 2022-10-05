@@ -12,7 +12,7 @@ class VaultService extends NodeService {
    * @param  {boolean} [isPublic]
    * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
-   public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<{
+  public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<{
     transactionId: string,
     vaultId: string,
     membershipId: string
@@ -153,6 +153,35 @@ class VaultService extends NodeService {
     )
     const { id } = await this.api.postLedgerTransaction([encodedTransaction]);
     return { transactionId: id };
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with the decrypted vault
+   */
+  public async get(vaultId: string): Promise<any> {
+    const object = await this.api.getObject(vaultId, this.objectType);
+    await this.setVaultContext(object.id);
+    object.state = await this.decryptState(object.state);
+    delete object.__typename;
+    return object;
+  }
+
+  /**
+   * @returns Promise with currently authenticated user vaults
+   */
+  public async list(): Promise<any> {
+    const vaults = await this.api.getVaults(this.wallet);
+    let vaultTable = [];
+    for (let vaultId of vaults) {
+      await this.setVaultContext(vaultId);
+      const decryptedState = await this.decryptState(this.vault.state);
+      vaultTable.push({
+        id: vaultId,
+        name: decryptedState.name
+      });
+    }
+    return vaultTable;
   }
 
   public async setVaultContext(vaultId: string): Promise<void> {

@@ -56,6 +56,37 @@ class NodeService extends Service {
     this.setCommand(commands.NODE_DELETE);
     return this.nodeUpdate();
   }
+
+  /**
+   * @param  {string} nodeId
+   * @returns Promise with the decrypted node
+   */
+  public async get(nodeId: string): Promise<any> {
+    const object = await this.api.getObject(nodeId, this.objectType);
+    await this.setVaultContext(object.dataRoomId);
+    object.state = await this.decryptState(object.state);
+    delete object.__typename;
+    return object;
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with all nodes within given vault
+   */
+  public async list(vaultId: string): Promise<any> {
+    const nodes = await this.api.getObjectsByVaultId(vaultId, this.objectType);
+    let nodeTable = [];
+    await this.setVaultContext(vaultId);
+    for (let node of nodes) {
+      const decryptedState = await this.decryptState(node.state);
+      nodeTable.push({
+        id: node.id,
+        createdAt: node.createdAt,
+        ...decryptedState
+      });
+    }
+    return nodeTable;
+  }
 }
 
 export {

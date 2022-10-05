@@ -27,11 +27,11 @@ async function vaultCreate() {
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
-  const membership = await akord.api.getObject(membershipId, "Membership");
+  const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.state.role).toEqual("OWNER");
 
-  const vault = await akord.decryptObject(vaultId, "Vault");
+  const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.state.title).toEqual(name);
   return { vaultId };
@@ -54,12 +54,10 @@ describe("Testing batch actions", () => {
       const name = faker.random.words();
       folderId = (await akord.folder.create(vaultId, name)).folderId;
 
-      const folder = await akord.api.getObject(folderId, "Folder");
+      const folder = await akord.folder.get(folderId);
       expect(folder.status).toEqual("ACTIVE");
       expect(folder.folderId).toEqual(null);
-
-      const decryptedState = await akord.service.processReadObject(folder.state, ["title"]);
-      expect(decryptedState.title).toEqual(name);
+      expect(folder.state.title).toEqual(name);
     });
 
     it("should create note", async () => {
@@ -68,7 +66,7 @@ describe("Testing batch actions", () => {
 
       noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
-      const note = await akord.api.getObject(noteId, "Note");
+      const note = await akord.note.get(noteId);
       expect(note.state.revisions.length).toEqual(1);
     });
 
@@ -78,10 +76,10 @@ describe("Testing batch actions", () => {
         { id: noteId, objectType: "Note" },
       ])
 
-      const folder = await akord.api.getObject(folderId, "Folder");
+      const folder = await akord.folder.get(folderId);
       expect(folder.status).toEqual("REVOKED");
 
-      const note = await akord.api.getObject(noteId, "Note");
+      const note = await akord.note.get(noteId);
       expect(note.status).toEqual("REVOKED");
     });
 
@@ -91,10 +89,10 @@ describe("Testing batch actions", () => {
         { id: noteId, objectType: "Note" },
       ])
 
-      const folder = await akord.api.getObject(folderId, "Folder");
+      const folder = await akord.folder.get(folderId);
       expect(folder.status).toEqual("ACTIVE");
 
-      const note = await akord.api.getObject(noteId, "Note");
+      const note = await akord.note.get(noteId);
       expect(note.status).toEqual("ACTIVE");
     });
   });
@@ -114,7 +112,7 @@ describe("Testing batch actions", () => {
       const response = await akord.batchStackCreate(vaultId, items);
 
       for (let index in items) {
-        const stack = await akord.decryptObject(response[index].stackId, "Stack");
+        const stack = await akord.stack.get(response[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
         expect(stack.state.files.length).toEqual(1);
         expect(stack.state.files[0].title).toEqual("logo.png");
@@ -131,7 +129,7 @@ describe("Testing batch actions", () => {
         ]
       ));
       for (let item of response) {
-        const membership = await akord.api.getObject(item.membershipId, "Membership");
+        const membership = await akord.membership.get(item.membershipId);
         if (membership.email === email2) {
           membershipId1 = item.membershipId;
           expect(membership.status).toEqual("PENDING");
@@ -150,10 +148,10 @@ describe("Testing batch actions", () => {
         { id: membershipId2, role: "CONTRIBUTOR" }
       ])
 
-      const membership1 = await akord.api.getObject(membershipId1, "Membership");
+      const membership1 = await akord.membership.get(membershipId1);
       expect(membership1.state.role).toEqual("VIEWER");
 
-      const membership2 = await akord.api.getObject(membershipId2, "Membership");
+      const membership2 = await akord.membership.get(membershipId2);
       expect(membership2.state.role).toEqual("CONTRIBUTOR");
     });
   });

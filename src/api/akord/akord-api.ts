@@ -205,12 +205,15 @@ export default class AkordApi extends Api {
 
   public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
+    const filter = objectType === "Membership"
+      ? { status: { eq: 'ACCEPTED' } }
+      : { status: { eq: 'ACTIVE' } };
     const results = await this.paginatedQuery(
       queryName,
       queries[queryName],
       {
         dataRoomId: vaultId
-      }, { status: { eq: 'ACTIVE' } })
+      }, filter);
     return results;
   };
 

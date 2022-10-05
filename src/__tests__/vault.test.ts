@@ -12,11 +12,11 @@ async function vaultCreate() {
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
 
-  const membership = await akord.api.getObject(membershipId, "Membership");
+  const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.state.role).toEqual("OWNER");
 
-  const vault = await akord.decryptObject(vaultId, "Vault");
+  const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.state.title).toEqual(name);
   return { vaultId };
@@ -35,17 +35,15 @@ describe("Testing vault commands", () => {
 
     await akord.vault.rename(vaultId, name);
 
-    const vault = await akord.api.getObject(vaultId, "Vault");
+    const vault = await akord.vault.get(vaultId);
     expect(vault.status).toEqual("ACTIVE");
-
-    const decryptedState = await akord.service.processReadObject(vault.state, ["title"]);
-    expect(decryptedState.title).toEqual(name);
+    expect(vault.state.title).toEqual(name);
   });
 
   it("should archive the vault", async () => {
     await akord.vault.archive(vaultId);
 
-    const vault = await akord.api.getObject(vaultId, "Vault");
+    const vault = await akord.vault.get(vaultId);
     expect(vault.status).toEqual("ARCHIVED");
   });
 
@@ -59,7 +57,7 @@ describe("Testing vault commands", () => {
   it("should restore the vault", async () => {
     await akord.vault.restore(vaultId);
 
-    const vault = await akord.api.getObject(vaultId, "Vault");
+    const vault = await akord.vault.get(vaultId);
     expect(vault.status).toEqual("ACTIVE");
   });
 });

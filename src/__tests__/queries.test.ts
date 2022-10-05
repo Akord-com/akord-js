@@ -34,7 +34,7 @@ describe("Testing querying directly from permaweb", () => {
   });
 
   it("Query all vaults from Akord API", async () => {
-    const result = await clientWithAkordApi.getVaults();
+    const result = await clientWithAkordApi.vault.list();
     expect(result).toEqual(vaults);
   });
 
@@ -57,12 +57,12 @@ describe("Testing querying directly from permaweb", () => {
   });
 
   it("Query all vaults from Arweave API", async () => {
-    const result = await clientWithArweaveApi.getVaults();
+    const result = await clientWithArweaveApi.vault.list();
     expect(result).toEqual(vaults);
   });
 
   it("Query memos from Arweave API", async () => {
-    const result = await clientWithArweaveApi.getNodes(vaults[0].id, 'Memo');
+    const result = await clientWithArweaveApi.memo.list(vaults[0].id);
     expect(result.length).toEqual(1);
     expect(result[0].message).toEqual(message);
   });
