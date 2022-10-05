@@ -362,6 +362,7 @@ export const membershipsByMemberPublicSigningKey =
             encAccessKey
           }
           dataRoom {
+            status
             state {
               isContract
               isPublic
