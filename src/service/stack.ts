@@ -106,8 +106,6 @@ class StackService extends NodeService {
   async _uploadFile(file: any, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl: string }> {
     let tags = {};
     if (this.isPublic) {
-      const hash = await digestRaw(file.data);
-      tags['File-Hash'] = hash;
       tags['File-Name'] = encodeURIComponent(file.name);
       if (file.lastModified) {
         tags['File-Modified-At'] = file.lastModified.toString();
@@ -123,6 +121,7 @@ class StackService extends NodeService {
       }
     }
     tags['Content-Type'] = mimeType;
+    tags['File-Hash'] = await digestRaw(processedData);
     tags['File-Size'] = file.size;
     tags['File-Type'] = file.type;
     tags['Timestamp'] = JSON.stringify(Date.now());
