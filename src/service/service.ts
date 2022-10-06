@@ -98,10 +98,15 @@ class Service {
     }
     if (decryptedState.revisions && decryptedState.revisions.length > 0) {
       for (const [index, revision] of decryptedState.revisions.entries()) {
-        const decryptedRevision = await this.processReadObject(revision, ["content"]);
+        const decryptedRevision = await this.processReadObject(revision, ["content", "title"]);
         delete decryptedRevision.__typename;
         decryptedState.revisions[index] = decryptedRevision;
       }
+    }
+    if (decryptedState.memberDetails) {
+      const decryptedMemberDetails = await this.processReadObject(decryptedState.memberDetails, ["fullName"]);
+      delete decryptedMemberDetails.__typename;
+      decryptedState.memberDetails = decryptedMemberDetails;
     }
     delete decryptedState.__typename;
     return decryptedState;
@@ -480,7 +485,7 @@ class Service {
   * @param {Object} headerPayload
   * @param {Object} bodyPayload
   */
-   protected async encodeTransaction(header: any, body: any) {
+  protected async encodeTransaction(header: any, body: any) {
     const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
     const publicKey = await this.wallet.signingPublicKey()
 
