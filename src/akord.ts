@@ -1,4 +1,4 @@
-import { Api, ApiFactory, AkordApi } from "./api";
+import { Api, ApiFactory } from "./api";
 import { ClientConfig } from "./client-config";
 import { Service, ServiceFactory } from "./service";
 import { Wallet } from "@akord/crypto";
@@ -15,6 +15,7 @@ import { ProfileService } from "./service/profile";
 import { Contract } from "./model/contract";
 import { Auth } from "./auth";
 import { CacheBusters } from "./model/cacheable";
+import { FileService } from "./service/file";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -25,6 +26,7 @@ export class Akord {
   public membership: MembershipService;
   public vault: VaultService;
   public stack: StackService;
+  public file: FileService;
   public note: NoteService;
   public profile: ProfileService;
   public service: Service;
@@ -119,12 +121,6 @@ export class Akord {
     transactionId: string
   }[]> {
     const groupRef = items && items.length > 1 ? uuidv4() : null;
-
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
-    let encryptionKeys = {} as any;
-    if (!vault.state?.isPublic) {
-      encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-    }
     const response = [] as { stackId: string, transactionId: string }[];
     await Promise.all(items.map(async (item) => {
       const service = new StackService(this.service.wallet, this.api);
@@ -194,77 +190,6 @@ export class Akord {
     return contract;
   }
 
-  /**
-   * @param  {string} id file resource url
-   * @param  {string} vaultId
-   * @param  {boolean} [isChunked]
-   * @param  {number} [numberOfChunks]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
-   * @returns Promise with file buffer
-   */
-  public async getFile(id: string, vaultId: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
-    const service = await this.setVaultContext(vaultId);
-    let fileBinary
-    if (isChunked) {
-      let currentChunk = 0;
-      try {
-        while (currentChunk < numberOfChunks) {
-          const url = `${id}_${currentChunk}`;
-          const file = await this.api.downloadFile(url, service.isPublic, progressHook, cancelHook);
-          const fileData = await service.processReadRaw(file.fileData, file.headers)
-          fileBinary = this.appendBuffer(fileBinary, fileData);
-          currentChunk++;
-        }
-      } catch (e) {
-        Logger.log(e);
-        throw new Error(
-          "Failed to download. Please check your network connection." +
-          " Please upload the file again if problem persists and/or contact Akord support."
-        );
-      }
-    } else {
-      const file = await this.api.downloadFile(id, service.isPublic, progressHook, cancelHook);
-      fileBinary = await service.processReadRaw(file.fileData, file.headers)
-    }
-    return fileBinary;
-  }
-
-  /**
-   * @param  {string} id file resource url
-   * @param  {boolean} [isChunked]
-   * @param  {number} [numberOfChunks]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
-   * @returns Promise with file buffer
-   */
-  public async getPublicFile(id: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
-    this.service.setIsPublic(true);
-    let fileBinary
-    if (isChunked) {
-      let currentChunk = 0;
-      try {
-        while (currentChunk < numberOfChunks) {
-          const url = `${id}_${currentChunk}`;
-          const file = await this.api.downloadFile(url, true, progressHook, cancelHook);
-          const fileData = await this.service.processReadRaw(file.fileData, file.headers)
-          fileBinary = this.appendBuffer(fileBinary, fileData);
-          currentChunk++;
-        }
-      } catch (e) {
-        Logger.log(e);
-        throw new Error(
-          "Failed to download. Please check your network connection." +
-          " Please upload the file again if problem persists and/or contact Akord support."
-        );
-      }
-    } else {
-      const file = await this.api.downloadFile(id, true, progressHook, cancelHook);
-      fileBinary = await this.service.processReadRaw(file.fileData, file.headers)
-    }
-    return fileBinary;
-  }
-
   private async batchAction(
     items: { id: string, objectType: string, role?: string }[],
     actionType: string,
@@ -299,29 +224,5 @@ export class Akord {
       }
     }));
     return transactionIds;
-  }
-
-  private async setVaultContext(vaultId: string) {
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
-    const service = new Service(this.service.wallet, this.api);
-    service.setVault(vault);
-    service.setVaultId(vaultId);
-    service.setIsPublic(vault.state?.isPublic);
-    if (!service.isPublic) {
-      const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-      service.setKeys(encryptionKeys.keys);
-      (<any>service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
-    }
-    return service;
-  }
-
-  private appendBuffer(buffer1: Uint8Array, buffer2: Uint8Array): ArrayBufferLike {
-    if (!buffer1 && !buffer2) return;
-    if (!buffer1) return buffer2;
-    if (!buffer2) return buffer1;
-    var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
-    tmp.set(new Uint8Array(buffer1), 0);
-    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
-    return tmp.buffer;
   }
 }

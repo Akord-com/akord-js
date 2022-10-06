@@ -211,7 +211,7 @@ class Service {
     this.object = object;
   }
 
-  protected setRawDataEncryptionPublicKey(publicKey) {
+  setRawDataEncryptionPublicKey(publicKey) {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 

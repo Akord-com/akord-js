@@ -68,13 +68,13 @@ describe("Testing querying directly from permaweb", () => {
   });
 
   it("Query chunked file from Akord API", async () => {
-    const decryptedFile = await clientWithAkordApi.getFile(fileId, vaults[0].id, true, 3);
+    const decryptedFile = await clientWithAkordApi.file.download(fileId, vaults[0].id, true, 3);
     const file = getFileFromPath("./src/__tests__/data/chunked-file.test");
     expect(Buffer.from(decryptedFile)).toEqual(file.data);
   });
 
   it("Query chunked file from Akord API", async () => {
-    const decryptedFile = await clientWithAkordApi.getFile(fileId, vaults[0].id, true, 3);
+    const decryptedFile = await clientWithAkordApi.file.download(fileId, vaults[0].id, true, 3);
     const file = getFileFromPath("./src/__tests__/data/chunked-file.test");
     expect(Buffer.from(decryptedFile)).toEqual(file.data);
   });

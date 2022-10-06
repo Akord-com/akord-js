@@ -1,11 +1,12 @@
 import { NodeService } from "./node";
-import { actionRefs, commands, objectTypes, protocolTags } from "../constants";
+import { actionRefs, commands, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
-import * as mime from "mime-types";
-import { digestRaw } from "@akord/crypto";
+import { FileService } from "./file";
 
 class StackService extends NodeService {
   objectType: string = objectTypes.STACK;
+
+  public fileService = new FileService(this.wallet, this.api);
 
   /**
    * @param  {string} vaultId
@@ -28,19 +29,21 @@ class StackService extends NodeService {
     const {
       resourceTx,
       resourceUrl,
+      resourceHash,
       thumbnailTx,
       thumbnailUrl
-    } = await this._postFile(file, progressHook, cancelHook);
+    } = await this.postFile(file, progressHook, cancelHook);
 
     const body = {
-      name: await super.processWriteString(name ? name : file.name),
+      name: await this.processWriteString(name ? name : file.name),
       files: [
         {
           postedAt: JSON.stringify(Date.now()),
-          name: await super.processWriteString(file.name ? file.name : name),
+          name: await this.processWriteString(file.name ? file.name : name),
           type: file.type,
           size: file.size,
           resourceTx: resourceTx,
+          resourceHash: resourceHash,
           thumbnailTx: thumbnailTx
         }
       ]
@@ -60,7 +63,7 @@ class StackService extends NodeService {
   public async uploadRevision(stackId: string, file: any, progressHook?: (progress: number) => void): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
-    const { resourceTx, resourceUrl, thumbnailTx, thumbnailUrl } = await this._postFile(file, progressHook);
+    const { resourceTx, resourceUrl, resourceHash, thumbnailTx, thumbnailUrl } = await this.postFile(file, progressHook);
 
     const body = {
       files: [
@@ -70,6 +73,7 @@ class StackService extends NodeService {
           type: file.type,
           size: file.size,
           resourceTx: resourceTx,
+          resourceHash: resourceHash,
           thumbnailTx: thumbnailTx
         }
       ]
@@ -103,45 +107,19 @@ class StackService extends NodeService {
     return { name: fileName, data: fileBuffer };
   }
 
-  async _uploadFile(file: any, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl: string }> {
-    let tags = {};
-    if (this.isPublic) {
-      tags['File-Name'] = encodeURIComponent(file.name);
-      if (file.lastModified) {
-        tags['File-Modified-At'] = file.lastModified.toString();
-      }
-    }
-    const { processedData, encryptionTags } = await this.processWriteRaw(file.data);
-    const mimeType = mime.lookup(file.name);
-    if (!file.type) {
-      try {
-        file.type = mimeType;
-      } catch (e) {
-        file = file.slice(0, file.size, mimeType);
-      }
-    }
-    tags['Content-Type'] = mimeType;
-    tags['File-Hash'] = await digestRaw(processedData);
-    tags['File-Size'] = file.size;
-    tags['File-Type'] = file.type;
-    tags['Timestamp'] = JSON.stringify(Date.now());
-    tags['Data-Type'] = "File";
-    tags[protocolTags.VAULT_ID] = this.vaultId;
-    return this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook);
-  }
+  private async postFile(file: any, progressHook?: (progress: number) => void, cancelHook?: AbortController)
+    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, thumbnailTx?: string, thumbnailUrl?: string }> {
 
-  async _postFile(file: any, progressHook?: (progress: number) => void, cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, thumbnailTx?: string, thumbnailUrl?: string }> {
-
-    const filePromise = this._uploadFile(file, true, progressHook, cancelHook);
+    const filePromise = this.fileService.upload(file, true, progressHook, cancelHook);
     try {
       const thumbnail = await createThumbnail(file);
       if (thumbnail) {
-        const thumbnailPromise = this._uploadFile(thumbnail, false, progressHook);
+        const thumbnailPromise = this.fileService.upload(thumbnail, false, progressHook);
         const results = await Promise.all([filePromise, thumbnailPromise]);
         return {
           resourceTx: results[0].resourceTx,
           resourceUrl: results[0].resourceUrl,
+          resourceHash: results[0].resourceHash,
           thumbnailTx: results[1].resourceTx,
           thumbnailUrl: results[1].resourceUrl
         };
@@ -151,6 +129,13 @@ class StackService extends NodeService {
     } catch (e) {
       console.log(e);
     }
+  }
+
+  public async setVaultContext(vaultId: string): Promise<void> {
+    await super.setVaultContext(vaultId);
+    this.fileService.setKeys(this.dataEncrypter.decryptedKeys);
+    this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
+    this.fileService.setVaultId(this.vaultId);
   }
 };
 
