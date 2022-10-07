@@ -110,11 +110,11 @@ class StackService extends NodeService {
   private async postFile(file: any, progressHook?: (progress: number) => void, cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, thumbnailTx?: string, thumbnailUrl?: string }> {
 
-    const filePromise = this.fileService.upload(file, true, progressHook, cancelHook);
+    const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
     try {
       const thumbnail = await createThumbnail(file);
       if (thumbnail) {
-        const thumbnailPromise = this.fileService.upload(thumbnail, false, progressHook);
+        const thumbnailPromise = this.fileService.create(thumbnail, false, progressHook);
         const results = await Promise.all([filePromise, thumbnailPromise]);
         return {
           resourceTx: results[0].resourceTx,

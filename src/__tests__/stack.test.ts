@@ -60,9 +60,8 @@ describe("Testing stack commands", () => {
     expect(stack.state.files.length).toEqual(1);
     expect(stack.state.files[0].title).toEqual("logo.png");
 
-    const { name: fileName, data } = await akord.stack.getFile(stackId);
-    expect(Buffer.from(data)).toEqual(file.data);
-    expect(fileName).toEqual("logo.png");
+    const binary = await akord.file.get(stack.state.files[0].resourceUrl, vaultId);
+    expect(Buffer.from(binary)).toEqual(file.data);
   });
 
   it("should upload new revision", async () => {
@@ -76,12 +75,11 @@ describe("Testing stack commands", () => {
     expect(stack.state.files[0].title).toEqual("logo.png");
     expect(stack.state.files[1].title).toEqual("avatar.jpeg");
 
-    const { name: fileName, data } = await akord.stack.getFile(stackId);
-    expect(Buffer.from(data)).toEqual(file.data);
-    expect(fileName).toEqual("avatar.jpeg");
+    const binary = await akord.file.get(stack.state.files[1].resourceUrl, vaultId);
+    expect(Buffer.from(binary)).toEqual(file.data);
 
     const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
-    const decryptedFirstFile = await akord.getFile(stack.state.files[0].resourceUrl, vaultId);
+    const decryptedFirstFile = await akord.file.get(stack.state.files[0].resourceUrl, vaultId);
     expect(Buffer.from(decryptedFirstFile)).toEqual(firstFile.data);
   });
 
@@ -97,11 +95,11 @@ describe("Testing stack commands", () => {
     expect(stack.state.files[1].title).toEqual("avatar.jpeg");
 
     const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
-    const decryptedfirstFile = await akord.getFile(stack.state.files[0].resourceUrl, vaultId);
+    const decryptedfirstFile = await akord.file.get(stack.state.files[0].resourceUrl, vaultId);
     expect(Buffer.from(decryptedfirstFile)).toEqual(firstFile.data);
 
     const secondFile = getFileFromPath("./src/__tests__/data/avatar.jpeg");
-    const decryptedSecondFile = await akord.getFile(stack.state.files[1].resourceUrl, vaultId);
+    const decryptedSecondFile = await akord.file.get(stack.state.files[1].resourceUrl, vaultId);
     expect(Buffer.from(decryptedSecondFile)).toEqual(secondFile.data);
   });
 

@@ -48,6 +48,7 @@ export class Akord {
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);
     this.stack = new StackService(wallet, this.api);
+    this.file = new FileService(wallet, this.api);
     this.note = new NoteService(wallet, this.api);
     this.membership = new MembershipService(wallet, this.api);
     this.profile = new ProfileService(wallet, this.api);

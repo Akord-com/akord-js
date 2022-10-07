@@ -23,7 +23,7 @@ class FileService extends Service {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async download(id: string, vaultId: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
+  public async get(id: string, vaultId: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
     await this.setVaultContext(vaultId);
     let fileBinary: ArrayBuffer;
     if (isChunked) {
@@ -85,7 +85,7 @@ class FileService extends Service {
     return fileBinary;
   }
 
-  public async upload(
+  public async create(
     file: any,
     shouldBundleTransaction?: boolean,
     progressHook?: (progress: number) => void,
@@ -155,6 +155,16 @@ class FileService extends Service {
     }
 
     this.uploadInProgress = false;
+    
+    await new PermapostExecutor()
+      .env((<any>this.api.config).env, (<any>this.api.config).domain)
+      .auth(this.api.jwtToken)
+      .resourceId(resourceUrl)
+      //.tags(TODO)
+      .public(this.isPublic)
+      .numberOfChunks(this.uploadedChunks)
+      .asyncTransaction();
+
     return {
       resourceUrl: this.resourceUrl,
       resourceHash: this.resourceUrl,

@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@akord/crypto": "0.0.43",
-    "@akord/ts-cacheable": "^1.0.7",
+    "@akord/ts-cacheable": "1.0.7",
     "amazon-cognito-identity-js": "^5.2.8",
     "arweave": "1.11.4",
     "aws-appsync": "4.1.5",

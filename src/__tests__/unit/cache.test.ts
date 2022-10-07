@@ -1,4 +1,4 @@
-import { AkordWallet } from "@akord/crypto";
+import { AkordWallet, generateKeyPair } from "@akord/crypto";
 import { Akord } from "../../akord";
 import { AkordApi } from "../../api";
 import { CacheBusters } from "../../model/cacheable";
@@ -79,10 +79,6 @@ it("should bust the profile cache on profile update", async () => {
         };
     });
 
-    Service.prototype.encodeTransaction = jest.fn().mockImplementation(() => {
-        return "";
-    });
-
     AkordApi.prototype.getProfileByPublicSigningKey = jest.fn().mockImplementation(() => {
         return {
             state: {
@@ -107,11 +103,21 @@ it("should bust the profile cache on profile update", async () => {
         return [];
     });
 
+    jest.spyOn(Service.prototype as any, 'encodeTransaction').mockImplementation(() => {});
+
     const wallet = new AkordWallet("any");
+
+    const keyPair = await generateKeyPair();
+    wallet.signingPrivateKeyRaw = jest.fn().mockImplementation(() => {
+        return keyPair.privateKey;
+    });
+
     akord = new Akord(wallet, undefined,
         {
             cache: true
         });
+
+    
 
     await akord.profile.get();
     await akord.profile.get();

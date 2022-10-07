@@ -25,6 +25,7 @@ export class PermapostExecutor {
     private _contractId: string;
     private _metadata: string;
     private _shouldBundleTransaction: boolean;
+    private _numberOfChunks: number;
 
     constructor() { }
 
@@ -115,6 +116,11 @@ export class PermapostExecutor {
         return this;
     }
 
+    numberOfChunks(numberOfChunks: number): PermapostExecutor {
+        this._numberOfChunks = numberOfChunks;
+        return this;
+    }
+
     /**
      * 
      * @requires: 
@@ -140,7 +146,7 @@ export class PermapostExecutor {
         return response.data.contractTx
     }
 
-    async getContract() : Promise<Contract> {
+    async getContract(): Promise<Contract> {
         const config = {
             method: 'get',
             url: `${this._url}/${this._contractUri}/${this._contractId}`,
@@ -220,6 +226,39 @@ export class PermapostExecutor {
         } as AxiosRequestConfig
         const response = await axios(config);
         return response.data.resourceTx
+    }
+
+    /**
+     * Schedules transaction posting
+     * @requires: 
+     * - auth() 
+     * - resourceId() 
+     * - metadata() 
+     * @uses:
+     * - tags()
+     */
+    async asyncTransaction() {
+        if (!this._jwt) {
+            throw Error('Authentication is required to use permapost')
+        }
+        if (!this._resourceId) {
+            throw Error('Reource id is required to use permapost')
+        }
+
+        const tags = this._tags.filter((tag) =>
+            tag.name !== "Public-Key"
+        )
+
+        const config = {
+            method: 'post',
+            url: `${this._url}/${this._transactionUri}`,
+            data: { resourceUrl: this._resourceId, tags: tags, async: true, numberOfChunks: this._numberOfChunks },
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        await axios(config);
     }
 
     /**
@@ -308,7 +347,7 @@ export class PermapostExecutor {
                     config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
                 }
             }
-            config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter((tag) => 
+            config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter((tag) =>
                 tag.name !== "Public-Key"
             ));
         }
