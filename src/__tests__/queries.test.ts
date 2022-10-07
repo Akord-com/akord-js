@@ -39,7 +39,7 @@ describe("Testing querying directly from permaweb", () => {
   });
 
   it("Should query public vault - contract state from Akord API", async () => {
-    const result = await clientWithoutWallet.getContractState(publicVaultId);
+    const result = await clientWithoutWallet.contract.getState(publicVaultId);
     expect(result.state.name).not.toBeNull();
     expect(result.state.isPublic).toBeTruthy();
     expect(result.state.folders.length).toBeTruthy();
@@ -48,7 +48,7 @@ describe("Testing querying directly from permaweb", () => {
   });
 
   it("Should query private vault - contract state from Arweave API & decrypt with Akord Wallet", async () => {
-    const result = await clientWithArweaveApi.getContractState(privateVaultId);
+    const result = await clientWithArweaveApi.contract.getState(privateVaultId);
     expect(result.state.name).not.toBeNull();
     expect(result.state.folders.length).toBeTruthy();
     expect(result.state.folders[0].name).toBeTruthy();

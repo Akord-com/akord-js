@@ -59,9 +59,19 @@ class Service {
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.state?.isPublic);
+    await this.setMembershipKeys(vaultId);
+  }
+
+  protected async setMembershipKeys(vaultId: string) {
     if (!this.isPublic) {
       const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.wallet);
-      this.setKeys(encryptionKeys.keys);
+      const keys = encryptionKeys.keys.map(((keyPair: any) => {
+        return {
+          encPrivateKey: keyPair.encPrivateKey,
+          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+        }
+      }))
+      this.setKeys(keys);
       this.setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
     }
   }
@@ -227,7 +237,7 @@ class Service {
     this.keysEncrypter.setRawPublicKey(publicKey);
   }
 
-  async getProfileDetails() {
+  protected async getProfileDetails() {
     const signingPublicKey = await this.wallet.signingPublicKey();
     const profile = await this.api.getProfileByPublicSigningKey(signingPublicKey);
     if (profile) {
@@ -480,7 +490,7 @@ class Service {
   * @param {Object} headerPayload
   * @param {Object} bodyPayload
   */
-   protected async encodeTransaction(header: any, body: any) {
+  protected async encodeTransaction(header: any, body: any) {
     const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
     const publicKey = await this.wallet.signingPublicKey()
 
