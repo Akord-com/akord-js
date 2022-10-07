@@ -1,9 +1,8 @@
 import { Api, ApiFactory } from "./api";
 import { ClientConfig } from "./client-config";
-import { Service, ServiceFactory } from "./service";
+import { Service } from "./service";
 import { Wallet } from "@akord/crypto";
-import { reactionEmoji, objectTypes } from "./constants";
-import { v4 as uuidv4 } from "uuid";
+import { reactionEmoji } from "./constants";
 import { Logger } from "./logger";
 import { MemoService } from "./service/memo";
 import { FolderService } from "./service/folder";
@@ -16,6 +15,7 @@ import { Contract } from "./model/contract";
 import { Auth } from "./auth";
 import { CacheBusters } from "./model/cacheable";
 import { FileService } from "./service/file";
+import { BatchService } from "./service/batch";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -29,6 +29,7 @@ export class Akord {
   public file: FileService;
   public note: NoteService;
   public profile: ProfileService;
+  public batch: BatchService;
   public service: Service;
 
   public static init: (wallet: Wallet, jwtToken?: string, apiConfig?: ClientConfig) => Promise<Akord>;
@@ -52,116 +53,7 @@ export class Akord {
     this.note = new NoteService(wallet, this.api);
     this.membership = new MembershipService(wallet, this.api);
     this.profile = new ProfileService(wallet, this.api);
-  }
-
-  /**
-   * @param  {{id:string,objectType:string}[]} items
-   * @returns Promise with corresponding transaction ids
-   */
-  public async batchRevoke(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
-    return this.batchAction(items, "REVOKE");
-  }
-
-  /**
-   * @param  {{id:string,objectType:string}[]} items
-   * @returns Promise with corresponding transaction ids
-   */
-  public async batchRestore(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
-    return this.batchAction(items, "RESTORE");
-  }
-
-  /**
-   * @param  {{id:string,objectType:string}[]} items
-   * @returns Promise with corresponding transaction ids
-   */
-  public async batchDelete(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
-    return this.batchAction(items, "DELETE");
-  }
-
-  /**
-   * @param  {{id:string,objectType:string}[]} items
-   * @returns Promise with corresponding transaction ids
-   */
-  public async batchMove(items: { id: string, objectType: string }[], parentId?: string): Promise<{ transactionId: string }[]> {
-    return this.batchAction(items, "MOVE", parentId);
-  }
-
-  /**
-   * @param  {{id:string,role:string}[]} items
-   * @returns Promise with corresponding transaction ids
-   */
-  public async batchMembershipChangeRole(items: { id: string, role: string }[]): Promise<{ transactionId: string }[]> {
-    const groupRef = items && items.length > 1 ? uuidv4() : null;
-
-    const response = [] as { transactionId: string }[];
-    await Promise.all(items.map(async (item) => {
-      const service = new MembershipService(this.service.wallet, this.api);
-      service.setGroupRef(groupRef);
-      response.push(await service.changeRole(item.id, item.role));
-    }));
-    return response;
-  }
-
-  /**
-   * @param  {string} vaultId
-   * @param  {{file:any,name:string}[]} items
-   * @param  {string} [parentId]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
-   * @returns Promise with new stack ids & their corresponding transaction ids
-   */
-  public async batchStackCreate(
-    vaultId: string,
-    items: { file: any, name: string }[],
-    parentId?: string,
-    progressHook?: (progress: number) => void,
-    cancelHook?: AbortController
-  ): Promise<{
-    stackId: string,
-    transactionId: string
-  }[]> {
-    const groupRef = items && items.length > 1 ? uuidv4() : null;
-    const response = [] as { stackId: string, transactionId: string }[];
-    await Promise.all(items.map(async (item) => {
-      const service = new StackService(this.service.wallet, this.api);
-      service.setGroupRef(groupRef);
-      response.push(await service.create(vaultId, item.file, item.name, parentId, progressHook, cancelHook));
-    }));
-    return response;
-  }
-
-  /**
-   * @param  {string} vaultId
-   * @param  {{email:string,role:string}[]} items
-   * @returns Promise with new membership ids & their corresponding transaction ids
-   */
-  public async batchMembershipInvite(vaultId: string, items: { email: string, role: string }[]): Promise<{
-    membershipId: string,
-    transactionId: string
-  }[]> {
-    const groupRef = items && items.length > 1 ? uuidv4() : null;
-    const emails = items.reduce((accumulator, currentValue) => {
-      accumulator.push(currentValue.email);
-      return accumulator;
-    }, []);
-    const results = await this.api.preInviteCheck(emails, vaultId);
-    const response = [] as { membershipId: string, transactionId: string }[];
-
-    await Promise.all(items.map(async (item, index) => {
-      if (results[index].membership) {
-        throw new Error("Membership already exists for this user.");
-      }
-      const { email, role } = item;
-      const userHasAccount = results[index].publicKey;
-      const service = new MembershipService(this.service.wallet, this.api);
-      service.setGroupRef(groupRef);
-      if (userHasAccount) {
-        response.push(await service.invite(vaultId, email, role));
-      } else {
-        response.push(await service.inviteNewUser(vaultId, email, role));
-      }
-    }));
-    return response;
+    this.batch = new BatchService(wallet, this.api);
   }
 
   public async getContractState(id: string): Promise<Contract> {
@@ -188,41 +80,5 @@ export class Akord {
     await Promise.all(contract.state.stacks.map(async (stack) => await this.service.decryptState(stack)));
     await Promise.all(contract.state.notes.map(async (note) => await this.service.decryptState(note)));
     return contract;
-  }
-
-  private async batchAction(
-    items: { id: string, objectType: string, role?: string }[],
-    actionType: string,
-    parentId?: string,
-  ): Promise<{ transactionId: string }[]> {
-    const groupRef = items && items.length > 1 ? uuidv4() : null;
-    const vaultId = (await this.api.getObject(items[0].id, items[0].objectType)).dataRoomId;
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
-    let encryptionKeys = {} as any;
-    if (!vault.state?.isPublic) {
-      encryptionKeys = await this.api.getMembershipKeys(vaultId, this.service.wallet);
-    }
-    const transactionIds = [] as { transactionId: string }[];
-    await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.service.wallet, this.api, item.objectType).serviceInstance();
-      service.setGroupRef(groupRef);
-      switch (actionType) {
-        case "REVOKE":
-          transactionIds.push(await service.revoke(item.id));
-          break;
-        case "RESTORE":
-          transactionIds.push(await service.restore(item.id));
-          break;
-        case "MOVE":
-          transactionIds.push(await service.move(item.id, parentId));
-          break;
-        case "DELETE":
-          transactionIds.push(await service.delete(item.id));
-          break;
-        default:
-          break;
-      }
-    }));
-    return transactionIds;
   }
 }
