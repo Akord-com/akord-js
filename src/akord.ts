@@ -1,9 +1,9 @@
-import { Api, ApiFactory, AkordApi } from "./api";
+import { v4 as uuidv4 } from "uuid";
+import { Wallet } from "@akord/crypto";
+import { Api, ApiFactory } from "./api";
 import { ClientConfig } from "./client-config";
 import { Service, ServiceFactory } from "./service";
-import { Wallet } from "@akord/crypto";
 import { reactionEmoji, objectTypes } from "./constants";
-import { v4 as uuidv4 } from "uuid";
 import { Logger } from "./logger";
 import { MemoService } from "./service/memo";
 import { FolderService } from "./service/folder";
@@ -14,7 +14,7 @@ import { NoteService } from "./service/note";
 import { ProfileService } from "./service/profile";
 import { Contract } from "./model/contract";
 import { Auth } from "./auth";
-import { CacheBusters } from "./model/cacheable";
+import { CacheConfig } from "./model/cacheable";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -40,7 +40,7 @@ export class Akord {
    */
   constructor(wallet?: Wallet, jwtToken?: string, config: ClientConfig = {}) {
     Logger.debug = config.debug;
-    CacheBusters.cache = config.cache
+    CacheConfig.enabled = config.cache
     this.api = new ApiFactory(config, wallet, jwtToken).apiInstance();
     this.service = new Service(wallet, this.api);
     this.vault = new VaultService(wallet, this.api);
@@ -167,6 +167,7 @@ export class Akord {
     }));
     return response;
   }
+
 
   public async getContractState(id: string): Promise<Contract> {
     const contract = await this.api.getContractState(id);

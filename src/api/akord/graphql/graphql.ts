@@ -310,6 +310,53 @@ export const getVault = /* GraphQL */ `
   }
 `
 
+export const getVaults =
+/* GraphQL */
+`
+  query MembershipsByMemberPublicSigningKey(
+    $memberPublicSigningKey: String
+    $sortDirection: ModelSortDirection
+    $filter: ModelMembershipFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    membershipsByMemberPublicSigningKey(
+      memberPublicSigningKey: $memberPublicSigningKey
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        state {
+          status
+          role
+          encryptionType
+          keys {
+            publicKey
+            encPrivateKey
+          }
+          encAccessKey
+        }
+        dataRoom {
+          state {
+            status
+            title
+            isPublic
+            publicKeys
+          }
+          storage {
+            storage_used
+          }
+          updatedAt
+        }
+      }
+      nextToken
+    }
+  }
+`
+
 export const membershipsByMemberPublicSigningKey =
   /* GraphQL */
   `

@@ -2,6 +2,7 @@ import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
 import { LedgerVersion } from '../client-config';
 import { Contract } from '../model/contract';
+import { Vault } from '../model/vault';
 
 abstract class Api {
   getMembershipKeys(vaultId: string, wallet: any): Promise<any> {
@@ -28,7 +29,7 @@ abstract class Api {
     throw new Error("Method not implemented.");
   }
 
-  getVaults(wallet: any): Promise<any> {
+  getVaults(wallet: any): Promise<Vault[]> {
     throw new Error("Method not implemented.");
   }
 

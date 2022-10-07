@@ -4,7 +4,7 @@ import { actionRefs } from "../constants";
 import { EncryptionType } from "@akord/crypto";
 import { ProfileDetails } from "../model/profile-details";
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
-import { CacheBusters } from "../model/cacheable";
+import { CacheConfig } from "../model/cacheable";
 
 class ProfileService extends NodeService {
   objectType: string = "Profile";
@@ -15,12 +15,12 @@ class ProfileService extends NodeService {
    */
   @PCacheable({
     storageStrategy: InMemoryStorageStrategy,
-    cacheBusterObserver: CacheBusters.profile,
+    cacheBusterObserver: CacheConfig.profileBuster,
     shouldCacheDecider: (res) => res && res._cached
   })
   public async get(): Promise<ProfileDetails> {
     const profileDetails = await this.getProfileDetails();
-    return { ...profileDetails, _cached: CacheBusters.cache };
+    return { ...profileDetails, _cached: CacheConfig.enabled };
   }
 
   /**
@@ -30,7 +30,7 @@ class ProfileService extends NodeService {
    * @returns Promise with corresponding transaction ids
    */
   @PCacheBuster({
-    cacheBusterNotifier: CacheBusters.profile
+    cacheBusterNotifier: CacheConfig.profileBuster
   })
   public async update(name: string, avatar: any): Promise<{ transactionId: string }[]> {
     let transactions = [];

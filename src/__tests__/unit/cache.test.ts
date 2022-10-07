@@ -1,14 +1,14 @@
 import { AkordWallet } from "@akord/crypto";
 import { Akord } from "../../akord";
 import { AkordApi } from "../../api";
-import { CacheBusters } from "../../model/cacheable";
+import { CacheConfig } from "../../model/cacheable";
 import { Service } from "../../service";
 
 let akord: Akord;
 
 
 beforeEach(async () => {
-    CacheBusters.profile.next("clear-cache")
+    CacheConfig.profileBuster.next("clear-cache")
 });
 
 it("should query the profile with cache disabled", async () => {

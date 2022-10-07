@@ -2,9 +2,26 @@ import { NodeService } from "./node";
 import { actionRefs, objectTypes, commands, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, jsonToBase64 } from "@akord/crypto";
+import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
+import { CacheConfig } from "../model/cacheable";
+import { Vault } from "../model/vault";
 
 class VaultService extends NodeService {
   objectType: string = objectTypes.VAULT;
+
+
+  @PCacheable({
+    storageStrategy: InMemoryStorageStrategy,
+    cacheBusterObserver: CacheConfig.vaultsBuster,
+    shouldCacheDecider: () => CacheConfig.enabled
+  })
+  public async list(): Promise<Vault[]> {
+    const vaults = await this.api.getVaults(this.wallet);
+    return await Promise.all(vaults.map(async vault => {
+      await vault.decrypt();
+      return vault;
+    }))
+  }
 
   /**
    * @param  {string} name new vault name
@@ -12,6 +29,9 @@ class VaultService extends NodeService {
    * @param  {boolean} [isPublic]
    * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
+  @PCacheBuster({
+    cacheBusterNotifier: CacheConfig.vaultsBuster
+  })
   public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<{
     transactionId: string,
     vaultId: string,
@@ -107,6 +127,9 @@ class VaultService extends NodeService {
    * @param name new vault name
    * @returns Promise with corresponding transaction id
    */
+  @PCacheBuster({
+    cacheBusterNotifier: CacheConfig.vaultsBuster
+  })
   public async rename(vaultId: string, name: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RENAME);
@@ -117,6 +140,9 @@ class VaultService extends NodeService {
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
+  @PCacheBuster({
+    cacheBusterNotifier: CacheConfig.vaultsBuster
+  })
   public async archive(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_ARCHIVE);
@@ -128,6 +154,9 @@ class VaultService extends NodeService {
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
+  @PCacheBuster({
+    cacheBusterNotifier: CacheConfig.vaultsBuster
+  })
   public async restore(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RESTORE);
@@ -139,6 +168,9 @@ class VaultService extends NodeService {
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
+  @PCacheBuster({
+    cacheBusterNotifier: CacheConfig.vaultsBuster
+  })
   public async delete(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_DELETE);
@@ -165,23 +197,6 @@ class VaultService extends NodeService {
     object.state = await this.decryptState(object.state);
     delete object.__typename;
     return object;
-  }
-
-  /**
-   * @returns Promise with currently authenticated user vaults
-   */
-  public async list(): Promise<any> {
-    const vaults = await this.api.getVaults(this.wallet);
-    let vaultTable = [];
-    for (let vaultId of vaults) {
-      await this.setVaultContext(vaultId);
-      const decryptedState = await this.decryptState(this.vault.state);
-      vaultTable.push({
-        id: vaultId,
-        name: decryptedState.name
-      });
-    }
-    return vaultTable;
   }
 
   public async setVaultContext(vaultId: string): Promise<void> {
