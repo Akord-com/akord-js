@@ -12,11 +12,12 @@ beforeEach(async () => {
 });
 
 it("should query the profile with cache disabled", async () => {
-    Service.prototype.getProfileDetails = jest.fn().mockImplementation(() => {
+    jest.spyOn(Service.prototype as any, 'encodeTransaction').mockImplementation(() => { });
+    const getProfileDetails = jest.spyOn(Service.prototype as any, 'getProfileDetails').mockImplementation(() => {
         return {
             publicSigningKey: "test",
             email: "any@akord.com"
-        };
+        }
     });
 
     akord = new Akord(
@@ -30,16 +31,16 @@ it("should query the profile with cache disabled", async () => {
     const profile1 = await akord.profile.get();
     const profile2 = await akord.profile.get();
 
-    expect(Service.prototype.getProfileDetails).toHaveBeenCalledTimes(2);
+    expect(getProfileDetails).toHaveBeenCalledTimes(2);
     expect(profile2).toEqual(profile1);
 });
 
 it("should query the profile with cache disabled by default", async () => {
-    Service.prototype.getProfileDetails = jest.fn().mockImplementation(() => {
+    const getProfileDetails = jest.spyOn(Service.prototype as any, 'getProfileDetails').mockImplementation(() => {
         return {
             publicSigningKey: "test",
             email: "any@akord.com"
-        };
+        }
     });
 
     akord = new Akord(undefined, undefined, {});
@@ -47,16 +48,16 @@ it("should query the profile with cache disabled by default", async () => {
     const profile1 = await akord.profile.get();
     const profile2 = await akord.profile.get();
 
-    expect(Service.prototype.getProfileDetails).toHaveBeenCalledTimes(2);
+    expect(getProfileDetails).toHaveBeenCalledTimes(2);
     expect(profile2).toEqual(profile1);
 });
 
 it("should query the profile and cache the result", async () => {
-    Service.prototype.getProfileDetails = jest.fn().mockImplementation(() => {
+    const getProfileDetails = jest.spyOn(Service.prototype as any, 'getProfileDetails').mockImplementation(() => {
         return {
             publicSigningKey: "test",
             email: "any@akord.com"
-        };
+        }
     });
 
     akord = new Akord(undefined, undefined,
@@ -67,16 +68,16 @@ it("should query the profile and cache the result", async () => {
     const profile = await akord.profile.get();
     const cachedProfile = await akord.profile.get();
 
-    expect(Service.prototype.getProfileDetails).toHaveBeenCalledTimes(1);
+    expect(getProfileDetails).toHaveBeenCalledTimes(1);
     expect(cachedProfile).toEqual(profile);
 });
 
 it("should bust the profile cache on profile update", async () => {
-    Service.prototype.getProfileDetails = jest.fn().mockImplementation(() => {
+    const getProfileDetails = jest.spyOn(Service.prototype as any, 'getProfileDetails').mockImplementation(() => {
         return {
             publicSigningKey: "test",
             email: "any@akord.com"
-        };
+        }
     });
 
     AkordApi.prototype.getProfileByPublicSigningKey = jest.fn().mockImplementation(() => {
@@ -103,7 +104,7 @@ it("should bust the profile cache on profile update", async () => {
         return [];
     });
 
-    jest.spyOn(Service.prototype as any, 'encodeTransaction').mockImplementation(() => {});
+    jest.spyOn(Service.prototype as any, 'encodeTransaction').mockImplementation(() => { });
 
     const wallet = new AkordWallet("any");
 
@@ -117,15 +118,15 @@ it("should bust the profile cache on profile update", async () => {
             cache: true
         });
 
-    
+
 
     await akord.profile.get();
     await akord.profile.get();
 
-    expect(Service.prototype.getProfileDetails).toHaveBeenCalledTimes(1);
+    expect(getProfileDetails).toHaveBeenCalledTimes(1);
 
     await akord.profile.update("", "");
     await akord.profile.get();
 
-    expect(Service.prototype.getProfileDetails).toHaveBeenCalledTimes(2);
+    expect(getProfileDetails).toHaveBeenCalledTimes(2);
 });
