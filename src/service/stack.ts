@@ -2,6 +2,7 @@ import { NodeService } from "./node";
 import { actionRefs, commands, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
+import { FileStream } from "../model/file-stream";
 
 class StackService extends NodeService {
   objectType: string = objectTypes.STACK;
@@ -17,7 +18,7 @@ class StackService extends NodeService {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async create(vaultId: string, file: any, name: string, parentId?: string,
+  public async create(vaultId: string, file: FileStream, name: string, parentId?: string,
     progressHook?: (progress: number) => void, cancelHook?: AbortController):
     Promise<{
       stackId: string,
@@ -30,6 +31,8 @@ class StackService extends NodeService {
       resourceTx,
       resourceUrl,
       resourceHash,
+      numberOfChunks,
+      chunkSize,
       thumbnailTx,
       thumbnailUrl
     } = await this.postFile(file, progressHook, cancelHook);
@@ -42,6 +45,8 @@ class StackService extends NodeService {
           name: await this.processWriteString(file.name ? file.name : name),
           type: file.type,
           size: file.size,
+          numberOfChunks: numberOfChunks,
+          chunkSize: chunkSize,
           resourceTx: resourceTx,
           resourceHash: resourceHash,
           thumbnailTx: thumbnailTx
@@ -107,8 +112,8 @@ class StackService extends NodeService {
     return { name: fileName, data: fileBuffer };
   }
 
-  private async postFile(file: any, progressHook?: (progress: number) => void, cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, thumbnailTx?: string, thumbnailUrl?: string }> {
+  private async postFile(file: FileStream, progressHook?: (progress: number) => void, cancelHook?: AbortController)
+    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
 
     const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
     try {
@@ -120,6 +125,7 @@ class StackService extends NodeService {
           resourceTx: results[0].resourceTx,
           resourceUrl: results[0].resourceUrl,
           resourceHash: results[0].resourceHash,
+          numberOfChunks: results[0].numberOfChunks,
           thumbnailTx: results[1].resourceTx,
           thumbnailUrl: results[1].resourceUrl
         };

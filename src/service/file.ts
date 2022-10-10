@@ -1,10 +1,12 @@
 import { Service } from "./service";
 import { protocolTags } from "../constants";
-import * as mime from "mime-types";
 import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
 import { PermapostExecutor } from "../api/akord/permapost";
 import { v4 as uuid } from "uuid";
+import { FileStream } from "../model/file-stream";
+import { Blob } from 'buffer';
+
 
 class FileService extends Service {
   chunkSize = 209715200;
@@ -86,11 +88,11 @@ class FileService extends Service {
   }
 
   public async create(
-    file: any,
+    file: FileStream,
     shouldBundleTransaction?: boolean,
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string }> {
+    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
     let tags = {};
     if (this.isPublic) {
       tags['File-Name'] = encodeURIComponent(file.name);
@@ -98,24 +100,16 @@ class FileService extends Service {
         tags['File-Modified-At'] = file.lastModified.toString();
       }
     }
-    const mimeType = mime.lookup(file.name);
-    if (!file.type) {
-      try {
-        file.type = mimeType;
-      } catch (e) {
-        file = file.slice(0, file.size, mimeType);
-      }
-    }
-    tags['Content-Type'] = mimeType;
+    tags['Content-Type'] = file.type;
     tags['File-Size'] = file.size;
     tags['File-Type'] = file.type;
     tags['Timestamp'] = JSON.stringify(Date.now());
     tags['Data-Type'] = "File";
     tags[protocolTags.VAULT_ID] = this.vaultId;
     if (file.size > this.chunkSize) {
-      return this.uploadChunked(file, progressHook, cancelHook);
+      return await this.uploadChunked(file, progressHook, cancelHook);
     } else {
-      const { processedData, encryptionTags } = await this.processWriteRaw(file.data);
+      const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
       tags['File-Hash'] = await digestRaw(processedData);
       console.log(tags)
       return { resourceHash: tags['File-Hash'], ...await this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
@@ -123,7 +117,7 @@ class FileService extends Service {
   }
 
   private async uploadChunked(
-    file: any,
+    file: FileStream,
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController
   ): Promise<any> {
@@ -133,7 +127,7 @@ class FileService extends Service {
 
     this.uploadInProgress = true;
     let resourceUrl = uuid();
-
+    let encryptionTags;
     while (offset < file.size) {
       const chunk = file.slice(offset, this.chunkSize + offset);
       const { encryptedData, chunkNumber } = await this.encryptChunk(
@@ -141,6 +135,7 @@ class FileService extends Service {
         offset
       );
       totalProgress = file.size;
+      encryptionTags = encryptedData.encryptionTags;
 
       loadedProgress = await this.uploadChunk(
         encryptedData,
@@ -160,14 +155,14 @@ class FileService extends Service {
       .env((<any>this.api.config).env, (<any>this.api.config).domain)
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
-      //.tags(TODO)
+      .tags(encryptionTags)
       .public(this.isPublic)
       .numberOfChunks(this.uploadedChunks)
       .asyncTransaction();
 
     return {
-      resourceUrl: this.resourceUrl,
-      resourceHash: this.resourceUrl,
+      resourceUrl: resourceUrl,
+      resourceHash: resourceUrl,
       numberOfChunks: this.uploadedChunks,
       chunkSize: this.chunkSize
     };
@@ -192,26 +187,18 @@ class FileService extends Service {
       .progressHook(progressHook)
       .cancelHook(cancelHook)
       .uploadFile()
-    Logger.log("Uploaded file with id: " + resource.id);
+    Logger.log("Uploaded file with id: " + resource.resourceUrl);
     return loadedProgress;
   }
 
-  private async encryptChunk(chunk, offset): Promise<{
+  private async encryptChunk(chunk: Blob, offset: number): Promise<{
     encryptedData: { processedData: ArrayBuffer, encryptionTags: any },
     chunkNumber: number
   }> {
-    return new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = async evt => {
-        if (evt.target.error == null) {
-          const chunkNumber = offset / this.chunkSize;
-          const byteArray = new Uint8Array(<any>evt.target.result);
-          const encryptedData = await this.processWriteRaw(byteArray);
-          resolve({ encryptedData, chunkNumber });
-        }
-      };
-      reader.readAsArrayBuffer(chunk);
-    });
+    const chunkNumber = offset / this.chunkSize;
+    const arrayBuffer = await chunk.arrayBuffer();
+    const encryptedData = await this.processWriteRaw(new Uint8Array(arrayBuffer));
+    return { encryptedData, chunkNumber }
   }
 
   private appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBufferLike {
