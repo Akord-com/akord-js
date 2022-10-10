@@ -112,6 +112,22 @@ class Service {
     return decryptedState;
   }
 
+  public async processObject(object: any): Promise<any> {
+    const processedObject = object;
+    const decryptedState = await this.decryptState(processedObject.state);
+    if (processedObject.folderId) {
+      processedObject.parentId = processedObject.folderId;
+    }
+    delete processedObject.folderId;
+    if (processedObject.dataRoomId) {
+      processedObject.vaultId = processedObject.dataRoomId;
+      delete processedObject.dataRoomId;
+    }
+    delete processedObject.__typename;
+    delete processedObject.state;
+    return { ...decryptedState, ...processedObject };
+  }
+
   protected async nodeRename(name: string): Promise<{ transactionId: string }> {
     const body = {
       name: await this.processWriteString(name)
@@ -334,8 +350,12 @@ class Service {
   }
 
   protected async processReadObject(object: any, fieldsToDecrypt: any) {
-    if (this.isPublic) return object;
     const decryptedObject = object;
+    if (decryptedObject.title) {
+      decryptedObject.name = decryptedObject.title;
+      delete decryptedObject.title;
+    }
+    if (this.isPublic) return decryptedObject;
     const promises = fieldsToDecrypt.map(async fieldName => {
       if (decryptedObject[fieldName] && decryptedObject[fieldName] !== '') {
         const decryptedFieldValue = await this.dataEncrypter.decryptRaw(decryptedObject[fieldName]);

@@ -29,11 +29,11 @@ async function vaultCreate() {
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -56,8 +56,8 @@ describe("Testing batch actions", () => {
 
       const folder = await akord.folder.get(folderId);
       expect(folder.status).toEqual("ACTIVE");
-      expect(folder.folderId).toEqual(null);
-      expect(folder.state.title).toEqual(name);
+      expect(folder.parentId).toBeFalsy();
+      expect(folder.name).toEqual(name);
     });
 
     it("should create note", async () => {
@@ -67,7 +67,7 @@ describe("Testing batch actions", () => {
       noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
       const note = await akord.note.get(noteId);
-      expect(note.state.revisions.length).toEqual(1);
+      expect(note.revisions.length).toEqual(1);
     });
 
     it("should revoke all items in a batch", async () => {
@@ -114,8 +114,8 @@ describe("Testing batch actions", () => {
       for (let index in items) {
         const stack = await akord.stack.get(response[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
-        expect(stack.state.files.length).toEqual(1);
-        expect(stack.state.files[0].title).toEqual("logo.png");
+        expect(stack.files.length).toEqual(1);
+        expect(stack.files[0].title).toEqual("logo.png");
       }
     });
   });
@@ -133,11 +133,11 @@ describe("Testing batch actions", () => {
         if (membership.email === email2) {
           membershipId1 = item.membershipId;
           expect(membership.status).toEqual("PENDING");
-          expect(membership.state.role).toEqual("CONTRIBUTOR");
+          expect(membership.role).toEqual("CONTRIBUTOR");
         } else {
           membershipId2 = item.membershipId;
           expect(membership.status).toEqual("PENDING");
-          expect(membership.state.role).toEqual("VIEWER");
+          expect(membership.role).toEqual("VIEWER");
         }
       }
     });
@@ -149,10 +149,10 @@ describe("Testing batch actions", () => {
       ])
 
       const membership1 = await akord.membership.get(membershipId1);
-      expect(membership1.state.role).toEqual("VIEWER");
+      expect(membership1.role).toEqual("VIEWER");
 
       const membership2 = await akord.membership.get(membershipId2);
-      expect(membership2.state.role).toEqual("CONTRIBUTOR");
+      expect(membership2.role).toEqual("CONTRIBUTOR");
     });
   });
 });

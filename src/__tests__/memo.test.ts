@@ -15,11 +15,11 @@ async function vaultCreate() {
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -37,30 +37,30 @@ describe("Testing memo commands", () => {
     memoId = (await akord.memo.create(vaultId, message)).memoId;
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.state.message).toEqual(message);
+    expect(memo.message).toEqual(message);
   });
 
   it("should add JOY reaction emoji", async () => {
     await akord.memo.addReaction(memoId, reactionEmoji.JOY);
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.state.reactions.length).toEqual(1);
-    expect(memo.state.reactions[0].reaction).toEqual(reactionEmoji.JOY);
+    expect(memo.reactions.length).toEqual(1);
+    expect(memo.reactions[0].reaction).toEqual(reactionEmoji.JOY);
   });
 
   it("should add FIRE reaction emoji", async () => {
     await akord.memo.addReaction(memoId, reactionEmoji.FIRE);
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.state.reactions.length).toEqual(2);
-    expect(memo.state.reactions[1].reaction).toEqual(reactionEmoji.FIRE);
+    expect(memo.reactions.length).toEqual(2);
+    expect(memo.reactions[1].reaction).toEqual(reactionEmoji.FIRE);
   });
 
   it("should remove JOY reaction emoji", async () => {
     await akord.memo.removeReaction(memoId, reactionEmoji.JOY);
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.state.reactions.length).toEqual(1);
-    expect(memo.state.reactions[0].reaction).toEqual(reactionEmoji.FIRE);
+    expect(memo.reactions.length).toEqual(1);
+    expect(memo.reactions[0].reaction).toEqual(reactionEmoji.FIRE);
   });
 });
