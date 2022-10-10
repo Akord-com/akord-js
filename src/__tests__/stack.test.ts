@@ -29,11 +29,11 @@ async function vaultCreate() {
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -56,9 +56,9 @@ describe("Testing stack commands", () => {
 
     const stack = await akord.stack.get(stackId);
     expect(stack.status).toEqual("ACTIVE");
-    expect(stack.state.title).toEqual(name);
-    expect(stack.state.files.length).toEqual(1);
-    expect(stack.state.files[0].title).toEqual("logo.png");
+    expect(stack.name).toEqual(name);
+    expect(stack.files.length).toEqual(1);
+    expect(stack.files[0].name).toEqual("logo.png");
 
     const { name: fileName, data } = await akord.stack.getFile(stackId);
     expect(Buffer.from(data)).toEqual(file.data);
@@ -72,16 +72,16 @@ describe("Testing stack commands", () => {
     await akord.stack.uploadRevision(stackId, file);
 
     const stack = await akord.stack.get(stackId);
-    expect(stack.state.files.length).toEqual(2);
-    expect(stack.state.files[0].title).toEqual("logo.png");
-    expect(stack.state.files[1].title).toEqual("avatar.jpeg");
+    expect(stack.files.length).toEqual(2);
+    expect(stack.files[0].name).toEqual("logo.png");
+    expect(stack.files[1].name).toEqual("avatar.jpeg");
 
     const { name: fileName, data } = await akord.stack.getFile(stackId);
     expect(Buffer.from(data)).toEqual(file.data);
     expect(fileName).toEqual("avatar.jpeg");
 
     const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
-    const decryptedFirstFile = await akord.getFile(stack.state.files[0].resourceUrl, vaultId);
+    const decryptedFirstFile = await akord.getFile(stack.files[0].resourceUrl, vaultId);
     expect(Buffer.from(decryptedFirstFile)).toEqual(firstFile.data);
   });
 
@@ -91,17 +91,17 @@ describe("Testing stack commands", () => {
     await akord.stack.rename(stackId, name);
 
     const stack = await akord.stack.get(stackId);
-    expect(stack.state.title).toEqual(name);
-    expect(stack.state.files.length).toEqual(2);
-    expect(stack.state.files[0].title).toEqual("logo.png");
-    expect(stack.state.files[1].title).toEqual("avatar.jpeg");
+    expect(stack.name).toEqual(name);
+    expect(stack.files.length).toEqual(2);
+    expect(stack.files[0].name).toEqual("logo.png");
+    expect(stack.files[1].name).toEqual("avatar.jpeg");
 
     const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
-    const decryptedfirstFile = await akord.getFile(stack.state.files[0].resourceUrl, vaultId);
+    const decryptedfirstFile = await akord.getFile(stack.files[0].resourceUrl, vaultId);
     expect(Buffer.from(decryptedfirstFile)).toEqual(firstFile.data);
 
     const secondFile = getFileFromPath("./src/__tests__/data/avatar.jpeg");
-    const decryptedSecondFile = await akord.getFile(stack.state.files[1].resourceUrl, vaultId);
+    const decryptedSecondFile = await akord.getFile(stack.files[1].resourceUrl, vaultId);
     expect(Buffer.from(decryptedSecondFile)).toEqual(secondFile.data);
   });
 

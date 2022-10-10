@@ -64,9 +64,7 @@ class NodeService extends Service {
   public async get(nodeId: string): Promise<any> {
     const object = await this.api.getObject(nodeId, this.objectType);
     await this.setVaultContext(object.dataRoomId);
-    object.state = await this.decryptState(object.state);
-    delete object.__typename;
-    return object;
+    return this.processObject(object);
   }
 
   /**
@@ -78,12 +76,8 @@ class NodeService extends Service {
     let nodeTable = [];
     await this.setVaultContext(vaultId);
     for (let node of nodes) {
-      const decryptedState = await this.decryptState(node.state);
-      nodeTable.push({
-        id: node.id,
-        createdAt: node.createdAt,
-        ...decryptedState
-      });
+      const processedNode = await this.processObject(node);
+      nodeTable.push(processedNode);
     }
     return nodeTable;
   }

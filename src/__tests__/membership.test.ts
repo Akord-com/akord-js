@@ -15,11 +15,11 @@ async function vaultCreate() {
 
   const membership = await akord1.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord1.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -38,7 +38,7 @@ describe("Testing membership commands", () => {
 
     const membership = await akord1.membership.get(membershipId);
     expect(membership.status).toEqual("PENDING");
-    expect(membership.state.role).toEqual("CONTRIBUTOR");
+    expect(membership.role).toEqual("CONTRIBUTOR");
   });
 
   it("should accept the invite", async () => {
@@ -61,7 +61,7 @@ describe("Testing membership commands", () => {
     await akord1.membership.changeRole(membershipId, "VIEWER");
 
     const membership = await akord1.membership.get(membershipId);
-    expect(membership.state.role).toEqual("VIEWER");
+    expect(membership.role).toEqual("VIEWER");
   });
 
   it("should revoke the invite", async () => {
