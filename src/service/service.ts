@@ -108,13 +108,34 @@ class Service {
     }
     if (decryptedState.revisions && decryptedState.revisions.length > 0) {
       for (const [index, revision] of decryptedState.revisions.entries()) {
-        const decryptedRevision = await this.processReadObject(revision, ["content"]);
+        const decryptedRevision = await this.processReadObject(revision, ["content", "title"]);
         delete decryptedRevision.__typename;
         decryptedState.revisions[index] = decryptedRevision;
       }
     }
+    if (decryptedState.memberDetails) {
+      const decryptedMemberDetails = await this.processReadObject(decryptedState.memberDetails, ["fullName"]);
+      delete decryptedMemberDetails.__typename;
+      decryptedState.memberDetails = decryptedMemberDetails;
+    }
     delete decryptedState.__typename;
     return decryptedState;
+  }
+
+  public async processObject(object: any): Promise<any> {
+    const processedObject = object;
+    const decryptedState = await this.decryptState(processedObject.state);
+    if (processedObject.folderId) {
+      processedObject.parentId = processedObject.folderId;
+    }
+    delete processedObject.folderId;
+    if (processedObject.dataRoomId) {
+      processedObject.vaultId = processedObject.dataRoomId;
+      delete processedObject.dataRoomId;
+    }
+    delete processedObject.__typename;
+    delete processedObject.state;
+    return { ...decryptedState, ...processedObject };
   }
 
   protected async nodeRename(name: string): Promise<{ transactionId: string }> {
@@ -339,8 +360,12 @@ class Service {
   }
 
   protected async processReadObject(object: any, fieldsToDecrypt: any) {
-    if (this.isPublic) return object;
     const decryptedObject = object;
+    if (decryptedObject.title) {
+      decryptedObject.name = decryptedObject.title;
+      delete decryptedObject.title;
+    }
+    if (this.isPublic) return decryptedObject;
     const promises = fieldsToDecrypt.map(async fieldName => {
       if (decryptedObject[fieldName] && decryptedObject[fieldName] !== '') {
         const decryptedFieldValue = await this.dataEncrypter.decryptRaw(decryptedObject[fieldName]);

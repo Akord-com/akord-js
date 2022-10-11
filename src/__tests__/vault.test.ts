@@ -14,11 +14,11 @@ async function vaultCreate() {
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -37,7 +37,7 @@ describe("Testing vault commands", () => {
 
     const vault = await akord.vault.get(vaultId);
     expect(vault.status).toEqual("ACTIVE");
-    expect(vault.state.title).toEqual(name);
+    expect(vault.name).toEqual(name);
   });
 
   it("should archive the vault", async () => {

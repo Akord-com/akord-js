@@ -188,7 +188,7 @@ export default class AkordApi extends Api {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.membershipsByMemberPublicSigningKey,
-      { memberPublicSigningKey: publicSigningKey }, { status: { eq: 'ACCEPTED' } });
+      { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
     return results;
   };
 
@@ -196,9 +196,9 @@ export default class AkordApi extends Api {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.membershipsByMemberPublicSigningKey,
-      { memberPublicSigningKey: publicSigningKey }, { status: { eq: 'ACCEPTED' } });
+      { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
     const vaults = results
-      .filter((membership: any) => membership.dataRoom.status !== 'ARCHIVED')
+      .filter((membership: any) => membership.dataRoom.status !== "ARCHIVED")
       .map((membership: any) => membership.dataRoomId);
     return vaults;
   };
@@ -206,8 +206,13 @@ export default class AkordApi extends Api {
   public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
     const filter = objectType === "Membership"
-      ? { status: { eq: 'ACCEPTED' } }
-      : { status: { eq: 'ACTIVE' } };
+      ? { status: { eq: "ACCEPTED" } }
+      : {
+        status: { ne: "REVOKED" },
+        and: {
+          status: { ne: "DELETED" }
+        }
+      };
     const results = await this.paginatedQuery(
       queryName,
       queries[queryName],

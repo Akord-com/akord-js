@@ -14,11 +14,11 @@ async function vaultCreate() {
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -40,8 +40,8 @@ describe("Testing folder commands", () => {
 
     const rootFolder = await akord.folder.get(rootFolderId);
     expect(rootFolder.status).toEqual("ACTIVE");
-    expect(rootFolder.folderId).toEqual(null);
-    expect(rootFolder.state.title).toEqual(name);
+    expect(rootFolder.parentId).toBeFalsy();
+    expect(rootFolder.name).toEqual(name);
   });
 
   it("should create a sub folder", async () => {
@@ -52,8 +52,8 @@ describe("Testing folder commands", () => {
 
     const subFolder = await akord.folder.get(subFolderId);
     expect(subFolder.status).toEqual("ACTIVE");
-    expect(subFolder.folderId).toEqual(rootFolderId);
-    expect(subFolder.state.title).toEqual(name);
+    expect(subFolder.parentId).toEqual(rootFolderId);
+    expect(subFolder.name).toEqual(name);
   });
 
   it("should revoke root folder", async () => {

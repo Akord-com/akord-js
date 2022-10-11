@@ -14,11 +14,11 @@ async function vaultCreate() {
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.state.role).toEqual("OWNER");
+  expect(membership.role).toEqual("OWNER");
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
-  expect(vault.state.title).toEqual(name);
+  expect(vault.name).toEqual(name);
   return { vaultId };
 }
 
@@ -38,8 +38,8 @@ describe("Testing note commands", () => {
     noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
     const note = await akord.note.get(noteId);
-    expect(note.state.revisions.length).toEqual(1);
-    expect(JSON.parse(note.state.content)).toEqual(content);
+    expect(note.revisions.length).toEqual(1);
+    expect(JSON.parse(note.content)).toEqual(content);
   });
 
   it("should upload new revision", async () => {
@@ -49,7 +49,7 @@ describe("Testing note commands", () => {
     await akord.note.uploadRevision(noteId, name, content);
 
     const note = await akord.note.get(noteId);
-    expect(note.state.revisions.length).toEqual(2);
+    expect(note.revisions.length).toEqual(2);
   });
 
   it("should revoke the note", async () => {
@@ -64,6 +64,6 @@ describe("Testing note commands", () => {
 
     const note = await akord.note.get(noteId);
     expect(note.status).toEqual("ACTIVE");
-    expect(note.state.revisions.length).toEqual(2);
+    expect(note.revisions.length).toEqual(2);
   });
 });

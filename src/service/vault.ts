@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { actionRefs, objectTypes, commands, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, jsonToBase64 } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson } from "@akord/crypto";
 
 class VaultService extends NodeService {
   objectType: string = objectTypes.VAULT;
@@ -162,9 +162,7 @@ class VaultService extends NodeService {
   public async get(vaultId: string): Promise<any> {
     const object = await this.api.getObject(vaultId, this.objectType);
     await this.setVaultContext(object.id);
-    object.state = await this.decryptState(object.state);
-    delete object.__typename;
-    return object;
+    return this.processObject(object);
   }
 
   /**
@@ -175,11 +173,8 @@ class VaultService extends NodeService {
     let vaultTable = [];
     for (let vaultId of vaults) {
       await this.setVaultContext(vaultId);
-      const decryptedState = await this.decryptState(this.vault.state);
-      vaultTable.push({
-        id: vaultId,
-        name: decryptedState.title
-      });
+      const processedVault = await this.processObject(this.vault);
+      vaultTable.push(processedVault);
     }
     return vaultTable;
   }
@@ -188,6 +183,15 @@ class VaultService extends NodeService {
     await super.setVaultContext(vaultId);
     this.setPrevHash(this.vault.hash);
     this.setObjectId(vaultId);
+  }
+
+  public async processObject(object: any): Promise<any> {
+    const processedObject = await super.processObject(object);
+    if (processedObject.termsOfAccess) {
+      const terms = base64ToJson(processedObject.termsOfAccess);
+      processedObject.termsOfAccess = terms.termsOfAccess;
+    }
+    return processedObject;
   }
 };
 
