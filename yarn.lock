@@ -14,10 +14,10 @@
     reflect-metadata "^0.1.13"
     tweetnacl "^1.0.3"
 
-"@akord/ts-cacheable@1.0.7":
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/@akord/ts-cacheable/-/ts-cacheable-1.0.7.tgz#cc006855cfcba3d35e3aaa7448d5db46bd13638c"
-  integrity sha512-YtmKTMjhy8X7ZVfVOnzXj4uL+955ajCrkAZkR5F629t3AQnzgvDomOHnBYMCFbUx1t5Qxzo9b2KmIS5/i7KTvA==
+"@akord/ts-cacheable@1.0.11":
+  version "1.0.11"
+  resolved "https://registry.yarnpkg.com/@akord/ts-cacheable/-/ts-cacheable-1.0.11.tgz#1593091ab30b783b96ef86eea7e67966595128ac"
+  integrity sha512-WKs3Peqh1kzRd4SNaCJcKPRaTv73D+uz3m9p/LPYiD2XqXIiiJG2aiZjTQV4Ik7OldlWYHdTTscNKDxhnXDZFg==
   dependencies:
     rxjs "^7.5.6"
 

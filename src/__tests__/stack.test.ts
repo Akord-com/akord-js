@@ -2,7 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
 import { email, password } from './data/test-credentials';
-import { FileStream } from "../model/file-stream";
+import { NodeJs } from "../model/file";
 
 let akord: Akord;
 
@@ -35,7 +35,7 @@ describe("Testing stack commands", () => {
   it("should create new stack", async () => {
     const name = faker.random.words();
 
-    const file = FileStream.fromPath("./src/__tests__/data/logo.png");
+    const file = new NodeJs.File("./src/__tests__/data/logo.png");
 
     stackId = (await akord.stack.create(vaultId, file, name)).stackId;
 
@@ -51,7 +51,7 @@ describe("Testing stack commands", () => {
   });
 
   it("should upload new revision", async () => {
-    const file = FileStream.fromPath("./src/__tests__/data/avatar.jpeg");
+    const file = new NodeJs.File("./src/__tests__/data/avatar.jpeg");
 
     await akord.stack.uploadRevision(stackId, file);
 
@@ -63,7 +63,7 @@ describe("Testing stack commands", () => {
     const binary = await akord.file.get(stack.state.files[1].resourceUrl, vaultId);
     expect(binary).toEqual(await file.arrayBuffer());
 
-    const firstFile = FileStream.fromPath("./src/__tests__/data/logo.png");
+    const firstFile = new NodeJs.File("./src/__tests__/data/logo.png");
     const decryptedFirstFile = await akord.file.get(stack.state.files[0].resourceUrl, vaultId);
     expect(decryptedFirstFile).toEqual(await firstFile.arrayBuffer());
   });
@@ -79,11 +79,11 @@ describe("Testing stack commands", () => {
     expect(stack.state.files[0].title).toEqual("logo.png");
     expect(stack.state.files[1].title).toEqual("avatar.jpeg");
 
-    const firstFile = FileStream.fromPath("./src/__tests__/data/logo.png");
+    const firstFile = new NodeJs.File("./src/__tests__/data/logo.png");
     const decryptedfirstFile = await akord.file.get(stack.state.files[0].resourceUrl, vaultId);
     expect(decryptedfirstFile).toEqual(await firstFile.arrayBuffer());
 
-    const secondFile = FileStream.fromPath("./src/__tests__/data/avatar.jpeg");
+    const secondFile = new NodeJs.File("./src/__tests__/data/avatar.jpeg");
 
     const decryptedSecondFile = await akord.file.get(stack.state.files[1].resourceUrl, vaultId);
     expect(decryptedSecondFile).toEqual(await secondFile.arrayBuffer());

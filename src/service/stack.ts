@@ -2,7 +2,7 @@ import { NodeService } from "./node";
 import { actionRefs, commands, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
-import { FileStream } from "../model/file-stream";
+import { FileLike } from "../model/file";
 
 class StackService extends NodeService {
   objectType: string = objectTypes.STACK;
@@ -18,7 +18,7 @@ class StackService extends NodeService {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async create(vaultId: string, file: FileStream, name: string, parentId?: string,
+  public async create(vaultId: string, file: FileLike, name: string, parentId?: string,
     progressHook?: (progress: number) => void, cancelHook?: AbortController):
     Promise<{
       stackId: string,
@@ -112,7 +112,7 @@ class StackService extends NodeService {
     return { name: fileName, data: fileBuffer };
   }
 
-  private async postFile(file: FileStream, progressHook?: (progress: number) => void, cancelHook?: AbortController)
+  private async postFile(file: FileLike, progressHook?: (progress: number) => void, cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
 
     const filePromise = this.fileService.create(file, true, progressHook, cancelHook);

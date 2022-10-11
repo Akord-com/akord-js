@@ -452,7 +452,7 @@ const memoArray = await akord.memo.list(vaultId);
 #### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
 
 - `vaultId` (`string`, required)
-- `file` (`any`, required) - file object
+- `file` (`FileLike`, required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
 - `name` (`string`, required) - stack name
 - `parentId` (`string`, optional) - parent folder id
 - `progressHook` (`(progress:number)=>void`, optional)

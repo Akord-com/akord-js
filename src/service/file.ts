@@ -4,7 +4,7 @@ import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
 import { PermapostExecutor } from "../api/akord/permapost";
 import { v4 as uuid } from "uuid";
-import { FileStream } from "../model/file-stream";
+import { FileLike } from "../model/file";
 import { Blob } from 'buffer';
 
 
@@ -17,6 +17,7 @@ class FileService extends Service {
   resourceUrl = null;
 
   /**
+   * Returns file as ArrayBuffer. Puts the whole file into memory.
    * @param  {string} id file resource url
    * @param  {string} vaultId
    * @param  {boolean} [isChunked]
@@ -60,7 +61,7 @@ class FileService extends Service {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async downloadPublic(id: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
+  public async getPublic(id: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
     this.setIsPublic(true);
     let fileBinary
     if (isChunked) {
@@ -88,7 +89,7 @@ class FileService extends Service {
   }
 
   public async create(
-    file: FileStream,
+    file: FileLike,
     shouldBundleTransaction?: boolean,
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController)
@@ -117,7 +118,7 @@ class FileService extends Service {
   }
 
   private async uploadChunked(
-    file: FileStream,
+    file: FileLike,
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController
   ): Promise<any> {
@@ -147,10 +148,11 @@ class FileService extends Service {
       );
       offset += this.chunkSize;
       this.uploadedChunks += 1;
+      Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
 
     this.uploadInProgress = false;
-    
+
     await new PermapostExecutor()
       .env((<any>this.api.config).env, (<any>this.api.config).domain)
       .auth(this.api.jwtToken)
