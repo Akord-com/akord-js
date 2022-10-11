@@ -13,6 +13,7 @@ import {
   stringToArray,
   arrayToBase64,
   base64ToJson,
+  deriveAddress,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
 import { objectTypes, protocolTags, commands } from '../constants';
@@ -294,30 +295,17 @@ class Service {
       processedData = encryptedFile.encryptedData.ciphertext;
       encryptionTags['Initialization-Vector'] = encryptedFile.encryptedData.iv;
       encryptionTags['Encrypted-Key'] = encryptedFile.encryptedKey;
-      encryptionTags['Public-Key-Index'] = (await this._getActiveKey()).index;
-      encryptionTags['Public-Key'] = (await this._getActiveKey()).publicKey;
+      const { address, publicKey } = await this._getActiveKey();
+      encryptionTags['Public-Address'] = address;
+      encryptionTags['Public-Key'] = publicKey;
     }
     return { processedData, encryptionTags }
   }
 
   protected async _getActiveKey() {
-    await (<any>this.dataEncrypter)._decryptKeys();
     const activePublicKey = arrayToBase64(<any>this.dataEncrypter.publicKey);
-    const activeKeyIndex = this.dataEncrypter.decryptedKeys.findIndex(
-      key => (key.publicKey === activePublicKey)
-    )
-    if (activeKeyIndex === -1) {
-      for (const [i, keyPair] of this.dataEncrypter.decryptedKeys.entries()) {
-        if (arrayToBase64(await this.wallet.decrypt(keyPair.publicKey))
-          === activePublicKey)
-          return {
-            index: i,
-            publicKey: activePublicKey
-          };;
-      }
-    }
     return {
-      index: activeKeyIndex,
+      address: await deriveAddress(activePublicKey, "akord"),
       publicKey: activePublicKey
     };
   }
@@ -326,7 +314,7 @@ class Service {
     if (this.isPublic) return data;
     const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data));
     const decodedPayload = base64ToJson(encryptedPayload);
-    decodedPayload.publicKeyIndex = (await this._getActiveKey()).index;
+    decodedPayload.publicAddress = (await this._getActiveKey()).address;
     delete decodedPayload.publicKey;
     return jsonToBase64(decodedPayload);
   }
