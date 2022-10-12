@@ -207,12 +207,15 @@ export default class AkordApi extends Api {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
     const filter = objectType === "Membership"
       ? { status: { eq: "ACCEPTED" } }
-      : {
-        status: { ne: "REVOKED" },
-        and: {
-          status: { ne: "DELETED" }
-        }
-      };
+      : objectType === "Memo"
+        ? {}
+        :
+        {
+          status: { ne: "REVOKED" },
+          and: {
+            status: { ne: "DELETED" }
+          }
+        };
     const results = await this.paginatedQuery(
       queryName,
       queries[queryName],
