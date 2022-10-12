@@ -6,6 +6,7 @@ import { PermapostExecutor } from "../api/akord/permapost";
 import { v4 as uuid } from "uuid";
 import { FileLike } from "../model/file";
 import { Blob } from 'buffer';
+import fs from "fs";
 
 
 class FileService extends Service {
@@ -17,7 +18,8 @@ class FileService extends Service {
   resourceUrl = null;
 
   /**
-   * Returns file as ArrayBuffer. Puts the whole file into memory.
+   * Returns file as ArrayBuffer. Puts the whole file into memory. 
+   * For downloading without putting whole file to memory use FileService#download()
    * @param  {string} id file resource url
    * @param  {string} vaultId
    * @param  {boolean} [isChunked]
@@ -31,20 +33,11 @@ class FileService extends Service {
     let fileBinary: ArrayBuffer;
     if (isChunked) {
       let currentChunk = 0;
-      try {
-        while (currentChunk < numberOfChunks) {
-          const url = `${id}_${currentChunk}`;
-          const file = await this.api.downloadFile(url, this.isPublic, progressHook, cancelHook);
-          const fileData = await this.processReadRaw(file.fileData, file.headers)
-          fileBinary = this.appendBuffer(fileBinary, fileData);
-          currentChunk++;
-        }
-      } catch (e) {
-        Logger.log(e);
-        throw new Error(
-          "Failed to download. Please check your network connection." +
-          " Please upload the file again if problem persists and/or contact Akord support."
-        );
+      while (currentChunk < numberOfChunks) {
+        const url = `${id}_${currentChunk}`;
+        const chunkBinary = await this.getBinary(url, progressHook, cancelHook);
+        fileBinary = this.appendBuffer(fileBinary, chunkBinary);
+        currentChunk++;
       }
     } else {
       const file = await this.api.downloadFile(id, this.isPublic, progressHook, cancelHook);
@@ -66,26 +59,52 @@ class FileService extends Service {
     let fileBinary
     if (isChunked) {
       let currentChunk = 0;
+      while (currentChunk < numberOfChunks) {
+        const url = `${id}_${currentChunk}`;
+        const chunkBinary = await this.getBinary(url, progressHook, cancelHook);
+        fileBinary = this.appendBuffer(fileBinary, chunkBinary);
+        currentChunk++;
+      }
+    } else {
+      fileBinary = await this.getBinary(id, progressHook, cancelHook);
+    }
+    return fileBinary;
+  }
+
+  /**
+   * Downloads file keeping memory consumed (RAM) at defiend level: this#chunkSize.
+   * In browser, streaming of the binary requires self hosting of mitm.html and sw.js
+   * See: https://github.com/jimmywarting/StreamSaver.js#configuration
+   * @param  {string} id file resource url
+   * @param  {string} vaultId
+   * @param  {boolean} [isChunked]
+   * @param  {number} [numberOfChunks]
+   * @param  {(progress:number)=>void} [progressHook]
+   * @param  {AbortController} [cancelHook]
+   * @returns Promise with file buffer
+   */
+  public async download(id: string, vaultId: string, name: string, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController) {
+    await this.setVaultContext(vaultId);
+    const writer = await this.stream(name);
+    if (isChunked) {
+      let currentChunk = 0;
       try {
         while (currentChunk < numberOfChunks) {
           const url = `${id}_${currentChunk}`;
-          const file = await this.api.downloadFile(url, true, progressHook, cancelHook);
-          const fileData = await this.processReadRaw(file.fileData, file.headers)
-          fileBinary = this.appendBuffer(fileBinary, fileData);
+          const fileBinary = await this.getBinary(url, progressHook, cancelHook);
+          await writer.write(new Uint8Array(fileBinary));
           currentChunk++;
         }
-      } catch (e) {
-        Logger.log(e);
-        throw new Error(
-          "Failed to download. Please check your network connection." +
-          " Please upload the file again if problem persists and/or contact Akord support."
-        );
+      } catch (err) {
+        throw new Error(err);
+      } finally {
+        await writer.close();
       }
     } else {
-      const file = await this.api.downloadFile(id, true, progressHook, cancelHook);
-      fileBinary = await this.processReadRaw(file.fileData, file.headers);
+      const fileBinary = await this.getBinary(id, progressHook, cancelHook);
+      await writer.write(new Uint8Array(fileBinary));
+      await writer.close();
     }
-    return fileBinary;
   }
 
   public async create(
@@ -114,6 +133,27 @@ class FileService extends Service {
       tags['File-Hash'] = await digestRaw(processedData);
       console.log(tags)
       return { resourceHash: tags['File-Hash'], ...await this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
+    }
+  }
+
+  public async stream(path: string) {
+    if (typeof window === 'undefined') {
+      return fs.createWriteStream(path);
+    }
+    else {
+      const streamSaver = (await import('streamsaver')).default;
+      if (!streamSaver.WritableStream) {
+        const pony = await import('web-streams-polyfill/ponyfill');
+        streamSaver.WritableStream = pony.WritableStream;
+      }
+      if (window.location.protocol === 'https:'
+        || window.location.protocol === 'chrome-extension:'
+        || window.location.hostname === 'localhost') {
+        streamSaver.mitm = '/streamsaver/mitm.html';
+      }
+
+      const fileStream = streamSaver.createWriteStream(path);
+      return fileStream.getWriter();
     }
   }
 
@@ -211,6 +251,19 @@ class FileService extends Service {
     tmp.set(new Uint8Array(buffer1), 0);
     tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
     return tmp.buffer;
+  }
+
+  private async getBinary(id: string, progressHook?: (progress: number) => void, cancelHook?: AbortController) {
+    try {
+      const file = await this.api.downloadFile(id, this.isPublic, progressHook, cancelHook);
+      return await this.processReadRaw(file.fileData, file.headers);
+    } catch (e) {
+      Logger.log(e);
+      throw new Error(
+        "Failed to download. Please check your network connection." +
+        " Please upload the file again if problem persists and/or contact Akord support."
+      );
+    }
   }
 };
 
