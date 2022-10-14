@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js",
-  "version": "1.5.1-beta",
+  "version": "1.5.1-rc1",
   "description": "Akord Client",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
