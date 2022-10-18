@@ -63,7 +63,7 @@ abstract class Api {
 
   abstract getContractState(vaultId: string): Promise<Contract>
 
-  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
+  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, loadedSize?: number, resourceSize?: number): Promise<any>
 
   public getConfig() {
     return this.config;
