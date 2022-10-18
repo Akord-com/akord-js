@@ -159,21 +159,21 @@ class VaultService extends NodeService {
    * @param  {string} vaultId
    * @returns Promise with the decrypted vault
    */
-  public async get(vaultId: string): Promise<any> {
+  public async get(vaultId: string, shouldDecrypt = true): Promise<any> {
     const object = await this.api.getObject(vaultId, this.objectType);
     await this.setVaultContext(object.id);
-    return this.processObject(object);
+    return this.processObject(object, shouldDecrypt);
   }
 
   /**
    * @returns Promise with currently authenticated user vaults
    */
-  public async list(): Promise<any> {
+  public async list(shouldDecrypt = true): Promise<any> {
     const vaults = await this.api.getVaults(this.wallet);
     let vaultTable = [];
     for (let vaultId of vaults) {
       await this.setVaultContext(vaultId);
-      const processedVault = await this.processObject(this.vault);
+      const processedVault = await this.processObject(this.vault, shouldDecrypt);
       vaultTable.push(processedVault);
     }
     return vaultTable;
@@ -185,8 +185,8 @@ class VaultService extends NodeService {
     this.setObjectId(vaultId);
   }
 
-  public async processObject(object: any): Promise<any> {
-    const processedObject = await super.processObject(object);
+  public async processObject(object: any, shouldDecrypt = true): Promise<any> {
+    const processedObject = await super.processObject(object, shouldDecrypt);
     if (processedObject.termsOfAccess) {
       const terms = base64ToJson(processedObject.termsOfAccess);
       processedObject.termsOfAccess = terms.termsOfAccess;

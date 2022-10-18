@@ -80,31 +80,31 @@ class Service {
   * @param  {any} state
   * @returns Promise with decrypted state
   */
-  public async decryptState<T>(state: T): Promise<T> {
-    const decryptedState = await this.processReadObject(state, ["title", "name", "message", "content"]);
+  public async processState<T>(state: T, shouldDecrypt = true): Promise<T> {
+    const decryptedState = await this.processReadObject(state, ["title", "name", "message", "content"], shouldDecrypt);
     if (decryptedState.files && decryptedState.files.length > 0) {
       for (const [index, file] of decryptedState.files.entries()) {
-        const decryptedFile = await this.processReadObject(file, ["title", "name"]);
+        const decryptedFile = await this.processReadObject(file, ["title", "name"], shouldDecrypt);
         delete decryptedFile.__typename;
         decryptedState.files[index] = decryptedFile;
       }
     }
     if (decryptedState.reactions && decryptedState.reactions.length > 0) {
       for (const [index, reaction] of decryptedState.reactions.entries()) {
-        const decryptedReaction = await this.processReadObject(reaction, ["reaction"]);
+        const decryptedReaction = await this.processReadObject(reaction, ["reaction"], shouldDecrypt);
         delete decryptedReaction.__typename;
         decryptedState.reactions[index] = decryptedReaction;
       }
     }
     if (decryptedState.revisions && decryptedState.revisions.length > 0) {
       for (const [index, revision] of decryptedState.revisions.entries()) {
-        const decryptedRevision = await this.processReadObject(revision, ["content", "title"]);
+        const decryptedRevision = await this.processReadObject(revision, ["content", "title"], shouldDecrypt);
         delete decryptedRevision.__typename;
         decryptedState.revisions[index] = decryptedRevision;
       }
     }
     if (decryptedState.memberDetails) {
-      const decryptedMemberDetails = await this.processReadObject(decryptedState.memberDetails, ["fullName"]);
+      const decryptedMemberDetails = await this.processReadObject(decryptedState.memberDetails, ["fullName"], shouldDecrypt);
       delete decryptedMemberDetails.__typename;
       decryptedState.memberDetails = decryptedMemberDetails;
     }
@@ -112,9 +112,9 @@ class Service {
     return decryptedState;
   }
 
-  public async processObject(object: any): Promise<any> {
+  public async processObject(object: any, shouldDecrypt = true): Promise<any> {
     const processedObject = object;
-    const decryptedState = await this.decryptState(processedObject.state);
+    const decryptedState = await this.processState(processedObject.state, shouldDecrypt);
     if (processedObject.folderId) {
       processedObject.parentId = processedObject.folderId;
     }
@@ -349,13 +349,13 @@ class Service {
     return processedMemberDetails;
   }
 
-  protected async processReadObject(object: any, fieldsToDecrypt: any) {
+  protected async processReadObject(object: any, fieldsToDecrypt: any, shouldDecrypt = true) {
     const decryptedObject = object;
     if (decryptedObject.title) {
       decryptedObject.name = decryptedObject.title;
       delete decryptedObject.title;
     }
-    if (this.isPublic) return decryptedObject;
+    if (this.isPublic || !shouldDecrypt) return decryptedObject;
     const promises = fieldsToDecrypt.map(async fieldName => {
       if (decryptedObject[fieldName] && decryptedObject[fieldName] !== '') {
         const decryptedFieldValue = await this.dataEncrypter.decryptRaw(decryptedObject[fieldName]);
@@ -365,14 +365,14 @@ class Service {
     return Promise.all(promises).then(() => decryptedObject);
   }
 
-  protected async processReadString(data: any) {
-    if (this.isPublic) return data;
+  protected async processReadString(data: any, shouldDecrypt = true) {
+    if (this.isPublic || !shouldDecrypt) return data;
     const decryptedDataRaw = await this.processReadRaw(data, {});
     return arrayToString(decryptedDataRaw);
   }
 
-  async processReadRaw(data: any, headers: any) {
-    if (this.isPublic) {
+  async processReadRaw(data: any, headers: any, shouldDecrypt = true) {
+    if (this.isPublic || !shouldDecrypt) {
       return Buffer.from(data.data);
     }
 

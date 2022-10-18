@@ -183,14 +183,14 @@ export class Akord {
       this.service.setKeys(keys);
       (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
     }
-    contract.state = await this.service.decryptState(contract.state);
+    contract.state = await this.service.processState(contract.state);
     if (contract.state.memberships) {
-      await Promise.all(contract.state.memberships.map(async (membership) => await this.service.decryptState(membership)));
+      await Promise.all(contract.state.memberships.map(async (membership) => await this.service.processState(membership)));
     }
-    await Promise.all(contract.state.memos.map(async (memo) => await this.service.decryptState(memo)));
-    await Promise.all(contract.state.folders.map(async (folder) => await this.service.decryptState(folder)));
-    await Promise.all(contract.state.stacks.map(async (stack) => await this.service.decryptState(stack)));
-    await Promise.all(contract.state.notes.map(async (note) => await this.service.decryptState(note)));
+    await Promise.all(contract.state.memos.map(async (memo) => await this.service.processState(memo)));
+    await Promise.all(contract.state.folders.map(async (folder) => await this.service.processState(folder)));
+    await Promise.all(contract.state.stacks.map(async (stack) => await this.service.processState(stack)));
+    await Promise.all(contract.state.notes.map(async (note) => await this.service.processState(note)));
     return contract;
   }
 
