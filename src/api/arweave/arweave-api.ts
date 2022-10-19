@@ -13,7 +13,7 @@ import { GraphQLClient } from 'graphql-request';
 import { membershipsQuery } from "./graphql";
 import Arweave from 'arweave';
 import { EncryptionKeys, Wallet } from "@akord/crypto";
-import { Contract } from "../../model/contract";
+import { ContractState } from "../../model/contract";
 import { srcTxId } from './config';
 
 export default class ArweaveApi extends Api {
@@ -86,40 +86,39 @@ export default class ArweaveApi extends Api {
   public async getContractState(contractId: string): Promise<any> {
     const contractObject = getContract(contractId, null);
     const contract = (await contractObject.readState()).cachedValue;
-    const vault = Object.assign(contract) as Contract;
-    const vaultData = await this.downloadFile(vault.state.data[vault.state.data.length - 1])
-    vault.state = { ...vault.state, ...vaultData };
-
+    let vault = contract.state;
+    const vaultData = await this.downloadFile(vault.data[vault.data.length - 1])
+    vault = { ...vault, ...vaultData };
     await this.downloadMemberships(vault)
     await this.downloadNodes(vault)
     return vault;
   };
 
-  private async downloadMemberships(vault: Contract) {
-    for (let membership of vault.state.memberships) {
+  private async downloadMemberships(vault: ContractState) {
+    for (let membership of vault.memberships) {
       const dataTx = membership.data[membership.data.length - 1];
       const state = await this.downloadFile(dataTx);
       membership = { ...membership, ...state };
     }
   }
 
-  private async downloadNodes(vault: Contract) {
-    vault.state.folders = [];
-    vault.state.stacks = [];
-    vault.state.notes = [];
-    vault.state.memos = [];
-    for (let node of (<any>vault.state).nodes) {
+  private async downloadNodes(vault: ContractState) {
+    vault.folders = [];
+    vault.stacks = [];
+    vault.notes = [];
+    vault.memos = [];
+    for (let node of (<any>vault).nodes) {
       const dataTx = node.data[node.data.length - 1];
       const state = await this.downloadFile(dataTx);
       node = { ...node, ...state };
-      vault.state[node.type.toLowerCase() + "s"].push(node);
+      vault[node.type.toLowerCase() + "s"].push(node);
     }
   }
 
   public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<any> {
     const state = await this.getContractState(vaultId);
     const address = await wallet.getAddress();
-    const membership = state.state.memberships.filter(member => member.address === address)[0];
+    const membership = state.memberships.filter(member => member.address === address)[0];
     const dataTx = membership.data[membership.data.length - 1];
     const data = await this.getTransactionData(dataTx);
     return new EncryptionKeys("KEYS_STRUCTURE", data.keys);
@@ -129,7 +128,7 @@ export default class ArweaveApi extends Api {
     const state = await this.getContractState(vaultId);
     let results;
     if (objectType === "Membership") {
-      results = await Promise.all(state.state.memberships.map(async (membership) => {
+      results = await Promise.all(state.memberships.map(async (membership) => {
         const object = membership;
         const dataTx = membership.data[membership.data.length - 1];
         delete object.data;
@@ -138,7 +137,7 @@ export default class ArweaveApi extends Api {
         return object
       }));
     } else {
-      results = await Promise.all(state.state.nodes.filter(node => node.type === objectType).map(async (node) => {
+      results = await Promise.all(state.nodes.filter(node => node.type === objectType).map(async (node) => {
         const object = node;
         const dataTx = node.data[node.data.length - 1];
         delete object.data;
@@ -154,12 +153,12 @@ export default class ArweaveApi extends Api {
     const state = await this.getContractState(vaultId);
     let dataTx;
     if (objectType === "Vault") {
-      dataTx = state.state.data[state.state.data.length - 1]
+      dataTx = state.data[state.data.length - 1]
     } else if (objectType === "Membership") {
-      const membership = state.state.memberships.filter(member => member.id === objectId)[0];
+      const membership = state.memberships.filter(member => member.id === objectId)[0];
       dataTx = membership.data[membership.data.length - 1];
     } else {
-      const node = state.state.nodes.filter(node => node.id === objectId)[0];
+      const node = state.nodes.filter(node => node.id === objectId)[0];
       dataTx = node.data[node.data.length - 1];
     }
     return this.getTransactionData(dataTx);

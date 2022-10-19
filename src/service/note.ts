@@ -19,12 +19,7 @@ class NoteService extends NodeService {
     this.setActionRef(actionRefs.NOTE_CREATE);
     this.setCommand(commands.NODE_CREATE);
     const body = {
-      revisions: [{
-        title: await this.processWriteString(name),
-        content: await this.processWriteString(JSON.stringify(content)),
-        size: Buffer.byteLength(content, 'utf8'),
-        postedAt: new Date()
-      }]
+      revisions: [await this.revision(name, content)]
     };
     const { nodeId, transactionId } = await this.nodeCreate(body, {
       parent: parentId
@@ -44,15 +39,19 @@ class NoteService extends NodeService {
     await this.setVaultContextFromObjectId(noteId, this.objectType);
     this.setActionRef(actionRefs.NOTE_UPLOAD_REVISION);
     const body = {
-      revisions: [{
-        title: await this.processWriteString(name),
-        content: await this.processWriteString(JSON.stringify(content)),
-        size: Buffer.byteLength(content, 'utf8'),
-        postedAt: new Date()
-      }]
+      revisions: [await this.revision(name, content)]
     };
     this.setCommand(commands.NODE_UPDATE);
     return this.nodeUpdate(body);
+  }
+
+  private async revision(name: string, content: any) {
+    return {
+      name: await this.processWriteString(name),
+      content: await this.processWriteString(JSON.stringify(content)),
+      size: Buffer.byteLength(content, 'utf8'),
+      createdAt: JSON.stringify(Date.now())
+    }
   }
 };
 

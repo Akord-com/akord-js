@@ -12,7 +12,7 @@ import { VaultService } from "./service/vault";
 import { StackService } from "./service/stack";
 import { NoteService } from "./service/note";
 import { ProfileService } from "./service/profile";
-import { Contract } from "./model/contract";
+import { ContractState } from "./model/contract";
 import { Auth } from "./auth";
 import { CacheBusters } from "./model/cacheable";
 
@@ -168,9 +168,9 @@ export class Akord {
     return response;
   }
 
-  public async getContractState(id: string): Promise<Contract> {
-    const contract = await this.api.getContractState(id);
-    this.service.setIsPublic(contract.state.isPublic);
+  public async getContractState(id: string): Promise<ContractState> {
+    let contractState = await this.api.getContractState(id);
+    this.service.setIsPublic(contractState.public);
     // if private vault, set encryption context
     if (!this.service.isPublic) {
       const encryptionKeys = await this.api.getMembershipKeys(id, this.service.wallet);
@@ -183,15 +183,15 @@ export class Akord {
       this.service.setKeys(keys);
       (<any>this.service).setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
     }
-    contract.state = await this.service.processState(contract.state);
-    if (contract.state.memberships) {
-      await Promise.all(contract.state.memberships.map(async (membership) => await this.service.processState(membership)));
+    contractState = await this.service.processState(contractState);
+    if (contractState.memberships) {
+      await Promise.all(contractState.memberships.map(async (membership) => await this.service.processState(membership)));
     }
-    await Promise.all(contract.state.memos.map(async (memo) => await this.service.processState(memo)));
-    await Promise.all(contract.state.folders.map(async (folder) => await this.service.processState(folder)));
-    await Promise.all(contract.state.stacks.map(async (stack) => await this.service.processState(stack)));
-    await Promise.all(contract.state.notes.map(async (note) => await this.service.processState(note)));
-    return contract;
+    await Promise.all(contractState.memos.map(async (memo) => await this.service.processState(memo)));
+    await Promise.all(contractState.folders.map(async (folder) => await this.service.processState(folder)));
+    await Promise.all(contractState.stacks.map(async (stack) => await this.service.processState(stack)));
+    await Promise.all(contractState.notes.map(async (note) => await this.service.processState(note)));
+    return contractState;
   }
 
   /**
@@ -271,7 +271,7 @@ export class Akord {
     parentId?: string,
   ): Promise<{ transactionId: string }[]> {
     const groupRef = items && items.length > 1 ? uuidv4() : null;
-    const vaultId = (await this.api.getObject(items[0].id, items[0].objectType)).dataRoomId;
+    const vaultId = (await this.api.getObject(items[0].id, items[0].objectType)).vaultId;
     const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
     let encryptionKeys = {} as any;
     if (!vault.state?.isPublic) {

@@ -63,7 +63,7 @@ class NodeService extends Service {
    */
   public async get(nodeId: string, shouldDecrypt = true): Promise<any> {
     const object = await this.api.getObject(nodeId, this.objectType);
-    await this.setVaultContext(object.dataRoomId);
+    await this.setVaultContext(object.vaultId);
     return this.processObject(object, shouldDecrypt);
   }
 

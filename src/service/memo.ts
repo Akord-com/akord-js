@@ -32,15 +32,13 @@ class MemoService extends NodeService {
   public async addReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(memoId, this.objectType);
     const memberDetails = await this.getProfileDetails();
-    const author = memberDetails.fullName || memberDetails.email;
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
     const body = {
       reactions: [{
         reaction: await this.processWriteString(reaction),
-        name: await this.processWriteString(author),
-        address: await this.wallet.getAddress(),
+        owner: await this.wallet.getAddress(),
         status: "ACTIVE",
-        postedAt: new Date()
+        createdAt: JSON.stringify(Date.now())
       }]
     };
     this.setCommand(commands.NODE_UPDATE);
@@ -58,7 +56,7 @@ class MemoService extends NodeService {
     this.setCommand(commands.NODE_UPDATE);
     this.tags = await this.getTags();
 
-    const body = await this._removeReaction(reaction);
+    const body = await this.deleteReaction(reaction);
     const { data, metadata } = await this._uploadBody(body);
 
     const txId = await this.api.postContractTransaction(
@@ -70,27 +68,20 @@ class MemoService extends NodeService {
     return { transactionId: txId }
   }
 
-  async _removeReaction(reaction: string) {
+  private async deleteReaction(reaction: string) {
     const currentState = await this.api.getNodeState(this.objectId, this.objectType, this.vaultId);
-    const index = await this._getReactionIndex(currentState.reactions, reaction);
+    const index = await this.getReactionIndex(currentState.reactions, reaction);
     const newState = lodash.cloneDeepWith(currentState);
     newState.reactions.splice(index, 1);
     return newState;
   }
 
-  async getReaction(reaction: string) {
-    const index = await this._getReactionIndex(this.object.state.reactions, reaction);
-    const reactionObject = this.object.state.reactions[index];
-    delete reactionObject.__typename;
-    return reactionObject;
-  }
-
-  async _getReactionIndex(reactions: any[], reaction: string) {
+  private async getReactionIndex(reactions: any[], reaction: string) {
     const address = await this.wallet.getAddress();
     const publicSigningKey = await this.wallet.signingPublicKey();
     for (const [key, value] of Object.entries(reactions)) {
       if ((<any>value).status === 'ACTIVE'
-        && ((<any>value).address === address || (<any>value).publicSigningKey === publicSigningKey)
+        && ((<any>value).owner === address || (<any>value).address === address || (<any>value).publicSigningKey === publicSigningKey)
         && reaction === await this.processReadString((<any>value).reaction)) {
         return <any>(<unknown>key);
       }

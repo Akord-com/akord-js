@@ -40,20 +40,20 @@ describe("Testing querying directly from permaweb", () => {
 
   it("Should query public vault - contract state from Akord API", async () => {
     const result = await clientWithoutWallet.getContractState(publicVaultId);
-    expect(result.state.name).not.toBeNull();
-    expect(result.state.isPublic).toBeTruthy();
-    expect(result.state.folders.length).toBeTruthy();
-    expect(result.state.stacks.length).toBeTruthy();
-    expect(result.state.notes.length).toBeTruthy();
+    expect(result.name).not.toBeNull();
+    expect(result.public).toBeTruthy();
+    expect(result.folders.length).toBeTruthy();
+    expect(result.stacks.length).toBeTruthy();
+    expect(result.notes.length).toBeTruthy();
   });
 
   it("Should query private vault - contract state from Arweave API & decrypt with Akord Wallet", async () => {
     const result = await clientWithArweaveApi.getContractState(privateVaultId);
-    expect(result.state.name).not.toBeNull();
-    expect(result.state.folders.length).toBeTruthy();
-    expect(result.state.folders[0].name).toBeTruthy();
-    expect(result.state.stacks.length).toBeTruthy();
-    expect(result.state.memberships.length).toBeTruthy();
+    expect(result.name).not.toBeNull();
+    expect(result.folders.length).toBeTruthy();
+    expect(result.folders[0].name).toBeTruthy();
+    expect(result.stacks.length).toBeTruthy();
+    expect(result.memberships.length).toBeTruthy();
   });
 
   it("Query all vaults from Arweave API", async () => {

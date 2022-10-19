@@ -1,7 +1,7 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
 import { LedgerVersion } from '../client-config';
-import { Contract } from '../model/contract';
+import { ContractState } from '../model/contract';
 
 abstract class Api {
   getMembershipKeys(vaultId: string, wallet: any): Promise<any> {
@@ -24,7 +24,7 @@ abstract class Api {
     throw new Error("Method not implemented.");
   }
 
-  preInviteCheck(emails: string[], dataRoomId: string): Promise<any> {
+  preInviteCheck(emails: string[], vaultId: string): Promise<any> {
     throw new Error("Method not implemented.");
   }
 
@@ -38,10 +38,6 @@ abstract class Api {
 
   getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     throw new Error("Method not implemented.");
-  }
-
-  getLedgerVersion(vault: any): LedgerVersion {
-    return LedgerVersion.V2;
   }
 
   config: AWSConfig | ArweaveConfig
@@ -61,7 +57,7 @@ abstract class Api {
 
   abstract uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<any[]>
 
-  abstract getContractState(vaultId: string): Promise<Contract>
+  abstract getContractState(vaultId: string): Promise<ContractState>
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 

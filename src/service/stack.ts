@@ -33,11 +33,11 @@ class StackService extends NodeService {
     } = await this._postFile(file, progressHook, cancelHook);
 
     const body = {
-      name: await super.processWriteString(name ? name : file.name),
+      name: await this.processWriteString(name ? name : file.name),
       files: [
         {
-          postedAt: JSON.stringify(Date.now()),
-          name: await super.processWriteString(file.name ? file.name : name),
+          createdAt: JSON.stringify(Date.now()),
+          name: await this.processWriteString(file.name ? file.name : name),
           type: file.type,
           size: file.size,
           resourceTx: resourceTx,
@@ -65,7 +65,7 @@ class StackService extends NodeService {
     const body = {
       files: [
         {
-          postedAt: JSON.stringify(Date.now()),
+          createdAt: JSON.stringify(Date.now()),
           name: await this.processWriteString(file.name),
           type: file.type,
           size: file.size,
@@ -88,18 +88,18 @@ class StackService extends NodeService {
     const stack = await this.api.getObject(stackId, objectTypes.STACK);
     let file: any;
     if (index) {
-      if (stack.state.files && stack.state.files[index]) {
-        file = stack.state.files[index];
+      if (stack.files && stack.files[index]) {
+        file = stack.files[index];
       } else {
         throw new Error("Given index: " + index + " does not exist for stack: " + stackId);
       }
     } else {
-      file = stack.state.files[stack.state.files.length - 1];
+      file = stack.files[stack.files.length - 1];
     }
-    await this.setVaultContext(stack.dataRoomId);
+    await this.setVaultContext(stack.vaultId);
     const fileRes = await this.api.downloadFile(file.resourceUrl, this.isPublic);
     const fileBuffer = await this.processReadRaw(fileRes.fileData, fileRes.headers);
-    const fileName = await this.processReadString(file.title);
+    const fileName = await this.processReadString(file.name);
     return { name: fileName, data: fileBuffer };
   }
 

@@ -244,7 +244,7 @@ class MembershipService extends NodeService {
    */
   public async inviteResend(membershipId: string): Promise<{ transactionId: string }> {
     const object = await this.api.getObject(membershipId, this.objectType);
-    this.setVaultId(object.dataRoomId);
+    this.setVaultId(object.vaultId);
     this.setPrevHash(object.hash);
     this.setObjectId(membershipId);
     this.setObject(object);

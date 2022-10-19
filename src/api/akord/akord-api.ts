@@ -1,7 +1,7 @@
 import { Wallet, fromMembership } from "@akord/crypto";
 import AWSAppSyncClient, { AUTH_TYPE } from "aws-appsync";
 import gql from "graphql-tag";
-import { ClientConfig, LedgerVersion } from "../../client-config";
+import { ClientConfig } from "../../client-config";
 import { Api } from "../api";
 import { awsConfig, AWSConfig } from "./aws-config";
 import * as queries from "./graphql/graphql";
@@ -59,9 +59,9 @@ export default class AkordApi extends Api {
     return result.data.postLedgerTransaction[0];
   };
 
-  public async preInviteCheck(emails: string[], dataRoomId: string): Promise<any> {
+  public async preInviteCheck(emails: string[], vaultId: string): Promise<any> {
     const result = await this.executeQuery(queries.preInviteCheck,
-      { emails: emails, dataRoomId: dataRoomId })
+      { emails: emails, dataRoomId: vaultId })
     return result.data.preInviteCheck;
   };
 
@@ -86,11 +86,6 @@ export default class AkordApi extends Api {
   public async getPublicKeyFromAddress(address: string): Promise<string> {
     return "";
   };
-
-  public getLedgerVersion(vault: any): LedgerVersion {
-    const ledgerVersion = vault.state.isContract ? LedgerVersion.V2 : LedgerVersion.V1;
-    return ledgerVersion;
-  }
 
   public async uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new PermapostExecutor()
@@ -177,11 +172,12 @@ export default class AkordApi extends Api {
   };
 
   public async getContractState(objectId: string): Promise<any> {
-    return new PermapostExecutor()
+    const contract = await new PermapostExecutor()
       .env(this.config.env, this.config.domain)
       .auth(this.jwtToken)
       .contractId(objectId)
       .getContract();
+    return contract.state;
   };
 
   public async getMemberships(wallet: Wallet): Promise<any> {

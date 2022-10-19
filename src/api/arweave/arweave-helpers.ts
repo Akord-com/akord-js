@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
-import { Contract as Vault } from "../../model/contract";
+import { ContractState } from "../../model/contract";
 import { clientName, protocolName, protocolVersion } from "./config";
 
 // Set up Arweave client
@@ -12,7 +12,7 @@ const arweave = Arweave.init(arweaveConfig());
 LoggerFactory.INST.logLevel("error");
 const smartweave = WarpFactory.forMainnet({ inMemory: true, dbLocation: DEFAULT_LEVEL_DB_LOCATION });
 
-const getContract = (contractId, wallet): Contract<Vault> => {
+const getContract = (contractId, wallet): Contract<ContractState> => {
   const contract = <any>smartweave
     .contract(contractId)
     // .setEvaluationOptions({

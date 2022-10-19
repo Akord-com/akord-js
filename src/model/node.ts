@@ -1,64 +1,56 @@
 export interface Node {
-    id: string;
-    hash: string;
-    name: string;
-    modifiedAt: string;
-    version: number;
-    status: string;
-    size?: number;
-    folderId?: string;
+  id: string;
+  owner: string; // owner's address
+  createdAt: number;
+  updatedAt: number;
+  status: string;
+  parentId?: string;
 }
 
-export interface Folder extends Node { }
+export interface Folder extends Node {
+  name: string;
+}
 
 export interface Stack extends Node {
-    files: Array<StackFile>;
+  files: Array<StackFile>;
 }
 
 export interface StackFile {
-    hash: string;
-    name: string;
-    type: string;
-    resourceUrl: string;
-    resourceTx: string;
-    thumbnailUrl: string;
-    thumbnailTx: string;
-    size: number;
-    numberOfChunks: number;
-    chunkSize: number;
-    postedAt: string;
-    modifiedAt: string;
+  name: string;
+  type: string;
+  resourceUrl: string;
+  resourceTx: string;
+  thumbnailUrl: string;
+  thumbnailTx: string;
+  size: number;
+  numberOfChunks: number;
+  chunkSize: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface Note extends Node {
-    revisions: Array<NoteRevision>;
+  revisions: Array<NoteRevision>;
 }
 
 export interface NoteRevision {
-    hash: string;
-    title: string;
-    fileType: string;
-    resourceUrl: string;
-    resourceTx: string;
-    thumbnailUrl: string;
-    thumbnailTx: string;
-    size: number;
-    numberOfChunks: number;
-    chunkSize: number;
-    postedAt: string;
-    modifiedAt: string;
+  owner: string;
+  name: string;
+  content: string;
+  size: number;
+  createdAt: number;
 }
 
 export interface Memo extends Node {
-    message: string
-    reactions: MemoReaction
+  message: string;
+  reactions: MemoReaction;
 }
 
 export interface MemoReaction {
-    publicSigningKey: string;
-    name: string;
-    reaction: string;
-    status: string;
-    postedAt: string;
-    refHash: string;
+  owner: string;
+  author: string;
+  reaction: string;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
 }
