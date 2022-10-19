@@ -24,19 +24,19 @@ class FileService extends Service {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async get(id: string, vaultId: string, size?: number, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
+  public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
     await this.setVaultContext(vaultId);
     let fileBinary: ArrayBuffer;
-    if (isChunked) {
+    if (options?.isChunked) {
       let currentChunk = 0;
-      while (currentChunk < numberOfChunks) {
+      while (currentChunk < options.numberOfChunks) {
         const url = `${id}_${currentChunk}`;
-        const chunkBinary = await this.getBinary(url, progressHook, cancelHook, currentChunk * this.chunkSize, size);
+        const chunkBinary = await this.getBinary(url, options.progressHook, options.cancelHook, options.numberOfChunks, currentChunk * this.chunkSize, options.size);
         fileBinary = this.appendBuffer(fileBinary, chunkBinary);
         currentChunk++;
       }
     } else {
-      const file = await this.api.downloadFile(id, this.isPublic, progressHook, cancelHook);
+      const file = await this.api.downloadFile(id, this.isPublic, options.progressHook, options.cancelHook);
       fileBinary = await this.processReadRaw(file.fileData, file.headers)
     }
     return fileBinary;
@@ -50,25 +50,25 @@ class FileService extends Service {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async getPublic(id: string, size?: number, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<ArrayBuffer> {
+  public async getPublic(id: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
     this.setIsPublic(true);
     let fileBinary
-    if (isChunked) {
+    if (options.isChunked) {
       let currentChunk = 0;
-      while (currentChunk < numberOfChunks) {
+      while (currentChunk < options.numberOfChunks) {
         const url = `${id}_${currentChunk}`;
-        const chunkBinary = await this.getBinary(url, progressHook, cancelHook, currentChunk * this.chunkSize, size);
+        const chunkBinary = await this.getBinary(url, options.progressHook, options.cancelHook, currentChunk * this.chunkSize, options.size);
         fileBinary = this.appendBuffer(fileBinary, chunkBinary);
         currentChunk++;
       }
     } else {
-      fileBinary = await this.getBinary(id, progressHook, cancelHook);
+      fileBinary = await this.getBinary(id, options.progressHook, options.cancelHook);
     }
     return fileBinary;
   }
 
   /**
-   * Downloads file keeping memory consumed (RAM) at defiend level: this#chunkSize.
+   * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
    * In browser, streaming of the binary requires self hosting of mitm.html and sw.js
    * See: https://github.com/jimmywarting/StreamSaver.js#configuration
    * @param  {string} id file resource url
@@ -79,15 +79,15 @@ class FileService extends Service {
    * @param  {AbortController} [cancelHook]
    * @returns Promise with file buffer
    */
-  public async download(id: string, vaultId: string, name: string, size?: number, isChunked?: boolean, numberOfChunks?: number, progressHook?: (progress: number) => void, cancelHook?: AbortController) {
+  public async download(id: string, vaultId: string, options: DownloadOptions = {}) : Promise<void> {
     await this.setVaultContext(vaultId);
-    const writer = await this.stream(name, size);
-    if (isChunked) {
+    const writer = await this.stream(options.name, options.size);
+    if (options.isChunked) {
       let currentChunk = 0;
       try {
-        while (currentChunk < numberOfChunks) {
+        while (currentChunk < options.numberOfChunks) {
           const url = `${id}_${currentChunk}`;
-          const fileBinary = await this.getBinary(url, progressHook, cancelHook, currentChunk * this.chunkSize, size);
+          const fileBinary = await this.getBinary(url, options.progressHook, options.cancelHook, options.numberOfChunks, currentChunk * this.chunkSize, options.size);
           if (writer instanceof WritableStreamDefaultWriter) {
             await writer.ready
           }
@@ -103,7 +103,7 @@ class FileService extends Service {
         await writer.close();
       }
     } else {
-      const fileBinary = await this.getBinary(id, progressHook, cancelHook);
+      const fileBinary = await this.getBinary(id, options.progressHook, options.cancelHook);
       await writer.write(new Uint8Array(fileBinary));
       await writer.close();
     }
@@ -251,9 +251,9 @@ class FileService extends Service {
     return tmp.buffer;
   }
 
-  private async getBinary(id: string, progressHook?: (progress: number) => void, cancelHook?: AbortController, loadedSize?: number, resourceSize?: number) {
+  private async getBinary(id: string, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number) {
     try {
-      const file = await this.api.downloadFile(id, this.isPublic, progressHook, cancelHook, loadedSize, resourceSize);
+      const file = await this.api.downloadFile(id, this.isPublic, progressHook, cancelHook, numberOfChunks, loadedSize, resourceSize);
       return await this.processReadRaw(file.fileData, file.headers);
     } catch (e) {
       Logger.log(e);
@@ -264,6 +264,15 @@ class FileService extends Service {
     }
   }
 };
+
+type DownloadOptions = {
+  size?: number,
+  name?: string,
+  isChunked?: boolean,
+  numberOfChunks?: number,
+  progressHook?: (progress: number) => void, 
+  cancelHook?: AbortController
+}
 
 export {
   FileService

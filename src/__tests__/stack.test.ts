@@ -46,7 +46,7 @@ describe("Testing stack commands", () => {
     expect(stack.files[0].name).toEqual("logo.png");
 
     const isChunked = stack.files[0].resourceUrl.numberOfChunks > 1
-    const binary = await akord.file.get(stack.files[0].resourceUrl, vaultId, isChunked, stack.files[0].resourceUrl.numberOfChunks);
+    const binary = await akord.file.get(stack.files[0].resourceUrl, vaultId, { isChunked: isChunked, numberOfChunks: stack.files[0].resourceUrl.numberOfChunks } );
     expect(binary).toEqual(await file.arrayBuffer());
   });
 

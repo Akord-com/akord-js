@@ -405,10 +405,9 @@ export class PermapostExecutor {
                     if (me._total) {
                         const chunkSize = me._total / me._numberOfChunks;
                         progress = Math.round(me._processed / me._total * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._total * 100);
-                        // progress = Math.round((me._processed + progressEvent.loaded) / me._total * 100);
                      } else {
                          progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
-                     }                   // const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                     }
                     me._progressHook(progress);
                 }
             },
