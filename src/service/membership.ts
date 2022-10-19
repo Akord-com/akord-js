@@ -200,7 +200,7 @@ class MembershipService extends NodeService {
    * @returns Promise with corresponding transaction id
    */
   public async changeRole(membershipId: string, role: string): Promise<{ transactionId: string }> {
-    const service = await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
     this.setCommand(commands.MEMBERSHIP_CHANGE_ROLE);
     return this.nodeUpdate(null, { role });
