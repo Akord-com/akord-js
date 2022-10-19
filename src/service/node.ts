@@ -61,22 +61,22 @@ class NodeService extends Service {
    * @param  {string} nodeId
    * @returns Promise with the decrypted node
    */
-  public async get(nodeId: string): Promise<any> {
+  public async get(nodeId: string, shouldDecrypt = true): Promise<any> {
     const object = await this.api.getObject(nodeId, this.objectType);
     await this.setVaultContext(object.dataRoomId);
-    return this.processObject(object);
+    return this.processObject(object, shouldDecrypt);
   }
 
   /**
    * @param  {string} vaultId
    * @returns Promise with all nodes within given vault
    */
-  public async list(vaultId: string): Promise<any> {
+  public async list(vaultId: any, shouldDecrypt = true): Promise<any> {
     const nodes = await this.api.getObjectsByVaultId(vaultId, this.objectType);
     let nodeTable = [];
     await this.setVaultContext(vaultId);
     for (let node of nodes) {
-      const processedNode = await this.processObject(node);
+      const processedNode = await this.processObject(node, shouldDecrypt);
       nodeTable.push(processedNode);
     }
     return nodeTable;
