@@ -220,7 +220,7 @@ class MembershipService extends NodeService {
     this.setVaultId(vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
     const header = {
-      schemaUri: "MEMBERSHIP_INVITE_NEW_USER",
+      schemaUri: "akord:membership:invite-new-user",
       dataRoomId: this.vaultId,
       ...await this.prepareHeader()
     }
