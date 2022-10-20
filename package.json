@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js",
-  "version": "1.6.0-rc1",
+  "version": "1.6.0-rc2",
   "description": "Akord Client",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
@@ -31,7 +31,7 @@
     "node": ">=16.0.0 <17.0.0"
   },
   "dependencies": {
-    "@akord/crypto": "file:../akord-crypto",
+    "@akord/crypto": "0.0.43",
     "@akord/ts-cacheable": "1.0.11",
     "amazon-cognito-identity-js": "^5.2.8",
     "arweave": "1.11.4",
