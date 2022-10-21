@@ -11,8 +11,8 @@ import { EncryptionTags } from "../types/encryption-tags";
 
 
 class FileService extends Service {
-  asyncUploadTreshold = 2097152;
-  chunkSize = 2097152;
+  asyncUploadTreshold = 209715200;
+  chunkSize = 209715200;
 
   /**
    * Returns file as ArrayBuffer. Puts the whole file into memory. 

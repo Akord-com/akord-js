@@ -16,11 +16,10 @@ class ProfileService extends NodeService {
   @PCacheable({
     storageStrategy: InMemoryStorageStrategy,
     cacheBusterObserver: CacheBusters.profile,
-    shouldCacheDecider: (res) => res && res._cached
+    shouldCacheDecider: () => CacheBusters.cache
   })
   public async get(): Promise<ProfileDetails> {
-    const profileDetails = await this.getProfileDetails();
-    return { ...profileDetails, _cached: CacheBusters.cache };
+    return await this.getProfileDetails();
   }
 
   /**
