@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
-import { Contract } from "../../model/contract";
+import { Contract } from "../../types/contract";
 
 export class PermapostExecutor {
     private _env: string = "dev";

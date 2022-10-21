@@ -1,7 +1,7 @@
 import { AkordWallet, generateKeyPair } from "@akord/crypto";
 import { Akord } from "../../akord";
 import { AkordApi } from "../../api";
-import { CacheBusters } from "../../model/cacheable";
+import { CacheBusters } from "../../types/cacheable";
 import { Service } from "../../service";
 
 let akord: Akord;

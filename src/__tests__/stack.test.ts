@@ -2,7 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
 import { email, password } from './data/test-credentials';
-import { NodeJs } from "../model/file";
+import { NodeJs } from "../types/file";
 
 let akord: Akord;
 

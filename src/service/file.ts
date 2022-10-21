@@ -4,14 +4,15 @@ import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
 import { PermapostExecutor } from "../api/akord/permapost";
 import { v4 as uuid } from "uuid";
-import { FileLike } from "../model/file";
+import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
 import fs from "fs";
+import { EncryptionTags } from "../types/encryption-tags";
 
 
 class FileService extends Service {
-  asyncUploadTreshold = 209715200;
-  chunkSize = 209715200;
+  asyncUploadTreshold = 2097152;
+  chunkSize = 2097152;
 
   /**
    * Returns file as ArrayBuffer. Puts the whole file into memory. 
@@ -27,7 +28,7 @@ class FileService extends Service {
   public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
     await this.setVaultContext(vaultId);
     let fileBinary: ArrayBuffer;
-    if (options?.isChunked) {
+    if (options.isChunked) {
       let currentChunk = 0;
       while (currentChunk < options.numberOfChunks) {
         const url = `${id}_${currentChunk}`;
@@ -164,18 +165,26 @@ class FileService extends Service {
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController
   ): Promise<any> {
+    let resourceUrl = uuid();
+    let encryptionTags: EncryptionTags;
+    let encryptedKey: string;
+    let iv: Array<string> = [];
+    let uploadedChunks = 0;
     let offset = 0;
 
-    let resourceUrl = uuid();
-    let encryptionTags;
-    let uploadedChunks = 0;
     while (offset < file.size) {
       const chunk = file.slice(offset, this.chunkSize + offset);
       const { encryptedData, chunkNumber } = await this.encryptChunk(
         chunk,
-        offset
+        offset,
+        encryptedKey
       );
+
       encryptionTags = encryptedData.encryptionTags;
+      iv.push(encryptionTags['Initialization-Vector'])
+      if (!encryptedKey) {
+        encryptedKey = encryptionTags['Encrypted-Key'];
+      }
 
       await this.uploadChunk(
         encryptedData,
@@ -190,7 +199,8 @@ class FileService extends Service {
       uploadedChunks += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-
+    encryptionTags['Initialization-Vector'] = iv.join(',')
+    
     await new PermapostExecutor()
       .env((<any>this.api.config).env, (<any>this.api.config).domain)
       .auth(this.api.jwtToken)
@@ -231,13 +241,13 @@ class FileService extends Service {
     Logger.log("Uploaded file with id: " + resource.resourceUrl);
   }
 
-  private async encryptChunk(chunk: Blob, offset: number): Promise<{
-    encryptedData: { processedData: ArrayBuffer, encryptionTags: any },
+  private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
+    encryptedData: { processedData: ArrayBuffer, encryptionTags: EncryptionTags },
     chunkNumber: number
   }> {
     const chunkNumber = offset / this.chunkSize;
     const arrayBuffer = await chunk.arrayBuffer();
-    const encryptedData = await this.processWriteRaw(new Uint8Array(arrayBuffer));
+    const encryptedData = await this.processWriteRaw(new Uint8Array(arrayBuffer), encryptedKey);
     return { encryptedData, chunkNumber }
   }
 

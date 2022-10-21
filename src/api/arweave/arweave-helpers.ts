@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
-import { Contract as Vault } from "../../model/contract";
+import { Contract as Vault } from "../../types/contract";
 import { clientName, protocolName, protocolVersion } from "./config";
 
 // Set up Arweave client

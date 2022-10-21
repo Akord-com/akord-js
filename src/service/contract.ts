@@ -1,5 +1,5 @@
 import { Service } from "../service";
-import { Contract } from "../model/contract";
+import { Contract } from "../types/contract";
 
 class ContractService extends Service {
   /**
@@ -11,14 +11,14 @@ class ContractService extends Service {
     this.setIsPublic(contract.state.isPublic);
     // if private vault, set encryption context
     await this.setMembershipKeys(id);
-    contract.state = await this.decryptState(contract.state);
+    contract.state = await this.processState(contract.state);
     if (contract.state.memberships) {
-      await Promise.all(contract.state.memberships.map(async (membership) => await this.decryptState(membership)));
+      await Promise.all(contract.state.memberships.map(async (membership) => await this.processState(membership)));
     }
-    await Promise.all(contract.state.memos.map(async (memo) => await this.decryptState(memo)));
-    await Promise.all(contract.state.folders.map(async (folder) => await this.decryptState(folder)));
-    await Promise.all(contract.state.stacks.map(async (stack) => await this.decryptState(stack)));
-    await Promise.all(contract.state.notes.map(async (note) => await this.decryptState(note)));
+    await Promise.all(contract.state.memos.map(async (memo) => await this.processState(memo)));
+    await Promise.all(contract.state.folders.map(async (folder) => await this.processState(folder)));
+    await Promise.all(contract.state.stacks.map(async (stack) => await this.processState(stack)));
+    await Promise.all(contract.state.notes.map(async (note) => await this.processState(note)));
     return contract;
   }
 }

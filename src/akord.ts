@@ -11,7 +11,7 @@ import { StackService } from "./service/stack";
 import { NoteService } from "./service/note";
 import { ProfileService } from "./service/profile";
 import { Auth } from "./auth";
-import { CacheBusters } from "./model/cacheable";
+import { CacheBusters } from "./types/cacheable";
 import { FileService } from "./service/file";
 import { BatchService } from "./service/batch";
 import { ContractService } from "./service/contract";

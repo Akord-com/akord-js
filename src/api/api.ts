@@ -1,7 +1,7 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
 import { LedgerVersion } from '../client-config';
-import { Contract } from '../model/contract';
+import { Contract } from '../types/contract';
 
 abstract class Api {
   getMembershipKeys(vaultId: string, wallet: any): Promise<any> {

@@ -2,7 +2,7 @@ import { NodeService } from "./node";
 import { actionRefs, commands, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
-import { FileLike } from "../model/file";
+import { FileLike } from "../types/file";
 
 class StackService extends NodeService {
   objectType: string = objectTypes.STACK;
@@ -115,7 +115,6 @@ class StackService extends NodeService {
   private async postFile(file: FileLike, progressHook?: (progress: number) => void, cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
     
-    this.fileService.setIsPublic(this.isPublic);
     const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
     try {
       const thumbnail = await createThumbnail(file);
@@ -140,9 +139,10 @@ class StackService extends NodeService {
 
   public async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
-    this.fileService.setKeys(this.dataEncrypter.decryptedKeys);
+    this.fileService.setKeys(this.membershipKeys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
     this.fileService.setVaultId(this.vaultId);
+    this.fileService.setIsPublic(this.isPublic);
   }
 };
 

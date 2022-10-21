@@ -2,9 +2,9 @@ import { NodeService } from "./node";
 import { MembershipService } from "./membership";
 import { actionRefs } from "../constants";
 import { EncryptionType } from "@akord/crypto";
-import { ProfileDetails } from "../model/profile-details";
+import { ProfileDetails } from "../types/profile-details";
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
-import { CacheBusters } from "../model/cacheable";
+import { CacheBusters } from "../types/cacheable";
 
 class ProfileService extends NodeService {
   objectType: string = "Profile";

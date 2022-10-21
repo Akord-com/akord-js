@@ -17,6 +17,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { objectTypes, protocolTags, commands } from '../constants';
 import lodash from "lodash";
+import { EncryptionTags } from "../types/encryption-tags";
 
 declare const Buffer;
 
@@ -26,6 +27,7 @@ class Service {
 
   dataEncrypter: Encrypter
   keysEncrypter: Encrypter
+  membershipKeys: any
 
   prevHash: string
   vaultId: string
@@ -198,6 +200,7 @@ class Service {
   }
 
   setKeys(keys: any) {
+    this.membershipKeys = keys;
     this.dataEncrypter.setKeys(keys);
     this.keysEncrypter.setKeys(keys);
   }
@@ -294,18 +297,19 @@ class Service {
     return {};
   }
 
-  protected async processWriteRaw(data: any) {
+  protected async processWriteRaw(data: any, encryptedKey?: string) {
     let processedData: any;
-    const encryptionTags = {};
+    let encryptionTags: EncryptionTags;
     if (this.isPublic) {
       processedData = data;
     } else {
-      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false);
+      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
+      const activeKey = await this._getActiveKey();
       processedData = encryptedFile.encryptedData.ciphertext;
       encryptionTags['Initialization-Vector'] = encryptedFile.encryptedData.iv;
       encryptionTags['Encrypted-Key'] = encryptedFile.encryptedKey;
-      encryptionTags['Public-Key-Index'] = (await this._getActiveKey()).index;
-      encryptionTags['Public-Key'] = (await this._getActiveKey()).publicKey;
+      encryptionTags['Public-Key-Index'] = activeKey.index;
+      encryptionTags['Public-Key'] = activeKey.publicKey;
     }
     return { processedData, encryptionTags }
   }
