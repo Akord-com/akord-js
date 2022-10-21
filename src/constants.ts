@@ -103,7 +103,7 @@ export enum encryptionTags {
   Initialization_Vector = "Initialization-Vector",
   Encrypted_Key = "Encrypted-Key",
   Public_Key = "Public-Key",
-  Public_Key_Index = "Public-Key-Index"
+  Public_Address = "Public-Address"
 };
 
 export enum smartweaveTags {

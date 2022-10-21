@@ -34,6 +34,7 @@ class Auth {
       "custom:encBackupPhrase": wallet.encBackupPhrase,
       "custom:publicKey": await wallet.publicKey(),
       "custom:publicSigningKey": await wallet.signingPublicKey(),
+      "custom:address": await wallet.getAddress(),
       "custom:mode": "dark",
       "custom:notifications": "true",
     }, clientMetadata);

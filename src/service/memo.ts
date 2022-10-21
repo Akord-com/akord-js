@@ -15,7 +15,7 @@ class MemoService extends NodeService {
     transactionId: string
   }> {
     await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.NOTE_CREATE);
+    this.setActionRef(actionRefs.MEMO_CREATE);
     this.setCommand(commands.NODE_CREATE);
     const body = {
       message: await this.processWriteString(message)
