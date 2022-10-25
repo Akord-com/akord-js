@@ -19,10 +19,7 @@ class FileService extends Service {
    * For downloading without putting whole file to memory use FileService#download()
    * @param  {string} id file resource url
    * @param  {string} vaultId
-   * @param  {boolean} [isChunked]
-   * @param  {number} [numberOfChunks]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
+   * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
   public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
@@ -45,10 +42,7 @@ class FileService extends Service {
 
   /**
    * @param  {string} id file resource url
-   * @param  {boolean} [isChunked]
-   * @param  {number} [numberOfChunks]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
+   * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
   public async getPublic(id: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
@@ -74,10 +68,7 @@ class FileService extends Service {
    * See: https://github.com/jimmywarting/StreamSaver.js#configuration
    * @param  {string} id file resource url
    * @param  {string} vaultId
-   * @param  {boolean} [isChunked]
-   * @param  {number} [numberOfChunks]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
+   * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
   public async download(id: string, vaultId: string, options: DownloadOptions = {}) : Promise<void> {
