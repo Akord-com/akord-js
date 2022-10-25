@@ -18,6 +18,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { objectTypes, protocolTags, commands } from '../constants';
 import lodash from "lodash";
+import { EncryptionTags } from "../types/encryption-tags";
 
 declare const Buffer;
 
@@ -27,6 +28,7 @@ class Service {
 
   dataEncrypter: Encrypter
   keysEncrypter: Encrypter
+  membershipKeys: any
 
   prevHash: string
   vaultId: string
@@ -60,9 +62,19 @@ class Service {
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.state?.isPublic);
+    await this.setMembershipKeys(vaultId);
+  }
+
+  protected async setMembershipKeys(vaultId: string) {
     if (!this.isPublic) {
       const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.wallet);
-      this.setKeys(encryptionKeys.keys);
+      const keys = encryptionKeys.keys.map(((keyPair: any) => {
+        return {
+          encPrivateKey: keyPair.encPrivateKey,
+          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+        }
+      }))
+      this.setKeys(keys);
       this.setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
     }
   }
@@ -189,6 +201,7 @@ class Service {
   }
 
   setKeys(keys: any) {
+    this.membershipKeys = keys;
     this.dataEncrypter.setKeys(keys);
     this.keysEncrypter.setKeys(keys);
   }
@@ -233,7 +246,7 @@ class Service {
     this.object = object;
   }
 
-  protected setRawDataEncryptionPublicKey(publicKey) {
+  setRawDataEncryptionPublicKey(publicKey) {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
@@ -249,7 +262,7 @@ class Service {
     this.keysEncrypter.setRawPublicKey(publicKey);
   }
 
-  async getProfileDetails() {
+  protected async getProfileDetails() {
     const signingPublicKey = await this.wallet.signingPublicKey();
     const profile = await this.api.getProfileByPublicSigningKey(signingPublicKey);
     if (profile) {
@@ -285,13 +298,13 @@ class Service {
     return {};
   }
 
-  protected async processWriteRaw(data: any) {
+  protected async processWriteRaw(data: any, encryptedKey?: string) {
     let processedData: any;
-    const encryptionTags = {};
+    let encryptionTags: EncryptionTags;
     if (this.isPublic) {
       processedData = data;
     } else {
-      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false);
+      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
       processedData = encryptedFile.encryptedData.ciphertext;
       encryptionTags['Initialization-Vector'] = encryptedFile.encryptedData.iv;
       encryptionTags['Encrypted-Key'] = encryptedFile.encryptedKey;

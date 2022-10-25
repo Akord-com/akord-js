@@ -1,26 +1,12 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
-import fs from "fs";
-import path from "path";
 import { email, password } from './data/test-credentials';
+import { NodeJs } from "../types/file";
 
 let akord: Akord;
 
 jest.setTimeout(3000000);
-
-function getFileFromPath(filePath: string) {
-  let file = <any>{};
-  if (!fs.existsSync(filePath)) {
-    console.error("Could not find a file in your filesystem: " + filePath);
-    process.exit(0);
-  }
-  const stats = fs.statSync(filePath);
-  file.size = stats.size;
-  file.data = fs.readFileSync(filePath);
-  file.name = path.basename(filePath);
-  return file;
-}
 
 async function vaultCreate() {
   const name = faker.random.words();
@@ -49,8 +35,7 @@ describe("Testing stack commands", () => {
   it("should create new stack", async () => {
     const name = faker.random.words();
 
-    const file = getFileFromPath("./src/__tests__/data/logo.png");
-    file.type = "image/png";
+    const file = new NodeJs.File("./src/__tests__/data/logo.png");
 
     stackId = (await akord.stack.create(vaultId, file, name)).stackId;
 
@@ -60,14 +45,13 @@ describe("Testing stack commands", () => {
     expect(stack.files.length).toEqual(1);
     expect(stack.files[0].name).toEqual("logo.png");
 
-    const { name: fileName, data } = await akord.stack.getFile(stackId);
-    expect(Buffer.from(data)).toEqual(file.data);
-    expect(fileName).toEqual("logo.png");
+    const isChunked = stack.files[0].resourceUrl.numberOfChunks > 1
+    const binary = await akord.file.get(stack.files[0].resourceUrl, vaultId, { isChunked: isChunked, numberOfChunks: stack.files[0].resourceUrl.numberOfChunks } );
+    expect(binary).toEqual(await file.arrayBuffer());
   });
 
   it("should upload new revision", async () => {
-    const file = getFileFromPath("./src/__tests__/data/avatar.jpeg");
-    file.type = "image/jpeg";
+    const file = new NodeJs.File("./src/__tests__/data/avatar.jpeg");
 
     await akord.stack.uploadRevision(stackId, file);
 
@@ -76,13 +60,12 @@ describe("Testing stack commands", () => {
     expect(stack.files[0].name).toEqual("logo.png");
     expect(stack.files[1].name).toEqual("avatar.jpeg");
 
-    const { name: fileName, data } = await akord.stack.getFile(stackId);
-    expect(Buffer.from(data)).toEqual(file.data);
-    expect(fileName).toEqual("avatar.jpeg");
+    const binary = await akord.file.get(stack.files[1].resourceUrl, vaultId);
+    expect(binary).toEqual(await file.arrayBuffer());
 
-    const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
-    const decryptedFirstFile = await akord.getFile(stack.files[0].resourceUrl, vaultId);
-    expect(Buffer.from(decryptedFirstFile)).toEqual(firstFile.data);
+    const firstFile = new NodeJs.File("./src/__tests__/data/logo.png");
+    const decryptedFirstFile = await akord.file.get(stack.files[0].resourceUrl, vaultId);
+    expect(decryptedFirstFile).toEqual(await firstFile.arrayBuffer());
   });
 
   it("should rename the stack", async () => {
@@ -96,13 +79,14 @@ describe("Testing stack commands", () => {
     expect(stack.files[0].name).toEqual("logo.png");
     expect(stack.files[1].name).toEqual("avatar.jpeg");
 
-    const firstFile = getFileFromPath("./src/__tests__/data/logo.png");
-    const decryptedfirstFile = await akord.getFile(stack.files[0].resourceUrl, vaultId);
-    expect(Buffer.from(decryptedfirstFile)).toEqual(firstFile.data);
+    const firstFile = new NodeJs.File("./src/__tests__/data/logo.png");
+    const decryptedfirstFile = await akord.file.get(stack.files[0].resourceUrl, vaultId);
+    expect(decryptedfirstFile).toEqual(await firstFile.arrayBuffer());
 
-    const secondFile = getFileFromPath("./src/__tests__/data/avatar.jpeg");
-    const decryptedSecondFile = await akord.getFile(stack.files[1].resourceUrl, vaultId);
-    expect(Buffer.from(decryptedSecondFile)).toEqual(secondFile.data);
+    const secondFile = new NodeJs.File("./src/__tests__/data/avatar.jpeg");
+
+    const decryptedSecondFile = await akord.file.get(stack.files[1].resourceUrl, vaultId);
+    expect(decryptedSecondFile).toEqual(await secondFile.arrayBuffer());
   });
 
   it("should revoke the stack", async () => {

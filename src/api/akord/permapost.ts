@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
-import { Contract } from "../../model/contract";
+import { Contract } from "../../types/contract";
 
 export class PermapostExecutor {
     private _env: string = "dev";
@@ -19,12 +19,15 @@ export class PermapostExecutor {
     private _dataRefs: string;
     private _responseType: string = "json";
     private _progressHook: (progress: any) => void
+    private _processed: number
+    private _total: number
     private _cancelHook: AbortController
     private _tags: Array<{ name: string, value: string }>;
     private _input: string;
     private _contractId: string;
     private _metadata: string;
     private _shouldBundleTransaction: boolean;
+    private _numberOfChunks: number;
 
     constructor() { }
 
@@ -96,8 +99,10 @@ export class PermapostExecutor {
         return this;
     }
 
-    progressHook(hook: (progress: any) => void): PermapostExecutor {
+    progressHook(hook: (progress: any) => void, processed?: number, total?: number): PermapostExecutor {
         this._progressHook = hook;
+        this._processed = processed;
+        this._total = total;
         return this;
     }
 
@@ -112,6 +117,11 @@ export class PermapostExecutor {
      */
     input(input: string): PermapostExecutor {
         this._input = input;
+        return this;
+    }
+
+    numberOfChunks(numberOfChunks: number): PermapostExecutor {
+        this._numberOfChunks = numberOfChunks;
         return this;
     }
 
@@ -140,7 +150,7 @@ export class PermapostExecutor {
         return response.data.contractTx
     }
 
-    async getContract() : Promise<Contract> {
+    async getContract(): Promise<Contract> {
         const config = {
             method: 'get',
             url: `${this._url}/${this._contractUri}/${this._contractId}`,
@@ -223,6 +233,39 @@ export class PermapostExecutor {
     }
 
     /**
+     * Schedules transaction posting
+     * @requires: 
+     * - auth() 
+     * - resourceId() 
+     * - metadata() 
+     * @uses:
+     * - tags()
+     */
+    async asyncTransaction() {
+        if (!this._jwt) {
+            throw Error('Authentication is required to use permapost')
+        }
+        if (!this._resourceId) {
+            throw Error('Reource id is required to use permapost')
+        }
+
+        const tags = this._tags.filter((tag) =>
+            tag.name !== "Public-Key"
+        )
+
+        const config = {
+            method: 'post',
+            url: `${this._url}/${this._transactionUri}`,
+            data: { resourceUrl: this._resourceId, tags: tags, async: true, numberOfChunks: this._numberOfChunks },
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        await axios(config);
+    }
+
+    /**
      * 
      * @requires: 
      * - auth() 
@@ -234,10 +277,8 @@ export class PermapostExecutor {
      */
     async uploadState() {
         this._dir = this._stateDir;
-        await this._upload();
-        const resourceId = this._resourceId;
-        const resourceTx = await this.bundleTransaction(this._stateDir);
-        return { resourceUrl: resourceId, id: resourceTx, resourceTx: resourceTx }
+        const { resourceUrl, resourceTx } = await this._upload();
+        return { resourceUrl: resourceUrl, id: resourceTx, resourceTx: resourceTx }
     }
 
     /**
@@ -270,7 +311,7 @@ export class PermapostExecutor {
             this._resourceId = this._isPublic ? this._publicDataDir + '/' + uuid() : uuid();
         }
 
-        const progressHook = this._progressHook
+        const me = this
         const config = {
             method: 'put',
             url: `${this._url}/${this._dir}/${this._resourceId}`,
@@ -281,9 +322,14 @@ export class PermapostExecutor {
             },
             signal: this._cancelHook ? this._cancelHook.signal : null,
             onUploadProgress(progressEvent) {
-                if (progressHook) {
-                    const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-                    progressHook(progress);
+                if (me._progressHook) {
+                    let progress;
+                    if (me._total) {
+                        progress = Math.round((me._processed + progressEvent.loaded) / me._total * 100);
+                    } else {
+                        progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
+                    }
+                    me._progressHook(progress);
                 }
             }
         } as AxiosRequestConfig
@@ -308,13 +354,13 @@ export class PermapostExecutor {
                     config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
                 }
             }
-            config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter((tag) => 
+            config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter((tag) =>
                 tag.name !== "Public-Key"
             ));
         }
 
-        await axios(config);
-        return { resourceUrl: this._resourceId }
+        const response = await axios(config);
+        return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx }
     }
 
     /**
@@ -347,16 +393,22 @@ export class PermapostExecutor {
             throw Error('Missing resource id to download')
         }
 
-        const progressHook = this._progressHook;
+        const me = this;
         const config = {
             method: 'get',
             url: `${this._url}/${this._dir}/${this._resourceId}`,
             responseType: this._responseType,
             signal: this._cancelHook ? this._cancelHook.signal : null,
             onDownloadProgress(progressEvent) {
-                if (progressHook) {
-                    const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-                    progressHook(progress);
+                if (me._progressHook) {
+                    let progress;
+                    if (me._total) {
+                        const chunkSize = me._total / me._numberOfChunks;
+                        progress = Math.round(me._processed / me._total * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._total * 100);
+                     } else {
+                         progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
+                     }
+                    me._progressHook(progress);
                 }
             },
         } as AxiosRequestConfig
