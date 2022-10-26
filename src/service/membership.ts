@@ -157,7 +157,7 @@ class MembershipService extends NodeService {
             publicKey
           );
           const keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
-          const newState = await this.mergeState(member.id, this.objectType, { keys });
+          const newState = await this.mergeState({ keys });
           const signature = await this.signData(newState);
           newMembershipStates.push({
             body: newState, tags: {

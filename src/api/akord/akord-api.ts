@@ -160,12 +160,11 @@ export default class AkordApi extends Api {
     return fromMembership(membership);
   };
 
-  public async getNodeState(objectId: string, objectType: string): Promise<any> {
-    const stateRef = await this.getStateRef(objectId, objectType);
+  public async getNodeState(stateId: string): Promise<any> {
     const { response } = await new PermapostExecutor()
       .env(this.config.env, this.config.domain)
       .auth(this.jwtToken)
-      .resourceId(stateRef)
+      .resourceId(stateId)
       .downloadState()
 
     return response.data

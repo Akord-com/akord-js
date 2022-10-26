@@ -1,45 +1,8 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
-import { LedgerVersion } from '../client-config';
 import { ContractState } from '../model/contract';
 
 abstract class Api {
-  getMembershipKeys(vaultId: string, wallet: any): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getProfileByPublicSigningKey(signingPublicKey: string): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getObject(objectId: string, objectType: string): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getNodeState(objectId: string, objectType: string, vaultId?: string): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  postLedgerTransaction(transactions: any): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  preInviteCheck(emails: string[], vaultId: string): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getVaults(wallet: any): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getMemberships(wallet: any): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-
   config: AWSConfig | ArweaveConfig
   jwtToken: string
 
@@ -61,8 +24,30 @@ abstract class Api {
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 
+  abstract getMembershipKeys(vaultId: string, wallet: any): Promise<any>
+
+  abstract getProfileByPublicSigningKey(signingPublicKey: string): Promise<any>
+
+  abstract getObject(objectId: string, objectType: string): Promise<any>
+
+  abstract getNodeState(stateId: string): Promise<any>
+
+  abstract getVaults(wallet: any): Promise<any>
+
+  abstract getMemberships(wallet: any): Promise<any>
+
+  abstract getObjectsByVaultId(vaultId: string, objectType: string): Promise<any>
+
   public getConfig() {
     return this.config;
+  }
+
+  // legacy calls
+  postLedgerTransaction(transactions: any[]): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  preInviteCheck(emails: any[], vaultId: string) {
+    throw new Error("Method not implemented.");
   }
 }
 

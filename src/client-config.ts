@@ -4,7 +4,7 @@ export interface ClientConfig {
   env?: EnvType,
   network?: NetworkType,
   wallet?: WalletType,
-  ledgerVersion?: LedgerVersion,
+  api?: ApiType,
   debug?: boolean,
   cache?: boolean,
 }
@@ -22,7 +22,8 @@ export enum NetworkType {
   MAINNET = "mainnet"
 }
 
-export enum LedgerVersion {
-  V1 = "v1",
-  V2 = "v2"
+export enum ApiType {
+  ARWEAVE = "arweave",
+  AKORD = "akord",
+  FIREBASE = "firebase"
 }

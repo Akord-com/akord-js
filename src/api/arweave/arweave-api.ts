@@ -126,7 +126,7 @@ export default class ArweaveApi extends Api {
 
   public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     const state = await this.getContractState(vaultId);
-    let results;
+    let results: any;
     if (objectType === "Membership") {
       results = await Promise.all(state.memberships.map(async (membership) => {
         const object = membership;
@@ -149,19 +149,12 @@ export default class ArweaveApi extends Api {
     return results;
   };
 
-  public async getNodeState(objectId: string, objectType: string, vaultId: string): Promise<any> {
-    const state = await this.getContractState(vaultId);
-    let dataTx;
-    if (objectType === "Vault") {
-      dataTx = state.data[state.data.length - 1]
-    } else if (objectType === "Membership") {
-      const membership = state.memberships.filter(member => member.id === objectId)[0];
-      dataTx = membership.data[membership.data.length - 1];
-    } else {
-      const node = state.nodes.filter(node => node.id === objectId)[0];
-      dataTx = node.data[node.data.length - 1];
-    }
-    return this.getTransactionData(dataTx);
+  public async getObject(objectId: string, objectType: string): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+
+  public async getNodeState(stateId: string): Promise<any> {
+    return this.getTransactionData(stateId);
   };
 
   public async downloadFile(id: string): Promise<any> {
@@ -186,6 +179,21 @@ export default class ArweaveApi extends Api {
       vaults.push(vaultId);
     }
     return vaults;
+  }
+
+  public async getMemberships(wallet: Wallet): Promise<any> {
+    const address = await wallet.getAddress();
+    const result = await this.executeQuery(membershipsQuery, { address });
+    let memberships = []
+    for (let edge of result?.transactions.edges) {
+      const vaultId = edge.node.tags.filter(tag => tag.name === "Contract")[0]?.value;
+      const state = await this.getContractState(vaultId);
+      const membership = state.memberships.filter(member => member.address === address)[0];
+      const dataTx = membership.data[membership.data.length - 1];
+      const data = await this.getTransactionData(dataTx);
+      memberships.push({ ...membership, ...data });
+    }
+    return memberships;
   }
 
   public async executeQuery(query: any, variables: any) {

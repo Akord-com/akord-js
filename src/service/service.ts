@@ -390,7 +390,7 @@ class Service {
   }
 
   protected async _mergeAndUploadBody(body: any) {
-    const mergedBody = await this.mergeState(this.objectId, this.objectType, body);
+    const mergedBody = await this.mergeState(body);
     return this._uploadBody(mergedBody);
   }
 
@@ -428,8 +428,8 @@ class Service {
     return { metadata, data }
   }
 
-  protected async mergeState(objectId: string, objectType: string, stateUpdates: any) {
-    const currentState = await this.api.getNodeState(objectId, objectType, this.vaultId);
+  protected async mergeState(stateUpdates: any) {
+    const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     let newState = lodash.cloneDeepWith(currentState);
     lodash.mergeWith(
       newState,
