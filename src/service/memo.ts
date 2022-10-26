@@ -18,7 +18,13 @@ class MemoService extends NodeService {
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setCommand(commands.NODE_CREATE);
     const body = {
-      message: await this.processWriteString(message)
+      versions: [{
+        owner: await this.wallet.getAddress(),
+        message: await this.processWriteString(message),
+        createdAt: JSON.stringify(Date.now()),
+        reactions: [],
+        attachments: []
+      }]
     };
     const { nodeId, transactionId } = await this.nodeCreate(body);
     return { memoId: nodeId, transactionId };
@@ -31,18 +37,26 @@ class MemoService extends NodeService {
   */
   public async addReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(memoId, this.objectType);
-    const memberDetails = await this.getProfileDetails();
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
-    const body = {
-      reactions: [{
-        reaction: await this.processWriteString(reaction),
-        owner: await this.wallet.getAddress(),
-        status: "ACTIVE",
-        createdAt: JSON.stringify(Date.now())
-      }]
-    };
     this.setCommand(commands.NODE_UPDATE);
-    return this.nodeUpdate(body);
+
+    const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
+    const newState = lodash.cloneDeepWith(currentState);
+    newState.versions[newState.versions.length -1].reactions.push({
+      reaction: await this.processWriteString(reaction),
+      owner: await this.wallet.getAddress(),
+      createdAt: JSON.stringify(Date.now())
+    })
+
+    const { data, metadata } = await this._uploadBody(newState);
+
+    const txId = await this.api.postContractTransaction(
+      this.vaultId,
+      { function: this.command, data },
+      this.tags,
+      { ...metadata, ...this.metadata() }
+    );
+    return { transactionId: txId }
   }
 
   /**
@@ -69,10 +83,10 @@ class MemoService extends NodeService {
   }
 
   private async deleteReaction(reaction: string) {
-    const currentState = await this.api.getNodeState(this.objectId, this.objectType, this.vaultId);
-    const index = await this.getReactionIndex(currentState.reactions, reaction);
+    const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
+    const index = await this.getReactionIndex(currentState.versions[currentState.versions.length -1].reactions, reaction);
     const newState = lodash.cloneDeepWith(currentState);
-    newState.reactions.splice(index, 1);
+    newState.versions[newState.versions.length -1].reactions.splice(index, 1);
     return newState;
   }
 
@@ -80,10 +94,9 @@ class MemoService extends NodeService {
     const address = await this.wallet.getAddress();
     const publicSigningKey = await this.wallet.signingPublicKey();
     for (const [key, value] of Object.entries(reactions)) {
-      if ((<any>value).status === 'ACTIVE'
-        && ((<any>value).owner === address || (<any>value).address === address || (<any>value).publicSigningKey === publicSigningKey)
-        && reaction === await this.processReadString((<any>value).reaction)) {
-        return <any>(<unknown>key);
+      if ((value.owner === address || value.address === address || value.publicSigningKey === publicSigningKey)
+        && reaction === await this.processReadString(value.reaction)) {
+        return key;
       }
     }
     throw new Error("Could not find reaction: " + reaction + " for given user.")

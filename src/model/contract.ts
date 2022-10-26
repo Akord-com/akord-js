@@ -7,13 +7,14 @@ export interface Contract {
 
 export interface ContractState {
   id: string;
+  owner: string;
   name: string;
   status: string;
   createdAt: string;
   updatedAt: string;
-  owner: string;
-  data?: string[];
   public: boolean;
+  admin?: string;
+  data?: string[];
   memberships: Array<Membership>;
   folders: Array<Folder>;
   stacks: Array<Stack>;

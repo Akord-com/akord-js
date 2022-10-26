@@ -5,52 +5,44 @@ export interface Node {
   updatedAt: number;
   status: string;
   parentId?: string;
-}
-
-export interface Folder extends Node {
   name: string;
 }
+
+export interface Folder extends Node { }
 
 export interface Stack extends Node {
-  files: Array<StackFile>;
+  versions: Array<FileVersion>;
 }
 
-export interface StackFile {
+export interface FileVersion {
+  owner: string;
   name: string;
   type: string;
-  resourceUrl: string;
-  resourceTx: string;
-  thumbnailUrl: string;
-  thumbnailTx: string;
+  resourceUri: string[];
   size: number;
   numberOfChunks: number;
   chunkSize: number;
   createdAt: number;
-  updatedAt: number;
 }
 
 export interface Note extends Node {
-  revisions: Array<NoteRevision>;
-}
-
-export interface NoteRevision {
-  owner: string;
-  name: string;
-  content: string;
-  size: number;
-  createdAt: number;
+  versions: Array<FileVersion>;
 }
 
 export interface Memo extends Node {
+  versions: Array<MemoVersion>;
+}
+
+export interface MemoVersion {
+  owner: string;
+  reactions: Array<MemoReaction>;
   message: string;
-  reactions: MemoReaction;
+  createdAt: number;
+  attachments: Array<FileVersion>
 }
 
 export interface MemoReaction {
   owner: string;
-  author: string;
   reaction: string;
-  status: string;
   createdAt: number;
-  updatedAt: number;
 }

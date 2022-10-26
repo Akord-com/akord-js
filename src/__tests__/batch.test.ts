@@ -114,8 +114,8 @@ describe("Testing batch actions", () => {
       for (let index in items) {
         const stack = await akord.stack.get(response[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
-        expect(stack.files.length).toEqual(1);
-        expect(stack.files[0].title).toEqual("logo.png");
+        expect(stack.versions.length).toEqual(1);
+        expect(stack.versions[0].title).toEqual("logo.png");
       }
     });
   });

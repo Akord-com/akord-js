@@ -59,11 +59,12 @@ class Service {
     const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
     this.setVault(vault);
     this.setVaultId(vaultId);
-    this.setIsPublic(vault.state?.isPublic);
+    this.setIsPublic(vault.public);
     if (!this.isPublic) {
       const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.wallet);
       this.setKeys(encryptionKeys.keys);
-      this.setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
+      const publicKey = await this.keysEncrypter.wallet.decrypt(encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey);
+      this.setRawDataEncryptionPublicKey(publicKey);
     }
   }
 
@@ -90,6 +91,20 @@ class Service {
         decryptedState.files[index] = decryptedFile;
       }
     }
+    if (decryptedState.versions && decryptedState.versions.length > 0) {
+      for (const [index, version] of decryptedState.versions.entries()) {
+        const decryptedVersion = await this.processReadObject(version, ["title", "name", "message", "content"], shouldDecrypt);
+        delete decryptedVersion.__typename;
+        if (decryptedVersion.reactions && decryptedVersion.reactions.length > 0) {
+          for (const [index, reaction] of decryptedVersion.reactions.entries()) {
+            const decryptedReaction = await this.processReadObject(reaction, ["reaction"], shouldDecrypt);
+            delete decryptedReaction.__typename;
+            decryptedVersion.reactions[index] = decryptedReaction;
+          }
+        }
+        decryptedState.versions[index] = decryptedVersion;
+      }
+    }
     if (decryptedState.reactions && decryptedState.reactions.length > 0) {
       for (const [index, reaction] of decryptedState.reactions.entries()) {
         const decryptedReaction = await this.processReadObject(reaction, ["reaction"], shouldDecrypt);
@@ -113,20 +128,8 @@ class Service {
     return decryptedState;
   }
 
-  public async processObject(object: any, shouldDecrypt = true): Promise<any> {
-    const processedObject = object;
-    const decryptedState = await this.processState(processedObject.state, shouldDecrypt);
-    if (processedObject.folderId) {
-      processedObject.parentId = processedObject.folderId;
-    }
-    delete processedObject.folderId;
-    if (processedObject.dataRoomId) {
-      processedObject.vaultId = processedObject.dataRoomId;
-      delete processedObject.dataRoomId;
-    }
-    delete processedObject.__typename;
-    delete processedObject.state;
-    return { ...decryptedState, ...processedObject };
+  public async processObject(object: any, shouldDecrypt = true) {
+    return this.processState(object, shouldDecrypt);
   }
 
   protected async nodeRename(name: string): Promise<{ transactionId: string }> {

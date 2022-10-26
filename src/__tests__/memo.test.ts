@@ -35,32 +35,31 @@ describe("Testing memo commands", () => {
   it("should create new memo", async () => {
     const message = faker.lorem.sentences(50);
     memoId = (await akord.memo.create(vaultId, message)).memoId;
-
     const memo = await akord.memo.get(memoId);
-    expect(memo.message).toEqual(message);
+    expect(memo.versions[0].message).toEqual(message);
   });
 
   it("should add JOY reaction emoji", async () => {
     await akord.memo.addReaction(memoId, reactionEmoji.JOY);
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.reactions.length).toEqual(1);
-    expect(memo.reactions[0].reaction).toEqual(reactionEmoji.JOY);
+    expect(memo.versions[0].reactions.length).toEqual(1);
+    expect(memo.versions[0].reactions[0].reaction).toEqual(reactionEmoji.JOY);
   });
 
   it("should add FIRE reaction emoji", async () => {
     await akord.memo.addReaction(memoId, reactionEmoji.FIRE);
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.reactions.length).toEqual(2);
-    expect(memo.reactions[1].reaction).toEqual(reactionEmoji.FIRE);
+    expect(memo.versions[0].reactions.length).toEqual(2);
+    expect(memo.versions[0].reactions[1].reaction).toEqual(reactionEmoji.FIRE);
   });
 
   it("should remove JOY reaction emoji", async () => {
     await akord.memo.removeReaction(memoId, reactionEmoji.JOY);
 
     const memo = await akord.memo.get(memoId);
-    expect(memo.reactions.length).toEqual(1);
-    expect(memo.reactions[0].reaction).toEqual(reactionEmoji.FIRE);
+    expect(memo.versions[0].reactions.length).toEqual(1);
+    expect(memo.versions[0].reactions[0].reaction).toEqual(reactionEmoji.FIRE);
   });
 });

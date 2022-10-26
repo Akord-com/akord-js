@@ -34,16 +34,7 @@ class StackService extends NodeService {
 
     const body = {
       name: await this.processWriteString(name ? name : file.name),
-      files: [
-        {
-          createdAt: JSON.stringify(Date.now()),
-          name: await this.processWriteString(file.name ? file.name : name),
-          type: file.type,
-          size: file.size,
-          resourceTx: resourceTx,
-          thumbnailTx: thumbnailTx
-        }
-      ]
+      versions: [await this.version(file, resourceTx)]
     };
     const { nodeId, transactionId } = await this.nodeCreate(body, {
       parent: parentId
@@ -63,16 +54,7 @@ class StackService extends NodeService {
     const { resourceTx, resourceUrl, thumbnailTx, thumbnailUrl } = await this._postFile(file, progressHook);
 
     const body = {
-      files: [
-        {
-          createdAt: JSON.stringify(Date.now()),
-          name: await this.processWriteString(file.name),
-          type: file.type,
-          size: file.size,
-          resourceTx: resourceTx,
-          thumbnailTx: thumbnailTx
-        }
-      ]
+      versions: [await this.version(file, resourceTx)]
     };
     this.setCommand(commands.NODE_UPDATE);
     return this.nodeUpdate(body, null, { resourceUrl, thumbnailUrl });
@@ -88,13 +70,13 @@ class StackService extends NodeService {
     const stack = await this.api.getObject(stackId, objectTypes.STACK);
     let file: any;
     if (index) {
-      if (stack.files && stack.files[index]) {
-        file = stack.files[index];
+      if (stack.versions && stack.versions[index]) {
+        file = stack.versions[index];
       } else {
         throw new Error("Given index: " + index + " does not exist for stack: " + stackId);
       }
     } else {
-      file = stack.files[stack.files.length - 1];
+      file = stack.versions[stack.versions.length - 1];
     }
     await this.setVaultContext(stack.vaultId);
     const fileRes = await this.api.downloadFile(file.resourceUrl, this.isPublic);
@@ -151,6 +133,16 @@ class StackService extends NodeService {
       }
     } catch (e) {
       console.log(e);
+    }
+  }
+
+  private async version(file: any, resourceTx: string) {
+    return {
+      createdAt: JSON.stringify(Date.now()),
+      name: await this.processWriteString(file.name),
+      type: file.type,
+      size: file.size,
+      resourceUri: [`arweave:${resourceTx}`]
     }
   }
 };
