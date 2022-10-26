@@ -462,14 +462,9 @@ class Service {
     return newState;
   }
 
-  protected async getUserEncryptionInfo(email?: string, address?: string) {
-    if (email) {
-      const { address, publicKey } = await this.api.getUserFromEmail(email);
-      return { address, publicKey: base64ToArray(publicKey) }
-    } else {
-      const publicKey = await (<ArweaveWallet>this.wallet).getPublicKeyFromAddress(address);
-      return { address, publicKey }
-    }
+  protected async getUserEncryptionInfo(email?: string, userAddress?: string) {
+    const { address, publicKey } = await this.api.getUserFromEmail(email || userAddress);
+    return { address, publicKey: base64ToArray(publicKey) }
   }
 
   protected async getTags() {

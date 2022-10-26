@@ -176,7 +176,7 @@ async function postArweaveTransaction(transaction) {
   }
 };
 
-async function getPublicKeyFromAddress(address) {
+async function getPublicKeyFromAddress(address: string) {
   try {
     const transactionId = await arweave.wallets.getLastTransactionID(address);
     if (transactionId) {

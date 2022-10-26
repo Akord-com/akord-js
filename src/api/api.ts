@@ -12,9 +12,7 @@ abstract class Api {
 
   abstract initContractId(tags: any): Promise<string>
 
-  abstract getUserFromEmail(email: string): Promise<any>
-
-  abstract getPublicKeyFromAddress(address: string): Promise<string>
+  abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
 
   abstract uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 

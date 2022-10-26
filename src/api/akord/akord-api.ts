@@ -83,10 +83,6 @@ export default class AkordApi extends Api {
     return result.data.usersByEmail[0];
   };
 
-  public async getPublicKeyFromAddress(address: string): Promise<string> {
-    return "";
-  };
-
   public async uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new PermapostExecutor()
       .env(this.config.env, this.config.domain)

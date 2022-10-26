@@ -46,12 +46,8 @@ export default class ArweaveApi extends Api {
     return initContract(srcTxId, tags, {}, this.jwk);
   };
 
-  public async getUserFromEmail(email: string): Promise<string> {
-    return getPublicKeyFromAddress(email);
-  };
-
-  public async getPublicKeyFromAddress(address: string): Promise<string> {
-    return getPublicKeyFromAddress(address);
+  public async getUserFromEmail(address: string): Promise<{ address: string, publicKey: string }> {
+    return { address, publicKey: await getPublicKeyFromAddress(address) };
   };
 
   public async getProfileByPublicSigningKey(): Promise<any> {
