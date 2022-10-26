@@ -13,10 +13,12 @@ This package can be used in both browser and Node.js environments.
   - [Membership](#membership)
   - [Memo](#memo)
   - [Stack](#stack)
+  - [File](#file)
   - [Folder](#folder)
   - [Note](#note)
+  - [Contract](#contract)
   - [Profile](#profile)
-  - [Other](#other)
+  - [Batch](#batch)
 - [Development](#development)
 - [Deployment](#deployment)
 
@@ -452,7 +454,7 @@ const memoArray = await akord.memo.list(vaultId);
 #### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
 
 - `vaultId` (`string`, required)
-- `file` (`any`, required) - file object
+- `file` (`FileLike`, required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
 - `name` (`string`, required) - stack name
 - `parentId` (`string`, optional) - parent folder id
 - `progressHook` (`(progress:number)=>void`, optional)
@@ -593,6 +595,35 @@ Get file stack version by index, return the latest version by default
 const { name: fileName, data: fileBuffer } = await akord.stack.getFile(stackId);
 ```
 </details>
+
+### file
+
+#### `get(id, vaultId, options)`
+
+Returns file as ArrayBuffer. Puts the whole file into memory.
+For downloading without putting whole file to memory use [download()](#download)
+
+- `id` (`string`, required) - file resource url
+- `vaultId` (`string`, required)
+- `options` (`DownloadOptions`, optional)
+- returns `Promise<ArrayBuffer>` - Promise with file buffer
+
+#### `download(id, vaultId, options)`
+
+Downloads the file keeping memory consumed (RAM) under defined level: options.chunkSize.
+In browser, streaming of the binary requires self hosting of mitm.html and sw.js
+See: https://github.com/jimmywarting/StreamSaver.js#configuration
+
+- `id` (`string`, required) - file resource url
+- `vaultId` (`string`, required)
+- `options` (`DownloadOptions`, optional)
+- returns `Promise<ArrayBuffer>` - Promise with file buffer
+
+#### `getPublic(id, options)`
+
+- `id` (`string`, required) - file resource url
+- `options` (`DownloadOptions`, optional)
+- returns `Promise<ArrayBuffer>` - Promise with file buffer
 
 ### folder
 
@@ -830,6 +861,21 @@ const noteArray = await akord.note.list(vaultId);
 ```
 </details>
 
+### contract
+
+#### `getState()`
+
+- `id` (`string`, required) - vault contract id
+- returns `Promise<Contract>` - Promise with the current contract state
+
+<details>
+  <summary>example</summary>
+
+```js
+const currentState = await akord.contract.getState(vaultId);
+```
+</details>
+
 ### profile
 
 #### `get()`
@@ -846,35 +892,35 @@ Update user profile along with all active memberships
 - `avatar` (`any`, required) - new avatar buffer
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-### other
+### batch
 
-#### `batchRevoke(items)`
-
-- `items` (`Array<{ transactionId }>`, required)
-- returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
-
-#### `batchRestore(items)`
+#### `revoke(items)`
 
 - `items` (`Array<{ transactionId }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `batchDelete(items)`
+#### `restore(items)`
 
 - `items` (`Array<{ transactionId }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `batchMove(items, parentId)`
+#### `delete(items)`
+
+- `items` (`Array<{ transactionId }>`, required)
+- returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
+
+#### `move(items, parentId)`
 
 - `items` (`Array<{ transactionId }>`, required)
 - `parentId` (`string`, optional)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `batchMembershipChangeRole(items)`
+#### `membershipChangeRole(items)`
 
 - `items` (`Array<{ transactionId }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `batchStackCreate(vaultId, items, parentId, progressHook, cancelHook)`
+#### `stackCreate(vaultId, items, parentId, progressHook, cancelHook)`
 
 - `vaultId` (`string`, required)
 - `items` (`Array<{ transactionId }>`, required)
@@ -883,30 +929,11 @@ Update user profile along with all active memberships
 - `cancelHook` (`AbortController`, optional)
 - returns `Promise<Array<{ transactionId }>>` - Promise with new stack ids & their corresponding transaction ids
 
-#### `batchMembershipInvite(vaultId, items)`
+#### `membershipInvite(vaultId, items)`
 
 - `vaultId` (`string`, required)
 - `items` (`Array<{ transactionId }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with new membership ids & their corresponding transaction ids
-
-#### `getFile(id, vaultId, isChunked, numberOfChunks, progressHook, cancelHook)`
-
-- `id` (`string`, required) - file resource url
-- `vaultId` (`string`, required)
-- `isChunked` (`boolean`, optional)
-- `numberOfChunks` (`number`, optional)
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
-
-#### `getPublicFile(id, isChunked, numberOfChunks, progressHook, cancelHook)`
-
-- `id` (`string`, required) - file resource url
-- `isChunked` (`boolean`, optional)
-- `numberOfChunks` (`number`, optional)
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
 
 ### Development
 > requires Node.js 16

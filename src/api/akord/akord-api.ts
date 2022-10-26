@@ -103,13 +103,14 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any> {
+  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
     const { response } = await new PermapostExecutor()
       .env(this.config.env, this.config.domain)
       .auth(this.jwtToken)
       .resourceId(id)
       .public(isPublic)
-      .progressHook(progressHook)
+      .numberOfChunks(numberOfChunks)
+      .progressHook(progressHook, loadedSize, resourceSize)
       .cancelHook(cancelHook)
       .asArrayBuffer()
       .downloadFile();

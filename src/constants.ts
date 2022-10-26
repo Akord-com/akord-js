@@ -99,6 +99,13 @@ export enum protocolTags {
   MEMBER_ADDRESS = "Member-Address"
 };
 
+export enum encryptionTags {
+  Initialization_Vector = "Initialization-Vector",
+  Encrypted_Key = "Encrypted-Key",
+  Public_Key = "Public-Key",
+  Public_Address = "Public-Address"
+};
+
 export enum smartweaveTags {
   APP_NAME = "App-Name",
   APP_VERSION = "App-Version",

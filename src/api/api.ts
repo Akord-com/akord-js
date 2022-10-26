@@ -1,6 +1,6 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
-import { ContractState } from '../model/contract';
+import { ContractState } from '../types/contract';
 
 abstract class Api {
   config: AWSConfig | ArweaveConfig
@@ -22,7 +22,7 @@ abstract class Api {
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
-  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
+  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
 
   abstract getMembershipKeys(vaultId: string, wallet: any): Promise<any>
 

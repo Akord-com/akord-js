@@ -1,6 +1,4 @@
-import { Cacheable } from "./cacheable";
-
-export interface ProfileDetails extends Cacheable {
+export interface ProfileDetails {
     publicSigningKey: string;
     email: string;
     fullName?: string;

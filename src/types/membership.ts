@@ -1,6 +1,4 @@
-import { Cacheable } from "./cacheable";
-
-export interface Membership extends Cacheable {
+export interface Membership {
   id: string;
   owner: string; // owner's address
   createdAt: number;

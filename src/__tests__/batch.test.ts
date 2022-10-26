@@ -71,7 +71,7 @@ describe("Testing batch actions", () => {
     });
 
     it("should revoke all items in a batch", async () => {
-      await akord.batchRevoke([
+      await akord.batch.revoke([
         { id: folderId, objectType: "Folder" },
         { id: noteId, objectType: "Note" },
       ])
@@ -84,7 +84,7 @@ describe("Testing batch actions", () => {
     });
 
     it("should restore all items in a batch", async () => {
-      await akord.batchRestore([
+      await akord.batch.restore([
         { id: folderId, objectType: "Folder" },
         { id: noteId, objectType: "Note" },
       ])
@@ -109,7 +109,7 @@ describe("Testing batch actions", () => {
         items.push({ file, name });
       }
 
-      const response = await akord.batchStackCreate(vaultId, items);
+      const response = await akord.batch.stackCreate(vaultId, items);
 
       for (let index in items) {
         const stack = await akord.stack.get(response[index].stackId);
@@ -122,7 +122,7 @@ describe("Testing batch actions", () => {
 
   describe("Batch membership actions", () => {
     it("should invite new member as CONTRIBUTOR", async () => {
-      const response = (await akord.batchMembershipInvite(vaultId,
+      const response = (await akord.batch.membershipInvite(vaultId,
         [
           { email: email2, role: "CONTRIBUTOR" },
           { email: email3, role: "VIEWER" }
@@ -143,7 +143,7 @@ describe("Testing batch actions", () => {
     });
 
     it("should change access", async () => {
-      await akord.batchMembershipChangeRole([
+      await akord.batch.membershipChangeRole([
         { id: membershipId1, role: "VIEWER" },
         { id: membershipId2, role: "CONTRIBUTOR" }
       ])

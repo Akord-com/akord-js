@@ -13,7 +13,7 @@ import { GraphQLClient } from 'graphql-request';
 import { membershipsQuery } from "./graphql";
 import Arweave from 'arweave';
 import { EncryptionKeys, Wallet } from "@akord/crypto";
-import { ContractState } from "../../model/contract";
+import { ContractState } from "../../types/contract";
 import { srcTxId } from './config';
 
 export default class ArweaveApi extends Api {
