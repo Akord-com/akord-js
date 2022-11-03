@@ -3,10 +3,9 @@ import { v4 as uuid } from "uuid";
 import { Contract } from "../../types/contract";
 
 export class PermapostExecutor {
-    private _env: string = "dev";
-    private _domain: string = "akord.link";
     private _jwt: string;
-    private _url: string = `https://api.${this._env}.permapost-storage.${this._domain}`;
+    private _storageurl: string;
+    private _apiurl: string;
     private _dir: string = "files";
     private _filesDir: string = "files";
     private _publicDataDir: string = "public";
@@ -31,10 +30,9 @@ export class PermapostExecutor {
 
     constructor() { }
 
-    env(env: string, domain: string): PermapostExecutor {
-        this._env = env;
-        this._domain = domain || this._domain;
-        this._url = `https://api.${this._env}.permapost-storage.${this._domain}`;
+    env(config: { apiurl: string, storageurl: string }): PermapostExecutor {
+        this._apiurl = config.apiurl;
+        this._storageurl = config.storageurl;
         return this;
     }
 
@@ -111,10 +109,6 @@ export class PermapostExecutor {
         return this;
     }
 
-    /**
-     * 
-     * this name must go away
-     */
     input(input: string): PermapostExecutor {
         this._input = input;
         return this;
@@ -139,7 +133,7 @@ export class PermapostExecutor {
 
         const config = {
             method: 'post',
-            url: `${this._url}/${this._contractUri}`,
+            url: `${this._apiurl}/${this._contractUri}`,
             data: { tags: this._tags },
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
@@ -147,13 +141,13 @@ export class PermapostExecutor {
             }
         } as AxiosRequestConfig
         const response = await axios(config);
-        return response.data.contractTx
+        return response.data.contractTxId
     }
 
     async getContract(): Promise<Contract> {
         const config = {
             method: 'get',
-            url: `${this._url}/${this._contractUri}/${this._contractId}`,
+            url: `${this._apiurl}/${this._contractUri}/${this._contractId}`,
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'
@@ -187,8 +181,8 @@ export class PermapostExecutor {
 
         const config = {
             method: 'post',
-            url: `${this._url}/${this._transactionUri}`,
-            data: { contractId: this._contractId, input: this._input, metadata: this._metadata, tags: this._tags },
+            url: `${this._apiurl}/${this._transactionUri}`,
+            data: { contractId: this._contractId, input: this._input, metadata: this._metadata, tags: this._tags, state: this._data },
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'
@@ -198,39 +192,6 @@ export class PermapostExecutor {
         return response.data.txId
     }
 
-    /**
-     * Creates data item from uploaded resource. Schedules bundled transaction
-     * @requires: 
-     * - auth() 
-     * - resourceId() 
-     * - metadata() 
-     * @uses:
-     * - tags()
-     */
-    async bundleTransaction(type: string) {
-        if (!this._jwt) {
-            throw Error('Authentication is required to use permapost')
-        }
-        if (!this._resourceId) {
-            throw Error('Reource id is required to use permapost')
-        }
-
-        const tags = this._tags.filter((tag) =>
-            tag.name !== "Public-Key"
-        )
-
-        const config = {
-            method: 'post',
-            url: `${this._url}/${this._transactionUri}`,
-            data: { resourceUrl: this._resourceId, tags: tags, type: type },
-            headers: {
-                'Authorization': 'Bearer ' + this._jwt,
-                'Content-Type': 'application/json'
-            }
-        } as AxiosRequestConfig
-        const response = await axios(config);
-        return response.data.resourceTx
-    }
 
     /**
      * Schedules transaction posting
@@ -255,7 +216,7 @@ export class PermapostExecutor {
 
         const config = {
             method: 'post',
-            url: `${this._url}/${this._transactionUri}`,
+            url: `${this._apiurl}/${this._transactionUri}/files`,
             data: { resourceUrl: this._resourceId, tags: tags, async: true, numberOfChunks: this._numberOfChunks },
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
@@ -277,8 +238,14 @@ export class PermapostExecutor {
      */
     async uploadState() {
         this._dir = this._stateDir;
-        const { resourceUrl, resourceTx } = await this._upload();
-        return { resourceUrl: resourceUrl, id: resourceTx, resourceTx: resourceTx }
+        let resourceTx: string;
+        if (this._shouldBundleTransaction) {
+            resourceTx = await this.stateTransaction();
+        }
+        else {
+            resourceTx = (await this.upload()).resourceTx;
+        }
+        return { resourceUrl: this._resourceId, id: resourceTx, resourceTx: resourceTx }
     }
 
     /**
@@ -293,14 +260,108 @@ export class PermapostExecutor {
      */
     async uploadFile() {
         this._dir = this._filesDir;
-        await this._upload();
+        await this.upload();
         const resourceId = this._resourceId;
-        const resourceTx = this._shouldBundleTransaction ? await this.bundleTransaction(this._filesDir) : null;
+        const resourceTx = this._shouldBundleTransaction ? await this.fileTransaction() : null;
         return { resourceUrl: resourceId, id: resourceTx, resourceTx: resourceTx }
-
     }
 
-    async _upload() {
+    /**
+     * 
+     * @requires: 
+     * - auth() 
+     * - resourceId()
+     */
+    async downloadFile() {
+        this._dir = this._filesDir;
+        return await this.download();
+    }
+
+    /**
+ * 
+ * @requires: 
+ * - auth() 
+ * - resourceId()
+ */
+    async downloadState() {
+        this._dir = this._stateDir;
+        return await this.download();
+    }
+
+    /**
+    * Creates data item from uploaded resource. Schedules bundled transaction
+    * @requires: 
+    * - auth() 
+    * - resourceId() 
+    * - metadata() 
+    * @uses:
+    * - tags()
+    */
+     private async fileTransaction() {
+        if (!this._jwt) {
+            throw Error('Authentication is required to use permapost')
+        }
+        if (!this._resourceId) {
+            this._resourceId = uuid();
+        }
+
+        const tags = this._tags.filter((tag) =>
+            tag.name !== "Public-Key"
+        )
+
+        const data = { resourceUrl: this._resourceId, tags: tags };
+
+        const config = {
+            method: 'post',
+            url: `${this._apiurl}/${this._transactionUri}/files`,
+            data: data,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response.data.txId
+    }
+
+    /**
+    * Creates data item from uploaded resource. Schedules bundled transaction
+    * @requires: 
+    * - auth() 
+    * - resourceId() 
+    * - metadata() 
+    * - data() 
+    * @uses:
+    * - tags()
+    */
+    private async stateTransaction() {
+        if (!this._jwt) {
+            throw Error('Authentication is required to use permapost')
+        }
+        if (!this._resourceId) {
+            this._resourceId = uuid();
+        }
+
+        const tags = this._tags.filter((tag) =>
+            tag.name !== "Public-Key"
+        )
+
+        const data = { resourceUrl: this._resourceId, tags: tags, data: this._data };
+
+        const config = {
+            method: 'post',
+            url: `${this._apiurl}/${this._transactionUri}/states`,
+            data: data,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response.data.txId
+    }
+
+    private async upload() {
         if (!this._jwt) {
             throw Error('Authentication is required to use permapost')
         }
@@ -314,7 +375,7 @@ export class PermapostExecutor {
         const me = this
         const config = {
             method: 'put',
-            url: `${this._url}/${this._dir}/${this._resourceId}`,
+            url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
             data: this._data,
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
@@ -363,29 +424,7 @@ export class PermapostExecutor {
         return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx }
     }
 
-    /**
-     * 
-     * @requires: 
-     * - auth() 
-     * - resourceId()
-     */
-    async downloadFile() {
-        this._dir = this._filesDir;
-        return await this._download();
-    }
-
-    /**
- * 
- * @requires: 
- * - auth() 
- * - resourceId()
- */
-    async downloadState() {
-        this._dir = this._stateDir;
-        return await this._download();
-    }
-
-    async _download() {
+    private async download() {
         if (!this._jwt && !this._isPublic) {
             throw Error('Authentication is required to use permapost')
         }
@@ -396,7 +435,7 @@ export class PermapostExecutor {
         const me = this;
         const config = {
             method: 'get',
-            url: `${this._url}/${this._dir}/${this._resourceId}`,
+            url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
             responseType: this._responseType,
             signal: this._cancelHook ? this._cancelHook.signal : null,
             onDownloadProgress(progressEvent) {
@@ -405,9 +444,9 @@ export class PermapostExecutor {
                     if (me._total) {
                         const chunkSize = me._total / me._numberOfChunks;
                         progress = Math.round(me._processed / me._total * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._total * 100);
-                     } else {
-                         progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
-                     }
+                    } else {
+                        progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
+                    }
                     me._progressHook(progress);
                 }
             },

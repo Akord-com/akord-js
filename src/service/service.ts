@@ -306,20 +306,21 @@ class Service {
     } else {
       const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
       processedData = encryptedFile.encryptedData.ciphertext;
-      encryptionTags['Initialization-Vector'] = encryptedFile.encryptedData.iv;
-      encryptionTags['Encrypted-Key'] = encryptedFile.encryptedKey;
       const { address, publicKey } = await this._getActiveKey();
-      encryptionTags['Public-Address'] = address;
-      encryptionTags['Public-Key'] = publicKey;
+      encryptionTags = {
+        'Initialization-Vector': encryptedFile.encryptedData.iv,
+        'Encrypted-Key': encryptedFile.encryptedKey,
+        'Public-Address': address,
+        'Public-Key': publicKey
+      }
     }
     return { processedData, encryptionTags }
   }
 
   protected async _getActiveKey() {
-    const activePublicKey = arrayToBase64(<any>this.dataEncrypter.publicKey);
     return {
-      address: await deriveAddress(activePublicKey, "akord"),
-      publicKey: activePublicKey
+      address: await deriveAddress(<any>this.dataEncrypter.publicKey, "akord"),
+      publicKey: arrayToBase64(<any>this.dataEncrypter.publicKey)
     };
   }
 
@@ -434,7 +435,7 @@ class Service {
     const ids = await this.api.uploadData([{ body, tags }], true);
     const metadata = {
       dataRefs: [
-        { ...ids[0], modelId: this.objectId, modelType: this.objectType }
+        { ...ids[0], modelId: this.objectId, modelType: this.objectType, data: body }
       ]
     }
     const data = ids[0].id;

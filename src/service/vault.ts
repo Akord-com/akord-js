@@ -86,8 +86,8 @@ class VaultService extends NodeService {
       }], true);
     const metadata = {
       dataRefs: [
-        { ...ids[0], modelId: this.vaultId, modelType: objectTypes.VAULT },
-        { ...ids[1], modelId: membershipId, modelType: objectTypes.MEMBERSHIP }
+        { ...ids[0], modelId: this.vaultId, modelType: objectTypes.VAULT, data: vaultData },
+        { ...ids[1], modelId: membershipId, modelType: objectTypes.MEMBERSHIP, data: membershipData }
       ],
       publicKeys
     }
