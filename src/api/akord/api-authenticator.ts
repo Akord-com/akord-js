@@ -32,7 +32,7 @@ export default class ApiAuthenticator {
 
   public async getJWTToken(username: string, password: string): Promise<string> {
     const { session } = await this.authenticateUser(username, password);
-    return session.getAccessToken().getJwtToken();
+    return session.getIdToken().getJwtToken();
   }
 
   public async authenticateUser(username: string, password: string): Promise<{
