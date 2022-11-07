@@ -65,11 +65,12 @@ export default class AkordApi extends Api {
     return result.data.preInviteCheck;
   };
 
-  public async initContractId(tags: any): Promise<string> {
+  public async initContractId(tags: any, state?: any): Promise<string> {
     const contractId = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
       .tags(tags)
+      .data(state)
       .contract()
     Logger.log("Created contract with id: " + contractId);
     return contractId;

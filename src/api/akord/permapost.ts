@@ -125,6 +125,7 @@ export class PermapostExecutor {
      * - auth() 
      * @uses:
      * - tags()
+     * - data()
      */
     async contract() {
         if (!this._jwt) {
@@ -134,7 +135,7 @@ export class PermapostExecutor {
         const config = {
             method: 'post',
             url: `${this._apiurl}/${this._contractUri}`,
-            data: { tags: this._tags },
+            data: { tags: this._tags, state: this._data},
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'
