@@ -246,7 +246,7 @@ export class PermapostExecutor {
         else {
             resourceTx = (await this.upload()).resourceTx;
         }
-        return { resourceUrl: this._resourceId, id: resourceTx, resourceTx: resourceTx }
+        return { resourceUrl: this._resourceId || resourceTx, id: resourceTx, resourceTx: resourceTx }
     }
 
     /**
@@ -329,18 +329,15 @@ export class PermapostExecutor {
     * Creates data item from uploaded resource. Schedules bundled transaction
     * @requires: 
     * - auth() 
-    * - resourceId() 
     * - metadata() 
     * - data() 
     * @uses:
     * - tags()
+    * - resourceId() 
     */
     private async stateTransaction() {
         if (!this._jwt) {
             throw Error('Authentication is required to use permapost')
-        }
-        if (!this._resourceId) {
-            this._resourceId = uuid();
         }
 
         const tags = this._tags.filter((tag) =>
