@@ -27,7 +27,7 @@ export default class AkordApi extends Api {
 
     await Promise.all(data.map(async (item, index) => {
       const resource = await new PermapostExecutor()
-        .env(this.config.env, this.config.domain)
+        .env(this.config)
         .auth(this.jwtToken)
         .data(item.body)
         .tags(item.tags)
@@ -42,11 +42,11 @@ export default class AkordApi extends Api {
 
   public async postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string> {
     const txId = await new PermapostExecutor()
-      .env(this.config.env, this.config.domain)
+      .env(this.config)
       .auth(this.jwtToken)
       .contractId(contractId)
-      .input(JSON.stringify(input))
-      .metadata(JSON.stringify(metadata ? metadata : {}))
+      .input(input)
+      .metadata(metadata ? metadata : {})
       .tags(tags)
       .transaction()
     Logger.log("Uploaded contract interaction with id: " + txId);
@@ -65,11 +65,12 @@ export default class AkordApi extends Api {
     return result.data.preInviteCheck;
   };
 
-  public async initContractId(tags: any): Promise<string> {
+  public async initContractId(tags: any, state?: any): Promise<string> {
     const contractId = await new PermapostExecutor()
-      .env(this.config.env, this.config.domain)
+      .env(this.config)
       .auth(this.jwtToken)
       .tags(tags)
+      .data(state)
       .contract()
     Logger.log("Created contract with id: " + contractId);
     return contractId;
@@ -85,7 +86,7 @@ export default class AkordApi extends Api {
 
   public async uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new PermapostExecutor()
-      .env(this.config.env, this.config.domain)
+      .env(this.config)
       .auth(this.jwtToken)
       .data(file)
       .tags(tags)
@@ -101,7 +102,7 @@ export default class AkordApi extends Api {
 
   public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
     const { response } = await new PermapostExecutor()
-      .env(this.config.env, this.config.domain)
+      .env(this.config)
       .auth(this.jwtToken)
       .resourceId(id)
       .public(isPublic)
@@ -159,7 +160,7 @@ export default class AkordApi extends Api {
 
   public async getNodeState(stateId: string): Promise<any> {
     const { response } = await new PermapostExecutor()
-      .env(this.config.env, this.config.domain)
+      .env(this.config)
       .auth(this.jwtToken)
       .resourceId(stateId)
       .downloadState()
@@ -169,7 +170,7 @@ export default class AkordApi extends Api {
 
   public async getContractState(objectId: string): Promise<any> {
     const contract = await new PermapostExecutor()
-      .env(this.config.env, this.config.domain)
+      .env(this.config)
       .auth(this.jwtToken)
       .contractId(objectId)
       .getContract();

@@ -4,8 +4,8 @@ export const awsConfig = (env: string) => {
   switch (env) {
     case "prod":
       return {
-        env: "prod",
-        domain: "akord.com",
+        apiurl: "",
+        storageurl: "",
         aws_project_region: "eu-central-1",
         aws_cognito_identity_pool_id: "eu-central-1:2cb4571c-1a70-4b78-b0db-6a0130af18c3",
         aws_cognito_region: "eu-central-1",
@@ -21,8 +21,8 @@ export const awsConfig = (env: string) => {
     case "v2":
     default:
       return {
-        env: "v2.prod",
-        domain: "akord.com",
+        apiurl: "https://1ythunyokf.execute-api.eu-central-1.amazonaws.com",
+        storageurl: "https://api.v2.prod.permapost-storage.akord.com",
         aws_project_region: "eu-central-1",
         aws_cognito_identity_pool_id: "eu-central-1:2cb4571c-1a70-4b78-b0db-6a0130af18c3",
         aws_cognito_region: "eu-central-1",
@@ -35,26 +35,10 @@ export const awsConfig = (env: string) => {
         aws_user_files_s3_bucket: "akordampdev223228-prodsec",
         aws_user_files_s3_bucket_region: "eu-central-1"
       };
-    case "testnet":
-      return {
-        env: "testnet",
-        domain: "akord.link",
-        aws_project_region: "eu-central-1",
-        aws_cognito_identity_pool_id: "eu-central-1:373eda1b-c67c-4e73-a2c5-887766bde111",
-        aws_cognito_region: "eu-central-1",
-        aws_user_pools_id: "eu-central-1_Po223cRud",
-        aws_user_pools_web_client_id: "2masnjvpr47p6fsqlcj81p7vvr",
-        oauth: {},
-        aws_appsync_graphqlEndpoint: "https://n2irvq4ekfdlrcv4m3y7tolqey.appsync-api.eu-central-1.amazonaws.com/graphql",
-        aws_appsync_region: "eu-central-1",
-        aws_appsync_authenticationType: "AMAZON_COGNITO_USER_POOLS",
-        aws_user_files_s3_bucket: "akordampdev133938-testnet",
-        aws_user_files_s3_bucket_region: "eu-central-1"
-      };
     case "dev":
       return {
-        env: "dev",
-        domain: "akord.link",
+        apiurl: "https://yym2xr0oj9.execute-api.eu-central-1.amazonaws.com",
+        storageurl: "https://api.dev.permapost-storage.akord.link",
         aws_project_region: "eu-central-1",
         aws_cognito_identity_pool_id: "eu-central-1:4906b0c5-1329-45be-b804-eca3b1ab6d37",
         aws_cognito_region: "eu-central-1",
@@ -71,8 +55,8 @@ export const awsConfig = (env: string) => {
 };
 
 export interface AWSConfig {
-  env: string,
-  domain: string,
+  apiurl: string,
+  storageurl: string,
   aws_project_region: string,
   aws_cognito_identity_pool_id: string,
   aws_cognito_region: string,

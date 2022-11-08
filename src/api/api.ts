@@ -10,7 +10,7 @@ abstract class Api {
 
   abstract postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string>
 
-  abstract initContractId(tags: any): Promise<string>
+  abstract initContractId(tags: any, state?: any): Promise<string>
 
   abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
 

@@ -137,7 +137,7 @@ class FileService extends Service {
       const streamSaver = (await import('streamsaver')).default;
       if (!streamSaver.WritableStream) {
         const pony = await import('web-streams-polyfill/ponyfill');
-        streamSaver.WritableStream = pony.WritableStream;
+        streamSaver.WritableStream = pony.WritableStream as unknown as typeof streamSaver.WritableStream;
       }
       if (window.location.protocol === 'https:'
         || window.location.protocol === 'chrome-extension:'
@@ -193,7 +193,7 @@ class FileService extends Service {
     encryptionTags[encTags.IV] = iv.join(',')
     
     await new PermapostExecutor()
-      .env((<any>this.api.config).env, (<any>this.api.config).domain)
+      .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
       .tags({ ...tags, ...encryptionTags })
@@ -219,7 +219,7 @@ class FileService extends Service {
     cancelHook?: AbortController
   ) {
     const resource = await new PermapostExecutor()
-      .env((<any>this.api.config).env, (<any>this.api.config).domain)
+      .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
