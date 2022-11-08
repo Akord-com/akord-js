@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, objectTypes, status, commands, protocolTags } from "../constants";
+import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
 
@@ -19,7 +19,7 @@ class MembershipService extends NodeService {
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    this.setCommand(commands.MEMBERSHIP_INVITE);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
     const membershipId = uuidv4();
     this.setObjectId(membershipId);
 
@@ -35,10 +35,10 @@ class MembershipService extends NodeService {
 
     this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
 
-    const { data, metadata } = await this._uploadBody(body);
+    const { data, metadata } = await this.uploadBody(body);
 
     let input = {
-      function: this.command,
+      function: this.function,
       address,
       role,
       data
@@ -65,7 +65,7 @@ class MembershipService extends NodeService {
       memberDetails: await this.processMemberDetails(memberDetails, true),
       encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())]
     }
-    this.setCommand(commands.MEMBERSHIP_ACCEPT);
+    this.setFunction(functions.MEMBERSHIP_ACCEPT);
     return this.nodeUpdate(body);
   }
 
@@ -76,7 +76,7 @@ class MembershipService extends NodeService {
   public async confirm(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
-    this.setCommand(commands.MEMBERSHIP_INVITE);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email);
     this.setRawKeysEncryptionPublicKey(publicKey);
     const keys = await this.keysEncrypter.encryptMemberKeys([]);
@@ -88,10 +88,10 @@ class MembershipService extends NodeService {
     };
     this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
 
-    const { data, metadata } = await this._uploadBody(body);
+    const { data, metadata } = await this.uploadBody(body);
 
     let input = {
-      function: this.command,
+      function: this.function,
       address,
       data,
       role: this.object.state.role
@@ -113,7 +113,7 @@ class MembershipService extends NodeService {
   public async reject(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_REJECT);
-    this.setCommand(commands.MEMBERSHIP_REJECT);
+    this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
   }
 
@@ -124,7 +124,7 @@ class MembershipService extends NodeService {
   public async leave(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
-    this.setCommand(commands.MEMBERSHIP_REJECT);
+    this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
   }
 
@@ -134,7 +134,7 @@ class MembershipService extends NodeService {
    */
   public async revoke(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
-    this.setCommand(commands.MEMBERSHIP_REVOKE);
+    this.setFunction(functions.MEMBERSHIP_REVOKE);
 
     let data: any, metadata: any;
     if (!this.isPublic) {
@@ -187,7 +187,7 @@ class MembershipService extends NodeService {
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.command, data },
+      { function: this.function, data },
       this.tags,
       { ...metadata, ...this.metadata() }
     );
@@ -202,7 +202,7 @@ class MembershipService extends NodeService {
   public async changeRole(membershipId: string, role: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
-    this.setCommand(commands.MEMBERSHIP_CHANGE_ROLE);
+    this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
     return this.nodeUpdate(null, { role });
   }
 
@@ -272,7 +272,7 @@ class MembershipService extends NodeService {
     await this.setVaultContextFromObjectId(membershipId, objectTypes.MEMBERSHIP);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     const memberDetails = await this.processMemberDetails({ fullName: name, avatar }, true);
-    this.setCommand(commands.MEMBERSHIP_UPDATE);
+    this.setFunction(functions.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
   }
 };

@@ -22,7 +22,7 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing note commands", () => {
+describe("Testing note functions", () => {
   let vaultId: string;
   let noteId: string;
 
@@ -38,8 +38,9 @@ describe("Testing note commands", () => {
     noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
     const note = await akord.note.get(noteId);
-    expect(note.revisions.length).toEqual(1);
-    expect(JSON.parse(note.content)).toEqual(content);
+    expect(note.versions.length).toEqual(1);
+    const { data } = await akord.note.getVersion(noteId);
+    expect(JSON.parse(note.content)).toEqual(data);
   });
 
   it("should upload new revision", async () => {
@@ -49,7 +50,8 @@ describe("Testing note commands", () => {
     await akord.note.uploadRevision(noteId, name, content);
 
     const note = await akord.note.get(noteId);
-    expect(note.revisions.length).toEqual(2);
+    const { name: fileName, data } = await akord.note.getVersion(noteId);
+    expect(note.versions.length).toEqual(2);
   });
 
   it("should revoke the note", async () => {
@@ -64,6 +66,6 @@ describe("Testing note commands", () => {
 
     const note = await akord.note.get(noteId);
     expect(note.status).toEqual("ACTIVE");
-    expect(note.revisions.length).toEqual(2);
+    expect(note.versions.length).toEqual(2);
   });
 });

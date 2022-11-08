@@ -22,7 +22,7 @@ function getFileFromPath(filePath: string) {
   return file;
 }
 
-describe("Testing profile commands", () => {
+describe("Testing profile functions", () => {
   beforeAll(async () => {
     akord = await initInstance(email, password);
   });

@@ -23,7 +23,7 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing membership commands", () => {
+describe("Testing membership functions", () => {
   let vaultId: string;
   let membershipId: string;
 

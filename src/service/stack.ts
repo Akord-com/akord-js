@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, commands, objectTypes } from "../constants";
+import { actionRefs, functions, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
 import { FileLike } from "../types/file";
@@ -26,17 +26,15 @@ class StackService extends NodeService {
     }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
-    this.setCommand(commands.NODE_CREATE);
-
-    const { version, resourceUrl, thumbnailUrl } = await this.uploadNewFileVersion(file, progressHook, cancelHook);
+    this.setFunction(functions.NODE_CREATE);
 
     const body = {
       name: await this.processWriteString(name ? name : file.name),
-      versions: [version]
+      versions: [await this.uploadNewFileVersion(file, progressHook, cancelHook)]
     };
     const { nodeId, transactionId } = await this.nodeCreate(body, {
       parent: parentId
-    }, { resourceUrl, thumbnailUrl });
+    });
     return { stackId: nodeId, transactionId };
   }
 
@@ -50,38 +48,59 @@ class StackService extends NodeService {
     await this.setVaultContextFromObjectId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
-    const { version, resourceUrl, thumbnailUrl } = await this.uploadNewFileVersion(file, progressHook);
-
     const body = {
-      versions: [version]
+      versions: [await this.uploadNewFileVersion(file, progressHook)]
     };
-    this.setCommand(commands.NODE_UPDATE);
-    return this.nodeUpdate(body, null, { resourceUrl, thumbnailUrl });
+    this.setFunction(functions.NODE_UPDATE);
+    return this.nodeUpdate(body);
   }
 
   /**
-   * Get file stack version by index, return the latest version by default
+   * Get stack version by index, return the latest version by default
    * @param  {string} stackId
-   * @param  {string} [index] file version index
-   * @returns Promise with file name & data buffer
+   * @param  {string} [index] stack version index
+   * @returns Promise with version name & data buffer
    */
-  public async getFile(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
+  public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
     const stack = await this.api.getObject(stackId, objectTypes.STACK);
-    let file: any;
+    let version: any;
     if (index) {
       if (stack.versions && stack.versions[index]) {
-        file = stack.versions[index];
+        version = stack.versions[index];
       } else {
         throw new Error("Given index: " + index + " does not exist for stack: " + stackId);
       }
     } else {
-      file = stack.versions[stack.versions.length - 1];
+      version = stack.versions[stack.versions.length - 1];
     }
     await this.setVaultContext(stack.vaultId);
-    const fileRes = await this.api.downloadFile(file.resourceUrl, this.isPublic);
-    const fileBuffer = await this.processReadRaw(fileRes.fileData, fileRes.headers);
-    const fileName = await this.processReadString(file.name);
-    return { name: fileName, data: fileBuffer };
+    const { fileData, headers } = await this.api.downloadFile(version.resourceUrl, this.isPublic);
+    const data = await this.processReadRaw(fileData, headers);
+    const name = await this.processReadString(version.name);
+    return { name, data };
+  }
+
+  private async uploadNewFileVersion(file: any, progressHook?: any, cancelHook?: any) {
+    const {
+      resourceTx,
+      resourceUrl,
+      resourceHash,
+      numberOfChunks,
+      chunkSize,
+      thumbnailTx,
+      thumbnailUrl
+    } = await this.postFile(file, progressHook, cancelHook);
+    const version = {
+      createdAt: JSON.stringify(Date.now()),
+      name: await this.processWriteString(file.name),
+      type: file.type,
+      size: file.size,
+      resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
+      thumbnailUri: [`arweave:${thumbnailTx}`, `s3:${thumbnailUrl}`],
+      numberOfChunks,
+      chunkSize,
+    }
+    return version;
   }
 
   private async postFile(file: FileLike, progressHook?: (progress: number) => void, cancelHook?: AbortController)
@@ -109,29 +128,7 @@ class StackService extends NodeService {
     }
   }
 
-  private async uploadNewFileVersion(file: any, progressHook?: any, cancelHook?: any) {
-    const {
-      resourceTx,
-      resourceUrl,
-      resourceHash,
-      numberOfChunks,
-      chunkSize,
-      thumbnailTx,
-      thumbnailUrl
-    } = await this.postFile(file, progressHook, cancelHook);
-    const version = {
-      createdAt: JSON.stringify(Date.now()),
-      name: await this.processWriteString(file.name),
-      type: file.type,
-      size: file.size,
-      resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`],
-      numberOfChunks,
-      chunkSize,
-    }
-    return { version, resourceUrl, thumbnailUrl };
-  }
-
-  public async setVaultContext(vaultId: string): Promise<void> {
+  protected async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
     this.fileService.setKeys(this.membershipKeys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);

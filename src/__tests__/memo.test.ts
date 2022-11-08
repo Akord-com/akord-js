@@ -23,7 +23,7 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing memo commands", () => {
+describe("Testing memo functions", () => {
   let vaultId: string;
   let memoId: string;
 

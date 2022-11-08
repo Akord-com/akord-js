@@ -1,8 +1,10 @@
 import { NodeService } from "./node";
-import { reactionEmoji, actionRefs, objectTypes, commands } from "../constants";
+import { reactionEmoji, actionRefs, objectTypes, functions } from "../constants";
 import lodash from "lodash";
 
 class MemoService extends NodeService {
+  static readonly reactionEmoji = reactionEmoji;
+
   objectType: string = objectTypes.MEMO;
 
   /**
@@ -16,7 +18,7 @@ class MemoService extends NodeService {
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
-    this.setCommand(commands.NODE_CREATE);
+    this.setFunction(functions.NODE_CREATE);
     const body = {
       versions: [{
         owner: await this.wallet.getAddress(),
@@ -38,7 +40,7 @@ class MemoService extends NodeService {
   public async addReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
-    this.setCommand(commands.NODE_UPDATE);
+    this.setFunction(functions.NODE_UPDATE);
 
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
@@ -48,11 +50,11 @@ class MemoService extends NodeService {
       createdAt: JSON.stringify(Date.now())
     })
 
-    const { data, metadata } = await this._uploadBody(newState);
+    const { data, metadata } = await this.uploadBody(newState);
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.command, data },
+      { function: this.function, data },
       this.tags,
       { ...metadata, ...this.metadata() }
     );
@@ -67,15 +69,15 @@ class MemoService extends NodeService {
   public async removeReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
-    this.setCommand(commands.NODE_UPDATE);
+    this.setFunction(functions.NODE_UPDATE);
     this.tags = await this.getTags();
 
     const body = await this.deleteReaction(reaction);
-    const { data, metadata } = await this._uploadBody(body);
+    const { data, metadata } = await this.uploadBody(body);
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.command, data },
+      { function: this.function, data },
       this.tags,
       { ...metadata, ...this.metadata() }
     );

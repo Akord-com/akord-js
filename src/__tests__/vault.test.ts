@@ -22,7 +22,7 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing vault commands", () => {
+describe("Testing vault functions", () => {
   let vaultId: any
 
   beforeAll(async () => {

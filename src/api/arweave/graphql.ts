@@ -59,7 +59,7 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
           values: [$objectType]
         },
         {
-          name: "Command",
+          name: "Function-Name",
           values: ["Node-Create"]
         }
       ]

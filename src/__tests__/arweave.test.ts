@@ -13,7 +13,7 @@ describe("Testing Akord Client without Akord API, only arweave", () => {
     akord = new Akord(arweaveWallet, undefined, { wallet: <any>"Arweave", network: <any>"mainnet" });
   });
 
-  it("Testing vault:init command", async () => {
+  it("Testing vault:init function", async () => {
     const name = faker.random.words();
     const termsOfAccess = faker.lorem.sentences();
     const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);

@@ -16,7 +16,7 @@ import {
   deriveAddress,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
-import { objectTypes, protocolTags, commands } from '../constants';
+import { objectTypes, protocolTags, functions, dataTags } from '../constants';
 import lodash from "lodash";
 import { EncryptionTags } from "../types/encryption-tags";
 
@@ -34,7 +34,7 @@ class Service {
   vaultId: string
   objectId: string
   objectType: string
-  command: string
+  function: string
   isPublic: boolean
   vault: any
   object: any
@@ -152,20 +152,20 @@ class Service {
     const body = {
       name: await this.processWriteString(name)
     };
-    this.setCommand(this.objectType === "Vault" ? commands.VAULT_UPDATE : commands.NODE_UPDATE);
+    this.setFunction(this.objectType === "Vault" ? functions.VAULT_UPDATE : functions.NODE_UPDATE);
     return this.nodeUpdate(body);
   }
 
   protected async nodeUpdate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{ transactionId: string }> {
     const input = {
-      function: this.command,
+      function: this.function,
       ...clientInput
     };
 
     this.tags = await this.getTags();
 
     if (body) {
-      const { data, metadata } = await this._mergeAndUploadBody(body);
+      const { data, metadata } = await this.mergeAndUploadBody(body);
       input.data = data;
       clientMetadata = {
         ...clientMetadata,
@@ -187,14 +187,14 @@ class Service {
   }> {
     const nodeId = uuidv4();
     this.setObjectId(nodeId);
-    this.setCommand(commands.NODE_CREATE);
+    this.setFunction(functions.NODE_CREATE);
 
     this.tags = await this.getTags();
 
-    const { metadata, data } = await this._uploadBody(body);
+    const { metadata, data } = await this.uploadBody(body);
 
     const input = {
-      function: this.command,
+      function: this.function,
       data,
       ...clientInput
     };
@@ -225,8 +225,8 @@ class Service {
     this.objectType = objectType;
   }
 
-  protected setCommand(command: string) {
-    this.command = command;
+  protected setFunction(functionName: string) {
+    this.function = functionName;
   }
 
   protected setActionRef(actionRef: string) {
@@ -286,7 +286,7 @@ class Service {
       let avatar = null;
       if (profileDetails.avatarUrl) {
         const { fileData, headers } = await this.api.downloadFile(profileDetails.avatarUrl);
-        const encryptedData = this._getEncryptedData(fileData, headers);
+        const encryptedData = this.getEncryptedData(fileData, headers);
         if (encryptedData) {
           avatar = await profileEncrypter.decryptRaw(encryptedData, false);
         } else {
@@ -313,16 +313,16 @@ class Service {
     } else {
       const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
       processedData = encryptedFile.encryptedData.ciphertext;
-      encryptionTags['Initialization-Vector'] = encryptedFile.encryptedData.iv;
+      encryptionTags["Initialization-Vector"] = encryptedFile.encryptedData.iv;
       encryptionTags['Encrypted-Key'] = encryptedFile.encryptedKey;
-      const { address, publicKey } = await this._getActiveKey();
+      const { address, publicKey } = await this.getActiveKey();
       encryptionTags['Public-Address'] = address;
       encryptionTags['Public-Key'] = publicKey;
     }
     return { processedData, encryptionTags }
   }
 
-  protected async _getActiveKey() {
+  protected async getActiveKey() {
     const activePublicKey = arrayToBase64(<any>this.dataEncrypter.publicKey);
     return {
       address: await deriveAddress(activePublicKey, "akord"),
@@ -334,7 +334,7 @@ class Service {
     if (this.isPublic) return data;
     const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data));
     const decodedPayload = base64ToJson(encryptedPayload);
-    decodedPayload.publicAddress = (await this._getActiveKey()).address;
+    decodedPayload.publicAddress = (await this.getActiveKey()).address;
     delete decodedPayload.publicKey;
     return jsonToBase64(decodedPayload);
   }
@@ -384,7 +384,7 @@ class Service {
       return Buffer.from(data.data);
     }
 
-    const encryptedData = this._getEncryptedData(data, headers);
+    const encryptedData = this.getEncryptedData(data, headers);
     if (encryptedData) {
       return this.dataEncrypter.decryptRaw(encryptedData, false);
     } else {
@@ -392,7 +392,7 @@ class Service {
     }
   }
 
-  protected _getEncryptedData(data: any, headers: any) {
+  protected getEncryptedData(data: any, headers: any) {
     const encryptedKey = headers['x-amz-meta-encryptedkey'];
     const iv = headers['x-amz-meta-iv'];
     const publicKeyIndex = headers['x-amz-meta-public-key-index'];
@@ -409,9 +409,9 @@ class Service {
     return null;
   }
 
-  protected async _mergeAndUploadBody(body: any) {
+  protected async mergeAndUploadBody(body: any) {
     const mergedBody = await this.mergeState(body);
-    return this._uploadBody(mergedBody);
+    return this.uploadBody(mergedBody);
   }
 
   protected async signData(data: any) {
@@ -424,10 +424,10 @@ class Service {
     return signature;
   }
 
-  protected async _uploadBody(body: any) {
+  protected async uploadBody(body: any) {
     const signature = await this.signData(body);
     const tags = {
-      "Data-Type": "State",
+      [dataTags.DATA_TYPE]: "State",
       [protocolTags.SIGNATURE]: signature,
       [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
       [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
@@ -469,7 +469,7 @@ class Service {
 
   protected async getTags() {
     const tags = {
-      [protocolTags.COMMAND]: this.command,
+      [protocolTags.FUNCTION_NAME]: this.function,
       [protocolTags.SIGNER_ADDRESS]: await this.wallet.getAddress(),
       [protocolTags.VAULT_ID]: this.vaultId,
       [protocolTags.TIMESTAMP]: JSON.stringify(Date.now()),

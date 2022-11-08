@@ -84,12 +84,12 @@ export enum protocolTags {
   PROTOCOL_NAME = "Protocol-Name",
   PROTOCOL_VERSION = "Protocol-Version",
   TIMESTAMP = "Timestamp",
-  COMMAND = "Command",
+  FUNCTION_NAME = "Function-Name",
   VAULT_ID = "Vault-Id",
   MEMBERSHIP_ID = "Membership-Id",
   NODE_TYPE = "Node-Type",
   NODE_ID = "Node-Id",
-  ACCESS = "Access",
+  PUBLIC = "Public",
   REF_ID = "Ref-Id",
   REVISION = "Revision",
   ACTION_REF = "Action-Ref",
@@ -99,11 +99,25 @@ export enum protocolTags {
   MEMBER_ADDRESS = "Member-Address"
 };
 
+export enum dataTags {
+  DATA_TYPE = "Data-Type",
+  CONTENT_TYPE = "Content-Type",
+  SIGNER_ADDRESS = "Signer-Address",
+  SIGNATURE = "Signature",
+};
+
+export enum fileTags {
+  FILE_NAME = "File-Name",
+  FILE_MODIFIED_AT = "File-Modified-At",
+  FILE_SIZE = "File-Size",
+  FILE_TYPE = "File-Type",
+  FILE_HASH = "File-Hash"
+}
+
 export enum encryptionTags {
-  Initialization_Vector = "Initialization-Vector",
-  Encrypted_Key = "Encrypted-Key",
-  Public_Key = "Public-Key",
-  Public_Address = "Public-Address"
+  IV = "Initialization-Vector",
+  ENCRYPTED_KEY = "Encrypted-Key",
+  PUBLIC_ADDRESS = "Public-Address"
 };
 
 export enum smartweaveTags {
@@ -122,7 +136,7 @@ export enum smartweaveValues {
   CONTRACT_INITIALIZATION = "SmartWeaveContract"
 };
 
-export enum commands {
+export enum functions {
   VAULT_CREATE = "vault:init",
   VAULT_UPDATE = "vault:update",
   VAULT_ARCHIVE = "vault:archive",

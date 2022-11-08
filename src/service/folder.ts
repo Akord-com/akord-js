@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, commands, objectTypes } from "../constants";
+import { actionRefs, functions, objectTypes } from "../constants";
 
 class FolderService extends NodeService {
   objectType: string = objectTypes.FOLDER;
@@ -16,7 +16,7 @@ class FolderService extends NodeService {
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
-    this.setCommand(commands.NODE_CREATE);
+    this.setFunction(functions.NODE_CREATE);
     const body = {
       name: await this.processWriteString(name)
     }

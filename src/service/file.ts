@@ -1,5 +1,5 @@
 import { Service } from "./service";
-import { protocolTags } from "../constants";
+import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
 import { PermapostExecutor } from "../api/akord/permapost";
@@ -109,23 +109,23 @@ class FileService extends Service {
     : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
     let tags = {};
     if (this.isPublic) {
-      tags['File-Name'] = encodeURIComponent(file.name);
+      tags[fileTags.FILE_NAME] = encodeURIComponent(file.name);
       if (file.lastModified) {
-        tags['File-Modified-At'] = file.lastModified.toString();
+        tags[fileTags.FILE_MODIFIED_AT] = file.lastModified.toString();
       }
     }
-    tags['Content-Type'] = file.type;
-    tags['File-Size'] = file.size;
-    tags['File-Type'] = file.type;
-    tags['Timestamp'] = JSON.stringify(Date.now());
-    tags['Data-Type'] = "File";
+    tags[smartweaveTags.CONTENT_TYPE] = file.type;
+    tags[fileTags.FILE_SIZE] = file.size;
+    tags[fileTags.FILE_TYPE] = file.type;
+    tags[protocolTags.TIMESTAMP] = JSON.stringify(Date.now());
+    tags[dataTags.DATA_TYPE] = "File";
     tags[protocolTags.VAULT_ID] = this.vaultId;
     if (file.size > this.asyncUploadTreshold) {
       return await this.uploadChunked(file, tags, progressHook, cancelHook);
     } else {
       const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      tags['File-Hash'] = await digestRaw(processedData);
-      return { resourceHash: tags['File-Hash'], ...await this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
+      tags[fileTags.FILE_HASH] = await digestRaw(processedData);
+      return { resourceHash: tags[fileTags.FILE_HASH], ...await this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
     }
   }
 
@@ -172,9 +172,9 @@ class FileService extends Service {
       );
 
       encryptionTags = encryptedData.encryptionTags;
-      iv.push(encryptionTags['Initialization-Vector'])
+      iv.push(encryptionTags[encTags.IV])
       if (!encryptedKey) {
-        encryptedKey = encryptionTags['Encrypted-Key'];
+        encryptedKey = encryptionTags[encTags.ENCRYPTED_KEY];
       }
 
       await this.uploadChunk(
@@ -190,7 +190,7 @@ class FileService extends Service {
       uploadedChunks += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-    encryptionTags['Initialization-Vector'] = iv.join(',')
+    encryptionTags[encTags.IV] = iv.join(',')
     
     await new PermapostExecutor()
       .env((<any>this.api.config).env, (<any>this.api.config).domain)

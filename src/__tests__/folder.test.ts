@@ -22,7 +22,7 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing folder commands", () => {
+describe("Testing folder functions", () => {
   let vaultId: string;
   let rootFolderId: string;
   let subFolderId: string;

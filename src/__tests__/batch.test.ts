@@ -67,7 +67,7 @@ describe("Testing batch actions", () => {
       noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
       const note = await akord.note.get(noteId);
-      expect(note.revisions.length).toEqual(1);
+      expect(note.versions.length).toEqual(1);
     });
 
     it("should revoke all items in a batch", async () => {

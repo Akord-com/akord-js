@@ -6,6 +6,7 @@ export interface Node {
   status: string;
   parentId?: string;
   name: string;
+  tags: string[];
 }
 
 export interface Folder extends Node { }

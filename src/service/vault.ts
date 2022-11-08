@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, objectTypes, commands, protocolTags } from "../constants";
+import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson } from "@akord/crypto";
 
@@ -36,7 +36,7 @@ class VaultService extends NodeService {
     const vaultId = await this.api.initContractId({
       [protocolTags.NODE_TYPE]: objectTypes.VAULT,
     });
-    this.setCommand(commands.VAULT_CREATE);
+    this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
 
@@ -46,7 +46,7 @@ class VaultService extends NodeService {
     this.tags = {
       [protocolTags.MEMBER_ADDRESS]: address,
       [protocolTags.MEMBERSHIP_ID]: membershipId,
-      "Public": isPublic ? "true" : "false",
+      [protocolTags.PUBLIC]: isPublic ? "true" : "false",
       ...await this.getTags()
     }
 
@@ -95,7 +95,7 @@ class VaultService extends NodeService {
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.command, data },
+      { function: this.function, data },
       this.tags,
       { ...metadata, ...this.metadata() }
     );
@@ -120,7 +120,7 @@ class VaultService extends NodeService {
   public async archive(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_ARCHIVE);
-    this.setCommand(commands.VAULT_ARCHIVE);
+    this.setFunction(functions.VAULT_ARCHIVE);
     return this.nodeUpdate();
   }
 
@@ -131,7 +131,7 @@ class VaultService extends NodeService {
   public async restore(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RESTORE);
-    this.setCommand(commands.VAULT_RESTORE);
+    this.setFunction(functions.VAULT_RESTORE);
     return this.nodeUpdate();
   }
 

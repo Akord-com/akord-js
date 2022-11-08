@@ -1,5 +1,5 @@
 import { Service } from './service';
-import { commands } from "../constants";
+import { functions } from "../constants";
 
 class NodeService extends Service {
   /**
@@ -9,7 +9,7 @@ class NodeService extends Service {
    */
   public async rename(nodeId: string, name: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(nodeId, this.objectType);
-    this.setCommand(commands.NODE_UPDATE);
+    this.setFunction(functions.NODE_UPDATE);
     const body = {
       name: await this.processWriteString(name)
     };
@@ -23,7 +23,7 @@ class NodeService extends Service {
    */
   public async move(nodeId: string, parentId?: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(nodeId, this.objectType);
-    this.setCommand(commands.NODE_MOVE);
+    this.setFunction(functions.NODE_MOVE);
     return this.nodeUpdate(null, { parent: parentId });
   }
 
@@ -33,7 +33,7 @@ class NodeService extends Service {
    */
   public async revoke(nodeId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(nodeId, this.objectType);
-    this.setCommand(commands.NODE_REVOKE);
+    this.setFunction(functions.NODE_REVOKE);
     return this.nodeUpdate();
   }
 
@@ -43,7 +43,7 @@ class NodeService extends Service {
    */
   public async restore(nodeId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(nodeId, this.objectType);
-    this.setCommand(commands.NODE_RESTORE);
+    this.setFunction(functions.NODE_RESTORE);
     return this.nodeUpdate();
   }
 
@@ -53,7 +53,7 @@ class NodeService extends Service {
    */
   public async delete(nodeId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(nodeId, this.objectType);
-    this.setCommand(commands.NODE_DELETE);
+    this.setFunction(functions.NODE_DELETE);
     return this.nodeUpdate();
   }
 
