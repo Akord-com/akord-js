@@ -7,6 +7,7 @@ import { awsConfig, AWSConfig } from "./aws-config";
 import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
 import { Logger } from "../../logger";
+import { Vault } from "../../types/vault";
 
 
 export default class AkordApi extends Api {
@@ -185,14 +186,22 @@ export default class AkordApi extends Api {
     return results;
   };
 
-  public async getVaults(wallet: Wallet): Promise<any> {
+  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.membershipsByMemberPublicSigningKey,
+      queries.listVaults,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    const vaults = results
+    
+      const vaults = await Promise.all(results
       .filter((membership: any) => membership.dataRoom.status !== "ARCHIVED")
-      .map((membership: any) => membership.dataRoomId);
+      .map(async (membership: any) =>
+        new Vault(
+          membership.dataRoom.id,
+          membership.dataRoom.name,
+          membership.dataRoom.public,
+          membership.keys
+        )
+      ))
     return vaults;
   };
 

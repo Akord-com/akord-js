@@ -378,6 +378,45 @@ export const membershipsByMemberPublicSigningKey =
     }
   `
 
+  export const listVaults =
+  /* GraphQL */
+  `
+    query MembershipsByMemberPublicSigningKey(
+      $memberPublicSigningKey: String
+      $sortDirection: ModelSortDirection
+      $filter: ModelMembershipFilterInput
+      $limit: Int
+      $nextToken: String
+    ) {
+      membershipsByMemberPublicSigningKey(
+        memberPublicSigningKey: $memberPublicSigningKey
+        sortDirection: $sortDirection
+        filter: $filter
+        limit: $limit
+        nextToken: $nextToken
+      ) {
+        items {
+          id
+          status
+          role
+          keys {
+            encPublicKey
+            encPrivateKey
+          }
+          dataRoom {
+            id
+            name
+            status
+            public
+          }
+          createdAt
+          updatedAt
+        }
+        nextToken
+      }
+    }
+  `
+
 export const profilesByPublicSigningKey = /* GraphQL */ `
   query ProfilesByPublicSigningKey(
     $publicSigningKey: String
