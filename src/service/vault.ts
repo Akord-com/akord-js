@@ -2,6 +2,7 @@ import { NodeService } from "./node";
 import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson } from "@akord/crypto";
+import { Vault } from "../types/vault";
 
 class VaultService extends NodeService {
   objectType: string = objectTypes.VAULT;
@@ -168,15 +169,14 @@ class VaultService extends NodeService {
   /**
    * @returns Promise with currently authenticated user vaults
    */
-  public async list(shouldDecrypt = true): Promise<any> {
+  public async list(shouldDecrypt = true): Promise<Array<Vault>> {
     const vaults = await this.api.getVaults(this.wallet);
-    let vaultTable = [];
-    for (let vaultId of vaults) {
-      await this.setVaultContext(vaultId);
-      const processedVault = await this.processObject(this.vault, shouldDecrypt);
-      vaultTable.push(processedVault);
+    for (let vault of vaults) {
+      if (shouldDecrypt) {
+        await vault.decrypt()
+      }
     }
-    return vaultTable;
+    return vaults;
   }
 
   public async setVaultContext(vaultId: string): Promise<void> {

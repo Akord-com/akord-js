@@ -1,6 +1,7 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
 import { ContractState } from '../types/contract';
+import { Vault } from '../types/vault';
 
 abstract class Api {
   config: AWSConfig | ArweaveConfig
@@ -30,7 +31,7 @@ abstract class Api {
 
   abstract getNodeState(stateId: string): Promise<any>
 
-  abstract getVaults(wallet: any): Promise<any>
+  abstract getVaults(wallet: any): Promise<Array<Vault>>
 
   abstract getMemberships(wallet: any): Promise<any>
 

@@ -1,6 +1,6 @@
 import { Api, ApiFactory } from "./api";
 import { ClientConfig } from "./client-config";
-import { Wallet } from "@akord/crypto";
+import { Crypto, Wallet } from "@akord/crypto";
 import { reactionEmoji } from "./constants";
 import { Logger } from "./logger";
 import { MemoService } from "./service/memo";
@@ -42,7 +42,8 @@ export class Akord {
    */
   constructor(wallet?: Wallet, jwtToken?: string, config: ClientConfig = {}) {
     Logger.debug = config.debug;
-    CacheBusters.cache = config.cache
+    CacheBusters.cache = config.cache;
+    Crypto.configure({ wallet: wallet });
     this.api = new ApiFactory(config, wallet, jwtToken).apiInstance();
     this.vault = new VaultService(wallet, this.api);
     this.memo = new MemoService(wallet, this.api);
