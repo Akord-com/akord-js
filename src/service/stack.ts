@@ -3,11 +3,12 @@ import { actionRefs, functions, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
 import { FileLike } from "../types/file";
+import { Stack } from "../types/node";
 
-class StackService extends NodeService {
-  objectType: string = objectTypes.STACK;
-
+class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
+  objectType: string = objectTypes.STACK;
+  NodeType = Stack;
 
   /**
    * @param  {string} vaultId
@@ -62,7 +63,7 @@ class StackService extends NodeService {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = await this.api.getObject(stackId, objectTypes.STACK);
+    const stack = await this.api.getObject<Stack>(stackId, objectTypes.STACK);
     let version: any;
     if (index) {
       if (stack.versions && stack.versions[index]) {

@@ -1,10 +1,40 @@
-import { NodeService } from "./node";
 import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
+import { Service } from "./service";
+import { Membership } from "../types/membership";
 
-class MembershipService extends NodeService {
+class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with the decrypted membership
+   */
+  public async get(vaultId: string, shouldDecrypt = true): Promise<Membership> {
+    const membershipProto = await this.api.getObject<any>(vaultId, this.objectType);
+    const membership = new Membership(membershipProto);
+    if (shouldDecrypt && !membership.public) {
+      await membership.decrypt();
+    }
+    return membership
+  }
+
+  /**
+ * @returns Promise with the decrypted memberships
+ */
+  public async list(shouldDecrypt = true): Promise<Array<Membership>> {
+    const membershipsProto = await this.api.getMemberships(this.wallet);
+    const memberships = []
+    for (const membershipProto of membershipsProto) {
+      const membership = new Membership(membershipProto);
+      if (shouldDecrypt && !membership.public) {
+        await membership.decrypt();
+      }
+      memberships.push(membership);
+    }
+    return memberships;
+  }
 
   /**
   * Invite user with an Akord account
@@ -141,7 +171,7 @@ class MembershipService extends NodeService {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.api.getObjectsByVaultId(this.vaultId, this.objectType);
+      const memberships = await this.api.getObjectsByVaultId<any>(this.vaultId, this.objectType);
 
       this.tags = await this.getTags();
 
@@ -243,7 +273,7 @@ class MembershipService extends NodeService {
    * @returns Promise with corresponding transaction id
    */
   public async inviteResend(membershipId: string): Promise<{ transactionId: string }> {
-    const object = await this.api.getObject(membershipId, this.objectType);
+    const object = await this.api.getObject<Membership>(membershipId, this.objectType);
     this.setVaultId(object.vaultId);
     this.setPrevHash(object.hash);
     this.setObjectId(membershipId);

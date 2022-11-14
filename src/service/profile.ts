@@ -5,8 +5,9 @@ import { EncryptionType } from "@akord/crypto";
 import { ProfileDetails } from "../types/profile-details";
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
 import { CacheBusters } from "../types/cacheable";
+import { Service } from "./service";
 
-class ProfileService extends NodeService {
+class ProfileService extends Service {
   objectType: string = "Profile";
 
   /**

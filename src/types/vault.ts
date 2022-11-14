@@ -4,15 +4,20 @@ export class Vault extends Encryptable {
     id: string;
     status: string;
     public: boolean;
-    size?: string;
+    createdAt: string;
+    updatedAt: string;
+    size?: number;
+    @encrypted() name: string;
 
-    @encrypted()
-    name: string;
-
-    constructor(id: string, name: string, isPublic: boolean, keys: Array<Keys>){
+    constructor(vaultProto: any, keys: Array<Keys>){
         super(keys, null)
-        this.id = id;
-        this.public = isPublic;
-        this.name = name;
+        this.id = vaultProto.id;
+        this.public = vaultProto.public;
+        this.createdAt = vaultProto.createdAt;
+        this.updatedAt = vaultProto.updatedAt;
+        this.size = vaultProto.size;
+        this.name = vaultProto.name;
+        this.status = vaultProto.status;
+        this.keys = keys;
     }   
   }

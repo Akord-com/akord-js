@@ -1,4 +1,4 @@
-import { Wallet, fromMembership } from "@akord/crypto";
+import { Wallet, Keys } from "@akord/crypto";
 import AWSAppSyncClient, { AUTH_TYPE } from "aws-appsync";
 import gql from "graphql-tag";
 import { ClientConfig } from "../../client-config";
@@ -146,17 +146,17 @@ export default class AkordApi extends Api {
     return object;
   };
 
-  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<any> {
+  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys> }> {
     const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.membershipsByMemberPublicSigningKey,
+      queries.listVaults,
       { memberPublicSigningKey: publicSigningKey }, { dataRoomId: { eq: vaultId } });
     if (!result || result.length === 0) {
       throw new Error("Cannot find membership for vault: " + vaultId +
         ", with the given public signing key: " + publicSigningKey);
     }
     const membership = result[0];
-    return fromMembership(membership);
+    return { isEncrypted: !membership.dataRoom.public, keys: membership.keys };
   };
 
   public async getNodeState(stateId: string): Promise<any> {
@@ -178,7 +178,7 @@ export default class AkordApi extends Api {
     return contract.state;
   };
 
-  public async getMemberships(wallet: Wallet): Promise<any> {
+  public async getMemberships(wallet: Wallet): Promise<Array<any>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.membershipsByMemberPublicSigningKey,
@@ -186,23 +186,12 @@ export default class AkordApi extends Api {
     return results;
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
+  public async getVaults(wallet: Wallet): Promise<Array<any>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.listVaults,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    
-      const vaults = await Promise.all(results
-      .filter((membership: any) => membership.dataRoom.status !== "ARCHIVED")
-      .map(async (membership: any) =>
-        new Vault(
-          membership.dataRoom.id,
-          membership.dataRoom.name,
-          membership.dataRoom.public,
-          membership.keys
-        )
-      ))
-    return vaults;
+    return results;
   };
 
   public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
