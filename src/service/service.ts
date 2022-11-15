@@ -63,17 +63,31 @@ class Service {
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
+    await this.setMembershipKeys(vaultId);
   }
 
 
-  protected async setVaultContextFromObjectId<T extends { vaultId: string }>(objectId: string, objectType: string) {
-    const object = await this.api.getObject<T>(objectId, objectType);
-    await this.setVaultContext(object?.vaultId);
+  protected async setVaultContextFromObjectId(objectId: string, objectType: string) {
+    const object = await this.api.getObject<any>(objectId, objectType);
+    await this.setVaultContext(object?.dataRoomId);
     this.setObject(object);
     this.setObjectId(objectId);
     this.setObjectType(objectType);
   }
 
+  protected async setMembershipKeys(vaultId: string) {
+    if (!this.isPublic) {
+      const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.wallet);
+      const keys = encryptionKeys.keys.map(((keyPair: any) => {
+        return {
+          encPrivateKey: keyPair.encPrivateKey,
+          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+        }
+      }))
+      this.setKeys(keys);
+      this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
+    }
+  }
 
   protected async nodeRename(name: string): Promise<{ transactionId: string }> {
     const body = {

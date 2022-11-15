@@ -6,6 +6,7 @@ export class Vault extends Encryptable {
     public: boolean;
     createdAt: string;
     updatedAt: string;
+    data: Array<string>;
     size?: number;
     @encrypted() name: string;
 
@@ -18,6 +19,7 @@ export class Vault extends Encryptable {
         this.size = vaultProto.size;
         this.name = vaultProto.name;
         this.status = vaultProto.status;
+        this.data = vaultProto.data;
         this.keys = keys;
     }   
   }

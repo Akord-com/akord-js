@@ -11,8 +11,8 @@ export class ContractState extends Encryptable {
   id: string;
   owner: string;
   status: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // number
+  updatedAt: string;  // number
   public: boolean;
   admin?: string;
   data?: string[];

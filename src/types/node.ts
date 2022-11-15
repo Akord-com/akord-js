@@ -3,20 +3,23 @@ import { Encryptable, encrypted, Keys } from "@akord/crypto";
 export abstract class Node extends Encryptable {
   id: string;
   owner: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // number
+  updatedAt: string; // number
   status: string;
   vaultId: string;
   parentId?: string;
+  data?: Array<string>;
   tags: string[];
 
-  constructor(id: string, createdAt: string, updatedAt: string, status: string, vaultId: string, owner: string, keys: Array<Keys>) {
-    super(keys, null);
+  constructor(id: string, createdAt: string, updatedAt: string, status: string, vaultId: string, owner: string, data: Array<string>, keys?: Array<Keys>, publicKey?: string) {
+    super(keys, publicKey);
     this.id = id;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.status = status;
     this.vaultId = vaultId;
+    this.owner = owner;
+    this.data = data;
   }
 }
 
@@ -25,7 +28,7 @@ export class Folder extends Node {
   parentId: string;
   
   constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys);
     this.name = nodeLike.name;
     this.parentId = nodeLike.parentId;
   }
@@ -33,11 +36,11 @@ export class Folder extends Node {
 
 export class Stack extends Node {
   @encrypted() name: string;
-  parentId: string;
+  parentId: string; // in node
   versions: Array<FileVersion>;
 
   constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys);
     this.name = nodeLike.name;
     this.parentId = nodeLike.parentId;
     this.versions = (nodeLike.versions || []).map(version =>
@@ -61,7 +64,7 @@ export class Note extends Node {
   versions: Array<FileVersion>;
 
   constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys);
     this.name = nodeLike.name;
     this.parentId = nodeLike.parentId;
     this.versions = (nodeLike.versions || []).map(version =>
@@ -82,8 +85,8 @@ export class Note extends Node {
 export class Memo extends Node {
   versions: Array<MemoVersion>;
 
-  constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, keys);
+  constructor(nodeLike: any, keys: Array<Keys>, publicKey?: string) {
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys, publicKey);
     this.versions = (nodeLike.versions || []).map(version =>
       new MemoVersion(
         version.owner,
@@ -91,7 +94,8 @@ export class Memo extends Node {
         version.attachments,
         version.createdAt,
         version.message,
-        keys
+        keys,
+        publicKey
       )
     );
   }
@@ -100,15 +104,15 @@ export class Memo extends Node {
 export class FileVersion extends Encryptable {
   @encrypted() name: string;
   owner: string;
-  type: string;
+  type: string; //type
   resourceUri: string[];
   size: number;
-  numberOfChunks: number;
-  chunkSize: number;
-  createdAt: number;
+  createdAt: string;
+  numberOfChunks?: number;
+  chunkSize?: number;
 
-  constructor(name: string, owner: string, type: string, resourceUri: string[], size: number, numberOfChunks: number, chunkSize: number, createdAt: number, keys: Array<Keys>) {
-    super(keys, null);
+  constructor(name: string, owner: string, type: string, resourceUri: string[], size: number, numberOfChunks: number, chunkSize: number, createdAt: string, keys?: Array<Keys>, publicKey?: string) {
+    super(keys, publicKey);
     this.owner = owner;
     this.type = type;
     this.resourceUri = resourceUri;
@@ -120,30 +124,15 @@ export class FileVersion extends Encryptable {
   }
 }
 
-export class NoteVersion extends Encryptable {
-  @encrypted() content: string;
-  @encrypted() name: string;
-  createdAt: string;
-  size: number;
-
-  constructor(name: string, content: string, size: number, createdAt: string, keys: Array<Keys>) {
-    super(keys, null);
-    this.name = name;
-    this.content = content;
-    this.size = size;
-    this.createdAt = createdAt;
-  }
-}
-
 export class MemoVersion extends Encryptable {
   @encrypted() message: string;
   owner: string;
+  createdAt: string;
   reactions?: Array<MemoReaction>;
-  createdAt: number;
   attachments?: Array<FileVersion>;
 
-  constructor(owner: string, reactions: Array<any>, attachments: Array<any>, createdAt: number, message: string, keys: Array<Keys>) {
-    super(keys, null);
+  constructor(owner: string, reactions: Array<any>, attachments: Array<any>, createdAt: string, message: string, keys?: Array<Keys>, publicKey?: string) {
+    super(keys, publicKey);
     this.owner = owner;
     this.createdAt = createdAt;
     this.message = message;
@@ -152,7 +141,8 @@ export class MemoVersion extends Encryptable {
         reaction.owner,
         reaction.createdAt,
         reaction.reaction,
-        keys
+        keys,
+        publicKey
       )
     );
     this.attachments = (attachments || []).map(attachment =>
@@ -174,10 +164,10 @@ export class MemoVersion extends Encryptable {
 export class MemoReaction extends Encryptable {
   @encrypted() reaction: string;
   owner: string;
-  createdAt: number;
+  createdAt: string;
 
-  constructor(owner: string, createdAt: number, reaction: string, keys: Array<Keys>) {
-    super(keys, null);
+  constructor(owner: string, createdAt: string, reaction: string, keys?: Array<Keys>, publicKey?: string) {
+    super(keys, publicKey);
     this.owner = owner;
     this.createdAt = createdAt;
     this.reaction = reaction;

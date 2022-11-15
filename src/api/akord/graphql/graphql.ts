@@ -132,28 +132,19 @@ export const getMembership = /* GraphQL */ `
       dataRoomId
       memberPublicSigningKey
       email
+      role
       status
-      state {
-        status
-        role
-        expiresOn
-        memberDetails {
-          publicSigningKey
-          email
-          fullName
-          phone
-          avatarUrl
-          avatarTx
-        }
-        termsOfAccess
-        agreementHash
-        message
-        encryptionType
-        keys {
-          publicKey
-          encPrivateKey
-        }
-        encAccessKey
+      memberDetails {
+        publicSigningKey
+        email
+        fullName
+        phone
+        avatarUrl
+        avatarTx
+       }
+      keys {
+        encPublicKey
+        encPrivateKey
       }
       dataRoom {
         public
@@ -175,8 +166,10 @@ export const getStack = /* GraphQL */ `
         status
         name
         parentId
+        dataRoomId
         createdAt
         updatedAt
+        data
         versions {
           owner
           type
@@ -201,6 +194,8 @@ export const getFolder = /* GraphQL */ `
       name
       parentId
       status
+      dataRoomId
+      data
       createdAt
       updatedAt
     }
@@ -215,6 +210,8 @@ export const getMemo = /* GraphQL */ `
         status
         createdAt
         updatedAt
+        dataRoomId
+        data
         versions {
           owner
           createdAt
@@ -248,8 +245,10 @@ export const getNote = /* GraphQL */ `
         name
         content
         parentId
+        dataRoomId
         createdAt
         updatedAt
+        data
         versions {
           content
           size
@@ -266,23 +265,11 @@ export const getVault = /* GraphQL */ `
   query GetDataRoom($id: ID!) {
     getDataRoom(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      contextVersion
+      name
       status
-      state {
-        status
-        title
-        description
-        termsOfAccess
-        permanentStorage
-        isContract
-        isPublic
-        publicKeys
-      }
+      public
+      size
+      data
       createdAt
       updatedAt
     }
@@ -389,6 +376,7 @@ export const listVaults =
             status
             public
             size
+            publicKeys
             createdAt
             updatedAt
           }

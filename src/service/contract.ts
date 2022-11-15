@@ -17,9 +17,11 @@ class ContractService extends Service {
    * @returns Promise with the current contract state
    */
   public async getState(id: string): Promise<ContractState> {
-    let contractState = await this.api.getContractState(id);
-    if (!contractState.public) {
-      await contractState.decrypt()
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(id, this.wallet);
+    const contractState = await this.api.getContractState(id);
+    contractState.__keys__ = keys;
+    if (isEncrypted) {
+      await contractState.decrypt();
     }
     return contractState;
   }

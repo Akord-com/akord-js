@@ -146,7 +146,7 @@ export default class AkordApi extends Api {
     return object;
   };
 
-  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys> }> {
+  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
     const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.listVaults,
@@ -156,7 +156,8 @@ export default class AkordApi extends Api {
         ", with the given public signing key: " + publicSigningKey);
     }
     const membership = result[0];
-    return { isEncrypted: !membership.dataRoom.public, keys: membership.keys };
+    const publicKey = membership.dataRoom.publicKeys ? membership.dataRoom.publicKeys[membership.dataRoom.publicKeys.length -1] : null
+    return { isEncrypted: !membership.dataRoom.public, keys: membership.keys, publicKey: publicKey };
   };
 
   public async getNodeState(stateId: string): Promise<any> {

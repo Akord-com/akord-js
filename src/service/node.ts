@@ -68,7 +68,7 @@ class NodeService<T = NodeLike> extends Service {
    */
   public async get(nodeId: string, shouldDecrypt = true): Promise<T> {
     const nodeProto = await this.api.getObject<any>(nodeId, this.objectType);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId, this.wallet)
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.dataRoomId, this.wallet)
     const node = this.nodeInstance(nodeProto, keys);
     if (isEncrypted && shouldDecrypt) {
       await node.decrypt();

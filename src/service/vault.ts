@@ -162,13 +162,10 @@ class VaultService extends Service {
    */
   public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
     const result = await this.api.getObject<any>(vaultId, this.objectType);
-    const vault = new Vault(result.dataRoom, result.keys);
+    const { keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const vault = new Vault(result, keys);
     if (shouldDecrypt && !vault.public) {
       await vault.decrypt();
-    }
-    if (vault.termsOfAccess) { // TODO: needed after migration? handle with @encoded()
-      const terms = base64ToJson(vault.termsOfAccess);
-      vault.termsOfAccess = terms.termsOfAccess;
     }
     return vault
   }
@@ -197,6 +194,7 @@ class VaultService extends Service {
     await super.setVaultContext(vaultId);
     this.setPrevHash(this.vault.hash);
     this.setObjectId(vaultId);
+    this.setObject(this.vault);
   }
 };
 
