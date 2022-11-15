@@ -1,10 +1,10 @@
-import { NodeService } from "./node";
 import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson } from "@akord/crypto";
 import { Vault } from "../types/vault";
+import { Service } from "./service";
 
-class VaultService extends NodeService {
+class VaultService extends Service {
   objectType: string = objectTypes.VAULT;
 
   /**
@@ -160,21 +160,32 @@ class VaultService extends NodeService {
    * @param  {string} vaultId
    * @returns Promise with the decrypted vault
    */
-  public async get(vaultId: string, shouldDecrypt = true): Promise<any> {
-    const object = await this.api.getObject(vaultId, this.objectType);
-    await this.setVaultContext(object.id);
-    return this.processObject(object, shouldDecrypt);
+  public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
+    const result = await this.api.getObject<any>(vaultId, this.objectType);
+    const { keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const vault = new Vault(result, keys);
+    if (shouldDecrypt && !vault.public) {
+      await vault.decrypt();
+    }
+    return vault
   }
 
   /**
    * @returns Promise with currently authenticated user vaults
    */
   public async list(shouldDecrypt = true): Promise<Array<Vault>> {
-    const vaults = await this.api.getVaults(this.wallet);
-    for (let vault of vaults) {
-      if (shouldDecrypt) {
+    const results = await this.api.getVaults(this.wallet);
+    const vaults = [];
+    for (let result of results) {
+      const vault = new Vault(result.dataRoom, result.keys);
+      if (shouldDecrypt && !vault.public) {
         await vault.decrypt()
       }
+      if (vault.termsOfAccess) { // TODO: needed after migration? handle with @encoded()
+        const terms = base64ToJson(vault.termsOfAccess);
+        vault.termsOfAccess = terms.termsOfAccess;
+      }
+      vaults.push(vault);
     }
     return vaults;
   }
@@ -183,15 +194,7 @@ class VaultService extends NodeService {
     await super.setVaultContext(vaultId);
     this.setPrevHash(this.vault.hash);
     this.setObjectId(vaultId);
-  }
-
-  public async processObject(object: any, shouldDecrypt = true): Promise<any> {
-    const processedObject = await super.processObject(object, shouldDecrypt);
-    if (processedObject.termsOfAccess) {
-      const terms = base64ToJson(processedObject.termsOfAccess);
-      processedObject.termsOfAccess = terms.termsOfAccess;
-    }
-    return processedObject;
+    this.setObject(this.vault);
   }
 };
 

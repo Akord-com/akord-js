@@ -1,3 +1,4 @@
+import { Encryptable, encrypted } from "@akord/crypto";
 import { Membership } from "./membership";
 import { Folder, Memo, Note, Stack } from "./node";
 
@@ -5,13 +6,13 @@ export interface Contract {
   state: ContractState
 }
 
-export interface ContractState {
+export class ContractState extends Encryptable {
+  @encrypted() name: string;
   id: string;
   owner: string;
-  name: string;
   status: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // number
+  updatedAt: string;  // number
   public: boolean;
   admin?: string;
   data?: string[];

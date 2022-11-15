@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 import { objectTypes, protocolTags, functions, dataTags } from '../constants';
 import lodash from "lodash";
 import { EncryptionTags } from "../types/encryption-tags";
+import { Vault } from "../types/vault";
 
 declare const Buffer;
 
@@ -58,11 +59,20 @@ class Service {
   }
 
   protected async setVaultContext(vaultId: string) {
-    const vault = await this.api.getObject(vaultId, objectTypes.VAULT);
+    const vault = await this.api.getObject<Vault>(vaultId, objectTypes.VAULT);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
     await this.setMembershipKeys(vaultId);
+  }
+
+
+  protected async setVaultContextFromObjectId(objectId: string, objectType: string) {
+    const object = await this.api.getObject<any>(objectId, objectType);
+    await this.setVaultContext(object?.dataRoomId);
+    this.setObject(object);
+    this.setObjectId(objectId);
+    this.setObjectType(objectType);
   }
 
   protected async setMembershipKeys(vaultId: string) {
@@ -75,77 +85,8 @@ class Service {
         }
       }))
       this.setKeys(keys);
-      if (encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey) {
-        const publicKey = await this.keysEncrypter.wallet.decrypt(encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey);
-        this.setRawDataEncryptionPublicKey(publicKey);
-      } else {
-        this.setRawDataEncryptionPublicKey(encryptionKeys?.getPublicKey());
-      }
+      this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
     }
-  }
-
-  protected async setVaultContextFromObjectId(objectId: string, objectType: string) {
-    const object = await this.api.getObject(objectId, objectType);
-    await this.setVaultContext(object.vaultId);
-    this.setPrevHash(object.hash);
-    this.setObject(object);
-    this.setObjectId(objectId);
-    this.setObjectType(objectType);
-  }
-
-  /**
-  * Decrypt given state (require encryption context)
-  * @param  {any} state
-  * @returns Promise with decrypted state
-  */
-  public async processState<T>(state: T, shouldDecrypt = true): Promise<T> {
-    const decryptedState = await this.processReadObject(state, ["title", "name", "message", "content"], shouldDecrypt);
-    if (decryptedState.files && decryptedState.files.length > 0) {
-      for (const [index, file] of decryptedState.files.entries()) {
-        const decryptedFile = await this.processReadObject(file, ["title", "name"], shouldDecrypt);
-        delete decryptedFile.__typename;
-        decryptedState.files[index] = decryptedFile;
-      }
-    }
-    if (decryptedState.versions && decryptedState.versions.length > 0) {
-      for (const [index, version] of decryptedState.versions.entries()) {
-        const decryptedVersion = await this.processReadObject(version, ["title", "name", "message", "content"], shouldDecrypt);
-        delete decryptedVersion.__typename;
-        if (decryptedVersion.reactions && decryptedVersion.reactions.length > 0) {
-          for (const [index, reaction] of decryptedVersion.reactions.entries()) {
-            const decryptedReaction = await this.processReadObject(reaction, ["reaction"], shouldDecrypt);
-            delete decryptedReaction.__typename;
-            decryptedVersion.reactions[index] = decryptedReaction;
-          }
-        }
-        decryptedState.versions[index] = decryptedVersion;
-      }
-    }
-    if (decryptedState.reactions && decryptedState.reactions.length > 0) {
-      for (const [index, reaction] of decryptedState.reactions.entries()) {
-        const decryptedReaction = await this.processReadObject(reaction, ["reaction"], shouldDecrypt);
-        delete decryptedReaction.__typename;
-        decryptedState.reactions[index] = decryptedReaction;
-      }
-    }
-    if (decryptedState.revisions && decryptedState.revisions.length > 0) {
-      for (const [index, revision] of decryptedState.revisions.entries()) {
-        const decryptedRevision = await this.processReadObject(revision, ["content", "title"], shouldDecrypt);
-        delete decryptedRevision.__typename;
-        decryptedState.revisions[index] = decryptedRevision;
-      }
-    }
-    if (decryptedState.memberDetails) {
-      const decryptedMemberDetails = await this.processReadObject(decryptedState.memberDetails, ["fullName"], shouldDecrypt);
-      delete decryptedMemberDetails.__typename;
-      decryptedState.memberDetails = decryptedMemberDetails;
-    }
-    delete decryptedState.__typename;
-    return decryptedState;
-  }
-
-  public async processObject(object: any, shouldDecrypt = true) {
-    return this.processState(object, shouldDecrypt);
   }
 
   protected async nodeRename(name: string): Promise<{ transactionId: string }> {
@@ -356,22 +297,6 @@ class Service {
       processedMemberDetails.avatarTx = resourceTx;
     }
     return processedMemberDetails;
-  }
-
-  protected async processReadObject(object: any, fieldsToDecrypt: any, shouldDecrypt = true) {
-    const decryptedObject = object;
-    if (decryptedObject.title) {
-      decryptedObject.name = decryptedObject.title;
-      delete decryptedObject.title;
-    }
-    if (this.isPublic || !shouldDecrypt) return decryptedObject;
-    const promises = fieldsToDecrypt.map(async fieldName => {
-      if (decryptedObject[fieldName] && decryptedObject[fieldName] !== '') {
-        const decryptedFieldValue = await this.dataEncrypter.decryptRaw(decryptedObject[fieldName]);
-        decryptedObject[fieldName] = arrayToString(decryptedFieldValue);
-      }
-    })
-    return Promise.all(promises).then(() => decryptedObject);
   }
 
   protected async processReadString(data: any, shouldDecrypt = true) {

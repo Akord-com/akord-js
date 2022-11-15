@@ -1,8 +1,10 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectTypes } from "../constants";
+import { Folder } from "../types/node";
 
-class FolderService extends NodeService {
+class FolderService extends NodeService<Folder> {
   objectType: string = objectTypes.FOLDER;
+  NodeType = Folder;
 
   /**
    * @param  {string} vaultId

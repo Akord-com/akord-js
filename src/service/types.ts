@@ -8,10 +8,11 @@ import { FolderService } from "./folder";
 import { NoteService } from "./note"
 import { ProfileService } from "./profile";
 import { NodeService } from "./node";
+import { Service } from "./service";
 
 export class ServiceFactory {
 
-  service: NodeService
+  service: Service
 
   constructor(wallet: Wallet, api: Api, objectType: string, encryptionKeys?: EncryptionKeys) {
     switch (objectType) {

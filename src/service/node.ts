@@ -1,7 +1,12 @@
 import { Service } from './service';
 import { functions } from "../constants";
+import { NodeLike } from '../types/node';
+import { Keys } from '@akord/crypto';
 
-class NodeService extends Service {
+class NodeService<T = NodeLike> extends Service {
+
+  protected NodeType: new (arg0: any, arg1: Keys[]) => NodeLike
+
   /**
    * @param  {string} nodeId
    * @param  {string} name new name
@@ -61,25 +66,36 @@ class NodeService extends Service {
    * @param  {string} nodeId
    * @returns Promise with the decrypted node
    */
-  public async get(nodeId: string, shouldDecrypt = true): Promise<any> {
-    const object = await this.api.getObject(nodeId, this.objectType);
-    await this.setVaultContext(object.vaultId);
-    return this.processObject(object, shouldDecrypt);
+  public async get(nodeId: string, shouldDecrypt = true): Promise<T> {
+    const nodeProto = await this.api.getObject<any>(nodeId, this.objectType);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.dataRoomId, this.wallet)
+    const node = this.nodeInstance(nodeProto, keys);
+    if (isEncrypted && shouldDecrypt) {
+      await node.decrypt();
+    }
+    return node as T;
   }
 
   /**
    * @param  {string} vaultId
    * @returns Promise with all nodes within given vault
    */
-  public async list(vaultId: any, shouldDecrypt = true): Promise<any> {
-    const nodes = await this.api.getObjectsByVaultId(vaultId, this.objectType);
-    let nodeTable = [];
-    await this.setVaultContext(vaultId);
-    for (let node of nodes) {
-      const processedNode = await this.processObject(node, shouldDecrypt);
-      nodeTable.push(processedNode);
-    }
-    return nodeTable;
+  public async list(vaultId: string, shouldDecrypt = true): Promise<Array<T>> {
+    const nodes = await this.api.getObjectsByVaultId<T>(vaultId, this.objectType);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    return await Promise.all(
+      nodes
+        .map(async nodeProto => {
+          const node = this.nodeInstance(nodeProto, keys);
+          if (isEncrypted && shouldDecrypt) {
+            await node.decrypt();
+          }
+          return node as T;
+        }))
+  }
+
+  private nodeInstance(nodeProto: any, keys: Array<Keys>) : NodeLike {
+    return new this.NodeType(nodeProto, keys);
   }
 }
 

@@ -1,11 +1,13 @@
 import { NodeService } from "./node";
 import { reactionEmoji, actionRefs, objectTypes, functions } from "../constants";
 import lodash from "lodash";
+import { Memo, MemoReaction, MemoVersion } from "../types/node";
 
-class MemoService extends NodeService {
+class MemoService extends NodeService<Memo> {
   static readonly reactionEmoji = reactionEmoji;
 
   objectType: string = objectTypes.MEMO;
+  NodeType = Memo;
 
   /**
   * @param  {string} vaultId
@@ -23,7 +25,7 @@ class MemoService extends NodeService {
       versions: [{
         owner: await this.wallet.getAddress(),
         message: await this.processWriteString(message),
-        createdAt: JSON.stringify(Date.now()),
+        createdAt: new Date().toISOString(),
         reactions: [],
         attachments: []
       }]
@@ -41,13 +43,14 @@ class MemoService extends NodeService {
     await this.setVaultContextFromObjectId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
     this.setFunction(functions.NODE_UPDATE);
+    this.tags = await this.getTags();
 
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length -1].reactions.push({
       reaction: await this.processWriteString(reaction),
       owner: await this.wallet.getAddress(),
-      createdAt: JSON.stringify(Date.now())
+      createdAt: new Date().toISOString()
     })
 
     const { data, metadata } = await this.uploadBody(newState);

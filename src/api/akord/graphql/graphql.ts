@@ -132,30 +132,22 @@ export const getMembership = /* GraphQL */ `
       dataRoomId
       memberPublicSigningKey
       email
+      role
       status
-      state {
-        status
-        role
-        expiresOn
-        memberDetails {
-          publicSigningKey
-          email
-          fullName
-          phone
-          avatarUrl
-          avatarTx
-        }
-        termsOfAccess
-        agreementHash
-        message
-        encryptionType
-        keys {
-          publicKey
-          encPrivateKey
-        }
-        encAccessKey
+      memberDetails {
+        publicSigningKey
+        email
+        fullName
+        phone
+        avatarUrl
+        avatarTx
+       }
+      keys {
+        encPublicKey
+        encPrivateKey
       }
       dataRoom {
+        public
         state {
           publicKeys
         }
@@ -170,34 +162,26 @@ export const getStack = /* GraphQL */ `
   query GetStack($id: ID!) {
     getStack(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      folderId
-      status
-      state {
+        owner
         status
-        title
-        description
-        resourceVersion
-        size
-        files {
-          title
-          resourceUrl
-          thumbnailUrl
-          postedAt
-          fileType
+        name
+        parentId
+        dataRoomId
+        createdAt
+        updatedAt
+        data
+        versions {
+          owner
+          type
+          resourceUri
           size
           numberOfChunks
           chunkSize
-          hash
+          createdAt
+          name
         }
-      }
-      createdAt
-      updatedAt
+        createdAt
+        updatedAt
     }
   }
 `
@@ -206,18 +190,12 @@ export const getFolder = /* GraphQL */ `
   query GetFolder($id: ID!) {
     getFolder(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      folderId
+      owner
+      name
+      parentId
       status
-      state {
-        status
-        title
-      }
+      dataRoomId
+      data
       createdAt
       updatedAt
     }
@@ -228,25 +206,32 @@ export const getMemo = /* GraphQL */ `
   query GetMemo($id: ID!) {
     getMemo(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      state {
-        message
-        reactions {
-          publicSigningKey
-          name
-          reaction
-          status
-          postedAt
-          refHash
+        owner
+        status
+        createdAt
+        updatedAt
+        dataRoomId
+        data
+        versions {
+          owner
+          createdAt
+          message
+          reactions {
+            owner
+            createdAt
+            reaction
+          }
+          attachments {
+            owner
+            type
+            resourceUri
+            size
+            numberOfChunks
+            chunkSize
+            createdAt
+            name
+          }
         }
-      }
-      createdAt
-      updatedAt
     }
   }
 `
@@ -255,30 +240,23 @@ export const getNote = /* GraphQL */ `
   query GetNote($id: ID!) {
     getNote(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      folderId
-      status
-      state {
+        owner
         status
-        title
-        resourceVersion
-        size
+        name
         content
-        revisions {
-          title
-          postedAt
-          size
-          hash
+        parentId
+        dataRoomId
+        createdAt
+        updatedAt
+        data
+        versions {
           content
+          size
+          createdAt
+          name
         }
-      }
-      createdAt
-      updatedAt
+        createdAt
+        updatedAt
     }
   }
 `
@@ -287,23 +265,11 @@ export const getVault = /* GraphQL */ `
   query GetDataRoom($id: ID!) {
     getDataRoom(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      contextVersion
+      name
       status
-      state {
-        status
-        title
-        description
-        termsOfAccess
-        permanentStorage
-        isContract
-        isPublic
-        publicKeys
-      }
+      public
+      size
+      data
       createdAt
       updatedAt
     }
@@ -363,6 +329,7 @@ export const membershipsByMemberPublicSigningKey =
           }
           dataRoom {
             status
+            public
             state {
               isContract
               isPublic
@@ -378,7 +345,7 @@ export const membershipsByMemberPublicSigningKey =
     }
   `
 
-  export const listVaults =
+export const listVaults =
   /* GraphQL */
   `
     query MembershipsByMemberPublicSigningKey(
@@ -408,6 +375,10 @@ export const membershipsByMemberPublicSigningKey =
             name
             status
             public
+            size
+            publicKeys
+            createdAt
+            updatedAt
           }
           createdAt
           updatedAt
@@ -577,19 +548,10 @@ export const foldersByDataRoomId = /* GraphQL */ `
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        folderId
+        owner
+        name
+        parentId
         status
-        state {
-          status
-          title
-        }
         createdAt
         updatedAt
       }
@@ -599,8 +561,8 @@ export const foldersByDataRoomId = /* GraphQL */ `
 `;
 
 export const stacksByDataRoomId =
-/* GraphQL */
-`
+  /* GraphQL */
+  `
   query StacksByDataRoomId(
     $dataRoomId: ID
     $sortDirection: ModelSortDirection
@@ -617,34 +579,21 @@ export const stacksByDataRoomId =
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        folderId
+        owner
         status
-        state {
-          status
-          title
-          description
-          resourceVersion
+        name
+        parentId
+        createdAt
+        updatedAt
+        versions {
+          owner
+          type
+          resourceUri
           size
-          files {
-            title
-            resourceUrl
-            thumbnailUrl
-            postedAt
-            fileType
-            size
-            numberOfChunks
-            chunkSize
-            hash
-            resourceTx
-            thumbnailTx
-          }
+          numberOfChunks
+          chunkSize
+          createdAt
+          name
         }
         createdAt
         updatedAt
@@ -654,9 +603,7 @@ export const stacksByDataRoomId =
   }
 `;
 
-export const memosByDataRoomId =
-/* GraphQL */
-`
+export const memosByDataRoomId = /* GraphQL */ `
   query MemosByDataRoomId(
     $dataRoomId: ID
     $sortDirection: ModelSortDirection
@@ -673,26 +620,30 @@ export const memosByDataRoomId =
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        state {
-          message
-          reactions {
-            publicSigningKey
-            name
-            reaction
-            status
-            postedAt
-            refHash
-          }
-        }
+        owner
+        status
         createdAt
         updatedAt
+        versions {
+          owner
+          createdAt
+          message
+          reactions {
+            owner
+            createdAt
+            reaction
+          }
+          attachments {
+            owner
+            type
+            resourceUri
+            size
+            numberOfChunks
+            chunkSize
+            createdAt
+            name
+          }
+        }
       }
       nextToken
     }
@@ -700,8 +651,8 @@ export const memosByDataRoomId =
 `;
 
 export const notesByDataRoomId =
-/* GraphQL */
-`
+  /* GraphQL */
+  `
   query NotesByDataRoomId(
     $dataRoomId: ID
     $sortDirection: ModelSortDirection
@@ -718,27 +669,18 @@ export const notesByDataRoomId =
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        dataRoomId
-        folderId
+        owner
         status
-        state {
-          status
-          title
-          resourceVersion
-          size
+        name
+        content
+        parentId
+        createdAt
+        updatedAt
+        versions {
           content
-          revisions {
-            title
-            postedAt
-            size
-            hash
-            content
-          }
+          size
+          createdAt
+          name
         }
         createdAt
         updatedAt
