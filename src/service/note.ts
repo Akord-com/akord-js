@@ -25,9 +25,7 @@ class NoteService extends NodeService<Note> {
     const body = {
       versions: [await this.uploadNewNoteVersion(name, content)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, {
-      parent: parentId
-    });
+    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
     return { noteId: nodeId, transactionId };
   }
 

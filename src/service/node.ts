@@ -29,7 +29,7 @@ class NodeService<T = NodeLike> extends Service {
   public async move(nodeId: string, parentId?: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(nodeId, this.objectType);
     this.setFunction(functions.NODE_MOVE);
-    return this.nodeUpdate(null, { parent: parentId });
+    return this.nodeUpdate(null, { parentId });
   }
 
   /**
@@ -94,7 +94,7 @@ class NodeService<T = NodeLike> extends Service {
         }))
   }
 
-  private nodeInstance(nodeProto: any, keys: Array<Keys>) : NodeLike {
+  private nodeInstance(nodeProto: any, keys: Array<Keys>): NodeLike {
     return new this.NodeType(nodeProto, keys);
   }
 }

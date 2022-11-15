@@ -22,9 +22,7 @@ class FolderService extends NodeService<Folder> {
     const body = {
       name: await this.processWriteString(name)
     }
-    const { nodeId, transactionId } = await this.nodeCreate(body, {
-      parent: parentId
-    });
+    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
     return { folderId: nodeId, transactionId };
   }
 };

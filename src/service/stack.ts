@@ -33,9 +33,7 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(name ? name : file.name),
       versions: [await this.uploadNewFileVersion(file, progressHook, cancelHook)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, {
-      parent: parentId
-    });
+    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
     return { stackId: nodeId, transactionId };
   }
 
