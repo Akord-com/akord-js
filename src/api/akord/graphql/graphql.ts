@@ -304,36 +304,23 @@ export const membershipsByMemberPublicSigningKey =
           dataRoomId
           memberPublicSigningKey
           email
+          role
           status
-          state {
-            status
-            role
-            expiresOn
-            memberDetails {
-              publicSigningKey
-              email
-              fullName
-              phone
-              avatarUrl
-              avatarTx
-            }
-            termsOfAccess
-            agreementHash
-            message
-            encryptionType
-            keys {
-              publicKey
-              encPrivateKey
-            }
-            encAccessKey
+          memberDetails {
+            publicSigningKey
+            email
+            name
+            phone
+            avatarUrl
+            avatarTx
+           }
+          keys {
+            encPublicKey
+            encPrivateKey
           }
           dataRoom {
-            status
             public
             state {
-              isContract
-              isPublic
-              permanentStorage
               publicKeys
             }
           }
