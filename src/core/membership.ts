@@ -1,6 +1,6 @@
 import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership } from "../types/membership";
 
@@ -8,11 +8,11 @@ class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
 
   /**
-   * @param  {string} vaultId
+   * @param  {string} membershipId
    * @returns Promise with the decrypted membership
    */
-  public async get(vaultId: string, shouldDecrypt = true): Promise<Membership> {
-    const membershipProto = await this.api.getObject<any>(vaultId, this.objectType);
+  public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
+    const membershipProto = await this.api.getObject<any>(membershipId, this.objectType, vaultId);
     const membership = new Membership(membershipProto);
     if (shouldDecrypt && !membership.public) {
       await membership.decrypt();
@@ -53,9 +53,9 @@ class MembershipService extends Service {
     const membershipId = uuidv4();
     this.setObjectId(membershipId);
 
-    const { address, publicKey } = await this.getUserEncryptionInfo(email);
-    this.setRawKeysEncryptionPublicKey(publicKey);
-    const keys = await this.keysEncrypter.encryptMemberKeys([]);
+    const { address, publicKey } = await this.getUserEncryptionInfo(email, await this.wallet.getAddress());
+    const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
+    const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
       keys: (<any>keys).map((keyPair) => {
         delete keyPair.publicKey;
@@ -65,7 +65,7 @@ class MembershipService extends Service {
 
     this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
 
-    const { data, metadata } = await this.uploadBody(body);
+    const { data, metadata } = await this.uploadState(body);
 
     let input = {
       function: this.function,
@@ -78,7 +78,7 @@ class MembershipService extends Service {
       this.vaultId,
       input,
       this.tags,
-      { ...metadata, ...this.metadata() }
+      metadata
     );
     return { membershipId, transactionId: txId };
   }
@@ -93,7 +93,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
-      encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())]
+      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey())
     }
     this.setFunction(functions.MEMBERSHIP_ACCEPT);
     return this.nodeUpdate(body);
@@ -107,9 +107,9 @@ class MembershipService extends Service {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
-    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email);
-    this.setRawKeysEncryptionPublicKey(publicKey);
-    const keys = await this.keysEncrypter.encryptMemberKeys([]);
+    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
+    const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
+    const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
       keys: (<any>keys).map((keyPair) => {
         delete keyPair.publicKey;
@@ -118,7 +118,7 @@ class MembershipService extends Service {
     };
     this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
 
-    const { data, metadata } = await this.uploadBody(body);
+    const { data } = await this.uploadState(body);
 
     let input = {
       function: this.function,
@@ -130,8 +130,7 @@ class MembershipService extends Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      { ...metadata, isUpdate: true, ...this.metadata() }
+      this.tags
     );
     return { transactionId: txId };
   }
@@ -166,7 +165,7 @@ class MembershipService extends Service {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
-    let data: any, metadata: any;
+    let data: any;
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
@@ -183,7 +182,7 @@ class MembershipService extends Service {
           const { publicKey } = await this.getUserEncryptionInfo(member.email, member.address);
           const memberKeysEncrypter = new KeysStructureEncrypter(
             this.wallet,
-            (<any>this.keysEncrypter).keys,
+            (<any>this.dataEncrypter).keys,
             publicKey
           );
           const keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
@@ -204,13 +203,8 @@ class MembershipService extends Service {
       }
       const ids = await this.api.uploadData(newMembershipStates, true);
       data = [];
-      metadata = {
-        dataRefs: [],
-        publicKeys: [arrayToBase64(keyPair.publicKey)],
-      }
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
-        metadata.dataRefs.push({ ...ids[memberIndex], modelId: memberId, modelType: objectTypes.MEMBERSHIP });
         data.push({ id: memberId, value: ids[memberIndex].id })
       })
     }
@@ -218,8 +212,7 @@ class MembershipService extends Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
-      this.tags,
-      { ...metadata, ...this.metadata() }
+      this.tags
     );
     return { transactionId: txId };
   }
@@ -273,9 +266,8 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async inviteResend(membershipId: string): Promise<{ transactionId: string }> {
-    const object = await this.api.getObject<Membership>(membershipId, this.objectType);
+    const object = await this.api.getObject<Membership>(membershipId, this.objectType, this.vaultId);
     this.setVaultId(object.vaultId);
-    this.setPrevHash(object.hash);
     this.setObjectId(membershipId);
     this.setObject(object);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);

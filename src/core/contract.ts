@@ -1,4 +1,4 @@
-import { Service } from "../service";
+import { Service } from "../core";
 import { ContractState } from "../types/contract";
 
 class ContractService extends Service {

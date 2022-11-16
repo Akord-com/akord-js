@@ -422,54 +422,6 @@ export const profilesByPublicSigningKey = /* GraphQL */ `
   }
 `
 
-export const getVaultStateRef = /* GraphQL */ `
-  query GetDataRoom($id: ID!) {
-    getDataRoom(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getMembershipStateRef = /* GraphQL */ `
-  query GetMembership($id: ID!) {
-    getMembership(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getFolderStateRef = /* GraphQL */ `
-  query GetFolder($id: ID!) {
-    getFolder(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getMemoStateRef = /* GraphQL */ `
-  query GetMemo($id: ID!) {
-    getMemo(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getStackStateRef = /* GraphQL */ `
-  query GetStack($id: ID!) {
-    getStack(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getNoteStateRef = /* GraphQL */ `
-  query GetNote($id: ID!) {
-    getNote(id: $id) {
-      stateRef
-    }
-  }
-`
-
 export const preInviteCheck = /* GraphQL */ `
   query PreInviteCheck($emails: [String], $dataRoomId: ID) {
     preInviteCheck(emails: $emails, dataRoomId: $dataRoomId) {

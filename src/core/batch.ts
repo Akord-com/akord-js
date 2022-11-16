@@ -1,4 +1,4 @@
-import { Service, ServiceFactory } from "../service";
+import { Service, ServiceFactory } from "../core";
 import { v4 as uuidv4 } from "uuid";
 import { MembershipService } from "./membership";
 import { StackService } from "./stack";

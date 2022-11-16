@@ -112,7 +112,7 @@ async function postContractTransaction(contractId, input, tags, wallet) {
 
 const initContract = async (contractSrc, additionalTags, initialState, wallet) => {
   const tags = getTagsFromObject(constructHeader(additionalTags));
-  const { contractTxId } = await deployContract(contractSrc, initialState, tags, wallet);
+  const { contractTxId } = await deployContract(contractSrc, initialState ? initialState : {}, tags, wallet);
   return contractTxId;
 }
 
@@ -209,5 +209,6 @@ export {
   postContractTransaction,
   initContract,
   postAndSignArweaveTransaction,
-  getAddress
+  getAddress,
+  getTagsFromObject
 }

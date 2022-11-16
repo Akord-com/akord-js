@@ -1,20 +1,24 @@
 import { ClientConfig } from "../../client-config";
 import { arweaveConfig, ArweaveConfig } from "./arweave-config";
-import { Api } from '../api'
+import { Api } from "../api";
 import {
   postContractTransaction,
   initContract,
   getContract,
   prepareArweaveTransaction,
   uploadChunksArweaveTransaction,
-  getPublicKeyFromAddress
+  getPublicKeyFromAddress,
+  getTagsFromObject
 } from "./arweave-helpers";
-import { GraphQLClient } from 'graphql-request';
-import { membershipsQuery } from "./graphql";
-import Arweave from 'arweave';
-import { EncryptionKeys, Wallet } from "@akord/crypto";
+import { GraphQLClient } from "graphql-request";
+import { membershipsQuery, nodeQuery } from "./graphql";
+import Arweave from "arweave";
+import { Keys, Wallet } from "@akord/crypto";
 import { ContractState } from "../../types/contract";
 import { srcTxId } from './config';
+import Bundlr from "@bundlr-network/client";
+import { Vault } from "../../types/vault";
+import { Membership } from "../../types/membership";
 
 export default class ArweaveApi extends Api {
   public config!: ArweaveConfig;
@@ -22,7 +26,7 @@ export default class ArweaveApi extends Api {
   public arweave: Arweave
 
   constructor(config: ClientConfig, jwk: any) {
-    super()
+    super();
     this.config = arweaveConfig(config.network);
     this.jwk = jwk;
     this.arweave = Arweave.init(this.config);
@@ -50,36 +54,41 @@ export default class ArweaveApi extends Api {
     return { address, publicKey: await getPublicKeyFromAddress(address) };
   };
 
-  public async getProfileByPublicSigningKey(): Promise<any> {
-    return {};
+  public async getProfile(wallet: any): Promise<any> {
+    return null;
   }
 
-  public async uploadFile(file: any, tags: any): Promise<string> {
+  public async uploadFile(file: any, tags: any): Promise<any> {
     const transaction = await prepareArweaveTransaction(
       file,
       tags,
       this.jwk
     );
     await uploadChunksArweaveTransaction(transaction);
-    return transaction.id;
+    return { resourceTx: transaction.id };
   };
 
   public async uploadData(data: any[]): Promise<string[]> {
     let resourceTxs = [];
 
+    const bundlr = new Bundlr("https://node1.bundlr.network", "arweave", this.jwk);
+
     for (let item of data) {
-      const transaction = await prepareArweaveTransaction(
-        JSON.stringify(item.body),
-        {},
-        this.jwk
-      );
-      await uploadChunksArweaveTransaction(transaction);
-      resourceTxs.push({ id: transaction.id });
+      const formattedTags = getTagsFromObject({ "Content-Type": "application/json", ...item.tags });
+      const filteredTags = formattedTags.filter((tag) =>
+        tag.name !== "Public-Key"
+      )
+      const transaction = bundlr.createTransaction(JSON.stringify(item.body), { tags: filteredTags });
+      await transaction.sign();
+      const txId = (await transaction.upload()).id;
+      console.log("Transaction submitted to Bundlr Network, instantly accessible from https://arweave.net/" + txId);
+      // data instantly accessible from https://arweave.net/{id}
+      resourceTxs.push({ id: txId });
     }
     return resourceTxs;
   };
 
-  public async getContractState(contractId: string): Promise<any> {
+  public async getContractState(contractId: string): Promise<ContractState> {
     const contractObject = getContract(contractId, null);
     const contract = (await contractObject.readState()).cachedValue;
     let vault = contract.state;
@@ -103,7 +112,7 @@ export default class ArweaveApi extends Api {
     vault.stacks = [];
     vault.notes = [];
     vault.memos = [];
-    for (let node of (<any>vault).nodes) {
+    for (let node of vault.nodes) {
       const dataTx = node.data[node.data.length - 1];
       const state = await this.downloadFile(dataTx);
       node = { ...node, ...state };
@@ -111,16 +120,16 @@ export default class ArweaveApi extends Api {
     }
   }
 
-  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<any> {
+  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
     const state = await this.getContractState(vaultId);
     const address = await wallet.getAddress();
     const membership = state.memberships.filter(member => member.address === address)[0];
     const dataTx = membership.data[membership.data.length - 1];
     const data = await this.getTransactionData(dataTx);
-    return new EncryptionKeys("KEYS_STRUCTURE", data.keys);
+    return { isEncrypted: !state.public, keys: data.keys };
   };
 
-  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
+  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<Array<any>> {
     const state = await this.getContractState(vaultId);
     let results: any;
     if (objectType === "Membership") {
@@ -133,7 +142,7 @@ export default class ArweaveApi extends Api {
         return object
       }));
     } else {
-      results = await Promise.all(state.nodes.filter(node => node.type === objectType).map(async (node) => {
+      results = await Promise.all(state.nodes.filter((node) => node.type === objectType).map(async (node) => {
         const object = node;
         const dataTx = node.data[node.data.length - 1];
         delete object.data;
@@ -145,8 +154,31 @@ export default class ArweaveApi extends Api {
     return results;
   };
 
-  public async getObject(objectId: string, objectType: string): Promise<any> {
-    throw new Error("Method not implemented.");
+  public async getObject(objectId: string, objectType: string, vaultId: string): Promise<any> {
+    let contractId = vaultId;
+    if (!vaultId) {
+      const result = await this.executeQuery(nodeQuery, { nodeId: objectId });
+      for (let edge of result?.transactions.edges) {
+        const vaultId = edge.node.tags.filter(tag => tag.name === "Contract")[0]?.value;
+        contractId = vaultId;
+      }
+    }
+    const state = await this.getContractState(contractId);
+    if (objectType === "Vault") {
+      const dataTx = state.data[state.data.length - 1];
+      const data = await this.getTransactionData(dataTx);
+      return { ...state, ...data };
+    } else if (objectType === "Membership") {
+      const membership = state.memberships.find((membership) => membership.id === objectId);
+      const dataTx = membership.data[membership.data.length - 1];
+      const data = await this.getTransactionData(dataTx);
+      return { ...membership, ...data, vaultId: contractId };
+    } else {
+      const node = state.nodes.find((node) => node.id === objectId);
+      const dataTx = node.data[node.data.length - 1];
+      const data = await this.getTransactionData(dataTx);
+      return { ...node, ...data, vaultId: contractId };
+    };
   }
 
   public async getNodeState(stateId: string): Promise<any> {
@@ -166,18 +198,21 @@ export default class ArweaveApi extends Api {
     return body;
   };
 
-  public async getVaults(wallet: Wallet): Promise<any> {
+  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
     const address = await wallet.getAddress();
     const result = await this.executeQuery(membershipsQuery, { address });
     let vaults = []
     for (let edge of result?.transactions.edges) {
       const vaultId = edge.node.tags.filter(tag => tag.name === "Contract")[0]?.value;
-      vaults.push(vaultId);
+      const state = await this.getContractState(vaultId);
+      const dataTx = state.data[state.data.length - 1];
+      const data = await this.getTransactionData(dataTx);
+      vaults.push({ ...state, ...data });
     }
     return vaults;
   }
 
-  public async getMemberships(wallet: Wallet): Promise<any> {
+  public async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
     const address = await wallet.getAddress();
     const result = await this.executeQuery(membershipsQuery, { address });
     let memberships = []

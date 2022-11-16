@@ -1,6 +1,6 @@
 import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson, KeysStructureEncrypter } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 
@@ -26,10 +26,10 @@ class VaultService extends Service {
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
-      const userPublicKey = await this.wallet.publicKeyRaw();
-      this.setRawKeysEncryptionPublicKey(userPublicKey);
       this.setRawDataEncryptionPublicKey(keyPair.publicKey);
-      keys = [await this.keysEncrypter.encryptMemberKey(keyPair)];
+      const userPublicKey = await this.wallet.publicKeyRaw();
+      const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, userPublicKey);
+      keys = [await keysEncrypter.encryptMemberKey(keyPair)];
       this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];
     }
@@ -61,7 +61,7 @@ class VaultService extends Service {
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
       keys,
-      encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())],
+      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey()),
       memberDetails: await this.processMemberDetails(memberDetails, true)
     }
     const membershipSignature = await this.signData(membershipData);
@@ -98,7 +98,7 @@ class VaultService extends Service {
       this.vaultId,
       { function: this.function, data },
       this.tags,
-      { ...metadata, ...this.metadata() }
+      metadata
     );
     return { vaultId, membershipId, transactionId: txId }
   }
@@ -161,7 +161,7 @@ class VaultService extends Service {
    * @returns Promise with the decrypted vault
    */
   public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
-    const result = await this.api.getObject<any>(vaultId, this.objectType);
+    const result = await this.api.getObject<any>(vaultId, this.objectType, vaultId);
     const { keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     const vault = new Vault(result, keys);
     if (shouldDecrypt && !vault.public) {
@@ -192,7 +192,6 @@ class VaultService extends Service {
 
   public async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
-    this.setPrevHash(this.vault.hash);
     this.setObjectId(vaultId);
     this.setObject(this.vault);
   }

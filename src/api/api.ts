@@ -2,6 +2,8 @@ import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
 import { ContractState } from '../types/contract';
 import { Keys } from '@akord/crypto';
+import { Vault } from '../types/vault';
+import { Membership } from '../types/membership';
 
 abstract class Api {
   config: AWSConfig | ArweaveConfig
@@ -25,15 +27,15 @@ abstract class Api {
 
   abstract getMembershipKeys(vaultId: string, wallet: any): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }>
 
-  abstract getProfileByPublicSigningKey(signingPublicKey: string): Promise<any>
+  abstract getProfile(wallet: any): Promise<any>
 
-  abstract getObject<T>(objectId: string, objectType: string): Promise<T>
+  abstract getObject<T>(objectId: string, objectType: string, vaultId?: string): Promise<T>
 
   abstract getNodeState(stateId: string): Promise<any>
 
-  abstract getVaults(wallet: any): Promise<Array<any>>
+  abstract getVaults(wallet: any): Promise<Array<Vault>>
 
-  abstract getMemberships(wallet: any): Promise<Array<any>>
+  abstract getMemberships(wallet: any): Promise<Array<Membership>>
 
   abstract getObjectsByVaultId<T>(vaultId: string, objectType: string): Promise<Array<T>>
 
@@ -45,7 +47,7 @@ abstract class Api {
   postLedgerTransaction(transactions: any[]): Promise<any> {
     throw new Error("Method not implemented.");
   }
-  preInviteCheck(emails: any[], vaultId: string) {
+  preInviteCheck(emails: any[], vaultId: string): Promise<any> {
     throw new Error("Method not implemented.");
   }
 }

@@ -1,14 +1,15 @@
 import { Encryptable, Keys } from "@akord/crypto";
 import { ProfileDetails } from "./profile-details";
+import { role, status } from "../constants";
 
 export class Membership extends Encryptable {
   id: string;
   owner: string;
-  createdAt: string; //number
-  updatedAt: string; //number
-  status: string; // type
+  createdAt: string; // number
+  updatedAt: string; // number
+  status: status;
   address: string;
-  role: string; //type
+  role: role;
   data?: string[];
   encPublicSigningKey: string;
   memberDetails: ProfileDetails;
@@ -27,7 +28,7 @@ export class Membership extends Encryptable {
     this.role = membershipProto.role;
     this.encPublicSigningKey = membershipProto.encPublicSigningKey;
     this.memberDetails = membershipProto.memberDetails;
-    this.vaultId = membershipProto.dataRoomId;
+    this.vaultId = membershipProto.vaultId;
     this.keys = membershipProto.keys;
   }
 }

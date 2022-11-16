@@ -77,8 +77,36 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
 }
 `;
 
+const nodeQuery = gql`
+query nodeById($nodeId: String!) {
+  transactions(
+      tags: [
+        {
+          name: "Node-Id",
+          values: [$nodeId]
+        },
+        {
+          name: "Function-Name",
+          values: ["Node-Create"]
+        }
+      ]
+  ) {
+      edges {
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+  }
+}
+`;
+
 export {
   timelineQuery,
   membershipsQuery,
-  nodesQuery
+  nodesQuery,
+  nodeQuery
 }

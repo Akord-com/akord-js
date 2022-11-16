@@ -80,7 +80,7 @@ it("should bust the profile cache on profile update", async () => {
         }
     });
 
-    AkordApi.prototype.getProfileByPublicSigningKey = jest.fn().mockImplementation(() => {
+    AkordApi.prototype.getProfile = jest.fn().mockImplementation(() => {
         return {
             state: {
                 profileDetails: {

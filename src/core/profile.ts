@@ -1,4 +1,3 @@
-import { NodeService } from "./node";
 import { MembershipService } from "./membership";
 import { actionRefs } from "../constants";
 import { EncryptionType } from "@akord/crypto";
@@ -37,9 +36,8 @@ class ProfileService extends Service {
 
     const profilePromise = new Promise<void>(async (resolve, reject) => {
       this.setActionRef(actionRefs.PROFILE_UPDATE);
-      const signingPublicKey = await this.wallet.signingPublicKey();
-      const profile = await this.api.getProfileByPublicSigningKey(signingPublicKey);
-      this.setPrevHash(profile.hash);
+      const profile = await this.api.getProfile(this.wallet);
+      this.setObject(profile);
 
       this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
       this.setIsPublic(false);

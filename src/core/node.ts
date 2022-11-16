@@ -2,6 +2,7 @@ import { Service } from './service';
 import { functions } from "../constants";
 import { NodeLike } from '../types/node';
 import { Keys } from '@akord/crypto';
+import { v4 as uuidv4 } from "uuid";
 
 class NodeService<T = NodeLike> extends Service {
 
@@ -26,8 +27,8 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} [parentId] new parent folder id
    * @returns Promise with corresponding transaction id
    */
-  public async move(nodeId: string, parentId?: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType);
+  public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<{ transactionId: string }> {
+    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_MOVE);
     return this.nodeUpdate(null, { parentId });
   }
@@ -36,8 +37,8 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} nodeId
    * @returns Promise with corresponding transaction id
    */
-  public async revoke(nodeId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType);
+  public async revoke(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
+    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_REVOKE);
     return this.nodeUpdate();
   }
@@ -46,8 +47,8 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} nodeId
    * @returns Promise with corresponding transaction id
    */
-  public async restore(nodeId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType);
+  public async restore(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
+    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_RESTORE);
     return this.nodeUpdate();
   }
@@ -56,8 +57,8 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} nodeId
    * @returns Promise with corresponding transaction id
    */
-  public async delete(nodeId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType);
+  public async delete(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
+    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_DELETE);
     return this.nodeUpdate();
   }
@@ -66,9 +67,9 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} nodeId
    * @returns Promise with the decrypted node
    */
-  public async get(nodeId: string, shouldDecrypt = true): Promise<T> {
-    const nodeProto = await this.api.getObject<any>(nodeId, this.objectType);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.dataRoomId, this.wallet)
+  public async get(nodeId: string, vaultId?: string, shouldDecrypt = true): Promise<T> {
+    const nodeProto = await this.api.getObject<any>(nodeId, this.objectType, vaultId);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId, this.wallet)
     const node = this.nodeInstance(nodeProto, keys);
     if (isEncrypted && shouldDecrypt) {
       await node.decrypt();

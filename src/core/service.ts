@@ -1,7 +1,6 @@
 import { Api } from "../api";
 import {
   Wallet,
-  ArweaveWallet,
   EncrypterFactory,
   fromProfileState,
   Encrypter,
@@ -14,6 +13,7 @@ import {
   arrayToBase64,
   base64ToJson,
   deriveAddress,
+  AkordWallet,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
 import { objectTypes, protocolTags, functions, dataTags } from '../constants';
@@ -28,10 +28,8 @@ class Service {
   wallet: Wallet
 
   dataEncrypter: Encrypter
-  keysEncrypter: Encrypter
   membershipKeys: any
 
-  prevHash: string
   vaultId: string
   objectId: string
   objectType: string
@@ -51,15 +49,10 @@ class Service {
       wallet,
       encryptionKeys
     ).encrypterInstance()
-    // for the member keys encryption
-    this.keysEncrypter = new EncrypterFactory(
-      wallet,
-      encryptionKeys
-    ).encrypterInstance()
   }
 
   protected async setVaultContext(vaultId: string) {
-    const vault = await this.api.getObject<Vault>(vaultId, objectTypes.VAULT);
+    const vault = await this.api.getObject<Vault>(vaultId, objectTypes.VAULT, vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
@@ -67,9 +60,9 @@ class Service {
   }
 
 
-  protected async setVaultContextFromObjectId(objectId: string, objectType: string) {
-    const object = await this.api.getObject<any>(objectId, objectType);
-    await this.setVaultContext(object?.dataRoomId);
+  protected async setVaultContextFromObjectId(objectId: string, objectType: string, vaultId?: string) {
+    const object = await this.api.getObject<any>(objectId, objectType, this.vaultId);
+    await this.setVaultContext(vaultId || object.vaultId);
     this.setObject(object);
     this.setObjectId(objectId);
     this.setObjectType(objectType);
@@ -85,7 +78,12 @@ class Service {
         }
       }))
       this.setKeys(keys);
-      this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
+      if (encryptionKeys.publicKey) {
+        this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
+      } else {
+        const publicKey = await this.dataEncrypter.wallet.decrypt(encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey);
+        this.setRawDataEncryptionPublicKey(publicKey);
+      }
     }
   }
 
@@ -117,7 +115,7 @@ class Service {
       this.vaultId,
       input,
       this.tags,
-      { ...clientMetadata, ...this.metadata() }
+      clientMetadata
     );
     return { transactionId: txId }
   }
@@ -132,7 +130,7 @@ class Service {
 
     this.tags = await this.getTags();
 
-    const { metadata, data } = await this.uploadBody(body);
+    const { metadata, data } = await this.uploadState(body);
 
     const input = {
       function: this.function,
@@ -143,7 +141,7 @@ class Service {
       this.vaultId,
       input,
       this.tags,
-      { ...metadata, ...clientMetadata, ...this.metadata() }
+      { ...metadata, ...clientMetadata }
     );
     return { nodeId, transactionId: txId };
   }
@@ -151,7 +149,6 @@ class Service {
   setKeys(keys: any) {
     this.membershipKeys = keys;
     this.dataEncrypter.setKeys(keys);
-    this.keysEncrypter.setKeys(keys);
   }
 
   setVaultId(vaultId: string) {
@@ -178,10 +175,6 @@ class Service {
     this.groupRef = groupRef;
   }
 
-  protected setPrevHash(hash: string) {
-    this.prevHash = hash;
-  }
-
   setIsPublic(isPublic: boolean) {
     this.isPublic = isPublic;
   }
@@ -198,21 +191,8 @@ class Service {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
-  protected setDataEncryptionPublicKey(publicKey) {
-    this.dataEncrypter.setPublicKey(publicKey);
-  }
-
-  protected setKeysEncryptionPublicKey(publicKey) {
-    this.keysEncrypter.setPublicKey(publicKey);
-  }
-
-  protected setRawKeysEncryptionPublicKey(publicKey) {
-    this.keysEncrypter.setRawPublicKey(publicKey);
-  }
-
   protected async getProfileDetails() {
-    const signingPublicKey = await this.wallet.signingPublicKey();
-    const profile = await this.api.getProfileByPublicSigningKey(signingPublicKey);
+    const profile = await this.api.getProfile(this.wallet);
     if (profile) {
       const profileKeys = fromProfileState(profile.state)
       const profileEncrypter = new EncrypterFactory(this.wallet, profileKeys).encrypterInstance()
@@ -337,21 +317,25 @@ class Service {
 
   protected async mergeAndUploadBody(body: any) {
     const mergedBody = await this.mergeState(body);
-    return this.uploadBody(mergedBody);
+    return this.uploadState(mergedBody);
   }
 
   protected async signData(data: any) {
-    const encodedBody = jsonToBase64(data)
-    const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
-    const signature = await signString(
-      encodedBody,
-      privateKeyRaw
-    )
-    return signature;
+    if (this.wallet instanceof AkordWallet) {
+      const encodedBody = jsonToBase64(data)
+      const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
+      const signature = await signString(
+        encodedBody,
+        privateKeyRaw
+      )
+      return signature;
+    } else {
+      return "--TODO--"
+    }
   }
 
-  protected async uploadBody(body: any) {
-    const signature = await this.signData(body);
+  protected async uploadState(state: any) {
+    const signature = await this.signData(state);
     const tags = {
       [dataTags.DATA_TYPE]: "State",
       [protocolTags.SIGNATURE]: signature,
@@ -364,10 +348,10 @@ class Service {
     } else if (this.objectType !== objectTypes.VAULT) {
       tags[protocolTags.NODE_ID] = this.tags[protocolTags.NODE_ID];
     }
-    const ids = await this.api.uploadData([{ body, tags }], true);
+    const ids = await this.api.uploadData([{ body: state, tags }], true);
     const metadata = {
       dataRefs: [
-        { ...ids[0], modelId: this.objectId, modelType: this.objectType, data: body }
+        { ...ids[0], modelId: this.objectId, modelType: this.objectType, data: state }
       ]
     }
     const data = ids[0].id;
@@ -401,6 +385,12 @@ class Service {
       [protocolTags.TIMESTAMP]: JSON.stringify(Date.now()),
       [protocolTags.NODE_TYPE]: this.objectType
     };
+    if (this.groupRef) {
+      tags["Group-Ref"] = this.groupRef;
+    }
+    if (this.actionRef) {
+      tags["Action-Ref"] = this.actionRef;
+    }
     if (this.objectType === objectTypes.MEMBERSHIP) {
       tags[protocolTags.MEMBERSHIP_ID] = this.objectId;
     } else if (this.objectType !== objectTypes.VAULT) {
@@ -409,17 +399,9 @@ class Service {
     return tags;
   }
 
-  protected metadata() {
-    const metadata = {
-      actionRef: this.actionRef,
-      groupRef: this.groupRef
-    };
-    return metadata;
-  }
-
   protected async prepareHeader() {
     const header = {
-      prevHash: this.prevHash,
+      prevHash: this.object.hash,
       publicSigningKey: await this.wallet.signingPublicKey(),
       postedAt: new Date(),
       groupRef: this.groupRef,

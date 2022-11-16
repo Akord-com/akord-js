@@ -22,13 +22,7 @@ class MemoService extends NodeService<Memo> {
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setFunction(functions.NODE_CREATE);
     const body = {
-      versions: [{
-        owner: await this.wallet.getAddress(),
-        message: await this.processWriteString(message),
-        createdAt: new Date().toISOString(),
-        reactions: [],
-        attachments: []
-      }]
+      versions: [await this.memoVersion(message)]
     };
     const { nodeId, transactionId } = await this.nodeCreate(body);
     return { memoId: nodeId, transactionId };
@@ -47,19 +41,14 @@ class MemoService extends NodeService<Memo> {
 
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
-    newState.versions[newState.versions.length -1].reactions.push({
-      reaction: await this.processWriteString(reaction),
-      owner: await this.wallet.getAddress(),
-      createdAt: new Date().toISOString()
-    })
-
-    const { data, metadata } = await this.uploadBody(newState);
+    newState.versions[newState.versions.length -1].reactions.push(await this.memoReaction(reaction));
+    const { data, metadata } = await this.uploadState(newState);
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
       this.tags,
-      { ...metadata, ...this.metadata() }
+      metadata
     );
     return { transactionId: txId }
   }
@@ -76,15 +65,37 @@ class MemoService extends NodeService<Memo> {
     this.tags = await this.getTags();
 
     const body = await this.deleteReaction(reaction);
-    const { data, metadata } = await this.uploadBody(body);
+    const { data, metadata } = await this.uploadState(body);
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
       this.tags,
-      { ...metadata, ...this.metadata() }
+      metadata
     );
     return { transactionId: txId }
+  }
+
+  // TODO: return type Promise<MemoVersion>
+  private async memoVersion(message: string): Promise<any> {
+    const version = {
+      owner: await this.wallet.getAddress(),
+      message: await this.processWriteString(message),
+      createdAt: JSON.stringify(Date.now()),
+      reactions: [],
+      attachments: []
+    };
+    return version;
+  }
+
+  // TODO: return type Promise<MemoReaction>
+  private async memoReaction(reactionEmoji: reactionEmoji): Promise<any> {
+    const reaction = {
+      reaction: await this.processWriteString(reactionEmoji),
+      owner: await this.wallet.getAddress(),
+      createdAt: JSON.stringify(Date.now())
+    };
+    return reaction;
   }
 
   private async deleteReaction(reaction: string) {

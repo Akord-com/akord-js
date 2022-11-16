@@ -8,7 +8,8 @@ import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
 import { Logger } from "../../logger";
 import { Vault } from "../../types/vault";
-
+import { Membership } from "../../types/membership";
+import { ContractState } from "../../types/contract";
 
 export default class AkordApi extends Api {
 
@@ -122,7 +123,8 @@ export default class AkordApi extends Api {
     return { fileData: fileData, headers: response.headers };
   };
 
-  public async getProfileByPublicSigningKey(publicSigningKey: string): Promise<any> {
+  public async getProfile(wallet: any): Promise<any> {
+    const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('profilesByPublicSigningKey',
       queries.profilesByPublicSigningKey,
       { publicSigningKey: publicSigningKey }, {})
@@ -143,7 +145,7 @@ export default class AkordApi extends Api {
     if (!object) {
       throw new Error("Cannot find object with id: " + objectId + " and type: " + objectType);
     }
-    return object;
+    return { ...object, vaultId: object.dataRoomId };
   };
 
   public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
@@ -156,7 +158,7 @@ export default class AkordApi extends Api {
         ", with the given public signing key: " + publicSigningKey);
     }
     const membership = result[0];
-    const publicKey = membership.dataRoom.publicKeys ? membership.dataRoom.publicKeys[membership.dataRoom.publicKeys.length -1] : null
+    const publicKey = membership.dataRoom.publicKeys ? membership.dataRoom.publicKeys[membership.dataRoom.publicKeys.length - 1] : null
     return { isEncrypted: !membership.dataRoom.public, keys: membership.keys, publicKey: publicKey };
   };
 
@@ -170,7 +172,7 @@ export default class AkordApi extends Api {
     return response.data
   };
 
-  public async getContractState(objectId: string): Promise<any> {
+  public async getContractState(objectId: string): Promise<ContractState> {
     const contract = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -179,15 +181,15 @@ export default class AkordApi extends Api {
     return contract.state;
   };
 
-  public async getMemberships(wallet: Wallet): Promise<Array<any>> {
+  public async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.membershipsByMemberPublicSigningKey,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    return results;
+    return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<any>> {
+  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.listVaults,
@@ -195,7 +197,7 @@ export default class AkordApi extends Api {
     return results;
   };
 
-  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
+  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<Array<any>> {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
     const filter = objectType === "Membership"
       ? { status: { eq: "ACCEPTED" } }
@@ -214,16 +216,7 @@ export default class AkordApi extends Api {
       {
         dataRoomId: vaultId
       }, filter);
-    return results;
-  };
-
-  private async getStateRef(objectId: string, objectType: string): Promise<any> {
-    let queryName = "get" + objectType;
-    const result = await this.executeQuery(queries[queryName + "StateRef"],
-      {
-        id: objectId
-      })
-    return result.data[queryName === "getVault" ? "getDataRoom" : queryName].stateRef;
+    return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
   };
 
   private async executeMutation(mutation: string | readonly string[], variables: any) {

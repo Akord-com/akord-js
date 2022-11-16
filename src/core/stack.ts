@@ -3,7 +3,7 @@ import { actionRefs, functions, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
 import { FileLike } from "../types/file";
-import { Stack } from "../types/node";
+import { FileVersion, Stack } from "../types/node";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -61,7 +61,7 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = await this.api.getObject<Stack>(stackId, objectTypes.STACK);
+    const stack = await this.api.getObject<Stack>(stackId, objectTypes.STACK, this.vaultId);
     let version: any;
     if (index) {
       if (stack.versions && stack.versions[index]) {
@@ -73,13 +73,19 @@ class StackService extends NodeService<Stack> {
       version = stack.versions[stack.versions.length - 1];
     }
     await this.setVaultContext(stack.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(version.resourceUrl, this.isPublic);
+    const { fileData, headers } = await this.api.downloadFile(this.getResourceTx(version), this.isPublic);
     const data = await this.processReadRaw(fileData, headers);
     const name = await this.processReadString(version.name);
     return { name, data };
   }
 
-  private async uploadNewFileVersion(file: any, progressHook?: any, cancelHook?: any) {
+  private getResourceTx(version: any) {
+    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("arweave"));
+    return resourceTx.split(':')[1];
+  }
+
+  // TODO: return type Promise<FileVersion>
+  private async uploadNewFileVersion(file: any, progressHook?: any, cancelHook?: any): Promise<any> {
     const {
       resourceTx,
       resourceUrl,
@@ -90,6 +96,7 @@ class StackService extends NodeService<Stack> {
       thumbnailUrl
     } = await this.postFile(file, progressHook, cancelHook);
     const version = {
+      owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(file.name),
       type: file.type,

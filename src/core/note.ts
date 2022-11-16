@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectTypes } from "../constants";
 import { FileService } from "./file";
-import { Note } from "../types/node";
+import { FileVersion, Note } from "../types/node";
 
 class NoteService extends NodeService<Note> {
   public fileService = new FileService(this.wallet, this.api);
@@ -54,7 +54,7 @@ class NoteService extends NodeService<Note> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const note = await this.api.getObject<Note>(noteId, objectTypes.NOTE);
+    const note = await this.api.getObject<Note>(noteId, objectTypes.NOTE, this.vaultId);
     let version: any;
     if (index) {
       if (note.versions && note.versions[index]) {
@@ -66,16 +66,23 @@ class NoteService extends NodeService<Note> {
       version = note.versions[note.versions.length - 1];
     }
     await this.setVaultContext(note.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(version.resourceUrl, this.isPublic);
+    const { fileData, headers } = await this.api.downloadFile(this.getResourceTx(version), this.isPublic);
     const data = await this.processReadRaw(fileData, headers);
     const name = await this.processReadString(version.name);
     return { name, data };
   }
 
-  private async uploadNewNoteVersion(name: string, content: any) {
+  private getResourceTx(version: any) {
+    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("arweave"));
+    return resourceTx.split(':')[1];
+  }
+
+  // TODO: return type Promise<FileVersion>
+  private async uploadNewNoteVersion(name: string, content: any): Promise<any> {
     const { resourceTx, resourceUrl, resourceHash } = await this.fileService.create(content, true);
 
     const version = {
+      owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(name),
       type: "application/rtf",

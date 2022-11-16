@@ -3,18 +3,18 @@ import { ClientConfig } from "./client-config";
 import { Crypto, Wallet } from "@akord/crypto";
 import { reactionEmoji } from "./constants";
 import { Logger } from "./logger";
-import { MemoService } from "./service/memo";
-import { FolderService } from "./service/folder";
-import { MembershipService } from "./service/membership";
-import { VaultService } from "./service/vault";
-import { StackService } from "./service/stack";
-import { NoteService } from "./service/note";
-import { ProfileService } from "./service/profile";
+import { MemoService } from "./core/memo";
+import { FolderService } from "./core/folder";
+import { MembershipService } from "./core/membership";
+import { VaultService } from "./core/vault";
+import { StackService } from "./core/stack";
+import { NoteService } from "./core/note";
+import { ProfileService } from "./core/profile";
 import { Auth } from "./auth";
 import { CacheBusters } from "./types/cacheable";
-import { FileService } from "./service/file";
-import { BatchService } from "./service/batch";
-import { ContractService } from "./service/contract";
+import { FileService } from "./core/file";
+import { BatchService } from "./core/batch";
+import { ContractService } from "./core/contract";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;

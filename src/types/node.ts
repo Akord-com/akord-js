@@ -1,17 +1,18 @@
 import { Encryptable, encrypted, Keys } from "@akord/crypto";
+import { status } from "../constants";
 
 export abstract class Node extends Encryptable {
   id: string;
   owner: string;
   createdAt: string; // number
   updatedAt: string; // number
-  status: string;
+  status: status;
   vaultId: string;
   parentId?: string;
   data?: Array<string>;
   tags: string[];
 
-  constructor(id: string, createdAt: string, updatedAt: string, status: string, vaultId: string, owner: string, data: Array<string>, keys?: Array<Keys>, publicKey?: string) {
+  constructor(id: string, createdAt: string, updatedAt: string, status: status, vaultId: string, owner: string, data: Array<string>, parentId: string, keys?: Array<Keys>, publicKey?: string) {
     super(keys, publicKey);
     this.id = id;
     this.createdAt = createdAt;
@@ -20,29 +21,26 @@ export abstract class Node extends Encryptable {
     this.vaultId = vaultId;
     this.owner = owner;
     this.data = data;
+    this.parentId = parentId;
   }
 }
 
 export class Folder extends Node {
   @encrypted() name: string;
-  parentId: string;
   
   constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
-    this.parentId = nodeLike.parentId;
   }
 }
 
 export class Stack extends Node {
   @encrypted() name: string;
-  parentId: string; // in node
   versions: Array<FileVersion>;
 
   constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
-    this.parentId = nodeLike.parentId;
     this.versions = (nodeLike.versions || []).map(version =>
       new FileVersion(
         version.name,
@@ -60,13 +58,11 @@ export class Stack extends Node {
 
 export class Note extends Node {
   @encrypted() name: string;
-  parentId: string;
   versions: Array<FileVersion>;
 
   constructor(nodeLike: any, keys: Array<Keys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
-    this.parentId = nodeLike.parentId;
     this.versions = (nodeLike.versions || []).map(version =>
       new FileVersion(
         version.name,
@@ -86,7 +82,7 @@ export class Memo extends Node {
   versions: Array<MemoVersion>;
 
   constructor(nodeLike: any, keys: Array<Keys>, publicKey?: string) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.dataRoomId, nodeLike.owner, nodeLike.data, keys, publicKey);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys, publicKey);
     this.versions = (nodeLike.versions || []).map(version =>
       new MemoVersion(
         version.owner,
