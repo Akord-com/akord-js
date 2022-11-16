@@ -20,6 +20,7 @@ import { objectTypes, protocolTags, functions, dataTags } from '../constants';
 import lodash from "lodash";
 import { EncryptionTags } from "../types/encryption-tags";
 import { Vault } from "../types/vault";
+import { getTagsFromObject } from "../api/arweave/arweave-helpers";
 
 declare const Buffer;
 
@@ -114,7 +115,7 @@ class Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
+      getTagsFromObject(this.tags),
       clientMetadata
     );
     return { transactionId: txId }
@@ -140,7 +141,7 @@ class Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
+      getTagsFromObject(this.tags),
       { ...metadata, ...clientMetadata }
     );
     return { nodeId, transactionId: txId };
@@ -263,7 +264,7 @@ class Service {
 
   protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, false, shouldBundleTransaction);
+    return this.api.uploadFile(processedData, getTagsFromObject(encryptionTags), false, shouldBundleTransaction);
   }
 
   protected async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
@@ -348,7 +349,7 @@ class Service {
     } else if (this.objectType !== objectTypes.VAULT) {
       tags[protocolTags.NODE_ID] = this.tags[protocolTags.NODE_ID];
     }
-    const ids = await this.api.uploadData([{ body: state, tags }], true);
+    const ids = await this.api.uploadData([{ body: state, tags: getTagsFromObject(tags) }], true);
     const metadata = {
       dataRefs: [
         { ...ids[0], modelId: this.objectId, modelType: this.objectType, data: state }

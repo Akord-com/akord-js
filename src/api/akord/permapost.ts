@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
-import { Contract } from "../../types/contract";
+import { Contract, Tags } from "../../types/contract";
 
 export class PermapostExecutor {
     private _jwt: string;
@@ -21,7 +21,7 @@ export class PermapostExecutor {
     private _processed: number
     private _total: number
     private _cancelHook: AbortController
-    private _tags: Array<{ name: string, value: string }>;
+    private _tags: Tags;
     private _input: string;
     private _contractId: string;
     private _metadata: string;
@@ -71,16 +71,17 @@ export class PermapostExecutor {
         return this;
     }
 
-    tags(tags: Array<any>): PermapostExecutor {
-        if (tags) {
-            this._tags = []
-            for (let key in tags) {
-                this._tags.push({
-                    name: key.toString(),
-                    value: tags[key].toString()
-                })
-            }
-        }
+    tags(tags: Tags): PermapostExecutor {
+        this._tags = tags;
+        // if (tags) {
+        //     this._tags = []
+        //     for (let key in tags) {
+        //         this._tags.push({
+        //             name: key.toString(),
+        //             value: tags[key].toString()
+        //         })
+        //     }
+        // }
         return this;
     }
 

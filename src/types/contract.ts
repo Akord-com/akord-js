@@ -23,3 +23,10 @@ export class ContractState extends Encryptable {
   memos: Array<Memo>;
   nodes: Array<NodeLike>;
 }
+
+export type Tag = {
+  name: string,
+  value: string
+};
+
+export type Tags = Tag[];

@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
-import { ContractState } from "../../types/contract";
+import { ContractState, Tags } from "../../types/contract";
 import { clientName, protocolName, protocolVersion } from "./config";
 
 // Set up Arweave client
@@ -15,20 +15,23 @@ const smartweave = WarpFactory.forMainnet({ inMemory: true, dbLocation: DEFAULT_
 const getContract = (contractId, wallet): Contract<ContractState> => {
   const contract = <any>smartweave
     .contract(contractId)
-    // .setEvaluationOptions({
-    //   useIVM: true
-    // })
+  // .setEvaluationOptions({
+  //   useIVM: true
+  // })
   if (wallet) {
     return contract.connect(wallet);
   }
   return contract;
 };
 
-const getTagsFromObject = (object) => {
+const getTagsFromObject = (object: any): Tags => {
   let tags = [];
   for (let key in object) {
     if (object.hasOwnProperty(key)) {
-      tags.push({ name: key, value: object[key] });
+      tags.push({
+        name: key.toString(),
+        value: object[key].toString()
+      });
     }
   }
   return tags;
@@ -41,7 +44,7 @@ async function deployContract(contractCodeSourceTxId, contractInitStateJSON, tag
     wallet,
     initState: initialState,
     srcTxId: contractCodeSourceTxId,
-    tags: tags
+    tags
   });
   return contractTxId;
 }

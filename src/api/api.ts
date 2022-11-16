@@ -1,6 +1,6 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
-import { ContractState } from '../types/contract';
+import { ContractState, Tags } from '../types/contract';
 import { Keys } from '@akord/crypto';
 import { Vault } from '../types/vault';
 import { Membership } from '../types/membership';
@@ -11,13 +11,13 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string>
+  abstract postContractTransaction(contractId: string, input: any, tags: Tags, metadata?: any): Promise<string>
 
-  abstract initContractId(tags: any, state?: any): Promise<string>
+  abstract initContractId(tags: Tags, state?: any): Promise<string>
 
   abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
 
-  abstract uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
+  abstract uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
 
   abstract uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<any[]>
 

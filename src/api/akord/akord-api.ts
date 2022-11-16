@@ -9,7 +9,7 @@ import { PermapostExecutor } from "./permapost";
 import { Logger } from "../../logger";
 import { Vault } from "../../types/vault";
 import { Membership } from "../../types/membership";
-import { ContractState } from "../../types/contract";
+import { ContractState, Tags } from "../../types/contract";
 
 export default class AkordApi extends Api {
 
@@ -42,7 +42,7 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string> {
+  public async postContractTransaction(contractId: string, input: any, tags: Tags, metadata?: any): Promise<string> {
     const txId = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -67,7 +67,7 @@ export default class AkordApi extends Api {
     return result.data.preInviteCheck;
   };
 
-  public async initContractId(tags: any, state?: any): Promise<string> {
+  public async initContractId(tags: Tags, state?: any): Promise<string> {
     const contractId = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -86,7 +86,7 @@ export default class AkordApi extends Api {
     return result.data.usersByEmail[0];
   };
 
-  public async uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
