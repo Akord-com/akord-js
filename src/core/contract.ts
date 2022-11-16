@@ -25,6 +25,14 @@ class ContractService extends Service {
     }
     return contractState;
   }
+
+  /**
+   * @param  id vault contract id
+   * @returns Promise with the list of all contract interactions
+   */
+  public async list(id: string): Promise<Array<any>> {
+    return this.api.getTransactions(id);
+  }
 }
 
 export {

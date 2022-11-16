@@ -61,7 +61,7 @@ export default class AkordApi extends Api {
     return result.data.postLedgerTransaction[0];
   };
 
-  public async preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>> {
+  public async preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>> {
     const result = await this.executeQuery(queries.preInviteCheck,
       { emails: emails, dataRoomId: vaultId })
     return result.data.preInviteCheck;
@@ -281,6 +281,10 @@ export default class AkordApi extends Api {
       },
       disableOffline: true
     });
+  }
+
+  public async getTransactions(vaultId: string): Promise<Array<any>> {
+    throw new Error("Method not implemented")
   }
 }
 

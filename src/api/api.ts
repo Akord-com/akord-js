@@ -41,6 +41,8 @@ abstract class Api {
 
   abstract preInviteCheck(emails: any[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>>
 
+  abstract getTransactions(vaultId: string): Promise<Array<any>>
+
   public getConfig() {
     return this.config;
   }

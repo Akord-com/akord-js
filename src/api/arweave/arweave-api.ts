@@ -11,7 +11,7 @@ import {
   getTagsFromObject
 } from "./arweave-helpers";
 import { GraphQLClient } from "graphql-request";
-import { membershipsQuery, nodeQuery } from "./graphql";
+import { membershipsQuery, nodeQuery, timelineQuery } from "./graphql";
 import Arweave from "arweave";
 import { Keys, Wallet } from "@akord/crypto";
 import { ContractState } from "../../types/contract";
@@ -233,7 +233,7 @@ export default class ArweaveApi extends Api {
     return result;
   };
 
-  public async preInviteCheck(addresses: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>> {
+  public async preInviteCheck(addresses: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>> {
     const state = await this.getContractState(vaultId);
     return await Promise.all(addresses.map(async (address) => ({
       address: address,
@@ -241,6 +241,14 @@ export default class ArweaveApi extends Api {
       membership: state.memberships.find(member => member.address === address)
     })));
   };
+
+  public async getTransactions(vaultId: string): Promise<Array<any>> {
+    const result = await this.executeQuery(timelineQuery, { vaultId });
+    return result.transactions.edges.map((edge: any) => ({
+      id: edge.node.id,
+      tags: edge.node.tags
+    }));
+  }
 }
 
 export {
