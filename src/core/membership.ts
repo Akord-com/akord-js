@@ -1,11 +1,13 @@
 import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, Keys, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership } from "../types/membership";
 
 class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
+
+  protected MembershipType: new (arg0: any, arg1: Keys[]) => Membership;
 
   /**
    * @param  {string} membershipId
@@ -21,14 +23,16 @@ class MembershipService extends Service {
   }
 
   /**
- * @returns Promise with the decrypted memberships
- */
-  public async list(shouldDecrypt = true): Promise<Array<Membership>> {
-    const membershipsProto = await this.api.getMemberships(this.wallet);
+   * @param  {string} vaultId
+   * @returns Promise with the decrypted memberships
+   */
+  public async list(vaultId: string, shouldDecrypt = true): Promise<Array<Membership>> {
+    const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     const memberships = []
     for (const membershipProto of membershipsProto) {
-      const membership = new Membership(membershipProto);
-      if (shouldDecrypt && !membership.public) {
+      const membership = new this.MembershipType(membershipProto, keys);
+      if (isEncrypted && shouldDecrypt) {
         await membership.decrypt();
       }
       memberships.push(membership);
@@ -37,12 +41,12 @@ class MembershipService extends Service {
   }
 
   /**
-  * Invite user with an Akord account
-  * @param  {string} vaultId
-  * @param  {string} email invitee's email
-  * @param  {string} role CONTRIBUTOR or VIEWER
-  * @returns Promise with new membership id & corresponding transaction id
-  */
+   * Invite user with an Akord account
+   * @param  {string} vaultId
+   * @param  {string} email invitee's email
+   * @param  {string} role CONTRIBUTOR or VIEWER
+   * @returns Promise with new membership id & corresponding transaction id
+   */
   public async invite(vaultId: string, email: string, role: string): Promise<{
     membershipId: string,
     transactionId: string
@@ -230,12 +234,12 @@ class MembershipService extends Service {
   }
 
   /**
-  * Invite user without an Akord account
-  * @param  {string} vaultId
-  * @param  {string} email invitee's email
-  * @param  {string} role CONTRIBUTOR or VIEWER
-  * @returns Promise with new membership id & corresponding transaction id
-  */
+   * Invite user without an Akord account
+   * @param  {string} vaultId
+   * @param  {string} email invitee's email
+   * @param  {string} role CONTRIBUTOR or VIEWER
+   * @returns Promise with new membership id & corresponding transaction id
+   */
   public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{
     membershipId: string,
     transactionId: string
