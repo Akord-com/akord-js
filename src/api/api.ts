@@ -37,7 +37,7 @@ abstract class Api {
 
   abstract getMemberships(wallet: any): Promise<Array<Membership>>
 
-  abstract getObjectsByVaultId<T>(vaultId: string, objectType: string): Promise<Array<T>>
+  abstract getObjectsByVaultId<T>(vaultId: string, objectType: string, shouldListAll?: boolean): Promise<Array<T>>
 
   abstract preInviteCheck(emails: any[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>>
 

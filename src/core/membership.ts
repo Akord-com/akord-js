@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, Keys, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership } from "../types/membership";
+import { defaultListOptions } from "../types/list-options";
 
 class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
@@ -26,13 +27,13 @@ class MembershipService extends Service {
    * @param  {string} vaultId
    * @returns Promise with the decrypted memberships
    */
-  public async list(vaultId: string, shouldDecrypt = true): Promise<Array<Membership>> {
-    const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType);
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
+    const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType, listOptions.shouldListAll);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     const memberships = []
     for (const membershipProto of membershipsProto) {
       const membership = new this.MembershipType(membershipProto, keys);
-      if (isEncrypted && shouldDecrypt) {
+      if (isEncrypted && listOptions.shouldDecrypt) {
         await membership.decrypt();
       }
       memberships.push(membership);

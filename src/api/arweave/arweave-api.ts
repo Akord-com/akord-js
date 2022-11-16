@@ -19,6 +19,7 @@ import { srcTxId } from './config';
 import Bundlr from "@bundlr-network/client";
 import { Vault } from "../../types/vault";
 import { Membership } from "../../types/membership";
+import { NodeLike } from "../../types/node";
 
 export default class ArweaveApi extends Api {
   public config!: ArweaveConfig;
@@ -129,7 +130,7 @@ export default class ArweaveApi extends Api {
     return { isEncrypted: !state.public, keys: data.keys };
   };
 
-  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<Array<any>> {
+  public async getObjectsByVaultId(vaultId: string, objectType: string, shouldListAll = false): Promise<Array<any>> {
     const state = await this.getContractState(vaultId);
     let results: any;
     if (objectType === "Membership") {
@@ -142,7 +143,9 @@ export default class ArweaveApi extends Api {
         return object
       }));
     } else {
-      results = await Promise.all(state.nodes.filter((node) => node.type === objectType).map(async (node) => {
+      results = await Promise.all(state.node
+        .filter((node: NodeLike) => node.type === objectType && (shouldListAll ? true : node.status === "ACTIVE"))
+        .map(async (node: NodeLike) => {
         const object = node;
         const dataTx = node.data[node.data.length - 1];
         delete object.data;

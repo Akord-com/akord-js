@@ -2,6 +2,7 @@ import { Service } from './service';
 import { functions } from "../constants";
 import { NodeLike } from '../types/node';
 import { Keys } from '@akord/crypto';
+import { defaultListOptions } from '../types/list-options';
 
 class NodeService<T = NodeLike> extends Service {
 
@@ -80,14 +81,14 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} vaultId
    * @returns Promise with all nodes within given vault
    */
-  public async list(vaultId: string, shouldDecrypt = true): Promise<Array<T>> {
-    const nodes = await this.api.getObjectsByVaultId<T>(vaultId, this.objectType);
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<T>> {
+    const nodes = await this.api.getObjectsByVaultId<T>(vaultId, this.objectType, listOptions.shouldListAll);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     return await Promise.all(
       nodes
         .map(async nodeProto => {
           const node = this.nodeInstance(nodeProto, keys);
-          if (isEncrypted && shouldDecrypt) {
+          if (isEncrypted && listOptions.shouldDecrypt) {
             await node.decrypt();
           }
           return node as T;

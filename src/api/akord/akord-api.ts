@@ -197,26 +197,34 @@ export default class AkordApi extends Api {
     return results;
   };
 
-  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<Array<any>> {
+  public async getObjectsByVaultId(vaultId: string, objectType: string, shouldListAll = false): Promise<Array<any>> {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
-    const filter = objectType === "Membership"
-      ? { status: { eq: "ACCEPTED" } }
-      : objectType === "Memo"
-        ? {}
-        :
-        {
-          status: { ne: "REVOKED" },
-          and: {
-            status: { ne: "DELETED" }
-          }
-        };
     const results = await this.paginatedQuery(
       queryName,
       queries[queryName],
       {
         dataRoomId: vaultId
-      }, filter);
+      }, this.filter(objectType, shouldListAll));
     return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
+  };
+
+  private filter(objectType: string, shouldListAll: boolean) {
+    if (shouldListAll) {
+      return {};
+    } else {
+      const filter = objectType === "Membership"
+        ? { status: { eq: "ACCEPTED" } }
+        : objectType === "Memo"
+          ? {}
+          :
+          {
+            status: { ne: "REVOKED" },
+            and: {
+              status: { ne: "DELETED" }
+            }
+          };
+      return filter;
+    }
   };
 
   private async executeMutation(mutation: string | readonly string[], variables: any) {
