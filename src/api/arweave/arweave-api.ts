@@ -123,7 +123,7 @@ export default class ArweaveApi extends Api {
   public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
     const state = await this.getContractState(vaultId);
     const address = await wallet.getAddress();
-    const membership = state.memberships.filter(member => member.address === address)[0];
+    const membership = state.memberships.find(member => member.address === address);
     const dataTx = membership.data[membership.data.length - 1];
     const data = await this.getTransactionData(dataTx);
     return { isEncrypted: !state.public, keys: data.keys };
@@ -159,7 +159,7 @@ export default class ArweaveApi extends Api {
     if (!vaultId) {
       const result = await this.executeQuery(nodeQuery, { nodeId: objectId });
       for (let edge of result?.transactions.edges) {
-        const vaultId = edge.node.tags.filter(tag => tag.name === "Contract")[0]?.value;
+        const vaultId = edge.node.tags.find((tag: any) => tag.name === "Contract")?.value;
         contractId = vaultId;
       }
     }
@@ -203,7 +203,7 @@ export default class ArweaveApi extends Api {
     const result = await this.executeQuery(membershipsQuery, { address });
     let vaults = []
     for (let edge of result?.transactions.edges) {
-      const vaultId = edge.node.tags.filter(tag => tag.name === "Contract")[0]?.value;
+      const vaultId = edge.node.tags.find((tag: any) => tag.name === "Contract")?.value;
       const state = await this.getContractState(vaultId);
       const dataTx = state.data[state.data.length - 1];
       const data = await this.getTransactionData(dataTx);
@@ -217,9 +217,9 @@ export default class ArweaveApi extends Api {
     const result = await this.executeQuery(membershipsQuery, { address });
     let memberships = []
     for (let edge of result?.transactions.edges) {
-      const vaultId = edge.node.tags.filter(tag => tag.name === "Contract")[0]?.value;
+      const vaultId = edge.node.tags.find((tag: any) => tag.name === "Contract")?.value;
       const state = await this.getContractState(vaultId);
-      const membership = state.memberships.filter(member => member.address === address)[0];
+      const membership = state.memberships.find(member => member.address === address);
       const dataTx = membership.data[membership.data.length - 1];
       const data = await this.getTransactionData(dataTx);
       memberships.push({ ...membership, ...data });

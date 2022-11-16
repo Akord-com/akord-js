@@ -2,7 +2,6 @@ import { Service } from './service';
 import { functions } from "../constants";
 import { NodeLike } from '../types/node';
 import { Keys } from '@akord/crypto';
-import { v4 as uuidv4 } from "uuid";
 
 class NodeService<T = NodeLike> extends Service {
 
