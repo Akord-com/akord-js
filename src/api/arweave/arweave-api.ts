@@ -232,6 +232,15 @@ export default class ArweaveApi extends Api {
     const result = await client.request(query, variables);
     return result;
   };
+
+  public async preInviteCheck(addresses: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>> {
+    const state = await this.getContractState(vaultId);
+    return await Promise.all(addresses.map(async (address) => ({
+      address: address,
+      publicKey: await getPublicKeyFromAddress(address),
+      membership: state.memberships.find(member => member.address === address)
+    })));
+  };
 }
 
 export {

@@ -39,15 +39,14 @@ abstract class Api {
 
   abstract getObjectsByVaultId<T>(vaultId: string, objectType: string): Promise<Array<T>>
 
+  abstract preInviteCheck(emails: any[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>>
+
   public getConfig() {
     return this.config;
   }
 
   // legacy calls
   postLedgerTransaction(transactions: any[]): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
-  preInviteCheck(emails: any[], vaultId: string): Promise<any> {
     throw new Error("Method not implemented.");
   }
 }
