@@ -79,7 +79,7 @@ class NoteService extends NodeService<Note> {
 
   // TODO: return type Promise<FileVersion>
   private async uploadNewNoteVersion(name: string, content: any): Promise<any> {
-    const { resourceTx, resourceUrl, resourceHash } = await this.fileService.create(content, true);
+    const { resourceTx, resourceUrl, resourceHash } = await this.fileService.create(new File([content], name), true);
 
     const version = {
       owner: await this.wallet.getAddress(),
