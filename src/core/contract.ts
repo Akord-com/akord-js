@@ -1,5 +1,5 @@
 import { Service } from "../core";
-import { ContractState } from "../types/contract";
+import { ContractState, Tags } from "../types/contract";
 
 class ContractService extends Service {
 
@@ -8,7 +8,7 @@ class ContractService extends Service {
    * @param state initial state of warp contract
    * @returns Promise contract Id
    */
-  public async create(tags: any, state?: any): Promise<string> {
+  public async create(tags: Tags, state?: any): Promise<string> {
     return await this.api.initContractId(tags, state)
   }
 

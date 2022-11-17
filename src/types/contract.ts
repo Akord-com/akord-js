@@ -24,9 +24,21 @@ export class ContractState extends Encryptable {
   nodes: Array<NodeLike>;
 }
 
-export type Tag = {
-  name: string,
-  value: string
-};
+export class Tag {
+  name: string;
+  value: string;
+
+  /**
+   * @param name
+   * @param value
+   * @returns 
+   */
+  constructor(name: string, value: string) {
+    return {
+      name: name,
+      value: value
+    }
+  }
+}
 
 export type Tags = Tag[];

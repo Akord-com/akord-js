@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
-import { ContractState, Tags } from "../../types/contract";
+import { ContractState, Tag, Tags } from "../../types/contract";
 import { clientName, protocolName, protocolVersion } from "./config";
 
 // Set up Arweave client
@@ -28,10 +28,7 @@ const getTagsFromObject = (object: any): Tags => {
   let tags = [];
   for (let key in object) {
     if (object.hasOwnProperty(key)) {
-      tags.push({
-        name: key.toString(),
-        value: object[key].toString()
-      });
+      tags.push(new Tag(key.toString(), object[key].toString()));
     }
   }
   return tags;
@@ -98,12 +95,12 @@ async function deployContract(contractCodeSourceTxId, contractInitStateJSON, tag
 //   return;
 // }
 
-async function postContractTransaction(contractId, input, tags, wallet) {
+async function postContractTransaction(contractId: string, input: any, tags: Tags, wallet: any) {
   try {
     const contract = getContract(contractId, wallet);
     // const pstTransfer = await preparePstRewardTransfer(wallet);
     const { originalTxId } = await contract.writeInteraction(input, {
-      tags: getTagsFromObject(constructHeader(tags)),
+      tags: constructTags(tags),
       strict: true
     });
     return { txId: originalTxId }
@@ -113,33 +110,29 @@ async function postContractTransaction(contractId, input, tags, wallet) {
   }
 }
 
-const initContract = async (contractSrc, additionalTags, initialState, wallet) => {
-  const tags = getTagsFromObject(constructHeader(additionalTags));
-  const { contractTxId } = await deployContract(contractSrc, initialState ? initialState : {}, tags, wallet);
+const initContract = async (srcTxId: string, tags: Tags, initialState, wallet) => {
+  const { contractTxId } = await deployContract(srcTxId, initialState ? initialState : {}, constructTags(tags), wallet);
   return contractTxId;
 }
 
-function constructHeader(headerPayload) {
-  return {
-    ...(headerPayload ? headerPayload : {}),
-    [protocolTags.CLIENT_NAME]: clientName,
-    [protocolTags.PROTOCOL_NAME]: protocolName,
-    [protocolTags.PROTOCOL_VERSION]: protocolVersion,
-    [protocolTags.TIMESTAMP]: JSON.stringify(Date.now()),
-  }
+function constructTags(tags: Tags) {
+  return [
+    new Tag(protocolTags.CLIENT_NAME, clientName),
+    new Tag(protocolTags.PROTOCOL_NAME, protocolName),
+    new Tag(protocolTags.PROTOCOL_VERSION, protocolVersion),
+    new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())),
+  ].concat(tags);
 }
 
-async function prepareArweaveTransaction(data, tags, wallet) {
+async function prepareArweaveTransaction(data: any, tags: Tags, wallet: any) {
   try {
     // create a new arweave transaction with data & tags
     let transaction = await arweave.createTransaction({
       data: data
     }, wallet)
-    for (const [key, value] of Object.entries(tags)) {
-      if (value) {
-        transaction.addTag(key, value.toString());
-      }
-    }
+    tags.map((tag) => {
+      transaction.addTag(tag.name, tag.value);
+    })
     // sign the new transaction
     await arweave.transactions.sign(transaction, wallet);
     return transaction;

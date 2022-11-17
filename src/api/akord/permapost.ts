@@ -73,15 +73,6 @@ export class PermapostExecutor {
 
     tags(tags: Tags): PermapostExecutor {
         this._tags = tags;
-        // if (tags) {
-        //     this._tags = []
-        //     for (let key in tags) {
-        //         this._tags.push({
-        //             name: key.toString(),
-        //             value: tags[key].toString()
-        //         })
-        //     }
-        // }
         return this;
     }
 

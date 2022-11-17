@@ -8,13 +8,12 @@ import {
   prepareArweaveTransaction,
   uploadChunksArweaveTransaction,
   getPublicKeyFromAddress,
-  getTagsFromObject
 } from "./arweave-helpers";
 import { GraphQLClient } from "graphql-request";
 import { membershipsQuery, nodeQuery, timelineQuery } from "./graphql";
 import Arweave from "arweave";
 import { Keys, Wallet } from "@akord/crypto";
-import { ContractState } from "../../types/contract";
+import { ContractState, Tag, Tags } from "../../types/contract";
 import { srcTxId } from './config';
 import Bundlr from "@bundlr-network/client";
 import { Vault } from "../../types/vault";
@@ -37,7 +36,7 @@ export default class ArweaveApi extends Api {
     return this.config;
   }
 
-  public async postContractTransaction(contractId: string, input: any, tags: any): Promise<string> {
+  public async postContractTransaction(contractId: string, input: any, tags: Tags): Promise<string> {
     const { txId } = await postContractTransaction(
       contractId,
       input,
@@ -47,7 +46,7 @@ export default class ArweaveApi extends Api {
     return txId;
   };
 
-  public async initContractId(tags: any, state?: any): Promise<string> {
+  public async initContractId(tags: Tags, state?: any): Promise<string> {
     return initContract(srcTxId, tags, state, this.jwk);
   };
 
@@ -55,11 +54,11 @@ export default class ArweaveApi extends Api {
     return { address, publicKey: await getPublicKeyFromAddress(address) };
   };
 
-  public async getProfile(wallet: any): Promise<any> {
+  public async getProfile(wallet: Wallet): Promise<any> {
     return null;
   }
 
-  public async uploadFile(file: any, tags: any): Promise<any> {
+  public async uploadFile(file: any, tags: Tags): Promise<any> {
     const transaction = await prepareArweaveTransaction(
       file,
       tags,
@@ -75,8 +74,8 @@ export default class ArweaveApi extends Api {
     const bundlr = new Bundlr("https://node1.bundlr.network", "arweave", this.jwk);
 
     for (let item of data) {
-      const formattedTags = getTagsFromObject({ "Content-Type": "application/json", ...item.tags });
-      const filteredTags = formattedTags.filter((tag) =>
+      const tags = [new Tag("Content-Type", "application/json")].concat(item.tags);
+      const filteredTags = tags.filter((tag) =>
         tag.name !== "Public-Key"
       )
       const transaction = bundlr.createTransaction(JSON.stringify(item.body), { tags: filteredTags });

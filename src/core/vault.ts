@@ -4,6 +4,7 @@ import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson, KeysStructu
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 import { getTagsFromObject } from "../api/arweave/arweave-helpers";
+import { Tag } from "../types/contract";
 
 class VaultService extends Service {
   objectType: string = objectTypes.VAULT;
@@ -45,12 +46,11 @@ class VaultService extends Service {
     const address = await this.wallet.getAddress();
     const membershipId = uuidv4();
 
-    this.tags = {
-      [protocolTags.MEMBER_ADDRESS]: address,
-      [protocolTags.MEMBERSHIP_ID]: membershipId,
-      [protocolTags.PUBLIC]: isPublic ? "true" : "false",
-      ...await this.getTags()
-    }
+    this.tags = [
+      new Tag(protocolTags.MEMBER_ADDRESS, address),
+      new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
+      new Tag(protocolTags.PUBLIC, isPublic ? "true" : "false"),
+    ].concat(await this.getTags());
 
     const vaultData = {
       name: await this.processWriteString(name),
@@ -98,7 +98,7 @@ class VaultService extends Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
-      getTagsFromObject(this.tags),
+      this.tags,
       metadata
     );
     return { vaultId, membershipId, transactionId: txId }

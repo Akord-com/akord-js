@@ -4,6 +4,7 @@ import { generateKeyPair, Keys, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership } from "../types/membership";
 import { defaultListOptions } from "../types/list-options";
+import { Tag } from "../types/contract";
 
 class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
@@ -67,7 +68,8 @@ class MembershipService extends Service {
       })
     }
 
-    this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
+    this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+      .concat(await this.getTags());
 
     const { data, metadata } = await this.uploadState(body);
 
@@ -120,7 +122,8 @@ class MembershipService extends Service {
         return keyPair;
       })
     };
-    this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
+    this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+      .concat(await this.getTags());
 
     const { data } = await this.uploadState(body);
 

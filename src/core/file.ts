@@ -8,6 +8,8 @@ import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
 import fs from "fs";
 import { EncryptionTags } from "../types/encryption-tags";
+import { getTagsFromObject } from "../api/arweave/arweave-helpers";
+import { Tags } from "../types/contract";
 
 
 class FileService extends Service {
@@ -121,11 +123,11 @@ class FileService extends Service {
     tags[dataTags.DATA_TYPE] = "File";
     tags[protocolTags.VAULT_ID] = this.vaultId;
     if (file.size > this.asyncUploadTreshold) {
-      return await this.uploadChunked(file, tags, progressHook, cancelHook);
+      return await this.uploadChunked(file, getTagsFromObject(tags), progressHook, cancelHook);
     } else {
       const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
       tags[fileTags.FILE_HASH] = await digestRaw(processedData);
-      return { resourceHash: tags[fileTags.FILE_HASH], ...await this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
+      return { resourceHash: tags[fileTags.FILE_HASH], ...await this.api.uploadFile(processedData, getTagsFromObject({ ...tags, ...encryptionTags }), this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
     }
   }
 
@@ -152,7 +154,7 @@ class FileService extends Service {
 
   private async uploadChunked(
     file: FileLike,
-    tags: any,
+    tags: Tags,
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController
   ): Promise<any> {
@@ -196,7 +198,7 @@ class FileService extends Service {
       .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
-      .tags({ ...tags, ...encryptionTags })
+      .tags(tags.concat(getTagsFromObject(encryptionTags)))
       .public(this.isPublic)
       .numberOfChunks(uploadedChunks)
       .asyncTransaction();
@@ -210,9 +212,9 @@ class FileService extends Service {
   }
 
   private async uploadChunk(
-    chunk: { processedData: ArrayBuffer, encryptionTags: any },
+    chunk: { processedData: ArrayBuffer, encryptionTags: EncryptionTags },
     chunkNumber: number,
-    tags: any,
+    tags: Tags,
     resourceUrl: string,
     resourceSize: number,
     progressHook?: (progress: number) => void,
@@ -223,7 +225,7 @@ class FileService extends Service {
       .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
-      .tags({ ...tags, ...chunk.encryptionTags })
+      .tags(tags.concat(getTagsFromObject(chunk.encryptionTags)))
       .public(this.isPublic)
       .bundle(false)
       .progressHook(progressHook, chunkNumber * this.chunkSize, resourceSize)

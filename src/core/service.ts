@@ -21,6 +21,7 @@ import lodash from "lodash";
 import { EncryptionTags } from "../types/encryption-tags";
 import { Vault } from "../types/vault";
 import { getTagsFromObject } from "../api/arweave/arweave-helpers";
+import { Tags } from "../types/contract";
 
 declare const Buffer;
 
@@ -40,7 +41,7 @@ class Service {
   object: any
   actionRef: string
   groupRef: string
-  tags: any
+  tags: Tags
 
   constructor(wallet: Wallet, api: Api, encryptionKeys?: EncryptionKeys) {
     this.wallet = wallet
@@ -115,7 +116,7 @@ class Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      getTagsFromObject(this.tags),
+      this.tags,
       clientMetadata
     );
     return { transactionId: txId }
@@ -141,7 +142,7 @@ class Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      getTagsFromObject(this.tags),
+      this.tags,
       { ...metadata, ...clientMetadata }
     );
     return { nodeId, transactionId: txId };
@@ -397,7 +398,7 @@ class Service {
     } else if (this.objectType !== objectTypes.VAULT) {
       tags[protocolTags.NODE_ID] = this.objectId;
     }
-    return tags;
+    return getTagsFromObject(tags);
   }
 
   protected async prepareHeader() {
