@@ -1,6 +1,6 @@
 import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 import { getTagsFromObject } from "../api/arweave/arweave-helpers";
@@ -54,10 +54,7 @@ class VaultService extends Service {
 
     const vaultData = {
       name: await this.processWriteString(name),
-      termsOfAccess: jsonToBase64({
-        termsOfAccess: termsOfAccess,
-        hasTerms: !!termsOfAccess
-      }),
+      termsOfAccess
     }
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
@@ -181,10 +178,6 @@ class VaultService extends Service {
       const vault = new Vault(result.dataRoom, result.keys);
       if (shouldDecrypt && !vault.public) {
         await vault.decrypt()
-      }
-      if (vault.termsOfAccess) { // TODO: needed after migration? handle with @encoded()
-        const terms = base64ToJson(vault.termsOfAccess);
-        vault.termsOfAccess = terms.termsOfAccess;
       }
       vaults.push(vault);
     }
