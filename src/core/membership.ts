@@ -8,16 +8,15 @@ import { defaultListOptions } from "../types/list-options";
 class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
 
-  protected MembershipType: new (arg0: any, arg1: Keys[]) => Membership;
-
   /**
    * @param  {string} membershipId
    * @returns Promise with the decrypted membership
    */
   public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
     const membershipProto = await this.api.getObject<any>(membershipId, this.objectType, vaultId);
-    const membership = new Membership(membershipProto);
-    if (shouldDecrypt && !membership.public) {
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const membership = new Membership(membershipProto, keys);
+    if (isEncrypted && shouldDecrypt) {
       await membership.decrypt();
     }
     return membership
@@ -32,7 +31,7 @@ class MembershipService extends Service {
     const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     const memberships = []
     for (const membershipProto of membershipsProto) {
-      const membership = new this.MembershipType(membershipProto, keys);
+      const membership = new Membership(membershipProto, keys);
       if (isEncrypted && listOptions.shouldDecrypt) {
         await membership.decrypt();
       }
