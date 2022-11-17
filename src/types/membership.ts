@@ -17,7 +17,7 @@ export class Membership extends Encryptable {
   vaultId: string; // remove when on warp
   keys: Keys[];
 
-  constructor(membershipProto: any) {
+  constructor(membershipProto: any, keys: Array<Keys>) {
     super(membershipProto.keys, null)
     this.id = membershipProto.id;
     this.owner = membershipProto.owner;
@@ -29,6 +29,6 @@ export class Membership extends Encryptable {
     this.encPublicSigningKey = membershipProto.encPublicSigningKey;
     this.memberDetails = membershipProto.memberDetails;
     this.vaultId = membershipProto.vaultId;
-    this.keys = membershipProto.keys;
+    this.keys = keys;
   }
 }
