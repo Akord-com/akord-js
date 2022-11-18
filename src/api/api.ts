@@ -1,7 +1,7 @@
 import { AWSConfig } from './akord/aws-config';
 import { ArweaveConfig } from './arweave/arweave-config';
-import { ContractState, Tags } from '../types/contract';
-import { Keys } from '@akord/crypto';
+import { ContractInput, ContractState, Tags } from '../types/contract';
+import { Keys, Wallet } from '@akord/crypto';
 import { Vault } from '../types/vault';
 import { Membership } from '../types/membership';
 
@@ -11,15 +11,15 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction(contractId: string, input: any, tags: Tags, metadata?: any): Promise<string>
+  abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 
   abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
 
-  abstract uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<any>
+  abstract uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
-  abstract uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<any[]>
+  abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<{ id: string, resourceTx: string }>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
@@ -33,9 +33,9 @@ abstract class Api {
 
   abstract getNodeState(stateId: string): Promise<any>
 
-  abstract getVaults(wallet: any): Promise<Array<Vault>>
+  abstract getVaults(wallet: Wallet): Promise<Array<Vault>>
 
-  abstract getMemberships(wallet: any): Promise<Array<Membership>>
+  abstract getMemberships(wallet: Wallet): Promise<Array<Membership>>
 
   abstract getObjectsByVaultId<T>(vaultId: string, objectType: string, shouldListAll?: boolean): Promise<Array<T>>
 

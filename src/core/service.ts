@@ -16,12 +16,12 @@ import {
   AkordWallet,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
-import { objectTypes, protocolTags, functions, dataTags } from '../constants';
+import { objectTypes, protocolTags, functions, dataTags, encryptionTags } from '../constants';
 import lodash from "lodash";
-import { EncryptionTags } from "../types/encryption-tags";
 import { Vault } from "../types/vault";
-import { getTagsFromObject } from "../api/arweave/arweave-helpers";
-import { Tags } from "../types/contract";
+import { Tag, Tags } from "../types/contract";
+import { NodeLike } from "../types/node";
+import { Membership } from "../types/membership";
 
 declare const Buffer;
 
@@ -35,10 +35,10 @@ class Service {
   vaultId: string
   objectId: string
   objectType: string
-  function: string
+  function: functions
   isPublic: boolean
-  vault: any
-  object: any
+  vault: Vault
+  object: NodeLike | Membership | Vault
   actionRef: string
   groupRef: string
   tags: Tags
@@ -165,7 +165,7 @@ class Service {
     this.objectType = objectType;
   }
 
-  protected setFunction(functionName: string) {
+  protected setFunction(functionName: functions) {
     this.function = functionName;
   }
 
@@ -181,11 +181,11 @@ class Service {
     this.isPublic = isPublic;
   }
 
-  setVault(vault: any) {
+  setVault(vault: Vault) {
     this.vault = vault;
   }
 
-  protected setObject(object: any) {
+  protected setObject(object: NodeLike | Membership | Vault) {
     this.object = object;
   }
 
@@ -230,21 +230,18 @@ class Service {
 
   protected async processWriteRaw(data: any, encryptedKey?: string) {
     let processedData: any;
-    let encryptionTags: EncryptionTags;
+    const tags = [] as Tags;
     if (this.isPublic) {
       processedData = data;
     } else {
       const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
       processedData = encryptedFile.encryptedData.ciphertext;
       const { address, publicKey } = await this.getActiveKey();
-      encryptionTags = {
-        'Initialization-Vector': encryptedFile.encryptedData.iv,
-        'Encrypted-Key': encryptedFile.encryptedKey,
-        'Public-Address': address,
-        // 'Public-Key': publicKey
-      }
+      tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
+      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
+      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
     }
-    return { processedData, encryptionTags }
+    return { processedData, encryptionTags: tags }
   }
 
   protected async getActiveKey() {
@@ -265,7 +262,7 @@ class Service {
 
   protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, getTagsFromObject(encryptionTags), false, shouldBundleTransaction);
+    return this.api.uploadFile(processedData, encryptionTags, false, shouldBundleTransaction);
   }
 
   protected async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
@@ -338,19 +335,19 @@ class Service {
 
   protected async uploadState(state: any) {
     const signature = await this.signData(state);
-    const tags = {
-      [dataTags.DATA_TYPE]: "State",
-      [protocolTags.SIGNATURE]: signature,
-      [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-      [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-      [protocolTags.NODE_TYPE]: this.tags[protocolTags.NODE_TYPE],
-    }
+    const tags = [
+      new Tag(dataTags.DATA_TYPE, "State"),
+      new Tag(protocolTags.SIGNATURE, signature),
+      new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+      new Tag(protocolTags.VAULT_ID, this.vaultId),
+      new Tag(protocolTags.NODE_TYPE, this.objectType),
+    ]
     if (this.objectType === objectTypes.MEMBERSHIP) {
-      tags[protocolTags.MEMBERSHIP_ID] = this.tags[protocolTags.MEMBERSHIP_ID];
+      tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId))
     } else if (this.objectType !== objectTypes.VAULT) {
-      tags[protocolTags.NODE_ID] = this.tags[protocolTags.NODE_ID];
+      tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ body: state, tags: getTagsFromObject(tags) }], true);
+    const ids = await this.api.uploadData([{ data: state, tags }], true);
     const metadata = {
       dataRefs: [
         { ...ids[0], modelId: this.objectId, modelType: this.objectType, data: state }
@@ -379,26 +376,26 @@ class Service {
     return { address, publicKey: base64ToArray(publicKey) }
   }
 
-  protected async getTags() {
-    const tags = {
-      [protocolTags.FUNCTION_NAME]: this.function,
-      [protocolTags.SIGNER_ADDRESS]: await this.wallet.getAddress(),
-      [protocolTags.VAULT_ID]: this.vaultId,
-      [protocolTags.TIMESTAMP]: JSON.stringify(Date.now()),
-      [protocolTags.NODE_TYPE]: this.objectType
-    };
+  protected async getTags(): Promise<Tags> {
+    const tags = [
+      new Tag(protocolTags.FUNCTION_NAME, this.function),
+      new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+      new Tag(protocolTags.VAULT_ID, this.vaultId),
+      new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())),
+      new Tag(protocolTags.NODE_TYPE, this.objectType),
+    ]
     if (this.groupRef) {
-      tags["Group-Ref"] = this.groupRef;
+      tags.push(new Tag("Group-Ref", this.groupRef));
     }
     if (this.actionRef) {
-      tags["Action-Ref"] = this.actionRef;
+      tags.push(new Tag("Action-Ref", this.actionRef));
     }
     if (this.objectType === objectTypes.MEMBERSHIP) {
-      tags[protocolTags.MEMBERSHIP_ID] = this.objectId;
+      tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
     } else if (this.objectType !== objectTypes.VAULT) {
-      tags[protocolTags.NODE_ID] = this.objectId;
+      tags.push(new Tag(protocolTags.NODE_ID, this.objectId));
     }
-    return getTagsFromObject(tags);
+    return tags;
   }
 
   protected async prepareHeader() {

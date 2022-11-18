@@ -13,7 +13,7 @@ import { GraphQLClient } from "graphql-request";
 import { membershipsQuery, nodeQuery, timelineQuery } from "./graphql";
 import Arweave from "arweave";
 import { Keys, Wallet } from "@akord/crypto";
-import { ContractState, Tag, Tags } from "../../types/contract";
+import { ContractInput, ContractState, Tag, Tags } from "../../types/contract";
 import { srcTxId } from './config';
 import Bundlr from "@bundlr-network/client";
 import { Vault } from "../../types/vault";
@@ -36,7 +36,7 @@ export default class ArweaveApi extends Api {
     return this.config;
   }
 
-  public async postContractTransaction(contractId: string, input: any, tags: Tags): Promise<string> {
+  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags): Promise<string> {
     const { txId } = await postContractTransaction(
       contractId,
       input,
@@ -58,7 +58,7 @@ export default class ArweaveApi extends Api {
     return null;
   }
 
-  public async uploadFile(file: any, tags: Tags): Promise<any> {
+  public async uploadFile(file: any, tags: Tags): Promise<{ resourceTx: string }> {
     const transaction = await prepareArweaveTransaction(
       file,
       tags,
@@ -68,17 +68,17 @@ export default class ArweaveApi extends Api {
     return { resourceTx: transaction.id };
   };
 
-  public async uploadData(data: any[]): Promise<string[]> {
+  public async uploadData(items: { data: any, tags: Tags }[]): Promise<Array<{ id: string, resourceTx: string }>> {
     let resourceTxs = [];
 
     const bundlr = new Bundlr("https://node1.bundlr.network", "arweave", this.jwk);
 
-    for (let item of data) {
+    for (let item of items) {
       const tags = [new Tag("Content-Type", "application/json")].concat(item.tags);
       const filteredTags = tags.filter((tag) =>
         tag.name !== "Public-Key"
       )
-      const transaction = bundlr.createTransaction(JSON.stringify(item.body), { tags: filteredTags });
+      const transaction = bundlr.createTransaction(JSON.stringify(item.data), { tags: filteredTags });
       await transaction.sign();
       const txId = (await transaction.upload()).id;
       console.log("Transaction submitted to Bundlr Network, instantly accessible from https://arweave.net/" + txId);

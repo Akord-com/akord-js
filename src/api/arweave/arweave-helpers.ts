@@ -2,7 +2,7 @@ import Arweave from 'arweave';
 import { arweaveConfig } from './arweave-config';
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { protocolTags } from "../../constants";
-import { ContractState, Tag, Tags } from "../../types/contract";
+import { ContractInput, ContractState, Tag, Tags } from "../../types/contract";
 import { clientName, protocolName, protocolVersion } from "./config";
 
 // Set up Arweave client
@@ -95,7 +95,7 @@ async function deployContract(contractCodeSourceTxId, contractInitStateJSON, tag
 //   return;
 // }
 
-async function postContractTransaction(contractId: string, input: any, tags: Tags, wallet: any) {
+async function postContractTransaction(contractId: string, input: ContractInput, tags: Tags, wallet: any) {
   try {
     const contract = getContract(contractId, wallet);
     // const pstTransfer = await preparePstRewardTransfer(wallet);

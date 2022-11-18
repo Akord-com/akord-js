@@ -7,9 +7,7 @@ import { v4 as uuid } from "uuid";
 import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
 import fs from "fs";
-import { EncryptionTags } from "../types/encryption-tags";
-import { getTagsFromObject } from "../api/arweave/arweave-helpers";
-import { Tags } from "../types/contract";
+import { Tag, Tags } from "../types/contract";
 
 
 class FileService extends Service {
@@ -73,7 +71,7 @@ class FileService extends Service {
    * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
-  public async download(id: string, vaultId: string, options: DownloadOptions = {}) : Promise<void> {
+  public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
     await this.setVaultContext(vaultId);
     const writer = await this.stream(options.name, options.size);
     if (options.isChunked) {
@@ -108,26 +106,28 @@ class FileService extends Service {
     shouldBundleTransaction?: boolean,
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
-    let tags = {};
+    : Promise<{ resourceTx: string, resourceUrl?: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
+    const tags = [] as Tags;
     if (this.isPublic) {
-      tags[fileTags.FILE_NAME] = encodeURIComponent(file.name);
+      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)))
       if (file.lastModified) {
-        tags[fileTags.FILE_MODIFIED_AT] = file.lastModified.toString();
+        tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
     }
-    tags[smartweaveTags.CONTENT_TYPE] = file.type;
-    tags[fileTags.FILE_SIZE] = file.size;
-    tags[fileTags.FILE_TYPE] = file.type;
-    tags[protocolTags.TIMESTAMP] = JSON.stringify(Date.now());
-    tags[dataTags.DATA_TYPE] = "File";
-    tags[protocolTags.VAULT_ID] = this.vaultId;
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
+    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
+    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
+    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
+    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
+    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+
     if (file.size > this.asyncUploadTreshold) {
-      return await this.uploadChunked(file, getTagsFromObject(tags), progressHook, cancelHook);
+      return await this.uploadChunked(file, tags, progressHook, cancelHook);
     } else {
       const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      tags[fileTags.FILE_HASH] = await digestRaw(processedData);
-      return { resourceHash: tags[fileTags.FILE_HASH], ...await this.api.uploadFile(processedData, getTagsFromObject({ ...tags, ...encryptionTags }), this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
+      const resourceHash = await digestRaw(processedData);
+      tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
+      return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
     }
   }
 
@@ -159,7 +159,7 @@ class FileService extends Service {
     cancelHook?: AbortController
   ): Promise<any> {
     let resourceUrl = uuid();
-    let encryptionTags: EncryptionTags;
+    let encryptionTags: Tags;
     let encryptedKey: string;
     let iv: Array<string> = [];
     let uploadedChunks = 0;
@@ -174,9 +174,9 @@ class FileService extends Service {
       );
 
       encryptionTags = encryptedData.encryptionTags;
-      iv.push(encryptionTags[encTags.IV])
+      iv.push(encryptionTags.find((tag)=> tag.name === encTags.IV).value);
       if (!encryptedKey) {
-        encryptedKey = encryptionTags[encTags.ENCRYPTED_KEY];
+        encryptedKey = encryptionTags.find((tag)=> tag.name === encTags.ENCRYPTED_KEY).value;
       }
 
       await this.uploadChunk(
@@ -192,13 +192,14 @@ class FileService extends Service {
       uploadedChunks += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-    encryptionTags[encTags.IV] = iv.join(',')
-    
+    const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
+    encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
+
     await new PermapostExecutor()
       .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
-      .tags(tags.concat(getTagsFromObject(encryptionTags)))
+      .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
       .numberOfChunks(uploadedChunks)
       .asyncTransaction();
@@ -212,7 +213,7 @@ class FileService extends Service {
   }
 
   private async uploadChunk(
-    chunk: { processedData: ArrayBuffer, encryptionTags: EncryptionTags },
+    chunk: { processedData: ArrayBuffer, encryptionTags: Tags },
     chunkNumber: number,
     tags: Tags,
     resourceUrl: string,
@@ -225,7 +226,7 @@ class FileService extends Service {
       .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
-      .tags(tags.concat(getTagsFromObject(chunk.encryptionTags)))
+      .tags(tags.concat(chunk.encryptionTags))
       .public(this.isPublic)
       .bundle(false)
       .progressHook(progressHook, chunkNumber * this.chunkSize, resourceSize)
@@ -235,7 +236,7 @@ class FileService extends Service {
   }
 
   private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
-    encryptedData: { processedData: ArrayBuffer, encryptionTags: EncryptionTags },
+    encryptedData: { processedData: ArrayBuffer, encryptionTags: Tags },
     chunkNumber: number
   }> {
     const chunkNumber = offset / this.chunkSize;
@@ -273,7 +274,7 @@ type DownloadOptions = {
   name?: string,
   isChunked?: boolean,
   numberOfChunks?: number,
-  progressHook?: (progress: number) => void, 
+  progressHook?: (progress: number) => void,
   cancelHook?: AbortController
 }
 

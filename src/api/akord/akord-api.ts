@@ -9,7 +9,7 @@ import { PermapostExecutor } from "./permapost";
 import { Logger } from "../../logger";
 import { Vault } from "../../types/vault";
 import { Membership } from "../../types/membership";
-import { ContractState, Tags } from "../../types/contract";
+import { ContractInput, ContractState, Tags } from "../../types/contract";
 
 export default class AkordApi extends Api {
 
@@ -24,14 +24,16 @@ export default class AkordApi extends Api {
     this.initGqlClient()
   }
 
-  public async uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<Array<{ resourceId: string, resourceTx: string }>> {
+  public async uploadData(items: { data: any, tags: Tags, metadata?: any }[], shouldBundleTransaction?: boolean)
+    : Promise<Array<{ id: string, resourceTx: string }>> {
+
     const resources = [];
 
-    await Promise.all(data.map(async (item, index) => {
+    await Promise.all(items.map(async (item, index) => {
       const resource = await new PermapostExecutor()
         .env(this.config)
         .auth(this.jwtToken)
-        .data(item.body)
+        .data(item.data)
         .tags(item.tags)
         .bundle(shouldBundleTransaction)
         .metadata(item.metadata)
@@ -42,7 +44,7 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction(contractId: string, input: any, tags: Tags, metadata?: any): Promise<string> {
+  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string> {
     const txId = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)

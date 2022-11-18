@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
-import { getTagsFromObject } from "../api/arweave/arweave-helpers";
 import { Tag } from "../types/contract";
 
 class VaultService extends Service {
@@ -36,9 +35,7 @@ class VaultService extends Service {
       publicKeys = [arrayToBase64(keyPair.publicKey)];
     }
 
-    const vaultId = await this.api.initContractId(getTagsFromObject({
-      [protocolTags.NODE_TYPE]: objectTypes.VAULT,
-    }));
+    const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectTypes.VAULT)]);
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
@@ -65,23 +62,23 @@ class VaultService extends Service {
     const membershipSignature = await this.signData(membershipData);
     const ids = await this.api.uploadData([
       {
-        body: vaultData, tags: getTagsFromObject({
-          "Data-Type": "State",
-          [protocolTags.SIGNATURE]: vaultSignature,
-          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-          [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-          [protocolTags.NODE_TYPE]: objectTypes.VAULT,
-        })
+        data: vaultData, tags: [
+          new Tag("Data-Type", "State"),
+          new Tag(protocolTags.SIGNATURE, vaultSignature),
+          new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+          new Tag(protocolTags.VAULT_ID, this.vaultId),
+          new Tag(protocolTags.NODE_TYPE, this.objectType),
+        ]
       },
       {
-        body: membershipData, tags: getTagsFromObject({
-          "Data-Type": "State",
-          [protocolTags.SIGNATURE]: membershipSignature,
-          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-          [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-          [protocolTags.NODE_TYPE]: objectTypes.MEMBERSHIP,
-          [protocolTags.MEMBERSHIP_ID]: membershipId,
-        })
+        data: membershipData, tags: [
+          new Tag("Data-Type", "State"),
+          new Tag(protocolTags.SIGNATURE, membershipSignature),
+          new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+          new Tag(protocolTags.VAULT_ID, this.vaultId),
+          new Tag(protocolTags.NODE_TYPE, objectTypes.MEMBERSHIP),
+          new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
+        ]
       }], true);
     const metadata = {
       dataRefs: [

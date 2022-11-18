@@ -1,4 +1,5 @@
 import { Encryptable, encrypted } from "@akord/crypto";
+import { functions } from "../constants";
 import { Membership } from "./membership";
 import { Folder, Memo, Note, Stack, NodeLike } from "./node";
 
@@ -33,12 +34,20 @@ export class Tag {
    * @param value
    * @returns 
    */
-  constructor(name: string, value: string) {
+  constructor(name: string, value: any) {
     return {
       name: name,
-      value: value
+      value: value.toString()
     }
   }
 }
 
 export type Tags = Tag[];
+
+export interface ContractInput {
+  function: functions,
+  data?: any,
+  parentId?: string,
+  address?: string,
+  role?: string // type
+}

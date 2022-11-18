@@ -1,10 +1,10 @@
 import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, Keys, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership } from "../types/membership";
 import { defaultListOptions } from "../types/list-options";
-import { Tag } from "../types/contract";
+import { Tag, Tags } from "../types/contract";
 
 class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
@@ -131,7 +131,7 @@ class MembershipService extends Service {
       function: this.function,
       address,
       data,
-      role: this.object.state.role
+      role: this.object.role
     }
 
     const txId = await this.api.postContractTransaction(
@@ -177,11 +177,11 @@ class MembershipService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.api.getObjectsByVaultId<any>(this.vaultId, this.objectType);
+      const memberships = await this.api.getObjectsByVaultId<Membership>(this.vaultId, this.objectType);
 
       this.tags = await this.getTags();
 
-      let newMembershipStates = [];
+      let newMembershipStates = [] as { data: any, tags: Tags }[];
       let newMembershipRefs = [];
       for (let member of memberships) {
         if (member.id !== this.objectId
@@ -196,14 +196,14 @@ class MembershipService extends Service {
           const newState = await this.mergeState({ keys });
           const signature = await this.signData(newState);
           newMembershipStates.push({
-            body: newState, tags: {
-              "Data-Type": "State",
-              [protocolTags.SIGNATURE]: signature,
-              [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-              [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-              [protocolTags.NODE_TYPE]: this.objectType,
-              [protocolTags.MEMBERSHIP_ID]: member.id,
-            }
+            data: newState, tags: [
+              new Tag("Data-Type", "State"),
+              new Tag(protocolTags.SIGNATURE, signature),
+              new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+              new Tag(protocolTags.VAULT_ID, this.vaultId),
+              new Tag(protocolTags.NODE_TYPE, this.objectType),
+              new Tag(protocolTags.MEMBERSHIP_ID, member.id)
+            ]
           });
           newMembershipRefs.push(member.id);
         }

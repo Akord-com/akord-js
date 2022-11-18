@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
-import { Contract, Tags } from "../../types/contract";
+import { Contract, ContractInput, Tags } from "../../types/contract";
 
 export class PermapostExecutor {
     private _jwt: string;
@@ -22,7 +22,7 @@ export class PermapostExecutor {
     private _total: number
     private _cancelHook: AbortController
     private _tags: Tags;
-    private _input: string;
+    private _input: ContractInput;
     private _contractId: string;
     private _metadata: string;
     private _shouldBundleTransaction: boolean;
@@ -101,7 +101,7 @@ export class PermapostExecutor {
         return this;
     }
 
-    input(input: string): PermapostExecutor {
+    input(input: ContractInput): PermapostExecutor {
         this._input = input;
         return this;
     }

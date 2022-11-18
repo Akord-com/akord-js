@@ -110,7 +110,7 @@ class StackService extends NodeService<Stack> {
   }
 
   private async postFile(file: FileLike, progressHook?: (progress: number) => void, cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
+    : Promise<{ resourceTx: string, resourceHash: string, resourceUrl?: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
 
     const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
     try {
