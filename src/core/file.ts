@@ -2,7 +2,7 @@ import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
-import { PermapostExecutor } from "../api/akord/permapost";
+// import { PermapostExecutor } from "../api/akord/permapost";
 import { v4 as uuid } from "uuid";
 import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
@@ -195,14 +195,14 @@ class FileService extends Service {
     const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
     encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
 
-    await new PermapostExecutor()
-      .env((<any>this.api.config))
-      .auth(this.api.jwtToken)
-      .resourceId(resourceUrl)
-      .tags(tags.concat(encryptionTags))
-      .public(this.isPublic)
-      .numberOfChunks(uploadedChunks)
-      .asyncTransaction();
+    // await new PermapostExecutor()
+    //   .env((<any>this.api.config))
+    //   .auth(this.api.jwtToken)
+    //   .resourceId(resourceUrl)
+    //   .tags(tags.concat(encryptionTags))
+    //   .public(this.isPublic)
+    //   .numberOfChunks(uploadedChunks)
+    //   .asyncTransaction();
 
     return {
       resourceUrl: resourceUrl,
@@ -221,17 +221,18 @@ class FileService extends Service {
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController
   ) {
-    const resource = await new PermapostExecutor()
-      .env((<any>this.api.config))
-      .auth(this.api.jwtToken)
-      .resourceId(`${resourceUrl}_${chunkNumber}`)
-      .data(chunk.processedData)
-      .tags(tags.concat(chunk.encryptionTags))
-      .public(this.isPublic)
-      .bundle(false)
-      .progressHook(progressHook, chunkNumber * this.chunkSize, resourceSize)
-      .cancelHook(cancelHook)
-      .uploadFile()
+    // const resource = await new PermapostExecutor()
+    //   .env((<any>this.api.config))
+    //   .auth(this.api.jwtToken)
+    //   .resourceId(`${resourceUrl}_${chunkNumber}`)
+    //   .data(chunk.processedData)
+    //   .tags(tags.concat(chunk.encryptionTags))
+    //   .public(this.isPublic)
+    //   .bundle(false)
+    //   .progressHook(progressHook, chunkNumber * this.chunkSize, resourceSize)
+    //   .cancelHook(cancelHook)
+    //   .uploadFile()
+    const resource = {} as any;
     Logger.log("Uploaded file with id: " + resource.resourceUrl);
   }
 

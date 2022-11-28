@@ -1,14 +1,9 @@
-import { AWSConfig } from './akord/aws-config';
-import { ArweaveConfig } from './arweave/arweave-config';
 import { ContractInput, ContractState, Tags } from '../types/contract';
 import { Keys, Wallet } from '@akord/crypto';
 import { Vault } from '../types/vault';
 import { Membership } from '../types/membership';
 
 abstract class Api {
-  config: AWSConfig | ArweaveConfig
-  jwtToken: string
-
   constructor() { }
 
   abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string>
@@ -42,10 +37,6 @@ abstract class Api {
   abstract preInviteCheck(emails: any[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>>
 
   abstract getTransactions(vaultId: string): Promise<Array<any>>
-
-  public getConfig() {
-    return this.config;
-  }
 
   // legacy calls
   postLedgerTransaction(transactions: any[]): Promise<any> {

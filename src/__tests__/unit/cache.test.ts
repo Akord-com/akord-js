@@ -1,8 +1,8 @@
 import { AkordWallet, generateKeyPair } from "@akord/crypto";
 import { Akord } from "../../akord";
-import { AkordApi } from "../../api";
+import { DefaultApi } from "../../api";
 import { CacheBusters } from "../../types/cacheable";
-import { Service } from "../../service";
+import { Service } from "../../core";
 
 let akord: Akord;
 
@@ -80,7 +80,7 @@ it("should bust the profile cache on profile update", async () => {
         }
     });
 
-    AkordApi.prototype.getProfile = jest.fn().mockImplementation(() => {
+    DefaultApi.prototype.getProfile = jest.fn().mockImplementation(() => {
         return {
             state: {
                 profileDetails: {
@@ -90,17 +90,17 @@ it("should bust the profile cache on profile update", async () => {
         };
     });
 
-    AkordApi.prototype.uploadData = jest.fn().mockImplementation(() => {
+    DefaultApi.prototype.uploadData = jest.fn().mockImplementation(() => {
         return [{
             resourceId: "any"
         }];
     });
 
-    AkordApi.prototype.postLedgerTransaction = jest.fn().mockImplementation(() => {
+    DefaultApi.prototype.postLedgerTransaction = jest.fn().mockImplementation(() => {
         return {};
     });
 
-    AkordApi.prototype.getMemberships = jest.fn().mockImplementation(() => {
+    DefaultApi.prototype.getMemberships = jest.fn().mockImplementation(() => {
         return [];
     });
 

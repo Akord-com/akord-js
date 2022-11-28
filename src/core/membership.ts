@@ -15,7 +15,7 @@ class MembershipService extends Service {
    */
   public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
     const membershipProto = await this.api.getObject<any>(membershipId, this.objectType, vaultId);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId, this.wallet);
     const membership = new Membership(membershipProto, keys);
     if (isEncrypted && shouldDecrypt) {
       await membership.decrypt();

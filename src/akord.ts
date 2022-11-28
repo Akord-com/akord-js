@@ -44,7 +44,7 @@ export class Akord {
     Logger.debug = config.debug;
     CacheBusters.cache = config.cache;
     Crypto.configure({ wallet: wallet });
-    this.api = new ApiFactory(config, wallet, jwtToken).apiInstance();
+    this.api = new ApiFactory(config, wallet).apiInstance();
     this.vault = new VaultService(wallet, this.api);
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);
