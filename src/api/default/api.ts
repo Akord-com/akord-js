@@ -3,8 +3,10 @@ import { ContractState, Tags } from "../../types/contract";
 import { Membership } from "../../types/membership";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import GUN from 'gun';
-import { digest } from '@akord/crypto';
+import { digest, Wallet } from '@akord/crypto';
 import { cloneDeep } from 'lodash';
+import { ClientConfig } from '../../client-config';
+import { ApiConfig, apiConfig } from './config';
 
 // Set up SmartWeave client
 LoggerFactory.INST.logLevel("error");
@@ -20,17 +22,18 @@ const getContract = (contractId, wallet): Contract<ContractState> => {
 };
 export default class DefaultApi extends Api {
   public gun = GUN();
+  public config: ApiConfig;
 
-
-  constructor() {
+  constructor(config: ClientConfig) {
     super();
+    this.config = apiConfig(config);
   }
 
-  async getMemberships(wallet): Promise<any> {
-    const address = await wallet.address();
+  async getMemberships(wallet: Wallet): Promise<any> {
+    const address = await wallet.getAddress();
     const that = this;
     return new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get("members").get(address).on((data, key) => {
+      that.gunGraph().get("membersByAddress").get(address).once((data, key) => {
         resolve(data);
       });
     });
@@ -40,7 +43,7 @@ export default class DefaultApi extends Api {
     const that = this;
     const collection = this.getCollectionName(objectType);
     const data = await new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get(collection).get(objectId).on((data, key) => {
+      that.gunGraph().get(collection).get(objectId).once((data, key) => {
         resolve(data);
       });
     });
@@ -51,7 +54,7 @@ export default class DefaultApi extends Api {
     const address = await wallet.getAddress();
     const that = this;
     const keys = await new Promise(function (resolve, reject) {
-      that.gun.get("akord-js-test").get('members').get(address).get(vaultId).on((membership, key) => {
+      that.gunGraph().get("membersByAddressAndVaultId").get(address).get(vaultId).once((membership, key) => {
         const keys = JSON.parse(membership.keys);
         resolve(JSON.parse(keys));
       });
@@ -62,23 +65,42 @@ export default class DefaultApi extends Api {
   async getVaults(wallet: any): Promise<any> {
     const address = await wallet.getAddress();
     const that = this;
-    return new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get('members').get(address).on((vaults, key) => {
-        resolve({ keys: "", isEncrypted: true });
+    const vaults = await new Promise(function (resolve, reject) {
+      that.gunGraph().get("membersByAddress").get(address).once(async (ids, key) => {
+        const vaults = [];
+        if (ids) {
+          for (let id of Object.keys(ids)) {
+            if (id !== "_") {
+              const membership = await that.getObject(id, "Membership");
+              const vault = await that.getObject(membership.vaultId, "Vault");
+              vaults.push(vault);
+            }
+          };
+        }
+        resolve(vaults);
       });
     });
+    return vaults;
   };
 
   async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     const that = this;
-    const collection = objectType.toLowerCase() === "membership"
-      ? "members"
-      : objectType.toLowerCase() + "s";
-    return new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get(collection).get(vaultId).on((data, key) => {
-        resolve(data);
+    const collection = this.getCollectionName(objectType);
+    const objects = await new Promise(function (resolve, reject) {
+      that.gunGraph().get(collection + "ByVaultId").get(vaultId).once(async (ids, key) => {
+        const objects = [];
+        if (ids) {
+          for (let id of Object.keys(ids)) {
+            if (id !== "_") {
+              const object = await that.getObject(id, objectType);
+              objects.push(object);
+            }
+          };
+        }
+        resolve(objects);
       });
     });
+    return objects;
   };
 
   async getProfile(wallet: any) {
@@ -122,7 +144,7 @@ export default class DefaultApi extends Api {
         if (item.data.keys) {
           item.data.keys = JSON.stringify(item.data.keys);
         }
-        another.gun.get("akord-js-test").get("states").get(id).put(item.data);
+        another.gunGraph().get("states").get(id).put(item.data);
         resolve("");
       });
       resources[index] = { id: id, resourceTx: id, resourceUrl: id };
@@ -138,7 +160,7 @@ export default class DefaultApi extends Api {
   async downloadState(id: string): Promise<any> {
     const that = this;
     const state = await new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get('states').get(id).on((data, key) => {
+      that.gunGraph().get("states").get(id).once((data, key) => {
         resolve(data);
       });
     });
@@ -168,7 +190,7 @@ export default class DefaultApi extends Api {
       delete vaultObject.data;
       delete vaultObject.nodes;
       delete vaultObject.memberships;
-      that.gun.get('akord-js-test').get("vaults").get(vault.id).put(vaultObject);
+      that.gunGraph().get("vaults").get(vault.id).put(vaultObject);
       resolve("");
     });
     await this.downloadMemberships(vault);
@@ -188,9 +210,10 @@ export default class DefaultApi extends Api {
           object.keys = JSON.stringify(membership.keys);
         }
         delete object.data;
-        that.gun.get("akord-js-test").get("members").get(object.vaultId).get(object.id).put(object);
-        that.gun.get("akord-js-test").get("members").get(object.id).put(object);
-        that.gun.get("akord-js-test").get("members").get(object.address).get(object.vaultId).put(object);
+        that.gunGraph().get("membersByVaultId").get(object.vaultId).get(object.id).put(object);
+        that.gunGraph().get("membersByAddress").get(object.address).get(object.id).put(object);
+        that.gunGraph().get("members").get(object.id).put(object);
+        that.gunGraph().get("membersByAddressAndVaultId").get(object.address).get(object.vaultId).put(object);
         resolve("");
       });
     }
@@ -200,7 +223,7 @@ export default class DefaultApi extends Api {
     const that = this;
     const emailHash = await digest(email);
     return new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get('wallets').get(emailHash).on((data, key) => {
+      that.gunGraph().get("wallets").get(emailHash).once((data, key) => {
         resolve(data);
       });
     });
@@ -231,8 +254,8 @@ export default class DefaultApi extends Api {
         if (!node.parentId) {
           node.parentId = null;
         }
-        that.gun.get("akord-js-test").get(collection).get(node.vaultId).get(node.id).put(node);
-        that.gun.get('akord-js-test').get(collection).get(node.id).put(node);
+        that.gunGraph().get(collection + "ByVaultId").get(node.vaultId).get(node.id).put(node);
+        that.gunGraph().get(collection).get(node.id).put(node);
         resolve("");
       });
     }
@@ -241,7 +264,7 @@ export default class DefaultApi extends Api {
   public async getNodeState(stateId: string): Promise<any> {
     const that = this;
     const state = await new Promise(function (resolve, reject) {
-      that.gun.get('akord-js-test').get('states').get(stateId).on((data, key) => {
+      that.gunGraph().get("states").get(stateId).once((data, key) => {
         resolve(data);
       });
     });
@@ -249,7 +272,7 @@ export default class DefaultApi extends Api {
   }
 
   private async fetch(functionName: string, body: any) {
-    const url = "https://europe-west1-akord-js-test.cloudfunctions.net/" + functionName;
+    const url = this.config.endpoint + functionName;
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -269,6 +292,10 @@ export default class DefaultApi extends Api {
     }
   }
 
+  private gunGraph() {
+    return this.gun.get("akord-js").get(this.config.env);
+  }
+
   private getCollectionName(objectType: string) {
     return objectType.toLowerCase() === "membership"
       ? "members"
@@ -276,7 +303,7 @@ export default class DefaultApi extends Api {
   }
 
   public async getTransactions(vaultId: string): Promise<Array<any>> {
-    throw new Error("Method not implemented")
+    throw new Error("Method not implemented");
   }
 }
 

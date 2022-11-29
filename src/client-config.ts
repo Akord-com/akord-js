@@ -7,6 +7,7 @@ export interface ClientConfig {
   api?: ApiType,
   debug?: boolean,
   cache?: boolean,
+  endpoint?: string,
 }
 
 export enum EnvType {

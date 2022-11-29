@@ -16,7 +16,7 @@ class Auth {
   public signIn = async function (email: string, password: string): Promise<{ akord: Akord, wallet: AkordWallet }> {
     const emailHash = await digest(email);
     const walletData = await new Promise(function (resolve, reject) {
-      gun.get('akord-js-test').get('wallets').get(emailHash).on((data, key) => {
+      gun.get("akord-js").get("test").get("wallets").get(emailHash).on((data, key) => {
         resolve(data);
       });
     });
@@ -34,7 +34,7 @@ class Auth {
     const wallet = await AkordWallet.create(password);
     const emailHash = await digest(email);
     await new Promise(async function (resolve, reject) {
-      gun.get('akord-js-test').get('wallets').get(emailHash).put({
+      gun.get("akord-js").get("test").get("wallets").get(emailHash).put({
         address: await wallet.getAddress(),
         encBackupPhrase: wallet.encBackupPhrase,
         publicKey: await wallet.publicKey(),

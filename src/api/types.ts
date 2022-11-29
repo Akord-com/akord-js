@@ -11,7 +11,7 @@ export class ApiFactory {
   constructor(config: ClientConfig, wallet: Wallet) {
     switch (config.api) {
       default:
-        this.api = new DefaultApi();
+        this.api = new DefaultApi(config);
         break
       case ApiType.ARWEAVE:
         this.api = new ArweaveApi(config, (<ArweaveWallet>wallet).wallet);
