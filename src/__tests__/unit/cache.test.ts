@@ -84,7 +84,7 @@ it("should bust the profile cache on profile update", async () => {
         return {
             state: {
                 profileDetails: {
-                    fullName: "any"
+                    name: "any"
                 }
             }
         };

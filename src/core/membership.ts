@@ -300,7 +300,7 @@ class MembershipService extends Service {
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
     await this.setVaultContextFromObjectId(membershipId, objectTypes.MEMBERSHIP);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
-    const memberDetails = await this.processMemberDetails({ fullName: name, avatar }, true);
+    const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
   }

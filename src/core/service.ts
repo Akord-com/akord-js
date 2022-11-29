@@ -207,8 +207,9 @@ class Service {
       let profileDetails = profile.state.profileDetails;
       delete profileDetails.__typename;
       let avatar = null;
-      if (profileDetails.avatarUrl) {
-        const { fileData, headers } = await this.api.downloadFile(profileDetails.avatarUrl);
+      if (profileDetails.avatarUrl || profileDetails.avatarUri) {
+        const resourceTx = profileDetails.avatarUrl || profileDetails.avatarUri.find(resourceUri => resourceUri.includes("s3")).split(':')[1];
+        const { fileData, headers } = await this.api.downloadFile(resourceTx);
         const encryptedData = this.getEncryptedData(fileData, headers);
         if (encryptedData) {
           avatar = await profileEncrypter.decryptRaw(encryptedData, false);
@@ -217,13 +218,15 @@ class Service {
           avatar = await profileEncrypter.decryptRaw(dataString, true);
         }
       }
-      return {
-        ...await profileEncrypter.decryptObject(
-          profileDetails,
-          ['fullName', 'phone'],
-        ),
-        avatar
+      const decryptedProfile = await profileEncrypter.decryptObject(
+        profileDetails,
+        ['fullName', 'name', 'phone'],
+      );
+      if (decryptedProfile.fullName) {
+        decryptedProfile.name = decryptedProfile.fullName;
+        delete decryptedProfile.fullName;
       }
+      return { ...decryptedProfile, avatar }
     }
     return {};
   }
@@ -267,13 +270,12 @@ class Service {
 
   protected async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
     let processedMemberDetails = {} as any;
-    if (memberDetails.fullName) {
-      processedMemberDetails.fullName = await this.processWriteString(memberDetails.fullName);
+    if (memberDetails.name) {
+      processedMemberDetails.name = await this.processWriteString(memberDetails.name);
     }
     if (memberDetails.avatar) {
       const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, shouldBundleTransaction);
-      processedMemberDetails.avatarUrl = resourceUrl;
-      processedMemberDetails.avatarTx = resourceTx;
+      processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
     }
     return processedMemberDetails;
   }

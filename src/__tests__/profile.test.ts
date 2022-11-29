@@ -34,7 +34,7 @@ describe("Testing profile functions", () => {
     await akord.profile.update(name, file.data);
 
     const profileDetails = await akord.profile.get();
-    expect(profileDetails.fullName).toEqual(name);
+    expect(profileDetails.name).toEqual(name);
     expect(profileDetails.avatar).not.toBeNull();
     expect(Buffer.from(profileDetails.avatar || new ArrayBuffer(1))).toEqual(file.data);
   });

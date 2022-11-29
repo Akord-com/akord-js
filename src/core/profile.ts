@@ -41,13 +41,13 @@ class ProfileService extends Service {
 
       this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
       this.setIsPublic(false);
-      const profileDetails = await this.processMemberDetails({ fullName: name, avatar }, false);
+      const profileDetails = await this.processMemberDetails({ name, avatar }, false);
 
       // merge & upload current profile state to Arweave
       const currentProfileDetails = profile.state.profileDetails;
       const mergedProfileDetails = {
-        fullName: profileDetails.fullName || currentProfileDetails.fullName,
-        avatarTx: profileDetails.avatarTx || currentProfileDetails.avatarTx,
+        name: profileDetails.name || currentProfileDetails.name || currentProfileDetails.fullName,
+        avatarUri: profileDetails.avatarUri || currentProfileDetails.avatarUri,
       }
 
       const ids = await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
