@@ -306,7 +306,7 @@ export class PermapostExecutor {
             this._resourceId = uuid();
         }
 
-        const tags = this._tags.filter((tag) =>
+        const tags = this._tags?.filter((tag) =>
             tag.name !== "Public-Key"
         )
 
