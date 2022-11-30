@@ -208,7 +208,12 @@ export default class AkordApi extends Api {
   public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
     const filter = objectType === "Membership"
-      ? { status: { eq: "ACCEPTED" } }
+      ? {
+        or: [
+          { status: { eq: "ACCEPTED" } },
+          { status: { eq: "PENDING" } }
+        ]
+      }
       : objectType === "Memo"
         ? {}
         :
