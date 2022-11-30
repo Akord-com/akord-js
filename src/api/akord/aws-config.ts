@@ -5,7 +5,7 @@ export const awsConfig = (env: string) => {
     case "prod":
       return {
         apiurl: "",
-        storageurl: "",
+        storageurl: "https://api.v2.prod.permapost-storage.akord.com",
         aws_project_region: "eu-central-1",
         aws_cognito_identity_pool_id: "eu-central-1:2cb4571c-1a70-4b78-b0db-6a0130af18c3",
         aws_cognito_region: "eu-central-1",
