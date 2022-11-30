@@ -215,7 +215,12 @@ export default class AkordApi extends Api {
       return {};
     } else {
       const filter = objectType === "Membership"
-        ? { status: { eq: "ACCEPTED" } }
+        ? {
+          or: [
+            { status: { eq: "ACCEPTED" } },
+            { status: { eq: "PENDING" } }
+          ]
+        }
         : objectType === "Memo"
           ? {}
           :
