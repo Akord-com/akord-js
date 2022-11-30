@@ -2,15 +2,27 @@
 # yarn lockfile v1
 
 
-"@akord/crypto@0.5.2":
-  version "0.5.2"
-  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.5.2.tgz#e23db5923abd31ed06771a61858262a403232063"
-  integrity sha512-kkDBl4UxgrfBTjUkHUaEIwan9sZpQ/LGGOhfC4ebnB13ZsYpft1cSIHlffzqz+7QCLi8DTJ3AblBOkKqWQdiAw==
+"@akord/browser-level@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@akord/browser-level/-/browser-level-1.0.2.tgz#5d5b580cc1de81b0195c68d2197bf1cae47159ab"
+  integrity sha512-Tw6FbtpzdTTMLTJWpxCAK6UMBNpqvadIHZh5agHYkDgufyRKJgPzD8+GbvYqfysaEFqfqkEgOaY1MrqeNV9YTg==
   dependencies:
+    abstract-level "^1.0.2"
+    catering "^2.1.1"
+    module-error "^1.0.2"
+    run-parallel-limit "^1.1.0"
+
+"@akord/crypto@0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.6.0.tgz#b0c7e14dee0b67e4ea0634082b34b64052e04495"
+  integrity sha512-lRf+/QbrWSLeTvbgHMGyH9M4cX0ZMowV71vc+LbcUivsClYKKnxzIYpLv8QWOAywmevxPRb5HDw0/kEd5JdMsQ==
+  dependencies:
+    "@akord/browser-level" "^1.0.2"
     arweave "^1.10.18"
     bip39 "^3.0.4"
     ethereum-cryptography "^1.1.2"
     libsodium-wrappers "^0.7.9"
+    memory-level "^1.0.0"
     reflect-metadata "^0.1.13"
     tweetnacl "^1.0.3"
 
