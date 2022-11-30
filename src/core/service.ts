@@ -402,7 +402,7 @@ class Service {
 
   protected async prepareHeader() {
     const header = {
-      prevHash: this.object.hash,
+      prevHash: this.object?.hash,
       publicSigningKey: await this.wallet.signingPublicKey(),
       postedAt: new Date(),
       groupRef: this.groupRef,

@@ -129,11 +129,12 @@ export const getMembership = /* GraphQL */ `
       publicSigningKey
       postedAt
       contextVersion
-      dataRoomId
+      vaultId: dataRoomId
       memberPublicSigningKey
       email
       role
       status
+      data
       memberDetails {
         publicSigningKey
         email
@@ -272,6 +273,9 @@ export const getVault = /* GraphQL */ `
       data
       createdAt
       updatedAt
+      storage {
+        storage_used
+      }
     }
   }
 `
@@ -363,9 +367,13 @@ export const listVaults =
             status
             public
             size
+            data
             publicKeys
             createdAt
             updatedAt
+            storage {
+              storage_used
+            }
           }
           createdAt
           updatedAt
@@ -616,8 +624,12 @@ export const notesByDataRoomId =
         createdAt
         updatedAt
         versions {
-          content
+          owner
+          type
+          resourceUri
           size
+          numberOfChunks
+          chunkSize
           createdAt
           name
         }
@@ -648,6 +660,9 @@ export const membershipsByDataRoomId =
       ) {
         items {
           id
+          role
+          owner
+          data
           hash
           prevHash
           refHash
@@ -658,6 +673,14 @@ export const membershipsByDataRoomId =
           memberPublicSigningKey
           email
           status
+          memberDetails {
+            publicSigningKey
+            email
+            name
+            avatarUrl
+            avatarUri
+            avatar
+          }
           state {
             status
             role

@@ -15,10 +15,16 @@ class MembershipService extends Service {
    */
   public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
     const membershipProto = await this.api.getObject<any>(membershipId, this.objectType, vaultId);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
-    const membership = new Membership(membershipProto, keys);
-    if (isEncrypted && shouldDecrypt) {
-      await membership.decrypt();
+    let membership: Membership;
+    if (shouldDecrypt) {
+      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId, this.wallet);
+      membership = new Membership(membershipProto, keys);
+      if (isEncrypted) {
+        await membership.decrypt();
+      }
+    }
+    else {
+      membership = new Membership(membershipProto);
     }
     return membership
   }
@@ -125,7 +131,7 @@ class MembershipService extends Service {
     this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const { data } = await this.uploadState(body);
+    const { data, metadata } = await this.uploadState(body);
 
     let input = {
       function: this.function,
@@ -137,7 +143,8 @@ class MembershipService extends Service {
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags
+      this.tags,
+      metadata
     );
     return { transactionId: txId };
   }
