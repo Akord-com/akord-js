@@ -148,7 +148,7 @@ export class PermapostExecutor {
     async getContract(): Promise<Contract> {
         const config = {
             method: 'get',
-            url: `${this._apiurl}/${this._contractUri}/${this._contractId}`,
+            url: `${this._storageurl}/${this._contractUri}/${this._contractId}`,
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'
