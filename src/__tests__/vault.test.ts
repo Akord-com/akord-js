@@ -25,6 +25,10 @@ async function vaultCreate() {
 describe("Testing vault functions", () => {
   let vaultId: any
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;

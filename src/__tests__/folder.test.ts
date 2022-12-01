@@ -27,6 +27,10 @@ describe("Testing folder functions", () => {
   let rootFolderId: string;
   let subFolderId: string;
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;

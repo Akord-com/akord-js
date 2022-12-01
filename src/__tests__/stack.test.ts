@@ -27,6 +27,10 @@ describe("Testing stack functions", () => {
   let vaultId: string;
   let stackId: string;
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;

@@ -27,6 +27,10 @@ describe("Testing memo functions", () => {
   let vaultId: string;
   let memoId: string;
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;
