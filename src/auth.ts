@@ -16,7 +16,7 @@ class Auth {
   public signIn = async function (email: string, password: string): Promise<{ akord: Akord, wallet: AkordWallet }> {
     const emailHash = await digest(email);
     const walletData = await new Promise(function (resolve, reject) {
-      gun.get("akord-js").get("test").get("wallets").get(emailHash).on((data, key) => {
+      gun.get("akord-js").get("test").get("wallets").get(emailHash).once((data, key) => {
         resolve(data);
       });
     });
