@@ -26,6 +26,10 @@ describe("Testing note functions", () => {
   let vaultId: string;
   let noteId: string;
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;

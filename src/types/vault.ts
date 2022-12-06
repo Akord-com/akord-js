@@ -16,7 +16,7 @@ export class Vault extends Encryptable {
     this.public = vaultProto.public;
     this.createdAt = vaultProto.createdAt;
     this.updatedAt = vaultProto.updatedAt;
-    this.size = vaultProto.size;
+    this.size = vaultProto.storage?.storage_used;
     this.name = vaultProto.name;
     this.status = vaultProto.status;
     this.data = vaultProto.data;

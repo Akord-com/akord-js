@@ -172,7 +172,9 @@ class VaultService extends Service {
     const results = await this.api.getVaults(this.wallet);
     const vaults = [];
     for (let result of results) {
-      const vault = new Vault(result.dataRoom, result.keys);
+      // TODO: get membership keys only for encrypted vaults
+      const { keys } = await this.api.getMembershipKeys(result.id, this.wallet);
+      const vault = new Vault(result, keys);
       if (shouldDecrypt && !vault.public) {
         await vault.decrypt()
       }

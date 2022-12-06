@@ -44,6 +44,10 @@ describe("Testing batch actions", () => {
   let membershipId1: string;
   let membershipId2: string;
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;

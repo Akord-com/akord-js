@@ -27,6 +27,11 @@ describe("Testing membership functions", () => {
   let vaultId: string;
   let membershipId: string;
 
+  beforeEach(async () => {
+    akord1 = await initInstance(email, password);
+    akord2 = await initInstance(email2, password2);
+  });
+
   beforeAll(async () => {
     akord1 = await initInstance(email, password);
     akord2 = await initInstance(email2, password2);
