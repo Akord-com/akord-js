@@ -21,7 +21,7 @@ const getContract = (contractId, wallet): Contract<ContractState> => {
   return contract;
 };
 export default class DefaultApi extends Api {
-  public gun = GUN(['http://localhost:8765/gun', 'https://gun-manhattan.herokuapp.com/gun']);
+  public gun = GUN(['https://gun-us.herokuapp.com/gun', 'https://gun-manhattan.herokuapp.com/gun']);
   public config: ApiConfig;
 
   constructor(config: ClientConfig) {

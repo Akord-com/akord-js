@@ -2,8 +2,7 @@ import { Akord } from "./akord";
 import { AkordWallet, digest } from "@akord/crypto";
 import GUN from "gun";
 
-const gun = GUN(['http://localhost:8765/gun', 'https://gun-manhattan.herokuapp.com/gun']);
-
+const gun = GUN(['https://gun-us.herokuapp.com/gun', 'https://gun-manhattan.herokuapp.com/gun']);
 class Auth {
 
   constructor() {}
