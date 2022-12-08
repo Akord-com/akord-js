@@ -31,9 +31,9 @@ export class Membership extends Encryptable {
       membershipProto.memberDetails?.name, 
       membershipProto.memberDetails?.publicSigningKey, 
       membershipProto.memberDetails?.email,
-      membershipProto.memberDetails?.avatarUrl, 
+      membershipProto.memberDetails?.avatarUri, 
       keys, null);
-    this.vaultId = membershipProto.vaultId;
+    this.vaultId = membershipProto.dataRoomId;
     this.keys = keys;
   }
 }

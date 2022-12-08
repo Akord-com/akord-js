@@ -33,6 +33,8 @@ abstract class Api {
 
   abstract getNodeState(stateId: string): Promise<any>
 
+  abstract getNode(id: string): Promise<any>
+
   abstract getVaults(wallet: Wallet): Promise<Array<Vault>>
 
   abstract getMemberships(wallet: Wallet): Promise<Array<Membership>>

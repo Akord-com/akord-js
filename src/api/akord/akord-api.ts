@@ -129,7 +129,7 @@ export default class AkordApi extends Api {
     const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('profilesByPublicSigningKey',
       queries.profilesByPublicSigningKey,
-      { publicSigningKey: publicSigningKey }, {})
+      { publicSigningKey: publicSigningKey }, null)
     if (!result || result.length === 0) {
       return {};
       // throw new Error("Cannot find profile with the given public signing key.")
@@ -174,6 +174,16 @@ export default class AkordApi extends Api {
     return response.data
   };
 
+  public async getNode(id: string): Promise<any> {
+    const response = await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .getNode()
+
+    return response.data
+  };
+
   public async getContractState(objectId: string): Promise<ContractState> {
     const contract = await new PermapostExecutor()
       .env(this.config)
@@ -191,7 +201,7 @@ export default class AkordApi extends Api {
     return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
+  public async getVaults(wallet: Wallet): Promise<Array<any>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.listVaults,

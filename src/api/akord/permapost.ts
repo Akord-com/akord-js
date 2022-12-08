@@ -140,7 +140,7 @@ export class PermapostExecutor {
     async getContract(): Promise<Contract> {
         const config = {
             method: 'get',
-            url: `${this._apiurl}/${this._contractUri}/${this._contractId}`,
+            url: `${this._storageurl}/${this._contractUri}/${this._contractId}`,
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'
@@ -148,6 +148,19 @@ export class PermapostExecutor {
         } as AxiosRequestConfig
         const response = await axios(config);
         return response.data
+    }
+
+    async getNode(): Promise<any> {
+        const config = {
+            method: 'get',
+            url: `${this._apiurl}/nodes/${this._resourceId}`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response
     }
 
     /**
