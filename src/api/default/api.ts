@@ -144,8 +144,9 @@ export default class DefaultApi extends Api {
         if (item.data.keys) {
           item.data.keys = JSON.stringify(item.data.keys);
         }
-        another.gunGraph().get("states").get(id).put(item.data);
-        resolve("");
+        another.gunGraph().get("states").get(id).put(item.data, (res) => {
+          resolve("");
+        });
       });
       resources[index] = { id: id, resourceTx: id, resourceUrl: id };
     }));
@@ -190,8 +191,9 @@ export default class DefaultApi extends Api {
       delete vaultObject.data;
       delete vaultObject.nodes;
       delete vaultObject.memberships;
-      that.gunGraph().get("vaults").get(vault.id).put(vaultObject);
-      resolve("");
+      that.gunGraph().get("vaults").get(vault.id).put(vaultObject, (res) => {
+        resolve("");
+      });
     });
     await this.downloadMemberships(vault);
     await this.downloadNodes(vault);
@@ -204,17 +206,30 @@ export default class DefaultApi extends Api {
       const state = await this.downloadState(dataTx);
       membership = { ...membership, ...state, vaultId: vault.id };
       const that = this;
+      let object = membership as any;
+      if (object.keys) {
+        object.keys = JSON.stringify(membership.keys);
+      }
+      delete object.data;
       await new Promise(function (resolve, reject) {
-        let object = membership as any;
-        if (object.keys) {
-          object.keys = JSON.stringify(membership.keys);
-        }
-        delete object.data;
-        that.gunGraph().get("membersByVaultId").get(object.vaultId).get(object.id).put(object);
-        that.gunGraph().get("membersByAddress").get(object.address).get(object.id).put(object);
-        that.gunGraph().get("members").get(object.id).put(object);
-        that.gunGraph().get("membersByAddressAndVaultId").get(object.address).get(object.vaultId).put(object);
-        resolve("");
+        that.gunGraph().get("membersByVaultId").get(object.vaultId).get(object.id).put(object, (res) => {
+          resolve("");
+        });
+      });
+      await new Promise(function (resolve, reject) {
+        that.gunGraph().get("membersByAddress").get(object.address).get(object.id).put(object, (res) => {
+          resolve("");
+        });
+      });
+      await new Promise(function (resolve, reject) {
+        that.gunGraph().get("members").get(object.id).put(object, (res) => {
+          resolve("");
+        });
+      });
+      await new Promise(function (resolve, reject) {
+        that.gunGraph().get("membersByAddressAndVaultId").get(object.address).get(object.vaultId).put(object, (res) => {
+          resolve("");
+        });
       });
     }
   }
@@ -249,14 +264,19 @@ export default class DefaultApi extends Api {
       const collection = node.type.toLowerCase() + "s";
       vault[collection].push(node);
       const that = this;
+      delete node.data;
+      if (!node.parentId) {
+        node.parentId = null;
+      }
       await new Promise(function (resolve, reject) {
-        delete node.data;
-        if (!node.parentId) {
-          node.parentId = null;
-        }
-        that.gunGraph().get(collection + "ByVaultId").get(node.vaultId).get(node.id).put(node);
-        that.gunGraph().get(collection).get(node.id).put(node);
-        resolve("");
+        that.gunGraph().get(collection + "ByVaultId").get(node.vaultId).get(node.id).put(node, (res) => {
+          resolve("");
+        });
+      });
+      await new Promise(function (resolve, reject) {
+        that.gunGraph().get(collection).get(node.id).put(node, (res) => {
+          resolve("");
+        });
       });
     }
   }
