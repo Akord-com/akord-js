@@ -58,7 +58,7 @@ export default class ArweaveApi extends Api {
     return null;
   }
 
-  public async uploadFile(file: any, tags: Tags): Promise<{ resourceTx: string }> {
+  public async uploadFile(file: ArrayBufferLike, tags: Tags): Promise<{ resourceTx: string }> {
     const transaction = await prepareArweaveTransaction(
       file,
       tags,
