@@ -138,7 +138,8 @@ export class PermapostExecutor {
             data: { tags: this._tags, state: this._data},
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Referer': 'v2.akord.com'
             }
         } as AxiosRequestConfig
         const response = await axios(config);
