@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js",
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-alpha.2",
   "description": "Akord Client",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
@@ -28,7 +28,7 @@
   "author": "Akord Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0 <17.0.0"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@akord/crypto": "0.6.0",
