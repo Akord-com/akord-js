@@ -22,7 +22,7 @@ abstract class Api {
 
   abstract getMembershipKeys(vaultId: string, wallet: any): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }>
 
-  abstract getProfile(wallet: any): Promise<any>
+  abstract getProfile(wallet: Wallet): Promise<any>
 
   abstract getObject<T>(objectId: string, objectType: string, vaultId?: string): Promise<T>
 

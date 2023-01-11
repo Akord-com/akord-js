@@ -1,5 +1,6 @@
-import { Api, ApiFactory } from "./api";
-import { ClientConfig } from "./client-config";
+import { Api } from "./api/api";
+import { AkordApi } from "./api/akord-api";
+import { ClientConfig } from "./config";
 import { Crypto, Wallet } from "@akord/crypto";
 import { reactionEmoji } from "./constants";
 import { Logger } from "./logger";
@@ -44,7 +45,7 @@ export class Akord {
     Logger.debug = config.debug;
     CacheBusters.cache = config.cache;
     Crypto.configure({ wallet: wallet });
-    this.api = new ApiFactory(config, wallet).apiInstance();
+    this.api = new AkordApi(config);
     this.vault = new VaultService(wallet, this.api);
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);

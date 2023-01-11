@@ -1,5 +1,5 @@
 import { EncryptionKeys, Wallet } from "@akord/crypto";
-import { Api } from "../api";
+import { Api } from "../api/api";
 import { VaultService } from "./vault";
 import { StackService } from "./stack";
 import { MemoService } from "./memo";

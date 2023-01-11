@@ -1,5 +1,5 @@
 import { Akord } from "./akord";
-import { ClientConfig } from "./client-config";
+import { ClientConfig } from "./config";
 import { Wallet } from "@akord/crypto";
 
 /**

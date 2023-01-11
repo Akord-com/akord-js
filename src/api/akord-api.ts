@@ -1,16 +1,15 @@
-import { Api } from '../api'
-import { ContractInput, Tags } from "../../types/contract";
-import { Membership } from "../../types/membership";
-import { Vault } from "../../types/vault";
+import { Api } from './api'
+import { ContractInput, Tags } from "../types/contract";
+import { Membership } from "../types/membership";
+import { Vault } from "../types/vault";
 import { digest, Wallet, Keys } from '@akord/crypto';
-import { ClientConfig } from '../../client-config';
 import { ApiConfig, apiConfig } from './config';
 import { get, getObject, gunGraph } from './gun';
 
-export default class DefaultApi extends Api {
+export default class AkordApi extends Api {
   public config: ApiConfig;
 
-  constructor(config: ClientConfig) {
+  constructor(config: ApiConfig) {
     super();
     this.config = apiConfig(config);
   }
@@ -192,5 +191,5 @@ export default class DefaultApi extends Api {
 }
 
 export {
-  DefaultApi
+  AkordApi
 }
