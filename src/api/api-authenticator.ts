@@ -1,8 +1,8 @@
-import 'cross-fetch/polyfill';
-import * as AmazonCognitoIdentity from 'amazon-cognito-identity-js';
-import { EnvType } from "../../client-config";
+import "cross-fetch/polyfill";
+import * as AmazonCognitoIdentity from "amazon-cognito-identity-js";
+import { EnvType } from "../config";
 import { awsConfig, AWSConfig } from "./aws-config";
-import { Logger } from '../../logger';
+import { Logger } from "../logger";
 
 export default class ApiAuthenticator {
   public config!: AWSConfig;
