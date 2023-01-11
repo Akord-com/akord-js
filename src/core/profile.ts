@@ -1,12 +1,12 @@
-import { NodeService } from "./node";
 import { MembershipService } from "./membership";
 import { actionRefs } from "../constants";
 import { EncryptionType } from "@akord/crypto";
 import { ProfileDetails } from "../types/profile-details";
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
 import { CacheBusters } from "../types/cacheable";
+import { Service } from "./service";
 
-class ProfileService extends NodeService {
+class ProfileService extends Service {
   objectType: string = "Profile";
 
   /**
@@ -36,26 +36,25 @@ class ProfileService extends NodeService {
 
     const profilePromise = new Promise<void>(async (resolve, reject) => {
       this.setActionRef(actionRefs.PROFILE_UPDATE);
-      const signingPublicKey = await this.wallet.signingPublicKey();
-      const profile = await this.api.getProfileByPublicSigningKey(signingPublicKey);
-      this.setPrevHash(profile.hash);
+      const profile = await this.api.getProfile(this.wallet);
+      this.setObject(profile);
 
       this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
       this.setIsPublic(false);
-      const profileDetails = await this.processMemberDetails({ fullName: name, avatar }, false);
+      const profileDetails = await this.processMemberDetails({ name, avatar }, false);
 
       // merge & upload current profile state to Arweave
       const currentProfileDetails = profile.state.profileDetails;
       const mergedProfileDetails = {
-        fullName: profileDetails.fullName || currentProfileDetails.fullName,
-        avatarTx: profileDetails.avatarTx || currentProfileDetails.avatarTx,
+        name: profileDetails.name || currentProfileDetails.name || currentProfileDetails.fullName,
+        avatarUri: profileDetails.avatarUri || currentProfileDetails.avatarUri,
       }
 
-      const ids = await this.api.uploadData([{ body: { profileDetails: mergedProfileDetails }, tags: {} }], false);
+      const ids = await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
 
       const header = {
         schemaUri: 'akord:profile:write',
-        stateRef: ids[0].resourceId,
+        stateRef: ids[0].id,
         ...await this.prepareHeader()
       }
       const encodedTransaction = await this.encodeTransaction(header, { profileDetails, encryptionType: EncryptionType.KEYS_STRUCTURE });

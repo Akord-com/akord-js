@@ -1,20 +1,21 @@
-import { Api, ApiFactory } from "./api";
-import { ClientConfig } from "./client-config";
-import { Wallet } from "@akord/crypto";
+import { Api } from "./api/api";
+import { AkordApi } from "./api/akord-api";
+import { ClientConfig } from "./config";
+import { Crypto, Wallet } from "@akord/crypto";
 import { reactionEmoji } from "./constants";
 import { Logger } from "./logger";
-import { MemoService } from "./service/memo";
-import { FolderService } from "./service/folder";
-import { MembershipService } from "./service/membership";
-import { VaultService } from "./service/vault";
-import { StackService } from "./service/stack";
-import { NoteService } from "./service/note";
-import { ProfileService } from "./service/profile";
+import { MemoService } from "./core/memo";
+import { FolderService } from "./core/folder";
+import { MembershipService } from "./core/membership";
+import { VaultService } from "./core/vault";
+import { StackService } from "./core/stack";
+import { NoteService } from "./core/note";
+import { ProfileService } from "./core/profile";
 import { Auth } from "./auth";
 import { CacheBusters } from "./types/cacheable";
-import { FileService } from "./service/file";
-import { BatchService } from "./service/batch";
-import { ContractService } from "./service/contract";
+import { FileService } from "./core/file";
+import { BatchService } from "./core/batch";
+import { ContractService } from "./core/contract";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -42,8 +43,9 @@ export class Akord {
    */
   constructor(wallet?: Wallet, jwtToken?: string, config: ClientConfig = {}) {
     Logger.debug = config.debug;
-    CacheBusters.cache = config.cache
-    this.api = new ApiFactory(config, wallet, jwtToken).apiInstance();
+    CacheBusters.cache = config.cache;
+    Crypto.configure({ wallet: wallet });
+    this.api = new AkordApi(config, jwtToken);
     this.vault = new VaultService(wallet, this.api);
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);

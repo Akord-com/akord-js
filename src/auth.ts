@@ -1,6 +1,6 @@
 import { Akord } from "./akord";
 import { AkordWallet } from "@akord/crypto";
-import ApiAuthenticator from "./api/akord/api-authenticator";
+import ApiAuthenticator from "./api/api-authenticator";
 
 class Auth {
   apiAuthenticator: ApiAuthenticator;

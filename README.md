@@ -58,7 +58,7 @@ const { stackId } = await akord.stack.create(vaultId, file, "my first file stack
 
 #### Download latest file version of the stack
 ```js
-const { data: fileBuffer, name: fileName } = await akord.stack.getFile(stackId);
+const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackId);
 ```
 
 #### Query user vaults
@@ -580,7 +580,7 @@ const stackArray = await akord.stack.list(vaultId);
 ```
 </details>
 
-#### `getFile(stackId, index)`
+#### `getVersion(stackId, index)`
 
 Get file stack version by index, return the latest version by default
 
@@ -592,7 +592,11 @@ Get file stack version by index, return the latest version by default
   <summary>example</summary>
 
 ```js
-const { name: fileName, data: fileBuffer } = await akord.stack.getFile(stackId);
+// get the latest stack version
+const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackId);
+
+// get the first stack version
+const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackId, 0);
 ```
 </details>
 
@@ -896,17 +900,17 @@ Update user profile along with all active memberships
 
 #### `revoke(items)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, objectType: string }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `restore(items)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, objectType: string }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `delete(items)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, objectType: string }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `move(items, parentId)`

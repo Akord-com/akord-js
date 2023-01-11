@@ -132,30 +132,25 @@ export const getMembership = /* GraphQL */ `
       dataRoomId
       memberPublicSigningKey
       email
+      role
       status
-      state {
-        status
-        role
-        expiresOn
-        memberDetails {
-          publicSigningKey
-          email
-          fullName
-          phone
-          avatarUrl
-          avatarTx
-        }
-        termsOfAccess
-        agreementHash
-        message
-        encryptionType
-        keys {
-          publicKey
-          encPrivateKey
-        }
-        encAccessKey
+      data
+      memberDetails {
+        publicSigningKey
+        email
+        fullName
+        name
+        phone
+        avatarUrl
+        avatarUri
+        avatarTx
+       }
+      keys {
+        encPublicKey
+        encPrivateKey
       }
       dataRoom {
+        public
         state {
           publicKeys
         }
@@ -170,34 +165,26 @@ export const getStack = /* GraphQL */ `
   query GetStack($id: ID!) {
     getStack(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      folderId
-      status
-      state {
+        owner
         status
-        title
-        description
-        resourceVersion
-        size
-        files {
-          title
-          resourceUrl
-          thumbnailUrl
-          postedAt
-          fileType
+        name
+        parentId
+        dataRoomId
+        createdAt
+        updatedAt
+        data
+        versions {
+          owner
+          type
+          resourceUri
           size
           numberOfChunks
           chunkSize
-          hash
+          createdAt
+          name
         }
-      }
-      createdAt
-      updatedAt
+        createdAt
+        updatedAt
     }
   }
 `
@@ -206,18 +193,12 @@ export const getFolder = /* GraphQL */ `
   query GetFolder($id: ID!) {
     getFolder(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      folderId
+      owner
+      name
+      parentId
       status
-      state {
-        status
-        title
-      }
+      dataRoomId
+      data
       createdAt
       updatedAt
     }
@@ -228,25 +209,32 @@ export const getMemo = /* GraphQL */ `
   query GetMemo($id: ID!) {
     getMemo(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      state {
-        message
-        reactions {
-          publicSigningKey
-          name
-          reaction
-          status
-          postedAt
-          refHash
+        owner
+        status
+        createdAt
+        updatedAt
+        dataRoomId
+        data
+        versions {
+          owner
+          createdAt
+          message
+          reactions {
+            owner
+            createdAt
+            reaction
+          }
+          attachments {
+            owner
+            type
+            resourceUri
+            size
+            numberOfChunks
+            chunkSize
+            createdAt
+            name
+          }
         }
-      }
-      createdAt
-      updatedAt
     }
   }
 `
@@ -255,30 +243,23 @@ export const getNote = /* GraphQL */ `
   query GetNote($id: ID!) {
     getNote(id: $id) {
       id
-      hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      dataRoomId
-      folderId
-      status
-      state {
+        owner
         status
-        title
-        resourceVersion
-        size
+        name
         content
-        revisions {
-          title
-          postedAt
-          size
-          hash
+        parentId
+        dataRoomId
+        createdAt
+        updatedAt
+        data
+        versions {
           content
+          size
+          createdAt
+          name
         }
-      }
-      createdAt
-      updatedAt
+        createdAt
+        updatedAt
     }
   }
 `
@@ -288,24 +269,16 @@ export const getVault = /* GraphQL */ `
     getDataRoom(id: $id) {
       id
       hash
-      prevHash
-      refHash
-      publicSigningKey
-      postedAt
-      contextVersion
+      name
       status
-      state {
-        status
-        title
-        description
-        termsOfAccess
-        permanentStorage
-        isContract
-        isPublic
-        publicKeys
-      }
+      public
+      size
+      data
       createdAt
       updatedAt
+      storage {
+        storage_used
+      }
     }
   }
 `
@@ -338,36 +311,72 @@ export const membershipsByMemberPublicSigningKey =
           dataRoomId
           memberPublicSigningKey
           email
+          role
           status
-          state {
-            status
-            role
-            expiresOn
-            memberDetails {
-              publicSigningKey
-              email
-              fullName
-              phone
-              avatarUrl
-              avatarTx
-            }
-            termsOfAccess
-            agreementHash
-            message
-            encryptionType
-            keys {
-              publicKey
-              encPrivateKey
-            }
-            encAccessKey
+          memberDetails {
+            publicSigningKey
+            email
+            name
+            phone
+            avatarUrl
+            avatarUri
+            avatarTx
+           }
+          keys {
+            encPublicKey
+            encPrivateKey
           }
           dataRoom {
-            status
+            public
             state {
-              isContract
-              isPublic
-              permanentStorage
               publicKeys
+            }
+          }
+          createdAt
+          updatedAt
+        }
+        nextToken
+      }
+    }
+  `
+
+export const listVaults =
+  /* GraphQL */
+  `
+    query MembershipsByMemberPublicSigningKey(
+      $memberPublicSigningKey: String
+      $sortDirection: ModelSortDirection
+      $filter: ModelMembershipFilterInput
+      $limit: Int
+      $nextToken: String
+    ) {
+      membershipsByMemberPublicSigningKey(
+        memberPublicSigningKey: $memberPublicSigningKey
+        sortDirection: $sortDirection
+        filter: $filter
+        limit: $limit
+        nextToken: $nextToken
+      ) {
+        items {
+          id
+          status
+          role
+          keys {
+            encPublicKey
+            encPrivateKey
+          }
+          dataRoom {
+            id
+            name
+            status
+            public
+            size
+            data
+            publicKeys
+            createdAt
+            updatedAt
+            storage {
+              storage_used
             }
           }
           createdAt
@@ -405,7 +414,9 @@ export const profilesByPublicSigningKey = /* GraphQL */ `
             publicSigningKey
             email
             fullName
+            name
             phone
+            avatarUri
             avatarUrl
             avatarTx
           }
@@ -421,54 +432,6 @@ export const profilesByPublicSigningKey = /* GraphQL */ `
         updatedAt
       }
       nextToken
-    }
-  }
-`
-
-export const getVaultStateRef = /* GraphQL */ `
-  query GetDataRoom($id: ID!) {
-    getDataRoom(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getMembershipStateRef = /* GraphQL */ `
-  query GetMembership($id: ID!) {
-    getMembership(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getFolderStateRef = /* GraphQL */ `
-  query GetFolder($id: ID!) {
-    getFolder(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getMemoStateRef = /* GraphQL */ `
-  query GetMemo($id: ID!) {
-    getMemo(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getStackStateRef = /* GraphQL */ `
-  query GetStack($id: ID!) {
-    getStack(id: $id) {
-      stateRef
-    }
-  }
-`
-
-export const getNoteStateRef = /* GraphQL */ `
-  query GetNote($id: ID!) {
-    getNote(id: $id) {
-      stateRef
     }
   }
 `
@@ -538,19 +501,10 @@ export const foldersByDataRoomId = /* GraphQL */ `
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        folderId
+        owner
+        name
+        parentId
         status
-        state {
-          status
-          title
-        }
         createdAt
         updatedAt
       }
@@ -560,8 +514,8 @@ export const foldersByDataRoomId = /* GraphQL */ `
 `;
 
 export const stacksByDataRoomId =
-/* GraphQL */
-`
+  /* GraphQL */
+  `
   query StacksByDataRoomId(
     $dataRoomId: ID
     $sortDirection: ModelSortDirection
@@ -578,33 +532,29 @@ export const stacksByDataRoomId =
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        folderId
+        owner
         status
-        state {
-          status
-          title
-          description
-          resourceVersion
+        name
+        parentId
+        createdAt
+        updatedAt
+        versions {
+          owner
+          type
+          resourceUri
           size
-          files {
-            title
-            resourceUrl
-            thumbnailUrl
-            postedAt
-            fileType
-            size
-            numberOfChunks
-            chunkSize
-            hash
-            resourceTx
-            thumbnailTx
+          numberOfChunks
+          chunkSize
+          createdAt
+          name
+        }
+        storageTransactions(sortDirection: DESC) {
+          items {
+            id
+            refId
+            dataRoomId
+            stackId
+            status
           }
         }
         createdAt
@@ -615,9 +565,7 @@ export const stacksByDataRoomId =
   }
 `;
 
-export const memosByDataRoomId =
-/* GraphQL */
-`
+export const memosByDataRoomId = /* GraphQL */ `
   query MemosByDataRoomId(
     $dataRoomId: ID
     $sortDirection: ModelSortDirection
@@ -634,26 +582,30 @@ export const memosByDataRoomId =
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        state {
-          message
-          reactions {
-            publicSigningKey
-            name
-            reaction
-            status
-            postedAt
-            refHash
-          }
-        }
+        owner
+        status
         createdAt
         updatedAt
+        versions {
+          owner
+          createdAt
+          message
+          reactions {
+            owner
+            createdAt
+            reaction
+          }
+          attachments {
+            owner
+            type
+            resourceUri
+            size
+            numberOfChunks
+            chunkSize
+            createdAt
+            name
+          }
+        }
       }
       nextToken
     }
@@ -661,8 +613,8 @@ export const memosByDataRoomId =
 `;
 
 export const notesByDataRoomId =
-/* GraphQL */
-`
+  /* GraphQL */
+  `
   query NotesByDataRoomId(
     $dataRoomId: ID
     $sortDirection: ModelSortDirection
@@ -679,27 +631,22 @@ export const notesByDataRoomId =
     ) {
       items {
         id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        dataRoomId
-        folderId
+        owner
         status
-        state {
-          status
-          title
-          resourceVersion
+        name
+        content
+        parentId
+        createdAt
+        updatedAt
+        versions {
+          owner
+          type
+          resourceUri
           size
-          content
-          revisions {
-            title
-            postedAt
-            size
-            hash
-            content
-          }
+          numberOfChunks
+          chunkSize
+          createdAt
+          name
         }
         createdAt
         updatedAt
@@ -728,6 +675,9 @@ export const membershipsByDataRoomId =
       ) {
         items {
           id
+          role
+          owner
+          data
           hash
           prevHash
           refHash
@@ -738,6 +688,14 @@ export const membershipsByDataRoomId =
           memberPublicSigningKey
           email
           status
+          memberDetails {
+            publicSigningKey
+            email
+            name
+            avatarUrl
+            avatarUri
+            avatar
+          }
           state {
             status
             role

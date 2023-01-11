@@ -44,6 +44,10 @@ describe("Testing batch actions", () => {
   let membershipId1: string;
   let membershipId2: string;
 
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
+
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;
@@ -67,7 +71,7 @@ describe("Testing batch actions", () => {
       noteId = (await akord.note.create(vaultId, name, content)).noteId;
 
       const note = await akord.note.get(noteId);
-      expect(note.revisions.length).toEqual(1);
+      expect(note.versions.length).toEqual(1);
     });
 
     it("should revoke all items in a batch", async () => {
@@ -114,8 +118,8 @@ describe("Testing batch actions", () => {
       for (let index in items) {
         const stack = await akord.stack.get(response[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
-        expect(stack.files.length).toEqual(1);
-        expect(stack.files[0].title).toEqual("logo.png");
+        expect(stack.versions.length).toEqual(1);
+        expect(stack.versions[0].title).toEqual("logo.png");
       }
     });
   });

@@ -4,7 +4,6 @@ export interface ClientConfig {
   env?: EnvType,
   network?: NetworkType,
   wallet?: WalletType,
-  ledgerVersion?: LedgerVersion,
   debug?: boolean,
   cache?: boolean,
 }
@@ -20,9 +19,4 @@ export enum NetworkType {
   LOCAL = "local",
   TESTNET = "testnet",
   MAINNET = "mainnet"
-}
-
-export enum LedgerVersion {
-  V1 = "v1",
-  V2 = "v2"
 }

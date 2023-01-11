@@ -1,9 +1,11 @@
-import { NodeService } from "./node";
-import { actionRefs, objectTypes, commands, protocolTags } from "../constants";
+import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, jsonToBase64, base64ToJson } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
+import { Vault } from "../types/vault";
+import { Service } from "./service";
+import { Tag } from "../types/contract";
 
-class VaultService extends NodeService {
+class VaultService extends Service {
   objectType: string = objectTypes.VAULT;
 
   /**
@@ -25,64 +27,58 @@ class VaultService extends NodeService {
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
-      const userPublicKey = await this.wallet.publicKeyRaw();
-      this.setRawKeysEncryptionPublicKey(userPublicKey);
       this.setRawDataEncryptionPublicKey(keyPair.publicKey);
-      keys = [await this.keysEncrypter.encryptMemberKey(keyPair)];
+      const userPublicKey = await this.wallet.publicKeyRaw();
+      const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, userPublicKey);
+      keys = [await keysEncrypter.encryptMemberKey(keyPair)];
       this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];
     }
 
-    const vaultId = await this.api.initContractId({
-      [protocolTags.NODE_TYPE]: objectTypes.VAULT,
-    });
-    this.setCommand(commands.VAULT_CREATE);
+    const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectTypes.VAULT)]);
+    this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
 
     const address = await this.wallet.getAddress();
     const membershipId = uuidv4();
 
-    this.tags = {
-      [protocolTags.MEMBER_ADDRESS]: address,
-      [protocolTags.MEMBERSHIP_ID]: membershipId,
-      "Public": isPublic ? "true" : "false",
-      ...await this.getTags()
-    }
+    this.tags = [
+      new Tag(protocolTags.MEMBER_ADDRESS, address),
+      new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
+      new Tag(protocolTags.PUBLIC, isPublic ? "true" : "false"),
+    ].concat(await this.getTags());
 
     const vaultData = {
       name: await this.processWriteString(name),
-      termsOfAccess: jsonToBase64({
-        termsOfAccess: termsOfAccess,
-        hasTerms: !!termsOfAccess
-      }),
+      termsOfAccess
     }
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
       keys,
-      encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())],
+      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey()),
       memberDetails: await this.processMemberDetails(memberDetails, true)
     }
     const membershipSignature = await this.signData(membershipData);
     const ids = await this.api.uploadData([
       {
-        body: vaultData, tags: {
-          "Data-Type": "State",
-          [protocolTags.SIGNATURE]: vaultSignature,
-          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-          [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-          [protocolTags.NODE_TYPE]: objectTypes.VAULT,
-        }
+        data: vaultData, tags: [
+          new Tag("Data-Type", "State"),
+          new Tag(protocolTags.SIGNATURE, vaultSignature),
+          new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+          new Tag(protocolTags.VAULT_ID, this.vaultId),
+          new Tag(protocolTags.NODE_TYPE, this.objectType),
+        ]
       },
       {
-        body: membershipData, tags: {
-          "Data-Type": "State",
-          [protocolTags.SIGNATURE]: membershipSignature,
-          [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-          [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-          [protocolTags.NODE_TYPE]: objectTypes.MEMBERSHIP,
-          [protocolTags.MEMBERSHIP_ID]: membershipId,
-        }
+        data: membershipData, tags: [
+          new Tag("Data-Type", "State"),
+          new Tag(protocolTags.SIGNATURE, membershipSignature),
+          new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+          new Tag(protocolTags.VAULT_ID, this.vaultId),
+          new Tag(protocolTags.NODE_TYPE, objectTypes.MEMBERSHIP),
+          new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
+        ]
       }], true);
     const metadata = {
       dataRefs: [
@@ -95,9 +91,9 @@ class VaultService extends NodeService {
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.command, data },
+      { function: this.function, data },
       this.tags,
-      { ...metadata, ...this.metadata() }
+      metadata
     );
     return { vaultId, membershipId, transactionId: txId }
   }
@@ -120,7 +116,7 @@ class VaultService extends NodeService {
   public async archive(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_ARCHIVE);
-    this.setCommand(commands.VAULT_ARCHIVE);
+    this.setFunction(functions.VAULT_ARCHIVE);
     return this.nodeUpdate();
   }
 
@@ -131,7 +127,7 @@ class VaultService extends NodeService {
   public async restore(vaultId: string): Promise<{ transactionId: string }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RESTORE);
-    this.setCommand(commands.VAULT_RESTORE);
+    this.setFunction(functions.VAULT_RESTORE);
     return this.nodeUpdate();
   }
 
@@ -159,39 +155,36 @@ class VaultService extends NodeService {
    * @param  {string} vaultId
    * @returns Promise with the decrypted vault
    */
-  public async get(vaultId: string, shouldDecrypt = true): Promise<any> {
-    const object = await this.api.getObject(vaultId, this.objectType);
-    await this.setVaultContext(object.id);
-    return this.processObject(object, shouldDecrypt);
+  public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
+    const result = await this.api.getObject<any>(vaultId, this.objectType, vaultId);
+    const { keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const vault = new Vault(result, keys);
+    if (shouldDecrypt && !vault.public) {
+      await vault.decrypt();
+    }
+    return vault
   }
 
   /**
    * @returns Promise with currently authenticated user vaults
    */
-  public async list(shouldDecrypt = true): Promise<any> {
-    const vaults = await this.api.getVaults(this.wallet);
-    let vaultTable = [];
-    for (let vaultId of vaults) {
-      await this.setVaultContext(vaultId);
-      const processedVault = await this.processObject(this.vault, shouldDecrypt);
-      vaultTable.push(processedVault);
+  public async list(shouldDecrypt = true): Promise<Array<Vault>> {
+    const results = await this.api.getVaults(this.wallet);
+    const vaults = [];
+    for (let result of results) {
+      const vault = new Vault(result, result.keys);
+      if (shouldDecrypt && !vault.public) {
+        await vault.decrypt();
+      }
+      vaults.push(vault);
     }
-    return vaultTable;
+    return vaults;
   }
 
   public async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
-    this.setPrevHash(this.vault.hash);
     this.setObjectId(vaultId);
-  }
-
-  public async processObject(object: any, shouldDecrypt = true): Promise<any> {
-    const processedObject = await super.processObject(object, shouldDecrypt);
-    if (processedObject.termsOfAccess) {
-      const terms = base64ToJson(processedObject.termsOfAccess);
-      processedObject.termsOfAccess = terms.termsOfAccess;
-    }
-    return processedObject;
+    this.setObject(this.vault);
   }
 };
 

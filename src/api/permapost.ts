@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
-import { Contract } from "../../types/contract";
+import { Contract, ContractInput, Tags } from "../types/contract";
 
 export class PermapostExecutor {
     private _jwt: string;
@@ -17,12 +17,12 @@ export class PermapostExecutor {
     private _data: any;
     private _dataRefs: string;
     private _responseType: string = "json";
-    private _progressHook: (progress: any) => void
+    private _progressHook: (progress: any, data?: any) => void
     private _processed: number
     private _total: number
     private _cancelHook: AbortController
-    private _tags: Array<{ name: string, value: string }>;
-    private _input: string;
+    private _tags: Tags;
+    private _input: ContractInput;
     private _contractId: string;
     private _metadata: string;
     private _shouldBundleTransaction: boolean;
@@ -71,16 +71,8 @@ export class PermapostExecutor {
         return this;
     }
 
-    tags(tags: Array<any>): PermapostExecutor {
-        if (tags) {
-            this._tags = []
-            for (let key in tags) {
-                this._tags.push({
-                    name: key.toString(),
-                    value: tags[key].toString()
-                })
-            }
-        }
+    tags(tags: Tags): PermapostExecutor {
+        this._tags = tags;
         return this;
     }
 
@@ -97,7 +89,7 @@ export class PermapostExecutor {
         return this;
     }
 
-    progressHook(hook: (progress: any) => void, processed?: number, total?: number): PermapostExecutor {
+    progressHook(hook: (progress: any, data?: any) => void, processed?: number, total?: number): PermapostExecutor {
         this._progressHook = hook;
         this._processed = processed;
         this._total = total;
@@ -109,7 +101,7 @@ export class PermapostExecutor {
         return this;
     }
 
-    input(input: string): PermapostExecutor {
+    input(input: ContractInput): PermapostExecutor {
         this._input = input;
         return this;
     }
@@ -157,6 +149,19 @@ export class PermapostExecutor {
         } as AxiosRequestConfig
         const response = await axios(config);
         return response.data
+    }
+
+    async getNode(): Promise<any> {
+        const config = {
+            method: 'get',
+            url: `${this._apiurl}/nodes/${this._resourceId}`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response
     }
 
     /**
@@ -389,7 +394,7 @@ export class PermapostExecutor {
                     } else {
                         progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
                     }
-                    me._progressHook(progress);
+                    me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
                 }
             }
         } as AxiosRequestConfig
@@ -446,7 +451,7 @@ export class PermapostExecutor {
                     } else {
                         progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
                     }
-                    me._progressHook(progress);
+                    me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
                 }
             },
         } as AxiosRequestConfig

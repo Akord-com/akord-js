@@ -1,31 +1,72 @@
-import { NodeService } from "./node";
-import { actionRefs, objectTypes, status, commands, protocolTags } from "../constants";
+import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
+import { Service } from "./service";
+import { Membership } from "../types/membership";
+import { defaultListOptions } from "../types/list-options";
+import { Tag, Tags } from "../types/contract";
 
-class MembershipService extends NodeService {
+class MembershipService extends Service {
   objectType: string = objectTypes.MEMBERSHIP;
 
   /**
-  * Invite user with an Akord account
-  * @param  {string} vaultId
-  * @param  {string} email invitee's email
-  * @param  {string} role CONTRIBUTOR or VIEWER
-  * @returns Promise with new membership id & corresponding transaction id
-  */
+   * @param  {string} membershipId
+   * @returns Promise with the decrypted membership
+   */
+  public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
+    const membershipProto = await this.api.getObject<any>(membershipId, this.objectType, vaultId);
+    let membership: Membership;
+    if (shouldDecrypt) {
+      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId, this.wallet);
+      membership = new Membership(membershipProto, keys);
+      if (isEncrypted) {
+        await membership.decrypt();
+      }
+    }
+    else {
+      membership = new Membership(membershipProto);
+    }
+    return membership
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with the decrypted memberships
+   */
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
+    const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType, listOptions.shouldListAll);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const memberships = []
+    for (const membershipProto of membershipsProto) {
+      const membership = new Membership(membershipProto, keys);
+      if (isEncrypted && listOptions.shouldDecrypt) {
+        await membership.decrypt();
+      }
+      memberships.push(membership);
+    }
+    return memberships;
+  }
+
+  /**
+   * Invite user with an Akord account
+   * @param  {string} vaultId
+   * @param  {string} email invitee's email
+   * @param  {string} role CONTRIBUTOR or VIEWER
+   * @returns Promise with new membership id & corresponding transaction id
+   */
   public async invite(vaultId: string, email: string, role: string): Promise<{
     membershipId: string,
     transactionId: string
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    this.setCommand(commands.MEMBERSHIP_INVITE);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
     const membershipId = uuidv4();
     this.setObjectId(membershipId);
 
-    const { address, publicKey } = await this.getUserEncryptionInfo(email);
-    this.setRawKeysEncryptionPublicKey(publicKey);
-    const keys = await this.keysEncrypter.encryptMemberKeys([]);
+    const { address, publicKey } = await this.getUserEncryptionInfo(email, await this.wallet.getAddress());
+    const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
+    const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
       keys: (<any>keys).map((keyPair) => {
         delete keyPair.publicKey;
@@ -33,12 +74,13 @@ class MembershipService extends NodeService {
       })
     }
 
-    this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
+    this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+      .concat(await this.getTags());
 
-    const { data, metadata } = await this._uploadBody(body);
+    const { data, metadata } = await this.uploadState(body);
 
     let input = {
-      function: this.command,
+      function: this.function,
       address,
       role,
       data
@@ -48,7 +90,7 @@ class MembershipService extends NodeService {
       this.vaultId,
       input,
       this.tags,
-      { ...metadata, ...this.metadata() }
+      metadata
     );
     return { membershipId, transactionId: txId };
   }
@@ -63,9 +105,9 @@ class MembershipService extends NodeService {
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
-      encPublicSigningKey: [await this.processWriteString(await this.wallet.signingPublicKey())]
+      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey())
     }
-    this.setCommand(commands.MEMBERSHIP_ACCEPT);
+    this.setFunction(functions.MEMBERSHIP_ACCEPT);
     return this.nodeUpdate(body);
   }
 
@@ -76,32 +118,33 @@ class MembershipService extends NodeService {
   public async confirm(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
-    this.setCommand(commands.MEMBERSHIP_INVITE);
-    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email);
-    this.setRawKeysEncryptionPublicKey(publicKey);
-    const keys = await this.keysEncrypter.encryptMemberKeys([]);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
+    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
+    const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
+    const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
       keys: (<any>keys).map((keyPair) => {
         delete keyPair.publicKey;
         return keyPair;
       })
     };
-    this.tags = { [protocolTags.MEMBER_ADDRESS]: address, ...await this.getTags() }
+    this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+      .concat(await this.getTags());
 
-    const { data, metadata } = await this._uploadBody(body);
+    const { data, metadata } = await this.uploadState(body);
 
     let input = {
-      function: this.command,
+      function: this.function,
       address,
       data,
-      role: this.object.state.role
+      role: this.object.role
     }
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
       this.tags,
-      { ...metadata, isUpdate: true, ...this.metadata() }
+      metadata
     );
     return { transactionId: txId };
   }
@@ -113,7 +156,7 @@ class MembershipService extends NodeService {
   public async reject(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_REJECT);
-    this.setCommand(commands.MEMBERSHIP_REJECT);
+    this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
   }
 
@@ -124,7 +167,7 @@ class MembershipService extends NodeService {
   public async leave(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
-    this.setCommand(commands.MEMBERSHIP_REJECT);
+    this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
   }
 
@@ -134,18 +177,18 @@ class MembershipService extends NodeService {
    */
   public async revoke(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
-    this.setCommand(commands.MEMBERSHIP_REVOKE);
+    this.setFunction(functions.MEMBERSHIP_REVOKE);
 
-    let data: any, metadata: any;
+    let data: any;
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.api.getObjectsByVaultId(this.vaultId, this.objectType);
+      const memberships = await this.api.getObjectsByVaultId<Membership>(this.vaultId, this.objectType);
 
       this.tags = await this.getTags();
 
-      let newMembershipStates = [];
+      let newMembershipStates = [] as { data: any, tags: Tags }[];
       let newMembershipRefs = [];
       for (let member of memberships) {
         if (member.id !== this.objectId
@@ -153,43 +196,37 @@ class MembershipService extends NodeService {
           const { publicKey } = await this.getUserEncryptionInfo(member.email, member.address);
           const memberKeysEncrypter = new KeysStructureEncrypter(
             this.wallet,
-            (<any>this.keysEncrypter).keys,
+            (<any>this.dataEncrypter).keys,
             publicKey
           );
           const keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
-          const newState = await this.mergeState(member.id, this.objectType, { keys });
+          const newState = await this.mergeState({ keys });
           const signature = await this.signData(newState);
           newMembershipStates.push({
-            body: newState, tags: {
-              "Data-Type": "State",
-              [protocolTags.SIGNATURE]: signature,
-              [protocolTags.SIGNER_ADDRESS]: this.tags[protocolTags.SIGNER_ADDRESS],
-              [protocolTags.VAULT_ID]: this.tags[protocolTags.VAULT_ID],
-              [protocolTags.NODE_TYPE]: this.objectType,
-              [protocolTags.MEMBERSHIP_ID]: member.id,
-            }
+            data: newState, tags: [
+              new Tag("Data-Type", "State"),
+              new Tag(protocolTags.SIGNATURE, signature),
+              new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+              new Tag(protocolTags.VAULT_ID, this.vaultId),
+              new Tag(protocolTags.NODE_TYPE, this.objectType),
+              new Tag(protocolTags.MEMBERSHIP_ID, member.id)
+            ]
           });
           newMembershipRefs.push(member.id);
         }
       }
       const ids = await this.api.uploadData(newMembershipStates, true);
       data = [];
-      metadata = {
-        dataRefs: [],
-        publicKeys: [arrayToBase64(keyPair.publicKey)],
-      }
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
-        metadata.dataRefs.push({ ...ids[memberIndex], modelId: memberId, modelType: objectTypes.MEMBERSHIP });
         data.push({ id: memberId, value: ids[memberIndex].id })
       })
     }
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.command, data },
-      this.tags,
-      { ...metadata, ...this.metadata() }
+      { function: this.function, data },
+      this.tags
     );
     return { transactionId: txId };
   }
@@ -202,17 +239,17 @@ class MembershipService extends NodeService {
   public async changeRole(membershipId: string, role: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
-    this.setCommand(commands.MEMBERSHIP_CHANGE_ROLE);
+    this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
     return this.nodeUpdate(null, { role });
   }
 
   /**
-  * Invite user without an Akord account
-  * @param  {string} vaultId
-  * @param  {string} email invitee's email
-  * @param  {string} role CONTRIBUTOR or VIEWER
-  * @returns Promise with new membership id & corresponding transaction id
-  */
+   * Invite user without an Akord account
+   * @param  {string} vaultId
+   * @param  {string} email invitee's email
+   * @param  {string} role CONTRIBUTOR or VIEWER
+   * @returns Promise with new membership id & corresponding transaction id
+   */
   public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{
     membershipId: string,
     transactionId: string
@@ -243,9 +280,8 @@ class MembershipService extends NodeService {
    * @returns Promise with corresponding transaction id
    */
   public async inviteResend(membershipId: string): Promise<{ transactionId: string }> {
-    const object = await this.api.getObject(membershipId, this.objectType);
-    this.setVaultId(object.dataRoomId);
-    this.setPrevHash(object.hash);
+    const object = await this.api.getObject<Membership>(membershipId, this.objectType, this.vaultId);
+    this.setVaultId(object.vaultId);
     this.setObjectId(membershipId);
     this.setObject(object);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
@@ -271,8 +307,8 @@ class MembershipService extends NodeService {
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
     await this.setVaultContextFromObjectId(membershipId, objectTypes.MEMBERSHIP);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
-    const memberDetails = await this.processMemberDetails({ fullName: name, avatar }, true);
-    this.setCommand(commands.MEMBERSHIP_UPDATE);
+    const memberDetails = await this.processMemberDetails({ name, avatar }, true);
+    this.setFunction(functions.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
   }
 };

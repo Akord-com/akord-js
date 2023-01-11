@@ -1,18 +1,31 @@
-import { Service, ServiceFactory } from "../service";
+import { Service, ServiceFactory } from "../core";
 import { v4 as uuidv4 } from "uuid";
 import { MembershipService } from "./membership";
 import { StackService } from "./stack";
+import { NodeService } from "./node";
+import { Node } from "../types/node";
+import { FileLike } from "../types/file";
+import { BatchStackCreateResponse } from "../types/batch-response";
+
+function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
+  for (let i = 0; i < arr.length; i += n) {
+    yield arr.slice(i, i + n);
+  }
+}
 
 class BatchService extends Service {
+
+  public static BATCH_CHUNK_SIZE = 50;
+
   /**
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async revoke(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
+  public async revoke<T extends Node>(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance();
+      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.revoke(item.id));
     }));
@@ -23,11 +36,11 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async restore(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
+  public async restore<T extends Node>(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance();
+      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.restore(item.id));
     }));
@@ -38,11 +51,11 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async delete(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
+  public async delete<T extends Node>(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance();
+      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.delete(item.id));
     }));
@@ -53,11 +66,11 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async move(items: { id: string, objectType: string }[], parentId?: string): Promise<{ transactionId: string }[]> {
+  public async move<T extends Node>(items: { id: string, objectType: string }[], parentId?: string): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance();
+      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.move(item.id, parentId));
     }));
@@ -89,22 +102,60 @@ class BatchService extends Service {
    */
   public async stackCreate(
     vaultId: string,
-    items: { file: any, name: string }[],
-    parentId?: string,
+    items: { file: FileLike, name: string, parentId?: string }[],
     progressHook?: (progress: number) => void,
-    cancelHook?: AbortController
-  ): Promise<{
-    stackId: string,
-    transactionId: string
-  }[]> {
+    cancelHook?: AbortController,
+    processingCountHook?: (count: number) => void,
+    onStackCreated?: (item: { file: FileLike, name: string, parentId?: string }) => Promise<void>
+  ): Promise<BatchStackCreateResponse>
+     {
+    const size = items.reduce((sum, stack) => {
+      return sum + stack.file.size;
+    }, 0);
+    let progress = 0;
+    let processedStacksCount = 0;
+    const perFileProgress = new Map();
     this.setGroupRef(items);
-    const response = [] as { stackId: string, transactionId: string }[];
-    await Promise.all(items.map(async (item) => {
-      const service = new StackService(this.wallet, this.api);
-      service.setGroupRef(this.groupRef);
-      response.push(await service.create(vaultId, item.file, item.name, parentId, progressHook, cancelHook));
-    }));
-    return response;
+    if (processingCountHook) {
+      processingCountHook(processedStacksCount);
+    }
+    
+
+    const data = [] as { stackId: string, transactionId: string }[];
+    const errors = [] as { name: string, message: string }[];
+
+    const stackProgressHook = (localProgress: number, data: any) => {
+      const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
+      progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
+      perFileProgress.set(data.id, stackBytesUploaded);
+      progressHook(Math.min(100, Math.round(progress/size * 100)));
+    }
+
+    for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
+      await Promise.all(chunk.map(async (item) => {
+        try {
+          const service = new StackService(this.wallet, this.api);
+          service.setGroupRef(this.groupRef);
+
+          const stackResponse = await service.create(vaultId, item.file, item.name, item.parentId, stackProgressHook, cancelHook);
+          if (cancelHook.signal.aborted) {
+            return { data, errors, cancelled: items.length - processedStacksCount };
+          }
+          data.push(stackResponse);
+          processedStacksCount += 1;
+          processingCountHook(processedStacksCount);
+          if (onStackCreated) {
+            await onStackCreated(item);
+          }
+        } catch (e) {
+          errors.push({ name: item.name, message: e.toString() })
+        };
+      }))
+      if (cancelHook.signal.aborted) {
+        return { data, errors, cancelled: items.length - processedStacksCount };
+      }
+    }
+    return { data, errors, cancelled: 0 };
   }
 
   /**

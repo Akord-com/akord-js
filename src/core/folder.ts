@@ -1,8 +1,10 @@
 import { NodeService } from "./node";
-import { actionRefs, commands, objectTypes } from "../constants";
+import { actionRefs, functions, objectTypes } from "../constants";
+import { Folder } from "../types/node";
 
-class FolderService extends NodeService {
+class FolderService extends NodeService<Folder> {
   objectType: string = objectTypes.FOLDER;
+  NodeType = Folder;
 
   /**
    * @param  {string} vaultId
@@ -16,13 +18,11 @@ class FolderService extends NodeService {
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
-    this.setCommand(commands.NODE_CREATE);
+    this.setFunction(functions.NODE_CREATE);
     const body = {
       name: await this.processWriteString(name)
     }
-    const { nodeId, transactionId } = await this.nodeCreate(body, {
-      parent: parentId
-    });
+    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
     return { folderId: nodeId, transactionId };
   }
 };

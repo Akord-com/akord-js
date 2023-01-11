@@ -1,13 +1,14 @@
-import { Wallet, fromMembership } from "@akord/crypto";
+import { Wallet, Keys } from "@akord/crypto";
 import AWSAppSyncClient, { AUTH_TYPE } from "aws-appsync";
 import gql from "graphql-tag";
-import { ClientConfig, LedgerVersion } from "../../client-config";
-import { Api } from "../api";
+import { ClientConfig } from "../config";
+import { Api } from "./api";
 import { awsConfig, AWSConfig } from "./aws-config";
 import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
-import { Logger } from "../../logger";
-
+import { Logger } from "../logger";
+import { Membership } from "../types/membership";
+import { ContractInput, ContractState, Tags } from "../types/contract";
 
 export default class AkordApi extends Api {
 
@@ -22,14 +23,16 @@ export default class AkordApi extends Api {
     this.initGqlClient()
   }
 
-  public async uploadData(data: any[], shouldBundleTransaction?: boolean): Promise<Array<{ resourceId: string, resourceTx: string }>> {
+  public async uploadData(items: { data: any, tags: Tags, metadata?: any }[], shouldBundleTransaction?: boolean)
+    : Promise<Array<{ id: string, resourceTx: string }>> {
+
     const resources = [];
 
-    await Promise.all(data.map(async (item, index) => {
+    await Promise.all(items.map(async (item, index) => {
       const resource = await new PermapostExecutor()
         .env(this.config)
         .auth(this.jwtToken)
-        .data(item.body)
+        .data(item.data)
         .tags(item.tags)
         .bundle(shouldBundleTransaction)
         .metadata(item.metadata)
@@ -40,7 +43,7 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction(contractId: string, input: any, tags: any, metadata?: any): Promise<string> {
+  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string> {
     const txId = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -59,13 +62,13 @@ export default class AkordApi extends Api {
     return result.data.postLedgerTransaction[0];
   };
 
-  public async preInviteCheck(emails: string[], dataRoomId: string): Promise<any> {
+  public async preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>> {
     const result = await this.executeQuery(queries.preInviteCheck,
-      { emails: emails, dataRoomId: dataRoomId })
+      { emails: emails, dataRoomId: vaultId })
     return result.data.preInviteCheck;
   };
 
-  public async initContractId(tags: any, state?: any): Promise<string> {
+  public async initContractId(tags: Tags, state?: any): Promise<string> {
     const contractId = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -84,16 +87,7 @@ export default class AkordApi extends Api {
     return result.data.usersByEmail[0];
   };
 
-  public async getPublicKeyFromAddress(address: string): Promise<string> {
-    return "";
-  };
-
-  public getLedgerVersion(vault: any): LedgerVersion {
-    const ledgerVersion = vault.state.isContract ? LedgerVersion.V2 : LedgerVersion.V1;
-    return ledgerVersion;
-  }
-
-  public async uploadFile(file: any, tags: any, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -109,7 +103,7 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
+  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
     const { response } = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -130,10 +124,11 @@ export default class AkordApi extends Api {
     return { fileData: fileData, headers: response.headers };
   };
 
-  public async getProfileByPublicSigningKey(publicSigningKey: string): Promise<any> {
+  public async getProfile(wallet: any): Promise<any> {
+    const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('profilesByPublicSigningKey',
       queries.profilesByPublicSigningKey,
-      { publicSigningKey: publicSigningKey }, {})
+      { publicSigningKey: publicSigningKey }, null)
     if (!result || result.length === 0) {
       return {};
       // throw new Error("Cannot find profile with the given public signing key.")
@@ -151,94 +146,113 @@ export default class AkordApi extends Api {
     if (!object) {
       throw new Error("Cannot find object with id: " + objectId + " and type: " + objectType);
     }
-    return object;
+    return { ...object, vaultId: object.dataRoomId };
   };
 
-  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<any> {
+  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
     const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.membershipsByMemberPublicSigningKey,
+      queries.listVaults,
       { memberPublicSigningKey: publicSigningKey }, { dataRoomId: { eq: vaultId } });
     if (!result || result.length === 0) {
       throw new Error("Cannot find membership for vault: " + vaultId +
         ", with the given public signing key: " + publicSigningKey);
     }
     const membership = result[0];
-    return fromMembership(membership);
+    const publicKey = membership.dataRoom.publicKeys ? membership.dataRoom.publicKeys[membership.dataRoom.publicKeys.length - 1] : null
+    return { isEncrypted: !membership.dataRoom.public, keys: membership.keys, publicKey: publicKey };
   };
 
-  public async getNodeState(objectId: string, objectType: string): Promise<any> {
-    const stateRef = await this.getStateRef(objectId, objectType);
+  public async getNodeState(stateId: string): Promise<any> {
     const { response } = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(stateRef)
+      .resourceId(stateId)
       .downloadState()
 
     return response.data
   };
 
-  public async getContractState(objectId: string): Promise<any> {
-    return new PermapostExecutor()
+  public async getNode(id: string): Promise<any> {
+    const response = await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .getNode()
+
+    return response.data
+  };
+
+  public async getContractState(objectId: string): Promise<ContractState> {
+    const contract = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
       .contractId(objectId)
       .getContract();
+    return contract.state;
   };
 
-  public async getMemberships(wallet: Wallet): Promise<any> {
+  public async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.membershipsByMemberPublicSigningKey,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    return results;
+    return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
   };
 
-  public async getVaults(wallet: Wallet): Promise<any> {
+  public async getVaults(wallet: Wallet): Promise<Array<any>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.membershipsByMemberPublicSigningKey,
+      queries.listVaults,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    const vaults = results
-      .filter((membership: any) => membership.dataRoom.status !== "ARCHIVED")
-      .map((membership: any) => membership.dataRoomId);
-    return vaults;
+    return results.map((object: any) => ({ ...object.dataRoom, ...{ keys: object.keys } }));
   };
 
-  public async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
+  public async getObjectsByVaultId(vaultId: string, objectType: string, shouldListAll = false): Promise<Array<any>> {
     let queryName = objectType.toLowerCase() + "sByDataRoomId";
-    const filter = objectType === "Membership"
-      ? {
-        or: [
-          { status: { eq: "ACCEPTED" } },
-          { status: { eq: "PENDING" } }
-        ]
-      }
-      : objectType === "Memo"
-        ? {}
-        :
-        {
-          status: { ne: "REVOKED" },
-          and: {
-            status: { ne: "DELETED" }
-          }
-        };
     const results = await this.paginatedQuery(
       queryName,
       queries[queryName],
       {
         dataRoomId: vaultId
-      }, filter);
-    return results;
+      }, this.filter(objectType, shouldListAll));
+    return results.map((object: any) => {
+      if (object.storageTransactions) {
+        const versions = object.versions.map((version, idx) => (
+          {
+            ...version,
+            status: object.storageTransactions.items.length > idx ? object.storageTransactions.items[idx].status : "REJECTED"
+          }
+        )
+        );
+        return { ...object, versions, vaultId: object.dataRoomId }
+      }
+      return { ...object, vaultId: object.dataRoomId }
+    });
   };
 
-  private async getStateRef(objectId: string, objectType: string): Promise<any> {
-    let queryName = "get" + objectType;
-    const result = await this.executeQuery(queries[queryName + "StateRef"],
-      {
-        id: objectId
-      })
-    return result.data[queryName === "getVault" ? "getDataRoom" : queryName].stateRef;
+  private filter(objectType: string, shouldListAll: boolean) {
+    if (shouldListAll) {
+      return {};
+    } else {
+      const filter = objectType === "Membership"
+        ? {
+          or: [
+            { status: { eq: "ACCEPTED" } },
+            { status: { eq: "PENDING" } }
+          ]
+        }
+        : objectType === "Memo"
+          ? {}
+          :
+          {
+            status: { ne: "REVOKED" },
+            and: {
+              status: { ne: "DELETED" }
+            }
+          };
+      return filter;
+    }
   };
 
   private async executeMutation(mutation: string | readonly string[], variables: any) {
@@ -303,6 +317,10 @@ export default class AkordApi extends Api {
       },
       disableOffline: true
     });
+  }
+
+  public async getTransactions(vaultId: string): Promise<Array<any>> {
+    throw new Error("Method not implemented")
   }
 }
 

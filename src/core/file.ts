@@ -1,13 +1,13 @@
 import { Service } from "./service";
-import { protocolTags } from "../constants";
+import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
-import { PermapostExecutor } from "../api/akord/permapost";
+import { PermapostExecutor } from "../api/permapost";
 import { v4 as uuid } from "uuid";
 import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
 import fs from "fs";
-import { EncryptionTags } from "../types/encryption-tags";
+import { Tag, Tags } from "../types/contract";
 
 
 class FileService extends Service {
@@ -23,7 +23,11 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    await this.setVaultContext(vaultId);
+    if (id && id.startsWith('public/')) {
+      this.setIsPublic(true);
+    } else {
+      await this.setVaultContext(vaultId);
+    }
     let fileBinary: ArrayBuffer;
     if (options.isChunked) {
       let currentChunk = 0;
@@ -40,27 +44,6 @@ class FileService extends Service {
     return fileBinary;
   }
 
-  /**
-   * @param  {string} id file resource url
-   * @param  {DownloadOptions} [options]
-   * @returns Promise with file buffer
-   */
-  public async getPublic(id: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    this.setIsPublic(true);
-    let fileBinary
-    if (options.isChunked) {
-      let currentChunk = 0;
-      while (currentChunk < options.numberOfChunks) {
-        const url = `${id}_${currentChunk}`;
-        const chunkBinary = await this.getBinary(url, options.progressHook, options.cancelHook, currentChunk * this.chunkSize, options.size);
-        fileBinary = this.appendBuffer(fileBinary, chunkBinary);
-        currentChunk++;
-      }
-    } else {
-      fileBinary = await this.getBinary(id, options.progressHook, options.cancelHook);
-    }
-    return fileBinary;
-  }
 
   /**
    * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
@@ -71,8 +54,12 @@ class FileService extends Service {
    * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
-  public async download(id: string, vaultId: string, options: DownloadOptions = {}) : Promise<void> {
-    await this.setVaultContext(vaultId);
+  public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
+    if (id && id.startsWith('public/')) {
+      this.setIsPublic(true);
+    } else {
+      await this.setVaultContext(vaultId);
+    }
     const writer = await this.stream(options.name, options.size);
     if (options.isChunked) {
       let currentChunk = 0;
@@ -104,28 +91,30 @@ class FileService extends Service {
   public async create(
     file: FileLike,
     shouldBundleTransaction?: boolean,
-    progressHook?: (progress: number) => void,
+    progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceUrl: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
-    let tags = {};
+    : Promise<{ resourceTx: string, resourceUrl?: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
+    const tags = [] as Tags;
     if (this.isPublic) {
-      tags['File-Name'] = encodeURIComponent(file.name);
+      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)))
       if (file.lastModified) {
-        tags['File-Modified-At'] = file.lastModified.toString();
+        tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
     }
-    tags['Content-Type'] = file.type;
-    tags['File-Size'] = file.size;
-    tags['File-Type'] = file.type;
-    tags['Timestamp'] = JSON.stringify(Date.now());
-    tags['Data-Type'] = "File";
-    tags[protocolTags.VAULT_ID] = this.vaultId;
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
+    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
+    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
+    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
+    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
+    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+
     if (file.size > this.asyncUploadTreshold) {
       return await this.uploadChunked(file, tags, progressHook, cancelHook);
     } else {
       const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      tags['File-Hash'] = await digestRaw(processedData);
-      return { resourceHash: tags['File-Hash'], ...await this.api.uploadFile(processedData, { ...tags, ...encryptionTags }, this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
+      const resourceHash = await digestRaw(processedData);
+      tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
+      return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), this.isPublic, shouldBundleTransaction, progressHook, cancelHook) };
     }
   }
 
@@ -152,12 +141,12 @@ class FileService extends Service {
 
   private async uploadChunked(
     file: FileLike,
-    tags: any,
-    progressHook?: (progress: number) => void,
+    tags: Tags,
+    progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController
   ): Promise<any> {
     let resourceUrl = uuid();
-    let encryptionTags: EncryptionTags;
+    let encryptionTags: Tags;
     let encryptedKey: string;
     let iv: Array<string> = [];
     let uploadedChunks = 0;
@@ -172,9 +161,9 @@ class FileService extends Service {
       );
 
       encryptionTags = encryptedData.encryptionTags;
-      iv.push(encryptionTags['Initialization-Vector'])
+      iv.push(encryptionTags.find((tag)=> tag.name === encTags.IV).value);
       if (!encryptedKey) {
-        encryptedKey = encryptionTags['Encrypted-Key'];
+        encryptedKey = encryptionTags.find((tag)=> tag.name === encTags.ENCRYPTED_KEY).value;
       }
 
       await this.uploadChunk(
@@ -190,13 +179,14 @@ class FileService extends Service {
       uploadedChunks += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-    encryptionTags['Initialization-Vector'] = iv.join(',')
-    
+    const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
+    encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
+
     await new PermapostExecutor()
       .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
-      .tags({ ...tags, ...encryptionTags })
+      .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
       .numberOfChunks(uploadedChunks)
       .asyncTransaction();
@@ -210,12 +200,12 @@ class FileService extends Service {
   }
 
   private async uploadChunk(
-    chunk: { processedData: ArrayBuffer, encryptionTags: any },
+    chunk: { processedData: ArrayBuffer, encryptionTags: Tags },
     chunkNumber: number,
-    tags: any,
+    tags: Tags,
     resourceUrl: string,
     resourceSize: number,
-    progressHook?: (progress: number) => void,
+    progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController
   ) {
     const resource = await new PermapostExecutor()
@@ -223,7 +213,7 @@ class FileService extends Service {
       .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
-      .tags({ ...tags, ...chunk.encryptionTags })
+      .tags(tags.concat(chunk.encryptionTags))
       .public(this.isPublic)
       .bundle(false)
       .progressHook(progressHook, chunkNumber * this.chunkSize, resourceSize)
@@ -233,7 +223,7 @@ class FileService extends Service {
   }
 
   private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
-    encryptedData: { processedData: ArrayBuffer, encryptionTags: EncryptionTags },
+    encryptedData: { processedData: ArrayBuffer, encryptionTags: Tags },
     chunkNumber: number
   }> {
     const chunkNumber = offset / this.chunkSize;
@@ -271,7 +261,7 @@ type DownloadOptions = {
   name?: string,
   isChunked?: boolean,
   numberOfChunks?: number,
-  progressHook?: (progress: number) => void, 
+  progressHook?: (progress: number) => void,
   cancelHook?: AbortController
 }
 

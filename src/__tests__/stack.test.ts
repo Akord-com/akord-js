@@ -23,9 +23,13 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing stack commands", () => {
+describe("Testing stack functions", () => {
   let vaultId: string;
   let stackId: string;
+
+  beforeEach(async () => {
+    akord = await initInstance(email, password);
+  });
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
@@ -42,8 +46,8 @@ describe("Testing stack commands", () => {
     const stack = await akord.stack.get(stackId);
     expect(stack.status).toEqual("ACTIVE");
     expect(stack.name).toEqual(name);
-    expect(stack.files.length).toEqual(1);
-    expect(stack.files[0].name).toEqual("logo.png");
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual("logo.png");
 
     const isChunked = stack.files[0].resourceUrl.numberOfChunks > 1
     const binary = await akord.file.get(stack.files[0].resourceUrl, vaultId, { isChunked: isChunked, numberOfChunks: stack.files[0].resourceUrl.numberOfChunks } );
@@ -56,9 +60,9 @@ describe("Testing stack commands", () => {
     await akord.stack.uploadRevision(stackId, file);
 
     const stack = await akord.stack.get(stackId);
-    expect(stack.files.length).toEqual(2);
-    expect(stack.files[0].name).toEqual("logo.png");
-    expect(stack.files[1].name).toEqual("avatar.jpeg");
+    expect(stack.versions.length).toEqual(2);
+    expect(stack.versions[0].name).toEqual("logo.png");
+    expect(stack.versions[1].name).toEqual("avatar.jpeg");
 
     const binary = await akord.file.get(stack.files[1].resourceUrl, vaultId);
     expect(binary).toEqual(await file.arrayBuffer());
@@ -75,9 +79,9 @@ describe("Testing stack commands", () => {
 
     const stack = await akord.stack.get(stackId);
     expect(stack.name).toEqual(name);
-    expect(stack.files.length).toEqual(2);
-    expect(stack.files[0].name).toEqual("logo.png");
-    expect(stack.files[1].name).toEqual("avatar.jpeg");
+    expect(stack.versions.length).toEqual(2);
+    expect(stack.versions[0].name).toEqual("logo.png");
+    expect(stack.versions[1].name).toEqual("avatar.jpeg");
 
     const firstFile = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
     const decryptedfirstFile = await akord.file.get(stack.files[0].resourceUrl, vaultId);
