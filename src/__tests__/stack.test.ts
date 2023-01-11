@@ -39,7 +39,7 @@ describe("Testing stack functions", () => {
   it("should create new stack", async () => {
     const name = faker.random.words();
 
-    const file = new NodeJs.File("./src/__tests__/data/logo.png");
+    const file = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
 
     stackId = (await akord.stack.create(vaultId, file, name)).stackId;
 
@@ -55,7 +55,7 @@ describe("Testing stack functions", () => {
   });
 
   it("should upload new revision", async () => {
-    const file = new NodeJs.File("./src/__tests__/data/avatar.jpeg");
+    const file = NodeJs.File.fromPath("./src/__tests__/data/avatar.jpeg");
 
     await akord.stack.uploadRevision(stackId, file);
 
@@ -67,7 +67,7 @@ describe("Testing stack functions", () => {
     const binary = await akord.file.get(stack.files[1].resourceUrl, vaultId);
     expect(binary).toEqual(await file.arrayBuffer());
 
-    const firstFile = new NodeJs.File("./src/__tests__/data/logo.png");
+    const firstFile = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
     const decryptedFirstFile = await akord.file.get(stack.files[0].resourceUrl, vaultId);
     expect(decryptedFirstFile).toEqual(await firstFile.arrayBuffer());
   });
@@ -83,11 +83,11 @@ describe("Testing stack functions", () => {
     expect(stack.versions[0].name).toEqual("logo.png");
     expect(stack.versions[1].name).toEqual("avatar.jpeg");
 
-    const firstFile = new NodeJs.File("./src/__tests__/data/logo.png");
+    const firstFile = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
     const decryptedfirstFile = await akord.file.get(stack.files[0].resourceUrl, vaultId);
     expect(decryptedfirstFile).toEqual(await firstFile.arrayBuffer());
 
-    const secondFile = new NodeJs.File("./src/__tests__/data/avatar.jpeg");
+    const secondFile = NodeJs.File.fromPath("./src/__tests__/data/avatar.jpeg");
 
     const decryptedSecondFile = await akord.file.get(stack.files[1].resourceUrl, vaultId);
     expect(decryptedSecondFile).toEqual(await secondFile.arrayBuffer());
