@@ -205,7 +205,7 @@ export default class AkordApi extends Api {
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.listVaults,
       { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    return results;
+    return results.map((object: any) => ({ ...object.dataRoom, ...{ keys: object.keys } }));
   };
 
   public async getObjectsByVaultId(vaultId: string, objectType: string, shouldListAll = false): Promise<Array<any>> {
@@ -218,11 +218,12 @@ export default class AkordApi extends Api {
       }, this.filter(objectType, shouldListAll));
     return results.map((object: any) => {
       if (object.storageTransactions) {
-        const versions = object.versions.map((version, idx) =>  (
-          { 
-            ...version, 
-            status: object.storageTransactions.items.length > idx ? object.storageTransactions.items[idx].status : "REJECTED" }
-          )
+        const versions = object.versions.map((version, idx) => (
+          {
+            ...version,
+            status: object.storageTransactions.items.length > idx ? object.storageTransactions.items[idx].status : "REJECTED"
+          }
+        )
         );
         return { ...object, versions, vaultId: object.dataRoomId }
       }
