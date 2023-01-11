@@ -5,7 +5,7 @@ import { Vault } from "../../types/vault";
 import { digest, Wallet, Keys } from '@akord/crypto';
 import { ClientConfig } from '../../client-config';
 import { ApiConfig, apiConfig } from './config';
-import { get } from './gun';
+import { get, getObject, gunGraph } from './gun';
 
 export default class DefaultApi extends Api {
   public config: ApiConfig;
@@ -17,24 +17,31 @@ export default class DefaultApi extends Api {
 
   async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
     const address = await wallet.getAddress();
-    return get("membersByAddress/" + address);
+    return get(gunGraph().get("membersByAddress").get(address));
   };
 
   async getObject(objectId: string, objectType: string): Promise<any> {
     const collection = this.getCollectionName(objectType);
-    return get(collection + "/" + objectId);
+    return getObject(gunGraph().get(collection).get(objectId));
   };
 
   async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
     const address = await wallet.getAddress();
-    const membership = await get("membersByAddressAndVaultId/" + address + "/" + vaultId);
+    const membership = await get(gunGraph().get("membersByAddressAndVaultId").get(address).get(vaultId));
+    for (let id of Object.keys(membership)) {
+      if (id !== "_") {
+        const membershipObj = await this.getObject(id, "Membership");
+        const keys = JSON.parse(JSON.parse(membershipObj.keys));
+        return { keys, isEncrypted: true };
+      }
+    };
     const keys = JSON.parse(JSON.parse(membership.keys));
     return { keys, isEncrypted: true };
   };
 
-  async getVaults(wallet: Wallet):  Promise<Array<Vault>> {
+  async getVaults(wallet: Wallet): Promise<Array<Vault>> {
     const address = await wallet.getAddress();
-    const ids = await get("membersByAddress/" + address);
+    const ids = await get(gunGraph().get("membersByAddress").get(address));
     const vaults = [];
     if (ids) {
       for (let id of Object.keys(ids)) {
@@ -50,7 +57,7 @@ export default class DefaultApi extends Api {
 
   async getObjectsByVaultId(vaultId: string, objectType: string): Promise<any> {
     const collection = this.getCollectionName(objectType);
-    const ids = await get(collection + "ByVaultId/" + vaultId);
+    const ids = await get(gunGraph().get(collection + "ByVaultId").get(vaultId));
     const objects = [];
     if (ids) {
       for (let id of Object.keys(ids)) {
@@ -95,20 +102,25 @@ export default class DefaultApi extends Api {
 
   async uploadData(items: { data: any, tags: Tags }[]) {
     const resources = [];
-    await Promise.all(items.map(async (item: { data: any, tags: Tags }, index: number) => {
-      const response = await this.fetch("uploadData", item);
+    for (let [index, item] of items.entries()) {
+      const response = await this.fetch("states", item);
       const id = response.id;
       resources[index] = { id: id, resourceTx: id, resourceUrl: id };
-    }));
+    }
+    // await Promise.all(items.map(async (item: { data: any, tags: Tags }, index: number) => {
+    //   const response = await this.fetch("uploadData", item);
+    //   const id = response.id;
+    //   resources[index] = { id: id, resourceTx: id, resourceUrl: id };
+    // }));
     return resources;
   };
 
   async initContractId() {
-    const response = await this.fetch("initContractId", {});
+    const response = await this.fetch("contracts/init", { tags: [] });
     return response.id;
   };
 
-  async downloadFile(id: string):  Promise<any> {
+  async downloadFile(id: string): Promise<any> {
     const response = await fetch("https://arweave.net/" + id);
     if (response.status == 200 || response.status == 202) {
       const buffer = await response.arrayBuffer();
@@ -120,13 +132,13 @@ export default class DefaultApi extends Api {
   };
 
   public async getContractState(contractId: string): Promise<any> {
-    const response = await this.fetch("refreshState", { vaultId: contractId });
+    const response = await this.fetch("contracts/refresh", { vaultId: contractId });
     return response;
   };
 
   public async getUserFromEmail(email: string): Promise<any> {
     const emailHash = await digest(email);
-    return get("wallets/" + emailHash);
+    return get(gunGraph().get("wallets").get(emailHash));
   };
 
   public async preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>> {
@@ -138,10 +150,10 @@ export default class DefaultApi extends Api {
   };
 
   public async getNodeState(stateId: string): Promise<any> {
-    return get("states/" + stateId);
+    return get(gunGraph().get("states").get(stateId));
   }
 
-  private async fetch(functionName: string, body: any) {
+  public async fetch(functionName: string, body: any) {
     const url = this.config.endpoint + functionName;
     try {
       const response = await fetch(url, {
@@ -154,9 +166,15 @@ export default class DefaultApi extends Api {
         },
         body: JSON.stringify(body)
       });
-      const jsonResponse = await response.json();
-      console.log(jsonResponse)
-      return jsonResponse;
+      if (response.ok) {
+        const jsonResponse = await response.json();
+        console.log(jsonResponse)
+        return jsonResponse;
+      } else {
+        const error = await response.text();
+        console.log(error);
+        throw new Error(error);
+      }
     } catch (error) {
       console.log(error);
     }
