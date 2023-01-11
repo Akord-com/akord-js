@@ -17,7 +17,7 @@ class MembershipService extends Service {
     const membershipProto = await this.api.getObject<any>(membershipId, this.objectType, vaultId);
     let membership: Membership;
     if (shouldDecrypt) {
-      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.dataRoomId, this.wallet);
+      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId, this.wallet);
       membership = new Membership(membershipProto, keys);
       if (isEncrypted) {
         await membership.decrypt();
