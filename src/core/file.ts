@@ -2,7 +2,7 @@ import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
-import { PermapostExecutor } from "../api/akord/permapost";
+import { PermapostExecutor } from "../api/permapost";
 import { v4 as uuid } from "uuid";
 import { FileLike } from "../types/file";
 import { Blob } from 'buffer';

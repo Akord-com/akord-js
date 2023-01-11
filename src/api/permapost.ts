@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
-import { Contract, ContractInput, Tags } from "../../types/contract";
+import { Contract, ContractInput, Tags } from "../types/contract";
 
 export class PermapostExecutor {
     private _jwt: string;

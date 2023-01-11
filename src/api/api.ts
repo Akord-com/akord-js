@@ -1,12 +1,10 @@
-import { AWSConfig } from './akord/aws-config';
-import { ArweaveConfig } from './arweave/arweave-config';
-import { ContractInput, ContractState, Tags } from '../types/contract';
-import { Keys, Wallet } from '@akord/crypto';
-import { Vault } from '../types/vault';
-import { Membership } from '../types/membership';
+import { ContractInput, ContractState, Tags } from "../types/contract";
+import { Keys, Wallet } from "@akord/crypto";
+import { Vault } from "../types/vault";
+import { Membership } from "../types/membership";
 
 abstract class Api {
-  config: AWSConfig | ArweaveConfig
+  config: any
   jwtToken: string
 
   constructor() { }
@@ -17,7 +15,7 @@ abstract class Api {
 
   abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
 
-  abstract uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
+  abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
   abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<{ id: string, resourceTx: string }>>
 
@@ -25,9 +23,9 @@ abstract class Api {
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
 
-  abstract getMembershipKeys(vaultId: string, wallet: any): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }>
+  abstract getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }>
 
-  abstract getProfile(wallet: any): Promise<any>
+  abstract getProfile(wallet: Wallet): Promise<any>
 
   abstract getObject<T>(objectId: string, objectType: string, vaultId?: string): Promise<T>
 
@@ -39,13 +37,9 @@ abstract class Api {
 
   abstract getObjectsByVaultId<T>(vaultId: string, objectType: string, shouldListAll?: boolean): Promise<Array<T>>
 
-  abstract preInviteCheck(emails: any[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership}>>
+  abstract preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>>
 
   abstract getTransactions(vaultId: string): Promise<Array<any>>
-
-  public getConfig() {
-    return this.config;
-  }
 
   // legacy calls
   postLedgerTransaction(transactions: any[]): Promise<any> {

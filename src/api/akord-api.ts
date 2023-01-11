@@ -1,14 +1,14 @@
 import { Wallet, Keys } from "@akord/crypto";
 import AWSAppSyncClient, { AUTH_TYPE } from "aws-appsync";
 import gql from "graphql-tag";
-import { ClientConfig } from "../../client-config";
-import { Api } from "../api";
+import { ClientConfig } from "../config";
+import { Api } from "./api";
 import { awsConfig, AWSConfig } from "./aws-config";
 import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
-import { Logger } from "../../logger";
-import { Membership } from "../../types/membership";
-import { ContractInput, ContractState, Tags } from "../../types/contract";
+import { Logger } from "../logger";
+import { Membership } from "../types/membership";
+import { ContractInput, ContractState, Tags } from "../types/contract";
 
 export default class AkordApi extends Api {
 
