@@ -23,7 +23,7 @@ abstract class Api {
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
-  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
+  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
 
   abstract getMembershipKeys(vaultId: string, wallet: any): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }>
 
@@ -32,8 +32,6 @@ abstract class Api {
   abstract getObject<T>(objectId: string, objectType: string, vaultId?: string): Promise<T>
 
   abstract getNodeState(stateId: string): Promise<any>
-
-  abstract getNode(id: string): Promise<any>
 
   abstract getVaults(wallet: Wallet): Promise<Array<Vault>>
 

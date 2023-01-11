@@ -145,6 +145,7 @@ class Service {
       this.tags,
       { ...metadata, ...clientMetadata }
     );
+    this.setActionRef(null);
     return { nodeId, transactionId: txId };
   }
 

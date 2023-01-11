@@ -548,6 +548,15 @@ export const stacksByDataRoomId =
           createdAt
           name
         }
+        storageTransactions(sortDirection: DESC) {
+          items {
+            id
+            refId
+            dataRoomId
+            stackId
+            status
+          }
+        }
         createdAt
         updatedAt
       }

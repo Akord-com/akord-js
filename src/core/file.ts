@@ -23,7 +23,11 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    await this.setVaultContext(vaultId);
+    if (id && id.startsWith('public/')) {
+      this.setIsPublic(true);
+    } else {
+      await this.setVaultContext(vaultId);
+    }
     let fileBinary: ArrayBuffer;
     if (options.isChunked) {
       let currentChunk = 0;
@@ -40,27 +44,6 @@ class FileService extends Service {
     return fileBinary;
   }
 
-  /**
-   * @param  {string} id file resource url
-   * @param  {DownloadOptions} [options]
-   * @returns Promise with file buffer
-   */
-  public async getPublic(id: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    this.setIsPublic(true);
-    let fileBinary
-    if (options.isChunked) {
-      let currentChunk = 0;
-      while (currentChunk < options.numberOfChunks) {
-        const url = `${id}_${currentChunk}`;
-        const chunkBinary = await this.getBinary(url, options.progressHook, options.cancelHook, currentChunk * this.chunkSize, options.size);
-        fileBinary = this.appendBuffer(fileBinary, chunkBinary);
-        currentChunk++;
-      }
-    } else {
-      fileBinary = await this.getBinary(id, options.progressHook, options.cancelHook);
-    }
-    return fileBinary;
-  }
 
   /**
    * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
@@ -72,7 +55,11 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
-    await this.setVaultContext(vaultId);
+    if (id && id.startsWith('public/')) {
+      this.setIsPublic(true);
+    } else {
+      await this.setVaultContext(vaultId);
+    }
     const writer = await this.stream(options.name, options.size);
     if (options.isChunked) {
       let currentChunk = 0;
@@ -104,7 +91,7 @@ class FileService extends Service {
   public async create(
     file: FileLike,
     shouldBundleTransaction?: boolean,
-    progressHook?: (progress: number) => void,
+    progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceUrl?: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
     const tags = [] as Tags;
@@ -155,7 +142,7 @@ class FileService extends Service {
   private async uploadChunked(
     file: FileLike,
     tags: Tags,
-    progressHook?: (progress: number) => void,
+    progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController
   ): Promise<any> {
     let resourceUrl = uuid();
@@ -218,7 +205,7 @@ class FileService extends Service {
     tags: Tags,
     resourceUrl: string,
     resourceSize: number,
-    progressHook?: (progress: number) => void,
+    progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController
   ) {
     const resource = await new PermapostExecutor()

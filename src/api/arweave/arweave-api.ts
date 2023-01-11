@@ -187,10 +187,6 @@ export default class ArweaveApi extends Api {
     return this.getTransactionData(stateId);
   };
 
-  public async getNode(id: string): Promise<any> {
-    return null;
-  };
-
   public async downloadFile(id: string): Promise<any> {
     return this.getTransactionData(id);
   }

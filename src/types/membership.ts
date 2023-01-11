@@ -27,13 +27,13 @@ export class Membership extends Encryptable {
     this.status = membershipProto.status;
     this.role = membershipProto.role;
     this.encPublicSigningKey = membershipProto.encPublicSigningKey;
+    this.vaultId = membershipProto.vaultId;
+    this.keys = keys;
     this.memberDetails = new ProfileDetails(
       membershipProto.memberDetails?.name, 
       membershipProto.memberDetails?.publicSigningKey, 
       membershipProto.memberDetails?.email,
       membershipProto.memberDetails?.avatarUri, 
       keys, null);
-    this.vaultId = membershipProto.dataRoomId;
-    this.keys = keys;
   }
 }

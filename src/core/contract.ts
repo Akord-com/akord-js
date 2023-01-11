@@ -19,11 +19,9 @@ class ContractService extends Service {
   public async getState(id: string): Promise<ContractState> {    
     const contract = await this.api.getContractState(id);
     this.setIsPublic(contract.public);
-    // if private vault, set encryption context
     if (contract.public) {
       return contract;
     } else {
-      //const { isEncrypted, keys } = await this.setMembershipKeys(id);
       await contract.decrypt();
     }
     return contract;

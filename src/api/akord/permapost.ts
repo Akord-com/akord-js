@@ -17,7 +17,7 @@ export class PermapostExecutor {
     private _data: any;
     private _dataRefs: string;
     private _responseType: string = "json";
-    private _progressHook: (progress: any) => void
+    private _progressHook: (progress: any, data?: any) => void
     private _processed: number
     private _total: number
     private _cancelHook: AbortController
@@ -89,7 +89,7 @@ export class PermapostExecutor {
         return this;
     }
 
-    progressHook(hook: (progress: any) => void, processed?: number, total?: number): PermapostExecutor {
+    progressHook(hook: (progress: any, data?: any) => void, processed?: number, total?: number): PermapostExecutor {
         this._progressHook = hook;
         this._processed = processed;
         this._total = total;
@@ -393,7 +393,7 @@ export class PermapostExecutor {
                     } else {
                         progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
                     }
-                    me._progressHook(progress);
+                    me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
                 }
             }
         } as AxiosRequestConfig
@@ -450,7 +450,7 @@ export class PermapostExecutor {
                     } else {
                         progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
                     }
-                    me._progressHook(progress);
+                    me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
                 }
             },
         } as AxiosRequestConfig
