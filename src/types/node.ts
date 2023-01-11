@@ -51,6 +51,7 @@ export class Stack extends Node {
         version.numberOfChunks,
         version.chunkSize,
         version.createdAt,
+        version.status,
         keys
       ));
   }
@@ -73,6 +74,7 @@ export class Note extends Node {
         version.numberOfChunks,
         version.chunkSize,
         version.createdAt,
+        version.status,
         keys
       ));
   }
@@ -107,7 +109,7 @@ export class FileVersion extends Encryptable {
   numberOfChunks?: number;
   chunkSize?: number;
 
-  constructor(name: string, owner: string, type: string, resourceUri: string[], size: number, numberOfChunks: number, chunkSize: number, createdAt: string, keys?: Array<Keys>, publicKey?: string) {
+  constructor(name: string, owner: string, type: string, resourceUri: string[], size: number, numberOfChunks: number, chunkSize: number, createdAt: string, status: string, keys?: Array<Keys>, publicKey?: string) {
     super(keys, publicKey);
     this.owner = owner;
     this.type = type;
@@ -117,6 +119,7 @@ export class FileVersion extends Encryptable {
     this.numberOfChunks = numberOfChunks;
     this.chunkSize = chunkSize;
     this.name = name;
+    this.status = status;
   }
 }
 
@@ -151,6 +154,7 @@ export class MemoVersion extends Encryptable {
         attachment.numberOfChunks,
         attachment.chunkSize,
         attachment.createdAt,
+        attachment.status,
         keys
       )
     );

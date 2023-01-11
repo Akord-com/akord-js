@@ -2,12 +2,12 @@ import { Encryptable, encrypted, Keys } from "@akord/crypto";
 
 export class ProfileDetails extends Encryptable {
 
-  constructor(name: string, publicSigningKey: string, email: string, avatarUrl: string, keys?: Array<Keys>, publicKey?: string) {
+  constructor(name: string, publicSigningKey: string, email: string, avatarUri: Array<string>, keys?: Array<Keys>, publicKey?: string) {
     super(keys, publicKey);
     this.name = name;
     this.publicSigningKey = publicSigningKey;
     this.email = email;
-    this.avatarUrl = avatarUrl;
+    this.avatarUri = avatarUri;
   }
 
     @encrypted() name?: string;

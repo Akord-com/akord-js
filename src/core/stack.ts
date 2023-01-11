@@ -20,7 +20,7 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with new stack id & corresponding transaction id
    */
   public async create(vaultId: string, file: FileLike, name: string, parentId?: string,
-    progressHook?: (progress: number) => void, cancelHook?: AbortController):
+    progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController):
     Promise<{
       stackId: string,
       transactionId: string
@@ -43,7 +43,7 @@ class StackService extends NodeService<Stack> {
   * @param  {(progress:number)=>void} [progressHook]
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(stackId: string, file: any, progressHook?: (progress: number) => void): Promise<{ transactionId: string }> {
+  public async uploadRevision(stackId: string, file: any, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
@@ -109,11 +109,9 @@ class StackService extends NodeService<Stack> {
     return version;
   }
 
-  private async postFile(file: FileLike, progressHook?: (progress: number) => void, cancelHook?: AbortController)
+  private async postFile(file: FileLike, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceHash: string, resourceUrl?: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
-
     const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
-    try {
       const thumbnail = await createThumbnail(file);
       if (thumbnail) {
         const thumbnailPromise = this.fileService.create(thumbnail, false, progressHook);
@@ -129,9 +127,6 @@ class StackService extends NodeService<Stack> {
       } else {
         return await filePromise;
       }
-    } catch (e) {
-      console.log(e);
-    }
   }
 
   protected async setVaultContext(vaultId: string): Promise<void> {

@@ -145,6 +145,7 @@ class Service {
       this.tags,
       { ...metadata, ...clientMetadata }
     );
+    this.setActionRef(null);
     return { nodeId, transactionId: txId };
   }
 
@@ -208,7 +209,7 @@ class Service {
       delete profileDetails.__typename;
       let avatar = null;
       if (profileDetails.avatarUrl || profileDetails.avatarUri) {
-        const resourceTx = profileDetails.avatarUrl || profileDetails.avatarUri.find(resourceUri => resourceUri.includes("s3")).split(':')[1];
+        const resourceTx = profileDetails.avatarUri?.findLast(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "") || profileDetails.avatarUrl;
         const { fileData, headers } = await this.api.downloadFile(resourceTx);
         const encryptedData = this.getEncryptedData(fileData, headers);
         if (encryptedData) {
@@ -360,7 +361,7 @@ class Service {
   }
 
   protected async mergeState(stateUpdates: any) {
-    const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
+    const currentState = this.object.data ? await this.api.getNodeState(this.object.data[this.object.data.length - 1]) : {};
     let newState = lodash.cloneDeepWith(currentState);
     lodash.mergeWith(
       newState,

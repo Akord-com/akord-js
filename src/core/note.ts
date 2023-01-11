@@ -85,7 +85,7 @@ class NoteService extends NodeService<Note> {
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(name),
-      type: "application/rtf",
+      type: "text/markdown",
       size: Buffer.byteLength(content, 'utf8'),
       resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`, `s3:${resourceUrl}`]
     }

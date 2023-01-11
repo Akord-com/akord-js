@@ -7,7 +7,6 @@ import { awsConfig, AWSConfig } from "./aws-config";
 import * as queries from "./graphql/graphql";
 import { PermapostExecutor } from "./permapost";
 import { Logger } from "../../logger";
-import { Vault } from "../../types/vault";
 import { Membership } from "../../types/membership";
 import { ContractInput, ContractState, Tags } from "../../types/contract";
 
@@ -88,7 +87,7 @@ export default class AkordApi extends Api {
     return result.data.usersByEmail[0];
   };
 
-  public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -104,7 +103,7 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
+  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
     const { response } = await new PermapostExecutor()
       .env(this.config)
       .auth(this.jwtToken)
@@ -129,7 +128,7 @@ export default class AkordApi extends Api {
     const publicSigningKey = await wallet.signingPublicKey();
     const result = await this.paginatedQuery('profilesByPublicSigningKey',
       queries.profilesByPublicSigningKey,
-      { publicSigningKey: publicSigningKey }, {})
+      { publicSigningKey: publicSigningKey }, null)
     if (!result || result.length === 0) {
       return {};
       // throw new Error("Cannot find profile with the given public signing key.")
@@ -174,6 +173,16 @@ export default class AkordApi extends Api {
     return response.data
   };
 
+  public async getNode(id: string): Promise<any> {
+    const response = await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .getNode()
+
+    return response.data
+  };
+
   public async getContractState(objectId: string): Promise<ContractState> {
     const contract = await new PermapostExecutor()
       .env(this.config)
@@ -191,7 +200,7 @@ export default class AkordApi extends Api {
     return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
+  public async getVaults(wallet: Wallet): Promise<Array<any>> {
     const publicSigningKey = await wallet.signingPublicKey();
     const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
       queries.listVaults,
@@ -207,7 +216,18 @@ export default class AkordApi extends Api {
       {
         dataRoomId: vaultId
       }, this.filter(objectType, shouldListAll));
-    return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
+    return results.map((object: any) => {
+      if (object.storageTransactions) {
+        const versions = object.versions.map((version, idx) =>  (
+          { 
+            ...version, 
+            status: object.storageTransactions.items.length > idx ? object.storageTransactions.items[idx].status : "REJECTED" }
+          )
+        );
+        return { ...object, versions, vaultId: object.dataRoomId }
+      }
+      return { ...object, vaultId: object.dataRoomId }
+    });
   };
 
   private filter(objectType: string, shouldListAll: boolean) {

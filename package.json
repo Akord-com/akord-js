@@ -31,12 +31,12 @@
     "node": ">=16.0.0 <17.0.0"
   },
   "dependencies": {
-    "@akord/crypto": "0.6.0",
+    "@akord/crypto": "0.7.1",
     "@akord/ts-cacheable": "1.0.11",
     "@bundlr-network/client": "^0.9.0",
     "amazon-cognito-identity-js": "^5.2.8",
     "arweave": "1.11.4",
-    "aws-appsync": "4.1.5",
+    "aws-appsync": "4.1.9",
     "axios": "^0.24.0",
     "blueimp-load-image": "^5.16.0",
     "cross-fetch": "^3.1.5",

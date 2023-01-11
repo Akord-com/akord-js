@@ -129,7 +129,7 @@ export const getMembership = /* GraphQL */ `
       publicSigningKey
       postedAt
       contextVersion
-      vaultId: dataRoomId
+      dataRoomId
       memberPublicSigningKey
       email
       role
@@ -139,8 +139,10 @@ export const getMembership = /* GraphQL */ `
         publicSigningKey
         email
         fullName
+        name
         phone
         avatarUrl
+        avatarUri
         avatarTx
        }
       keys {
@@ -266,6 +268,7 @@ export const getVault = /* GraphQL */ `
   query GetDataRoom($id: ID!) {
     getDataRoom(id: $id) {
       id
+      hash
       name
       status
       public
@@ -316,6 +319,7 @@ export const membershipsByMemberPublicSigningKey =
             name
             phone
             avatarUrl
+            avatarUri
             avatarTx
            }
           keys {
@@ -410,7 +414,9 @@ export const profilesByPublicSigningKey = /* GraphQL */ `
             publicSigningKey
             email
             fullName
+            name
             phone
+            avatarUri
             avatarUrl
             avatarTx
           }
@@ -541,6 +547,15 @@ export const stacksByDataRoomId =
           chunkSize
           createdAt
           name
+        }
+        storageTransactions(sortDirection: DESC) {
+          items {
+            id
+            refId
+            dataRoomId
+            stackId
+            status
+          }
         }
         createdAt
         updatedAt
