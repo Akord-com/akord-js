@@ -41,10 +41,13 @@ abstract class Api {
 
   abstract getTransactions(vaultId: string): Promise<Array<any>>
 
-  // legacy calls
-  postLedgerTransaction(transactions: any[]): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
+  abstract updateProfile(wallet: Wallet, name: string, avatarUri: string): Promise<void>
+
+  abstract deleteVault(vaultId: string): Promise<void>
+
+  abstract inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }>
+
+  abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
 }
 
 export {

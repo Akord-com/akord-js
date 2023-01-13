@@ -56,12 +56,6 @@ export default class AkordApi extends Api {
     return txId;
   };
 
-  public async postLedgerTransaction(transactions: any): Promise<any> {
-    const result = await this.executeMutation(queries.postLedgerTransaction,
-      { transactions: transactions })
-    return result.data.postLedgerTransaction[0];
-  };
-
   public async preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>> {
     const result = await this.executeQuery(queries.preInviteCheck,
       { emails: emails, dataRoomId: vaultId })
@@ -135,6 +129,52 @@ export default class AkordApi extends Api {
     }
     return result[0];
   };
+
+
+  public async updateProfile(wallet: Wallet, name: string, avatarUri: string): Promise<void> {
+    const address = await wallet.getAddress();
+    await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(address)
+      .data({
+        name: name,
+        avatarUri: avatarUri
+      })
+      .updateProfile();
+  };
+
+  public async deleteVault(vaultId: string): Promise<void> {
+    await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(vaultId)
+      .deleteVault();
+  }
+
+  public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }> {
+    return await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(vaultId)
+      .data({
+        email: email,
+        role: role
+      })
+      .invite();
+  }
+
+
+  public async inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }> {
+    return await new PermapostExecutor()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(vaultId)
+      .data({
+        membershipId: membershipId,
+      })
+      .invite();
+  }
 
   public async getObject(objectId: string, objectType: string): Promise<any> {
     let queryName = "get" + objectType;
@@ -252,21 +292,6 @@ export default class AkordApi extends Api {
             }
           };
       return filter;
-    }
-  };
-
-  private async executeMutation(mutation: string | readonly string[], variables: any) {
-    try {
-      const response = await this.gqlClient.mutate({
-        mutation: gql(mutation),
-        variables,
-        fetchPolicy: "no-cache",
-      });
-      return response;
-    } catch (err) {
-      Logger.log("Error while trying to mutate data");
-      Logger.log(err);
-      throw Error(JSON.stringify(err));
     }
   };
 

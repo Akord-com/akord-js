@@ -107,8 +107,7 @@ class BatchService extends Service {
     cancelHook?: AbortController,
     processingCountHook?: (count: number) => void,
     onStackCreated?: (item: { file: FileLike, name: string, parentId?: string }) => Promise<void>
-  ): Promise<BatchStackCreateResponse>
-     {
+  ): Promise<BatchStackCreateResponse> {
     const size = items.reduce((sum, stack) => {
       return sum + stack.file.size;
     }, 0);
@@ -119,7 +118,7 @@ class BatchService extends Service {
     if (processingCountHook) {
       processingCountHook(processedStacksCount);
     }
-    
+
 
     const data = [] as { stackId: string, transactionId: string }[];
     const errors = [] as { name: string, message: string }[];
@@ -128,7 +127,7 @@ class BatchService extends Service {
       const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
       progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
       perFileProgress.set(data.id, stackBytesUploaded);
-      progressHook(Math.min(100, Math.round(progress/size * 100)));
+      progressHook(Math.min(100, Math.round(progress / size * 100)));
     }
 
     for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
@@ -186,9 +185,13 @@ class BatchService extends Service {
       if (userHasAccount) {
         response.push(await service.invite(vaultId, email, role));
       } else {
-        response.push(await service.inviteNewUser(vaultId, email, role));
+        response.push({
+          ...(await service.inviteNewUser(vaultId, email, role)),
+          transactionId: null
+        })
       }
-    }));
+    }
+    ));
     return response;
   }
 

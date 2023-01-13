@@ -51,15 +51,7 @@ class ProfileService extends Service {
       }
 
       const ids = await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
-
-      const header = {
-        schemaUri: 'akord:profile:write',
-        stateRef: ids[0].id,
-        ...await this.prepareHeader()
-      }
-      const encodedTransaction = await this.encodeTransaction(header, { profileDetails, encryptionType: EncryptionType.KEYS_STRUCTURE });
-      const { id } = await this.api.postLedgerTransaction([encodedTransaction]);
-      transactions.push(id);
+      this.api.updateProfile(this.wallet, mergedProfileDetails.name, mergedProfileDetails.avatarUri);
       resolve();
     })
 
