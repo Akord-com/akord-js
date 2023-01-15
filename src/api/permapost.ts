@@ -1,3 +1,4 @@
+import { jsonToBase64 } from "@akord/crypto";
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
@@ -167,7 +168,7 @@ export class PermapostExecutor {
     async updateProfile(): Promise<any> {
         const config = {
             method: 'put',
-            url: `${this._apiurl}/profiles/${this._resourceId}`,
+            url: `${this._apiurl}/profiles/${jsonToBase64({address: this._resourceId})}`, //ApiG bug with double encoding
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'

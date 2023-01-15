@@ -223,10 +223,8 @@ class Service {
         profileDetails,
         ['fullName', 'name', 'phone'],
       );
-      if (decryptedProfile.fullName) {
-        decryptedProfile.name = decryptedProfile.fullName;
-        delete decryptedProfile.fullName;
-      }
+      decryptedProfile.name = decryptedProfile.name || decryptedProfile.fullName;
+      delete decryptedProfile.fullName;
       return { ...decryptedProfile, avatar }
     }
     return {};

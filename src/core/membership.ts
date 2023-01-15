@@ -263,9 +263,6 @@ class MembershipService extends Service {
    */
   public async inviteResend(membershipId: string): Promise<void> {
     const object = await this.api.getObject<Membership>(membershipId, this.objectType, this.vaultId);
-    this.setVaultId(object.vaultId);
-    this.setObjectId(membershipId);
-    this.setObject(object);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
     if (object.status !== status.PENDING && object.status !== status.INVITED) {
       throw new Error("Cannot resend the invitation for member: " + membershipId +

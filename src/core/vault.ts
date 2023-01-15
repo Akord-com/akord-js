@@ -136,8 +136,6 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async delete(vaultId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_DELETE);
     this.api.deleteVault(vaultId);
     return { transactionId: "" };
   }
