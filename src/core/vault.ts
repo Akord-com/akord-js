@@ -136,19 +136,8 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async delete(vaultId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_DELETE);
-    const header = {
-      schemaUri: 'akord:dataroom:delete',
-      ...await this.prepareHeader()
-    }
-
-    const encodedTransaction = await this.encodeTransaction(
-      header,
-      { status: "DELETED" }
-    )
-    const { id } = await this.api.postLedgerTransaction([encodedTransaction]);
-    return { transactionId: id };
+    this.api.deleteVault(vaultId);
+    return { transactionId: "" };
   }
 
   /**

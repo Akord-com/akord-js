@@ -96,10 +96,6 @@ it("should bust the profile cache on profile update", async () => {
         }];
     });
 
-    AkordApi.prototype.postLedgerTransaction = jest.fn().mockImplementation(() => {
-        return {};
-    });
-
     AkordApi.prototype.getMemberships = jest.fn().mockImplementation(() => {
         return [];
     });

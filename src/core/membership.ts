@@ -251,57 +251,24 @@ class MembershipService extends Service {
    * @returns Promise with new membership id & corresponding transaction id
    */
   public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{
-    membershipId: string,
-    transactionId: string
+    membershipId: string
   }> {
-    this.setVaultId(vaultId);
-    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    const header = {
-      schemaUri: "akord:membership:invite-new-user",
-      dataRoomId: this.vaultId,
-      ...await this.prepareHeader()
-    }
-
-    const body = {
-      role,
-      memberDetails: {
-        email: email
-      },
-      status: "INVITED"
-    }
-    const encodedTransaction = await this.encodeTransaction(header, body);
-
-    const { modelId, id } = await this.api.postLedgerTransaction([encodedTransaction]);
-    return { membershipId: modelId, transactionId: id };
+    const { id } = await this.api.inviteNewUser(vaultId, email, role);
+    return { membershipId: id };
   }
 
   /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */
-  public async inviteResend(membershipId: string): Promise<{ transactionId: string }> {
+  public async inviteResend(membershipId: string): Promise<void> {
     const object = await this.api.getObject<Membership>(membershipId, this.objectType, this.vaultId);
-    this.setVaultId(object.vaultId);
-    this.setObjectId(membershipId);
-    this.setObject(object);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
-    let schemaUri: string;
-    if (object.status === status.PENDING) {
-      schemaUri = 'akord:membership:invite';
-    } else if (object.status === status.INVITED) {
-      schemaUri = 'akord:membership:invite-new-user';
-    } else {
+    if (object.status !== status.PENDING && object.status !== status.INVITED) {
       throw new Error("Cannot resend the invitation for member: " + membershipId +
         ". Found invalid status: " + object.status);
     }
-    const header = {
-      schemaUri,
-      ...await this.prepareHeader()
-    }
-    const encodedTransaction = await this.encodeTransaction(header, {});
-
-    const { id } = await this.api.postLedgerTransaction([encodedTransaction]);
-    return { transactionId: id };
+    await this.api.inviteResend(object.vaultId, membershipId);
   }
 
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {

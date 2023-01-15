@@ -1,3 +1,4 @@
+import { jsonToBase64 } from "@akord/crypto";
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
@@ -127,7 +128,7 @@ export class PermapostExecutor {
         const config = {
             method: 'post',
             url: `${this._apiurl}/${this._contractUri}`,
-            data: { tags: this._tags, state: this._data},
+            data: { tags: this._tags, state: this._data },
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json',
@@ -162,6 +163,59 @@ export class PermapostExecutor {
         } as AxiosRequestConfig
         const response = await axios(config);
         return response
+    }
+
+    async updateProfile(): Promise<any> {
+        const config = {
+            method: 'put',
+            url: `${this._apiurl}/profiles/${jsonToBase64({address: this._resourceId})}`, //ApiG bug with double encoding
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            },
+            data: this._data,
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response
+    }
+
+    async deleteVault(): Promise<void> {
+        const config = {
+            method: 'delete',
+            url: `${this._apiurl}/vaults/${this._resourceId}`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        await axios(config);
+    }
+
+    async invite(): Promise<{ id: string }> {
+        const config = {
+            method: 'post',
+            url: `${this._apiurl}/vaults/${this._resourceId}/invites`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            },
+            data: this._data
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response.data.id
+    }
+
+    async inviteResend(): Promise<{ id: string }> {
+        const config = {
+            method: 'post',
+            url: `${this._apiurl}/vaults/${this._resourceId}/invites/${this._data.membershipId}`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            }
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response.data.id
     }
 
     /**
@@ -304,7 +358,7 @@ export class PermapostExecutor {
     * @uses:
     * - tags()
     */
-     private async fileTransaction() {
+    private async fileTransaction() {
         if (!this._jwt) {
             throw Error('Authentication is required to use permapost')
         }
