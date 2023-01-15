@@ -5,7 +5,7 @@ import { ClientConfig } from "../config";
 import { Api } from "./api";
 import { apiConfig, ApiConfig } from "./config";
 import * as queries from "./graphql/graphql";
-import { PermapostExecutor } from "./permapost";
+import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
 import { Membership } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
@@ -29,7 +29,7 @@ export default class AkordApi extends Api {
     const resources = [];
 
     await Promise.all(items.map(async (item, index) => {
-      const resource = await new PermapostExecutor()
+      const resource = await new ApiClient()
         .env(this.config)
         .auth(this.jwtToken)
         .data(item.data)
@@ -44,7 +44,7 @@ export default class AkordApi extends Api {
   };
 
   public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string> {
-    const txId = await new PermapostExecutor()
+    const txId = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .contractId(contractId)
@@ -56,14 +56,16 @@ export default class AkordApi extends Api {
     return txId;
   };
 
-  public async preInviteCheck(emails: string[], vaultId: string): Promise<Array<{ address: string, publicKey: string, membership: Membership }>> {
-    const result = await this.executeRequest(queries.preInviteCheck,
-      { emails: emails, dataRoomId: vaultId })
-    return result.preInviteCheck;
+  public async getMembers(vaultId: string): Promise<Array<any>> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(vaultId)
+      .getMembers();
   };
 
   public async initContractId(tags: Tags, state?: any): Promise<string> {
-    const contractId = await new PermapostExecutor()
+    const contractId = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .tags(tags)
@@ -82,7 +84,7 @@ export default class AkordApi extends Api {
   };
 
   public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
-    const resource = await new PermapostExecutor()
+    const resource = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .data(file)
@@ -98,7 +100,7 @@ export default class AkordApi extends Api {
   };
 
   public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
-    const { response } = await new PermapostExecutor()
+    const { response } = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(id)
@@ -133,7 +135,7 @@ export default class AkordApi extends Api {
 
   public async updateProfile(wallet: Wallet, name: string, avatarUri: string): Promise<void> {
     const address = await wallet.getAddress();
-    await new PermapostExecutor()
+    await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(address)
@@ -145,7 +147,7 @@ export default class AkordApi extends Api {
   };
 
   public async deleteVault(vaultId: string): Promise<void> {
-    await new PermapostExecutor()
+    await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(vaultId)
@@ -153,7 +155,7 @@ export default class AkordApi extends Api {
   }
 
   public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }> {
-    return await new PermapostExecutor()
+    return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(vaultId)
@@ -166,7 +168,7 @@ export default class AkordApi extends Api {
 
 
   public async inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }> {
-    return await new PermapostExecutor()
+    return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(vaultId)
@@ -204,7 +206,7 @@ export default class AkordApi extends Api {
   };
 
   public async getNodeState(stateId: string): Promise<any> {
-    const { response } = await new PermapostExecutor()
+    const { response } = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(stateId)
@@ -214,7 +216,7 @@ export default class AkordApi extends Api {
   };
 
   public async getNode(id: string): Promise<any> {
-    const response = await new PermapostExecutor()
+    const response = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(id)
@@ -224,7 +226,7 @@ export default class AkordApi extends Api {
   };
 
   public async getContractState(objectId: string): Promise<ContractState> {
-    const contract = await new PermapostExecutor()
+    const contract = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .contractId(objectId)

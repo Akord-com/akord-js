@@ -5,7 +5,7 @@ import { StackService } from "./stack";
 import { NodeService } from "./node";
 import { Node } from "../types/node";
 import { FileLike } from "../types/file";
-import { BatchStackCreateResponse } from "../types/batch-response";
+import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -162,37 +162,33 @@ class BatchService extends Service {
    * @param  {{email:string,role:string}[]} items
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: string }[]): Promise<{
-    membershipId: string,
-    transactionId: string
-  }[]> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: string }[]): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
-    const emails = items.reduce((accumulator, currentValue) => {
-      accumulator.push(currentValue.email);
-      return accumulator;
-    }, []);
-    const results = await this.api.preInviteCheck(emails, vaultId);
-    const response = [] as { membershipId: string, transactionId: string }[];
+    const members = await this.api.getMembers(vaultId);
+    const data = [] as { membershipId: string, transactionId: string }[];
+    const errors = [];
 
-    await Promise.all(items.map(async (item, index) => {
-      if (results[index].membership) {
-        throw new Error("Membership already exists for this user.");
-      }
+    await Promise.all(items.map(async (item) => {
       const { email, role } = item;
-      const userHasAccount = results[index].publicKey;
-      const service = new MembershipService(this.wallet, this.api);
-      service.setGroupRef(this.groupRef);
-      if (userHasAccount) {
-        response.push(await service.invite(vaultId, email, role));
+      const member = members.find(item => item.email === email)
+      if (member) {
+        errors.push({ email: email, message: "Membership already exists for this user." })
       } else {
-        response.push({
-          ...(await service.inviteNewUser(vaultId, email, role)),
-          transactionId: null
-        })
+        const userHasAccount = Boolean(await this.api.getUserFromEmail(email));
+        const service = new MembershipService(this.wallet, this.api);
+        service.setGroupRef(this.groupRef);
+        if (userHasAccount) {
+          data.push(await service.invite(vaultId, email, role));
+        } else {
+          data.push({
+            ...(await service.inviteNewUser(vaultId, email, role)),
+            transactionId: null
+          })
+        }
       }
     }
     ));
-    return response;
+    return { data: data, errors: errors };
   }
 
   public setGroupRef(items: any) {
