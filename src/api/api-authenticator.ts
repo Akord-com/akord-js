@@ -1,14 +1,14 @@
 import "cross-fetch/polyfill";
 import * as AmazonCognitoIdentity from "amazon-cognito-identity-js";
 import { EnvType } from "../config";
-import { awsConfig, AWSConfig } from "./aws-config";
+import { apiConfig, ApiConfig } from "./config";
 import { Logger } from "../logger";
 
 export default class ApiAuthenticator {
-  public config!: AWSConfig;
+  public config!: ApiConfig;
 
   constructor(config?: EnvType) {
-    this.config = awsConfig(config);
+    this.config = apiConfig(config);
   }
 
   public getCognitoUser(username: string): AmazonCognitoIdentity.CognitoUser {
