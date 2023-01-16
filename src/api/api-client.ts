@@ -3,7 +3,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 
-export class PermapostExecutor {
+export class ApiClient {
     private _jwt: string;
     private _storageurl: string;
     private _apiurl: string;
@@ -31,53 +31,53 @@ export class PermapostExecutor {
 
     constructor() { }
 
-    env(config: { apiurl: string, storageurl: string }): PermapostExecutor {
+    env(config: { apiurl: string, storageurl: string }): ApiClient {
         this._apiurl = config.apiurl;
         this._storageurl = config.storageurl;
         return this;
     }
 
-    auth(jwt: string): PermapostExecutor {
+    auth(jwt: string): ApiClient {
         this._jwt = jwt;
         return this;
     }
 
-    resourceId(resourceId: string): PermapostExecutor {
+    resourceId(resourceId: string): ApiClient {
         this._resourceId = resourceId;
         return this;
     }
 
-    public(isPublic: boolean): PermapostExecutor {
+    public(isPublic: boolean): ApiClient {
         this._isPublic = isPublic;
         return this;
     }
 
-    bundle(shouldBundleTransaction: boolean): PermapostExecutor {
+    bundle(shouldBundleTransaction: boolean): ApiClient {
         this._shouldBundleTransaction = shouldBundleTransaction;
         return this;
     }
 
-    asArrayBuffer(): PermapostExecutor {
+    asArrayBuffer(): ApiClient {
         this.setResponseType("arraybuffer");
         return this;
     }
 
-    contractId(contractId: string): PermapostExecutor {
+    contractId(contractId: string): ApiClient {
         this._contractId = contractId;
         return this;
     }
 
-    data(data: any): PermapostExecutor {
+    data(data: any): ApiClient {
         this._data = data;
         return this;
     }
 
-    tags(tags: Tags): PermapostExecutor {
+    tags(tags: Tags): ApiClient {
         this._tags = tags;
         return this;
     }
 
-    metadata(metadata: any): PermapostExecutor {
+    metadata(metadata: any): ApiClient {
         this._metadata = metadata
         if (metadata && metadata.dataRefs) {
             this._dataRefs = typeof metadata.dataRefs === 'string' ? metadata.dataRefs : JSON.stringify(metadata.dataRefs);
@@ -85,29 +85,29 @@ export class PermapostExecutor {
         return this;
     }
 
-    setResponseType(responseType: string): PermapostExecutor {
+    setResponseType(responseType: string): ApiClient {
         this._responseType = responseType;
         return this;
     }
 
-    progressHook(hook: (progress: any, data?: any) => void, processed?: number, total?: number): PermapostExecutor {
+    progressHook(hook: (progress: any, data?: any) => void, processed?: number, total?: number): ApiClient {
         this._progressHook = hook;
         this._processed = processed;
         this._total = total;
         return this;
     }
 
-    cancelHook(hook: AbortController): PermapostExecutor {
+    cancelHook(hook: AbortController): ApiClient {
         this._cancelHook = hook;
         return this;
     }
 
-    input(input: ContractInput): PermapostExecutor {
+    input(input: ContractInput): ApiClient {
         this._input = input;
         return this;
     }
 
-    numberOfChunks(numberOfChunks: number): PermapostExecutor {
+    numberOfChunks(numberOfChunks: number): ApiClient {
         this._numberOfChunks = numberOfChunks;
         return this;
     }
@@ -191,10 +191,24 @@ export class PermapostExecutor {
         await axios(config);
     }
 
+    async getMembers(): Promise<Array<any>> {
+        const config = {
+            method: 'get',
+            url: `${this._apiurl}/vaults/${this._resourceId}/members`,
+            headers: {
+                'Authorization': 'Bearer ' + this._jwt,
+                'Content-Type': 'application/json'
+            },
+            data: this._data
+        } as AxiosRequestConfig
+        const response = await axios(config);
+        return response.data
+    }
+
     async invite(): Promise<{ id: string }> {
         const config = {
             method: 'post',
-            url: `${this._apiurl}/vaults/${this._resourceId}/invites`,
+            url: `${this._apiurl}/vaults/${this._resourceId}/members`,
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'
@@ -208,7 +222,7 @@ export class PermapostExecutor {
     async inviteResend(): Promise<{ id: string }> {
         const config = {
             method: 'post',
-            url: `${this._apiurl}/vaults/${this._resourceId}/invites/${this._data.membershipId}`,
+            url: `${this._apiurl}/vaults/${this._resourceId}/members/${this._data.membershipId}`,
             headers: {
                 'Authorization': 'Bearer ' + this._jwt,
                 'Content-Type': 'application/json'

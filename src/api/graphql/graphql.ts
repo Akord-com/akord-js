@@ -14,9 +14,6 @@ export const getMembership = /* GraphQL */ `
   query GetMembership($id: ID!) {
     getMembership(id: $id) {
       id
-      hash
-      prevHash
-      refHash
       publicSigningKey
       postedAt
       contextVersion
@@ -159,7 +156,6 @@ export const getVault = /* GraphQL */ `
   query GetDataRoom($id: ID!) {
     getDataRoom(id: $id) {
       id
-      hash
       name
       status
       public
@@ -193,9 +189,6 @@ export const membershipsByMemberPublicSigningKey =
       ) {
         items {
           id
-          hash
-          prevHash
-          refHash
           publicSigningKey
           postedAt
           contextVersion
@@ -295,7 +288,6 @@ export const profilesByPublicSigningKey = /* GraphQL */ `
     ) {
       items {
         id
-        hash
         publicSigningKey
         postedAt
         contextVersion
@@ -326,54 +318,6 @@ export const profilesByPublicSigningKey = /* GraphQL */ `
     }
   }
 `
-
-export const preInviteCheck = /* GraphQL */ `
-  query PreInviteCheck($emails: [String], $dataRoomId: ID) {
-    preInviteCheck(emails: $emails, dataRoomId: $dataRoomId) {
-      address
-      email
-      publicSigningKey
-      publicKey
-      membership {
-        id
-        hash
-        prevHash
-        refHash
-        publicSigningKey
-        postedAt
-        contextVersion
-        dataRoomId
-        memberPublicSigningKey
-        email
-        status
-        state {
-          status
-          role
-          expiresOn
-          memberDetails {
-            publicSigningKey
-            email
-            fullName
-            phone
-            avatarUrl
-            avatarTx
-          }
-          termsOfAccess
-          agreementHash
-          message
-          encryptionType
-          keys {
-            publicKey
-            encPrivateKey
-          }
-          encAccessKey
-        }
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
 
 export const foldersByDataRoomId = /* GraphQL */ `
   query FoldersByDataRoomId(
@@ -569,9 +513,6 @@ export const membershipsByDataRoomId =
           role
           owner
           data
-          hash
-          prevHash
-          refHash
           publicSigningKey
           postedAt
           contextVersion

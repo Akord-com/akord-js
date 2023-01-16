@@ -2,7 +2,7 @@ import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { digestRaw } from "@akord/crypto";
 import { Logger } from "../logger";
-import { PermapostExecutor } from "../api/permapost";
+import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
 import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
@@ -182,7 +182,7 @@ class FileService extends Service {
     const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
     encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
 
-    await new PermapostExecutor()
+    await new ApiClient()
       .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
@@ -208,7 +208,7 @@ class FileService extends Service {
     progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController
   ) {
-    const resource = await new PermapostExecutor()
+    const resource = await new ApiClient()
       .env((<any>this.api.config))
       .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
