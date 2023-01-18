@@ -6,6 +6,7 @@ import { NodeService } from "./node";
 import { Node } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
+import { objectType, role } from "../constants";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -21,7 +22,7 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async revoke<T extends Node>(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
+  public async revoke<T extends Node>(items: { id: string, objectType: objectType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -36,7 +37,7 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async restore<T extends Node>(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
+  public async restore<T extends Node>(items: { id: string, objectType: objectType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -51,7 +52,7 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async delete<T extends Node>(items: { id: string, objectType: string }[]): Promise<{ transactionId: string }[]> {
+  public async delete<T extends Node>(items: { id: string, objectType: objectType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -66,7 +67,7 @@ class BatchService extends Service {
    * @param  {{id:string,objectType:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async move<T extends Node>(items: { id: string, objectType: string }[], parentId?: string): Promise<{ transactionId: string }[]> {
+  public async move<T extends Node>(items: { id: string, objectType: objectType }[], parentId?: string): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -81,7 +82,7 @@ class BatchService extends Service {
    * @param  {{id:string,role:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async membershipChangeRole(items: { id: string, role: string }[]): Promise<{ transactionId: string }[]> {
+  public async membershipChangeRole(items: { id: string, role: role }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const response = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -162,7 +163,7 @@ class BatchService extends Service {
    * @param  {{email:string,role:string}[]} items
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: string }[]): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: role }[]): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as { membershipId: string, transactionId: string }[];

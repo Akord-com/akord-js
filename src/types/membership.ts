@@ -37,3 +37,9 @@ export class Membership extends Encryptable {
       keys, null);
   }
 }
+
+export type MembershipKeys = {
+  isEncrypted: boolean;
+  keys: Keys[];
+  publicKey?: string;
+};

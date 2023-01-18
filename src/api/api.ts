@@ -1,7 +1,8 @@
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { Keys, Wallet } from "@akord/crypto";
 import { Vault } from "../types/vault";
-import { Membership } from "../types/membership";
+import { Membership, MembershipKeys } from "../types/membership";
+import { objectType } from "../constants";
 
 abstract class Api {
   config: any
@@ -23,11 +24,11 @@ abstract class Api {
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
 
-  abstract getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }>
+  abstract getMembershipKeys(vaultId: string, wallet: Wallet): Promise<MembershipKeys>
 
   abstract getProfile(wallet: Wallet): Promise<any>
 
-  abstract getObject<T>(objectId: string, objectType: string, vaultId?: string): Promise<T>
+  abstract getObject<T>(id: string, type: objectType, vaultId?: string): Promise<T>
 
   abstract getNodeState(stateId: string): Promise<any>
 

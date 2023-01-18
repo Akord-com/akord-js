@@ -1,11 +1,11 @@
 import { NodeService } from "./node";
-import { actionRefs, functions, objectTypes } from "../constants";
+import { actionRefs, functions, objectType } from "../constants";
 import { FileService } from "./file";
 import { FileVersion, Note } from "../types/node";
 
 class NoteService extends NodeService<Note> {
   public fileService = new FileService(this.wallet, this.api);
-  objectType: string = objectTypes.NOTE;
+  objectType = objectType.NOTE;
   NodeType = Note;
 
   /**
@@ -54,7 +54,7 @@ class NoteService extends NodeService<Note> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const note = await this.api.getObject<Note>(noteId, objectTypes.NOTE, this.vaultId);
+    const note = await this.api.getObject<Note>(noteId, objectType.NOTE, this.vaultId);
     let version: any;
     if (index) {
       if (note.versions && note.versions[index]) {

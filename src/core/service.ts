@@ -16,12 +16,12 @@ import {
   AkordWallet,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
-import { objectTypes, protocolTags, functions, dataTags, encryptionTags } from '../constants';
+import { objectType, protocolTags, functions, dataTags, encryptionTags } from '../constants';
 import lodash from "lodash";
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
-import { Membership } from "../types/membership";
+import { Membership, MembershipKeys } from "../types/membership";
 
 declare const Buffer;
 
@@ -30,11 +30,11 @@ class Service {
   wallet: Wallet
 
   dataEncrypter: Encrypter
-  membershipKeys: any
+  membershipKeys: MembershipKeys
 
   vaultId: string
   objectId: string
-  objectType: string
+  objectType: objectType
   function: functions
   isPublic: boolean
   vault: Vault
@@ -54,7 +54,7 @@ class Service {
   }
 
   protected async setVaultContext(vaultId: string) {
-    const vault = await this.api.getObject<Vault>(vaultId, objectTypes.VAULT, vaultId);
+    const vault = await this.api.getObject<Vault>(vaultId, objectType.VAULT, vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
@@ -62,7 +62,7 @@ class Service {
   }
 
 
-  protected async setVaultContextFromObjectId(objectId: string, objectType: string, vaultId?: string) {
+  protected async setVaultContextFromObjectId(objectId: string, objectType: objectType, vaultId?: string) {
     const object = await this.api.getObject<any>(objectId, objectType, this.vaultId);
     await this.setVaultContext(vaultId || object.vaultId);
     this.setObject(object);
@@ -162,7 +162,7 @@ class Service {
     this.objectId = objectId;
   }
 
-  protected setObjectType(objectType: string) {
+  protected setObjectType(objectType: objectType) {
     this.objectType = objectType;
   }
 
@@ -343,9 +343,9 @@ class Service {
       new Tag(protocolTags.VAULT_ID, this.vaultId),
       new Tag(protocolTags.NODE_TYPE, this.objectType),
     ]
-    if (this.objectType === objectTypes.MEMBERSHIP) {
+    if (this.objectType === objectType.MEMBERSHIP) {
       tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId))
-    } else if (this.objectType !== objectTypes.VAULT) {
+    } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
     const ids = await this.api.uploadData([{ data: state, tags }], true);
@@ -391,9 +391,9 @@ class Service {
     if (this.actionRef) {
       tags.push(new Tag("Action-Ref", this.actionRef));
     }
-    if (this.objectType === objectTypes.MEMBERSHIP) {
+    if (this.objectType === objectType.MEMBERSHIP) {
       tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
-    } else if (this.objectType !== objectTypes.VAULT) {
+    } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId));
     }
     return tags;

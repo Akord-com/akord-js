@@ -9,12 +9,13 @@ import { NoteService } from "./note"
 import { ProfileService } from "./profile";
 import { NodeService } from "./node";
 import { Service } from "./service";
+import { objectType } from "../constants";
 
 export class ServiceFactory {
 
   service: Service
 
-  constructor(wallet: Wallet, api: Api, objectType: string, encryptionKeys?: EncryptionKeys) {
+  constructor(wallet: Wallet, api: Api, objectType: objectType, encryptionKeys?: EncryptionKeys) {
     switch (objectType) {
       case "Vault":
         this.service = new VaultService(wallet, api, encryptionKeys);

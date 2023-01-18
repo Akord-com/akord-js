@@ -1,4 +1,4 @@
-import { actionRefs, objectTypes, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
@@ -7,7 +7,7 @@ import { defaultListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 
 class MembershipService extends Service {
-  objectType: string = objectTypes.MEMBERSHIP;
+  objectType = objectType.MEMBERSHIP;
 
   /**
    * @param  {string} membershipId
@@ -272,7 +272,7 @@ class MembershipService extends Service {
   }
 
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
-    await this.setVaultContextFromObjectId(membershipId, objectTypes.MEMBERSHIP);
+    await this.setVaultContextFromObjectId(membershipId, objectType.MEMBERSHIP);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
