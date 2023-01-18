@@ -208,8 +208,8 @@ class Service {
       let profileDetails = profile.state.profileDetails;
       delete profileDetails.__typename;
       let avatar = null;
-      if (profileDetails.avatarUrl || profileDetails.avatarUri) {
-        const resourceTx = profileDetails.avatarUri?.findLast(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "") || profileDetails.avatarUrl;
+      if (profileDetails.avatarUrl && profileDetails.avatarUri.length) {
+        const resourceTx = [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "")
         const { fileData, headers } = await this.api.downloadFile(resourceTx);
         const encryptedData = this.getEncryptedData(fileData, headers);
         if (encryptedData) {
