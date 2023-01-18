@@ -174,7 +174,7 @@ export class ApiClient {
   }
 
   async getMemberships(): Promise<Array<Membership>> {
-    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/members/${this._resourceId}`, this._data);
   }
 
   async getVaults(): Promise<Array<Vault>> {
