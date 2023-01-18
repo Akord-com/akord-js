@@ -121,6 +121,12 @@ export class FileVersion extends Encryptable {
     this.name = name;
     this.status = status;
   }
+
+  getUri(type: StorageType) {
+    return this.resourceUri
+      ?.find(uri => uri.startsWith(type))
+      ?.replace(type, "");
+  }
 }
 
 export class MemoVersion extends Encryptable {
@@ -180,4 +186,9 @@ export class NodeFactory {
   static instance<NodeLike, K extends Node>(nodeLike: { new (raw: K, keys: Array<Keys>): NodeLike }, data: K, keys: Array<Keys>): any {
     return new nodeLike(data, keys);
   }
+}
+
+export enum StorageType {
+  S3 = "s3:", 
+  ARWEAVE = "arweave:"
 }
