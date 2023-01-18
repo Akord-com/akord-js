@@ -32,7 +32,7 @@ export class Akord {
   public batch: BatchService;
   public contract: ContractService;
 
-  public static init: (wallet: Wallet, jwtToken?: string, apiConfig?: ClientConfig) => Promise<Akord>;
+  public static init: (wallet: Wallet, jwtToken?: string, config?: ClientConfig) => Promise<Akord>;
   public static auth = new Auth();
 
   // TODO: JWT token provider
