@@ -124,7 +124,7 @@ export class ApiClient {
    */
   async contract() {
     if (!this._jwt) {
-      throw Error('Authentication is required to use permapost')
+      throw Error("Authentication is required to use Akord API");
     }
 
     const config = {
@@ -138,7 +138,7 @@ export class ApiClient {
       }
     } as AxiosRequestConfig
     const response = await axios(config);
-    return response.data.contractTxId
+    return response.data.contractTxId;
   }
 
   async getContract(): Promise<Contract> {
@@ -154,7 +154,7 @@ export class ApiClient {
   }
 
   async updateProfile(): Promise<any> {
-    return await this.fetch('put', `${this._apiurl}/profiles/${jsonToBase64({ address: this._resourceId })}`, this._data);
+    return await this.fetch("put", `${this._apiurl}/profiles/${jsonToBase64({ address: this._resourceId })}`, this._data);
   }
 
   async deleteVault(): Promise<void> {
@@ -212,6 +212,10 @@ export class ApiClient {
   }
 
   async fetch(method: string, url: string, data?: any): Promise<any> {
+    if (!this._jwt) {
+      throw Error("Authentication is required to use Akord API");
+    }
+
     const config = {
       method,
       url,
@@ -238,28 +242,18 @@ export class ApiClient {
    * - tags()
    */
   async transaction() {
-    if (!this._jwt) {
-      throw Error('Authentication is required to use permapost')
-    }
     if (!this._input) {
-      throw Error('Input is required to use permapost')
+      throw Error("Input is required to use /transactions endpoint");
     }
     if (!this._metadata) {
-      throw Error('Metadata is required to use permapost')
+      throw Error("Metadata is required to use /transactions endpoint");
     }
 
-
-    const config = {
-      method: 'post',
-      url: `${this._apiurl}/${this._transactionUri}`,
-      data: { contractId: this._contractId, input: this._input, metadata: this._metadata, tags: this._tags, state: this._data },
-      headers: {
-        'Authorization': 'Bearer ' + this._jwt,
-        'Content-Type': 'application/json'
-      }
-    } as AxiosRequestConfig
-    const response = await axios(config);
-    return response.data.txId
+    const response = await this.post(
+      `${this._apiurl}/${this._transactionUri}`,
+      { contractId: this._contractId, input: this._input, metadata: this._metadata, tags: this._tags, state: this._data }
+    );
+    return response.txId;
   }
 
 
@@ -273,27 +267,18 @@ export class ApiClient {
    * - tags()
    */
   async asyncTransaction() {
-    if (!this._jwt) {
-      throw Error('Authentication is required to use permapost');
-    }
     if (!this._resourceId) {
-      throw Error('Reource id is required to use permapost');
+      throw Error("Resource id is required to use /transactions/files endpoint");
     }
 
     const tags = this._tags.filter((tag) =>
       tag.name !== "Public-Key"
     )
 
-    const config = {
-      method: 'post',
-      url: `${this._apiurl}/${this._transactionUri}/files`,
-      data: { resourceUrl: this._resourceId, tags: tags, async: true, numberOfChunks: this._numberOfChunks },
-      headers: {
-        'Authorization': 'Bearer ' + this._jwt,
-        'Content-Type': 'application/json'
-      }
-    } as AxiosRequestConfig
-    await axios(config);
+    await this.post(
+      `${this._apiurl}/${this._transactionUri}/files`,
+      { resourceUrl: this._resourceId, tags: tags, async: true, numberOfChunks: this._numberOfChunks }
+    );
   }
 
   /**
@@ -368,9 +353,6 @@ export class ApiClient {
   * - tags()
   */
   private async fileTransaction() {
-    if (!this._jwt) {
-      throw Error('Authentication is required to use permapost')
-    }
     if (!this._resourceId) {
       this._resourceId = uuid();
     }
@@ -381,17 +363,12 @@ export class ApiClient {
 
     const data = { resourceUrl: this._resourceId, tags: tags };
 
-    const config = {
-      method: 'post',
-      url: `${this._apiurl}/${this._transactionUri}/files`,
-      data: data,
-      headers: {
-        'Authorization': 'Bearer ' + this._jwt,
-        'Content-Type': 'application/json'
-      }
-    } as AxiosRequestConfig
-    const response = await axios(config);
-    return response.data.txId
+
+    const response = await this.post(
+      `${this._apiurl}/${this._transactionUri}/files`,
+      data
+    );
+    return response.txId;
   }
 
   /**
@@ -405,35 +382,25 @@ export class ApiClient {
   * - resourceId() 
   */
   private async stateTransaction() {
-    if (!this._jwt) {
-      throw Error('Authentication is required to use permapost')
-    }
-
     const tags = this._tags.filter((tag) =>
       tag.name !== "Public-Key"
     )
 
     const data = { resourceUrl: this._resourceId, tags: tags, data: this._data };
 
-    const config = {
-      method: 'post',
-      url: `${this._apiurl}/${this._transactionUri}/states`,
-      data: data,
-      headers: {
-        'Authorization': 'Bearer ' + this._jwt,
-        'Content-Type': 'application/json'
-      }
-    } as AxiosRequestConfig
-    const response = await axios(config);
-    return response.data.txId
+    const response = await this.post(
+      `${this._apiurl}/${this._transactionUri}/states`,
+      data
+    );
+    return response.txId;
   }
 
   private async upload() {
     if (!this._jwt) {
-      throw Error('Authentication is required to use permapost')
+      throw Error("Authentication is required to use Akord API");
     }
     if (!this._data) {
-      throw Error('Missing data to upload. Use Permapost#data() to add it')
+      throw Error('Missing data to upload. Use ApiClient#data() to add it')
     }
     if (!this._resourceId) {
       this._resourceId = this._isPublic ? this._publicDataDir + '/' + uuid() : uuid();
@@ -493,7 +460,7 @@ export class ApiClient {
 
   private async download() {
     if (!this._jwt && !this._isPublic) {
-      throw Error('Authentication is required to use permapost')
+      throw Error("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
       throw Error('Missing resource id to download')
