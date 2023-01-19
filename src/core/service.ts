@@ -398,37 +398,6 @@ class Service {
     }
     return tags;
   }
-
-  protected async prepareHeader() {
-    const header = {
-      prevHash: this.object?.hash,
-      publicSigningKey: await this.wallet.signingPublicKey(),
-      postedAt: new Date(),
-      groupRef: this.groupRef,
-      actionRef: this.actionRef
-    };
-    return header;
-  }
-
-  /**
-  * Post ledger transaction preparation
-  * - encode & sign the transaction payload
-  * @param {Object} headerPayload
-  * @param {Object} bodyPayload
-  */
-  protected async encodeTransaction(header: any, body: any) {
-    const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
-    const publicKey = await this.wallet.signingPublicKey()
-
-    // encode the header and body as BASE64 and sign it
-    const encodedHeader = jsonToBase64(header)
-    const encodedBody = jsonToBase64(body)
-    const signature = await signString(
-      `${encodedHeader}${encodedBody}`,
-      privateKeyRaw
-    )
-    return { encodedHeader, encodedBody, publicKey, signature }
-  }
 }
 
 export {
