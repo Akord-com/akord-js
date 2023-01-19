@@ -2,7 +2,6 @@ import { ContractInput, ContractState, Tags } from "../types/contract";
 import { Keys, Wallet } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
-import { objectType } from "../constants";
 
 abstract class Api {
   config: any
@@ -28,7 +27,7 @@ abstract class Api {
 
   abstract getProfile(wallet: Wallet): Promise<any>
 
-  abstract getObject<T>(id: string, type: objectType, vaultId?: string): Promise<T>
+  abstract getObject<T>(id: string, type: string, vaultId?: string): Promise<T>
 
   abstract getNodeState(stateId: string): Promise<any>
 
@@ -36,7 +35,7 @@ abstract class Api {
 
   abstract getMemberships(wallet: Wallet): Promise<Array<Membership>>
 
-  abstract getObjectsByVaultId<T>(vaultId: string, objectType: string, shouldListAll?: boolean): Promise<Array<T>>
+  abstract getObjectsByVaultId<T>(vaultId: string, type: string, shouldListAll?: boolean): Promise<Array<T>>
 
   abstract getMembers(vaultId: string): Promise<Array<Membership>>
 

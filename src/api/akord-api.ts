@@ -6,7 +6,7 @@ import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
 import { Membership, MembershipKeys } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
-import { objectType } from "../constants";
+import { objectType, role } from "../constants";
 
 export default class AkordApi extends Api {
 
@@ -147,7 +147,7 @@ export default class AkordApi extends Api {
       .deleteVault();
   }
 
-  public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }> {
+  public async inviteNewUser(vaultId: string, email: string, role: role): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
