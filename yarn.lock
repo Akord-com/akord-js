@@ -12,10 +12,10 @@
     module-error "^1.0.2"
     run-parallel-limit "^1.1.0"
 
-"@akord/crypto@0.7.4":
-  version "0.7.4"
-  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.7.4.tgz#66c5e1bbb99b0cc70343d468d567af697b043916"
-  integrity sha512-gPuN63LcsiZyODQgUCl1wpouyfEGY/d8p56H1bxniZMT71gZ656evwfM7hYHAuSL36coIIfQXWm8bsgmz94ffw==
+"@akord/crypto@0.7.6":
+  version "0.7.6"
+  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.7.6.tgz#935c38c7fb63d4a1575f83307f04756c7ae17494"
+  integrity sha512-2p+v3YuyKgj+7ZfvoJus2Yvxd5XsQPD5Dnaeys2uOtP3ITOlNhECkDH5UHM2opFSybBgBHOOYmaGYPIEgCRSRA==
   dependencies:
     "@akord/browser-level" "^1.0.2"
     arweave "^1.10.18"

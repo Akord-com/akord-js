@@ -2,7 +2,6 @@ import { Api } from "../api/api";
 import {
   Wallet,
   EncrypterFactory,
-  fromProfileState,
   Encrypter,
   EncryptionKeys,
   signString,
@@ -197,7 +196,12 @@ class Service {
   protected async getProfileDetails() {
     const profile = await this.api.getProfile(this.wallet);
     if (profile) {
-      const profileKeys = fromProfileState(profile.state)
+      const profileKeys = new EncryptionKeys(
+        profile.state.encryptionType,
+        profile.state.keys,
+        profile.state.encAccessKey,
+        null
+      );
       const profileEncrypter = new EncrypterFactory(this.wallet, profileKeys).encrypterInstance()
       profileEncrypter.decryptedKeys = [
         {
