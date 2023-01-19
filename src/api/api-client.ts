@@ -166,7 +166,7 @@ export class ApiClient {
   }
 
   async getProfile(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/profiles/${encodeURIComponent(this._resourceId)}`, this._data);
+    return await this.get(`${this._apiurl}/profiles/${this._resourceId}`, this._data);
   }
 
   async getMembers(): Promise<Array<any>> {
@@ -174,15 +174,15 @@ export class ApiClient {
   }
 
   async getMemberships(): Promise<Array<Membership>> {
-    return await this.get(`${this._apiurl}/members/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`, this._data);
   }
 
   async getVaults(): Promise<Array<Vault>> {
-    return await this.get(`${this._apiurl}/vaults/${encodeURIComponent(this._resourceId)}`, this._data);
+    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`, this._data);
   }
 
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.get(`${this._apiurl}/vaults/${this._contractId}/keys/${encodeURIComponent(this._resourceId)}`, this._data);
+    return await this.get(`${this._apiurl}/vaults/${this._contractId}/memberships/${this._resourceId}/keys`, this._data);
   }
 
   async getObjects(): Promise<Array<any>> {
@@ -190,7 +190,7 @@ export class ApiClient {
   }
 
   async getObject(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/nodes/${this._resourceId}`);
+    return await this.get(`${this._apiurl}/objects/${this._resourceId}`, this._data);
   }
 
   async invite(): Promise<{ id: string }> {

@@ -117,11 +117,11 @@ export default class AkordApi extends Api {
   };
 
   public async getProfile(wallet: any): Promise<any> {
-    const publicSigningKey = await wallet.signingPublicKey();
+    const address = await wallet.getAddress();
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(publicSigningKey)
+      .resourceId(address)
       .getProfile();
   };
 
@@ -181,12 +181,12 @@ export default class AkordApi extends Api {
   };
 
   public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<MembershipKeys> {
-    const publicSigningKey = await wallet.signingPublicKey();
+    const address = await wallet.getAddress();
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .contractId(vaultId)
-      .resourceId(publicSigningKey)
+      .resourceId(address)
       .getMembershipKeys();
   };
 
@@ -220,20 +220,20 @@ export default class AkordApi extends Api {
   };
 
   public async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
-    const publicSigningKey = await wallet.signingPublicKey();
+    const address = await wallet.getAddress();
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(publicSigningKey)
+      .resourceId(address)
       .getMemberships();
   };
 
   public async getVaults(wallet: Wallet): Promise<Array<any>> {
-    const publicSigningKey = await wallet.signingPublicKey();
+    const address = await wallet.getAddress();
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(publicSigningKey)
+      .resourceId(address)
       .getVaults();
   };
 
