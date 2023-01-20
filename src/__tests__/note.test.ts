@@ -39,7 +39,7 @@ describe("Testing note functions", () => {
     const name = faker.random.words();
     const content = faker.lorem.sentences();
 
-    noteId = (await akord.note.create(vaultId, name, content)).noteId;
+    noteId = (await akord.note.create(vaultId, content, name)).noteId;
 
     const note = await akord.note.get(noteId);
     expect(note.versions.length).toEqual(1);
@@ -51,7 +51,7 @@ describe("Testing note functions", () => {
     const name = faker.random.words();
     const content = faker.lorem.sentences();
 
-    await akord.note.uploadRevision(noteId, name, content);
+    await akord.note.uploadRevision(noteId, content, name);
 
     const note = await akord.note.get(noteId);
     const { name: fileName, data } = await akord.note.getVersion(noteId);
