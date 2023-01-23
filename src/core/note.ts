@@ -4,6 +4,7 @@ import { StackService } from "./stack";
 import { defaultListOptions } from "../types/list-options";
 import { objectTypes } from "../constants";
 import { arrayToString } from "@akord/crypto";
+import { NodeJs } from "../types/file";
 
 enum NoteType {
   MD = "text/markdown",
@@ -27,9 +28,7 @@ class NoteService extends NodeService<Stack> {
     noteId: string,
     transactionId: string
   }> {
-    const noteFile = new File([content], name, {
-      type: mimeType ? mimeType : NoteType.MD
-    });
+    const noteFile = new NodeJs.File([content], name, mimeType ? mimeType : NoteType.MD);
     const { stackId, transactionId } = await this.stackService.create(
       vaultId,
       noteFile,
@@ -49,9 +48,7 @@ class NoteService extends NodeService<Stack> {
   public async uploadRevision(noteId: string, content: string, name: string, mimeType?: string): Promise<{
     transactionId: string
   }> {
-    const noteFile = new File([content], name, {
-      type: mimeType ? mimeType : NoteType.MD
-    });
+    const noteFile = new NodeJs.File([content], name, mimeType ? mimeType : NoteType.MD);
     return this.stackService.uploadRevision(noteId, noteFile);
   }
 
