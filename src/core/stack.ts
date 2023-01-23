@@ -80,7 +80,7 @@ class StackService extends NodeService<Stack> {
   }
 
   private getResourceTx(version: any) {
-    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("arweave"));
+    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("s3"));
     return resourceTx.split(':')[1];
   }
 
