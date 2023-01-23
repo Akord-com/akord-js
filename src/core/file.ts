@@ -161,9 +161,11 @@ class FileService extends Service {
       );
 
       encryptionTags = encryptedData.encryptionTags;
-      iv.push(encryptionTags.find((tag)=> tag.name === encTags.IV).value);
-      if (!encryptedKey) {
-        encryptedKey = encryptionTags.find((tag)=> tag.name === encTags.ENCRYPTED_KEY).value;
+      if (!this.isPublic) {
+        iv.push(encryptionTags.find((tag) => tag.name === encTags.IV).value);
+        if (!encryptedKey) {
+          encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
+        }
       }
 
       await this.uploadChunk(
@@ -179,9 +181,11 @@ class FileService extends Service {
       uploadedChunks += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-    const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
-    encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
-
+    if (!this.isPublic) {
+      const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
+      encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
+    }
+    
     await new ApiClient()
       .env((<any>this.api.config))
       .auth(this.api.jwtToken)
