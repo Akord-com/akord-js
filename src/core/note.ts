@@ -1,9 +1,19 @@
 import { NodeService } from "./node";
 import { Stack } from "../types/node";
 import { StackService } from "./stack";
+import { defaultListOptions } from "../types/list-options";
+import { objectTypes } from "../constants";
+import { arrayToString } from "@akord/crypto";
+
+enum NoteType {
+  MD = "text/markdown",
+  JSON = "application/json"
+}
 
 class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
+  objectType: string = objectTypes.STACK;
+  NodeType = Stack;
 
   /**
    * @param  {string} vaultId
@@ -18,7 +28,7 @@ class NoteService extends NodeService<Stack> {
     transactionId: string
   }> {
     const noteFile = new File([content], name, {
-      type: mimeType ? mimeType : "text/markdown"
+      type: mimeType ? mimeType : NoteType.MD
     });
     const { stackId, transactionId } = await this.stackService.create(
       vaultId,
@@ -40,7 +50,7 @@ class NoteService extends NodeService<Stack> {
     transactionId: string
   }> {
     const noteFile = new File([content], name, {
-      type: mimeType ? mimeType : "text/markdown"
+      type: mimeType ? mimeType : NoteType.MD
     });
     return this.stackService.uploadRevision(noteId, noteFile);
   }
@@ -49,10 +59,24 @@ class NoteService extends NodeService<Stack> {
    * Get note version by index, return the latest version by default
    * @param  {string} noteId
    * @param  {string} [index] note version index
-   * @returns Promise with version name & data buffer
+   * @returns Promise with version name & data string
    */
-  public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    return this.stackService.getVersion(noteId, index);
+  public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: string }> {
+    const version = await this.stackService.getVersion(noteId, index);
+    return { data: arrayToString(version.data), name: version.name };
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with all notes within given vault
+   */
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Stack>> {
+    const stacks = await this.stackService.list(vaultId, listOptions);
+    return stacks.filter((stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
+  }
+
+  private isValidNoteType(type: string) {
+    return Object.values(NoteType).includes(<any>type);
   }
 };
 

@@ -875,6 +875,26 @@ const noteArray = await akord.note.list(vaultId);
 ```
 </details>
 
+#### `getVersion(noteId, index)`
+
+Get note text version by index, return the latest version by default
+
+- `noteId` (`string`, required)
+- `index` (`string`, optional) - note version index
+- returns `Promise<{ name: string, data: string }>` - Promise with note name & data string text
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the latest note version
+const { name: fileName, data: noteText } = await akord.note.getVersion(noteId);
+
+// get the first note version
+const { name: fileName, data: noteText } = await akord.note.getVersion(noteId, 0);
+```
+</details>
+
 ### contract
 
 #### `getState()`

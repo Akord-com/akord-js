@@ -43,19 +43,27 @@ describe("Testing note functions", () => {
 
     const note = await akord.note.get(noteId);
     expect(note.versions.length).toEqual(1);
-    const { data } = await akord.note.getVersion(noteId);
-    expect(JSON.parse(note.content)).toEqual(data);
+    const { name: fileName, data } = await akord.note.getVersion(noteId);
+    expect(data).toEqual(content);
+    expect(fileName).toEqual(name);
   });
 
   it("should upload new revision", async () => {
     const name = faker.random.words();
     const content = faker.lorem.sentences();
 
-    await akord.note.uploadRevision(noteId, content, name);
+    await akord.note.uploadRevision(
+      noteId,
+      JSON.stringify({ content: content }),
+      name,
+      "application/json"
+    );
 
     const note = await akord.note.get(noteId);
-    const { name: fileName, data } = await akord.note.getVersion(noteId);
     expect(note.versions.length).toEqual(2);
+    const { name: fileName, data } = await akord.note.getVersion(noteId);
+    expect(JSON.parse(data)).toEqual({ content: content });
+    expect(fileName).toEqual(name);
   });
 
   it("should revoke the note", async () => {
