@@ -18,6 +18,7 @@ export class ApiClient {
   private _resourceId: string;
   private _isPublic: boolean;
   private _data: any;
+  private _queryParams: any;
   private _dataRefs: string;
   private _responseType: string = "json";
   private _progressHook: (progress: any, data?: any) => void
@@ -71,6 +72,11 @@ export class ApiClient {
 
   data(data: any): ApiClient {
     this._data = data;
+    return this;
+  }
+
+  queryParams(queryParams: any): ApiClient {
+    this._queryParams = queryParams;
     return this;
   }
 
@@ -154,7 +160,7 @@ export class ApiClient {
   }
 
   async updateProfile(): Promise<any> {
-    return await this.fetch("put", `${this._apiurl}/profiles/${jsonToBase64({ address: this._resourceId })}`, this._data);
+    return await this.fetch("put", `${this._apiurl}/profiles/${jsonToBase64({ address: this._resourceId })}`);
   }
 
   async deleteVault(): Promise<void> {
@@ -162,35 +168,35 @@ export class ApiClient {
   }
 
   async getUser(): Promise<any> {
-    return await this.get(`${this._apiurl}/users/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
   }
 
   async getProfile(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/profiles/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/profiles/${this._resourceId}`);
   }
 
   async getMembers(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}/members`, this._data);
+    return await this.get(`${this._apiurl}/vaults/${this._resourceId}/members`);
   }
 
   async getMemberships(): Promise<Array<Membership>> {
-    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`);
   }
 
   async getVaults(): Promise<Array<Vault>> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`);
   }
 
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.get(`${this._apiurl}/vaults/${this._contractId}/memberships/${this._resourceId}/keys`, this._data);
+    return await this.get(`${this._apiurl}/vaults/${this._contractId}/memberships/${this._resourceId}/keys`);
   }
 
   async getObjects(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}/nodes`, this._data);
+    return await this.get(`${this._apiurl}/vaults/${this._resourceId}/nodes`);
   }
 
   async getObject(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/objects/${this._resourceId}`, this._data);
+    return await this.get(`${this._apiurl}/objects/${this._resourceId}`);
   }
 
   async invite(): Promise<{ id: string }> {
@@ -203,32 +209,44 @@ export class ApiClient {
     return response.id;
   }
 
-  async post(url: string, data?: any): Promise<any> {
-    return this.fetch("post", url, data);
+  async post(url: string): Promise<any> {
+    return this.fetch("post", url);
   }
 
-  async get(url: string, data?: any): Promise<any> {
-    return this.fetch("get", url, data);
+  async get(url: string): Promise<any> {
+    return this.fetch("get", url);
   }
 
-  async fetch(method: string, url: string, data?: any): Promise<any> {
+  async fetch(method: string, url: string): Promise<any> {
     if (!this._jwt) {
       throw Error("Authentication is required to use Akord API");
     }
 
     const config = {
       method,
-      url,
+      url: this._queryParams ? this.addQueryParams(url, this._queryParams) : url,
       headers: {
         'Authorization': 'Bearer ' + this._jwt,
         'Content-Type': 'application/json'
       }
     } as AxiosRequestConfig;
-    if (data) {
-      config.data = data;
+    if (this._data) {
+      config.data = this._data;
     }
     const response = await axios(config);
     return response.data;
+  }
+
+  addQueryParams = function (url: string, params: any) {
+    Object.entries(params).forEach(([key, value], index) => {
+      if (value) {
+        let queryParam = index === 0 ? "?" : "&";
+        queryParam += encodeURIComponent(key);
+        queryParam += "=" + encodeURIComponent(value.toString());
+        url += queryParam;
+      }
+    });
+    return url;
   }
 
   /**
@@ -249,10 +267,14 @@ export class ApiClient {
       throw Error("Metadata is required to use /transactions endpoint");
     }
 
-    const response = await this.post(
-      `${this._apiurl}/${this._transactionUri}`,
-      { contractId: this._contractId, input: this._input, metadata: this._metadata, tags: this._tags, state: this._data }
-    );
+    this.data({
+      contractId: this._contractId,
+      input: this._input,
+      metadata: this._metadata,
+      tags: this._tags,
+      state: this._data
+    });
+    const response = await this.post(`${this._apiurl}/${this._transactionUri}`);
     return response.txId;
   }
 
@@ -275,10 +297,13 @@ export class ApiClient {
       tag.name !== "Public-Key"
     )
 
-    await this.post(
-      `${this._apiurl}/${this._transactionUri}/files`,
-      { resourceUrl: this._resourceId, tags: tags, async: true, numberOfChunks: this._numberOfChunks }
-    );
+    this.data({
+      resourceUrl: this._resourceId,
+      tags: tags,
+      async: true,
+      numberOfChunks: this._numberOfChunks
+    });
+    await this.post(`${this._apiurl}/${this._transactionUri}/files`);
   }
 
   /**
@@ -361,13 +386,12 @@ export class ApiClient {
       tag.name !== "Public-Key"
     )
 
-    const data = { resourceUrl: this._resourceId, tags: tags };
+    this.data({
+      resourceUrl: this._resourceId,
+      tags: tags
+    });
 
-
-    const response = await this.post(
-      `${this._apiurl}/${this._transactionUri}/files`,
-      data
-    );
+    const response = await this.post(`${this._apiurl}/${this._transactionUri}/files`);
     return response.txId;
   }
 
@@ -386,12 +410,13 @@ export class ApiClient {
       tag.name !== "Public-Key"
     )
 
-    const data = { resourceUrl: this._resourceId, tags: tags, data: this._data };
+    this.data({
+      resourceUrl: this._resourceId,
+      tags: tags,
+      data: this._data
+    });
 
-    const response = await this.post(
-      `${this._apiurl}/${this._transactionUri}/states`,
-      data
-    );
+    const response = await this.post(`${this._apiurl}/${this._transactionUri}/states`);
     return response.txId;
   }
 

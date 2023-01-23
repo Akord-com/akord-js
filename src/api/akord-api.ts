@@ -176,7 +176,7 @@ export default class AkordApi extends Api {
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(id)
-      .data({ type })
+      .queryParams({ type })
       .getObject();
   };
 
@@ -242,7 +242,7 @@ export default class AkordApi extends Api {
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(vaultId)
-      .data({
+      .queryParams({
         type,
         shouldListAll
       })
