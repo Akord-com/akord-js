@@ -212,9 +212,9 @@ class Service {
       let profileDetails = profile.state.profileDetails;
       delete profileDetails.__typename;
       let avatar = null;
-      if (profileDetails.avatarUrl && profileDetails.avatarUri.length) {
-        const resourceTx = [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "")
-        const { fileData, headers } = await this.api.downloadFile(resourceTx);
+      const resourceUri = this.getAvatarUri(profileDetails);
+      if (resourceUri) {
+        const { fileData, headers } = await this.api.downloadFile(resourceUri);
         const encryptedData = this.getEncryptedData(fileData, headers);
         if (encryptedData) {
           avatar = await profileEncrypter.decryptRaw(encryptedData, false);
@@ -264,6 +264,16 @@ class Service {
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
     delete decodedPayload.publicKey;
     return jsonToBase64(decodedPayload);
+  }
+
+  protected getAvatarUri(profileDetails: any) {
+    if (profileDetails.avatarUri && profileDetails.avatarUri.length) {
+      return [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
+    }
+    else if (profileDetails.avatarUrl) {
+      return profileDetails.avatarUrl;
+    }
+    return null;
   }
 
   protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
@@ -401,17 +411,6 @@ class Service {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId));
     }
     return tags;
-  }
-
-  protected async prepareHeader() {
-    const header = {
-      prevHash: this.object?.hash,
-      publicSigningKey: await this.wallet.signingPublicKey(),
-      postedAt: new Date(),
-      groupRef: this.groupRef,
-      actionRef: this.actionRef
-    };
-    return header;
   }
 
   /**
