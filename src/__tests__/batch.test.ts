@@ -76,8 +76,8 @@ describe("Testing batch actions", () => {
 
     it("should revoke all items in a batch", async () => {
       await akord.batch.revoke([
-        { id: folderId, objectType: "Folder" },
-        { id: noteId, objectType: "Note" },
+        { id: folderId, type: "Folder" },
+        { id: noteId, type: "Note" },
       ])
 
       const folder = await akord.folder.get(folderId);
@@ -89,8 +89,8 @@ describe("Testing batch actions", () => {
 
     it("should restore all items in a batch", async () => {
       await akord.batch.restore([
-        { id: folderId, objectType: "Folder" },
-        { id: noteId, objectType: "Note" },
+        { id: folderId, type: "Folder" },
+        { id: noteId, type: "Note" },
       ])
 
       const folder = await akord.folder.get(folderId);
@@ -131,7 +131,7 @@ describe("Testing batch actions", () => {
           { email: email2, role: "CONTRIBUTOR" },
           { email: email3, role: "VIEWER" }
         ]
-      ));
+      )).data;
       for (let item of response) {
         const membership = await akord.membership.get(item.membershipId);
         if (membership.email === email2) {

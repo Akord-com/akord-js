@@ -1,6 +1,8 @@
 import { Encryptable, encrypted, Keys } from "@akord/crypto";
 import { status } from "../constants";
 
+export type NodeType = "Stack" | "Folder" | "Memo" | "Note";
+
 export abstract class Node extends Encryptable {
   id: string;
   owner: string;

@@ -930,17 +930,17 @@ Update user profile along with all active memberships
 
 #### `revoke(items)`
 
-- `items` (`Array<{ id: string, objectType: string }>`, required)
+- `items` (`Array<{ id: string, type: string }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `restore(items)`
 
-- `items` (`Array<{ id: string, objectType: string }>`, required)
+- `items` (`Array<{ id: string, type: string }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `delete(items)`
 
-- `items` (`Array<{ id: string, objectType: string }>`, required)
+- `items` (`Array<{ id: string, type: string }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `move(items, parentId)`

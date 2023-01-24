@@ -21,6 +21,7 @@ import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
 import { Membership, MembershipKeys } from "../types/membership";
+import { Object, ObjectType } from "../types/object";
 
 declare const Buffer;
 
@@ -33,11 +34,11 @@ class Service {
 
   vaultId: string
   objectId: string
-  objectType: objectType
+  objectType: ObjectType
   function: functions
   isPublic: boolean
   vault: Vault
-  object: NodeLike | Membership | Vault
+  object: Object
   actionRef: string
   groupRef: string
   tags: Tags
@@ -61,7 +62,7 @@ class Service {
   }
 
 
-  protected async setVaultContextFromObjectId(objectId: string, objectType: objectType, vaultId?: string) {
+  protected async setVaultContextFromObjectId(objectId: string, objectType: ObjectType, vaultId?: string) {
     const object = await this.api.getObject<any>(objectId, objectType, this.vaultId);
     await this.setVaultContext(vaultId || object.vaultId);
     this.setObject(object);
@@ -161,7 +162,7 @@ class Service {
     this.objectId = objectId;
   }
 
-  protected setObjectType(objectType: objectType) {
+  protected setObjectType(objectType: ObjectType) {
     this.objectType = objectType;
   }
 

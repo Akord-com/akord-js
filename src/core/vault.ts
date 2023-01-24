@@ -6,7 +6,7 @@ import { Service } from "./service";
 import { Tag } from "../types/contract";
 
 class VaultService extends Service {
-  objectType: objectType = objectType.VAULT;
+  objectType = objectType.VAULT;
 
   /**
    * @param  {string} name new vault name
