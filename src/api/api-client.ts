@@ -1,4 +1,3 @@
-import { jsonToBase64 } from "@akord/crypto";
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
@@ -191,11 +190,11 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/vaults/${this._contractId}/keys`);
   }
 
-  async getObjects(): Promise<Array<any>> {
+  async getObjects<T>(): Promise<Array<T>> {
     return await this.get(`${this._apiurl}/vaults/${this._resourceId}/nodes`);
   }
 
-  async getObject(): Promise<Array<any>> {
+  async getObject<T>(): Promise<T> {
     return await this.get(`${this._apiurl}/objects/${this._resourceId}`);
   }
 

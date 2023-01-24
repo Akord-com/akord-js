@@ -7,6 +7,7 @@ import { Logger } from "../logger";
 import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
+import { Vault } from "../types/vault";
 
 export default class AkordApi extends Api {
 
@@ -52,7 +53,7 @@ export default class AkordApi extends Api {
     return txId;
   };
 
-  public async getMembers(vaultId: string): Promise<Array<any>> {
+  public async getMembers(vaultId: string): Promise<Array<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -171,7 +172,7 @@ export default class AkordApi extends Api {
       .invite();
   }
 
-  public async getObject(id: string, type: ObjectType): Promise<any> {
+  public async getObject<T>(id: string, type: ObjectType): Promise<T> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -228,7 +229,7 @@ export default class AkordApi extends Api {
       .getMemberships();
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<any>> {
+  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
     const address = await wallet.getAddress();
     return await new ApiClient()
       .env(this.config)
@@ -237,7 +238,7 @@ export default class AkordApi extends Api {
       .getVaults();
   };
 
-  public async getObjectsByVaultId(vaultId: string, type: ObjectType, shouldListAll = false): Promise<Array<any>> {
+  public async getObjectsByVaultId<T>(vaultId: string, type: ObjectType, shouldListAll = false): Promise<Array<T>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)

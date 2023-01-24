@@ -63,7 +63,7 @@ class Service {
 
 
   protected async setVaultContextFromObjectId(objectId: string, objectType: ObjectType, vaultId?: string) {
-    const object = await this.api.getObject<any>(objectId, objectType, this.vaultId);
+    const object = await this.api.getObject<Object>(objectId, objectType, this.vaultId);
     await this.setVaultContext(vaultId || object.vaultId);
     this.setObject(object);
     this.setObjectId(objectId);
