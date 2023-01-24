@@ -2,7 +2,6 @@ import { Api } from "../api/api";
 import {
   Wallet,
   EncrypterFactory,
-  fromProfileState,
   Encrypter,
   EncryptionKeys,
   signString,
@@ -197,7 +196,12 @@ class Service {
   protected async getProfileDetails() {
     const profile = await this.api.getProfile(this.wallet);
     if (profile) {
-      const profileKeys = fromProfileState(profile.state)
+      const profileKeys = new EncryptionKeys(
+        profile.state.encryptionType,
+        profile.state.keys,
+        profile.state.encAccessKey,
+        null
+      );
       const profileEncrypter = new EncrypterFactory(this.wallet, profileKeys).encrypterInstance()
       profileEncrypter.decryptedKeys = [
         {
@@ -208,9 +212,9 @@ class Service {
       let profileDetails = profile.state.profileDetails;
       delete profileDetails.__typename;
       let avatar = null;
-      if (profileDetails.avatarUrl || profileDetails.avatarUri) {
-        const resourceTx = profileDetails.avatarUri?.findLast(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "") || profileDetails.avatarUrl;
-        const { fileData, headers } = await this.api.downloadFile(resourceTx);
+      const resourceUri = this.getAvatarUri(profileDetails);
+      if (resourceUri) {
+        const { fileData, headers } = await this.api.downloadFile(resourceUri);
         const encryptedData = this.getEncryptedData(fileData, headers);
         if (encryptedData) {
           avatar = await profileEncrypter.decryptRaw(encryptedData, false);
@@ -260,6 +264,16 @@ class Service {
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
     delete decodedPayload.publicKey;
     return jsonToBase64(decodedPayload);
+  }
+
+  protected getAvatarUri(profileDetails: any) {
+    if (profileDetails.avatarUri && profileDetails.avatarUri.length) {
+      return [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
+    }
+    else if (profileDetails.avatarUrl) {
+      return profileDetails.avatarUrl;
+    }
+    return null;
   }
 
   protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
