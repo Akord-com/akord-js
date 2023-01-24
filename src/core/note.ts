@@ -4,12 +4,14 @@ import { StackService } from "./stack";
 import { defaultListOptions } from "../types/list-options";
 import { objectTypes } from "../constants";
 import { arrayToString } from "@akord/crypto";
-import { NodeJs } from "../types/file";
+import { createFile } from "../types/file";
 
-enum NoteType {
+enum NoteTypes {
   MD = "text/markdown",
   JSON = "application/json"
 }
+
+type NoteType = "text/markdown" | "application/json";
 
 class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
@@ -24,11 +26,11 @@ class NoteService extends NodeService<Stack> {
    * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
    * @returns Promise with new note id & corresponding transaction id
    */
-  public async create(vaultId: string, content: string, name: string, parentId?: string, mimeType?: string): Promise<{
+  public async create(vaultId: string, content: string, name: string, parentId?: string, mimeType?: NoteType): Promise<{
     noteId: string,
     transactionId: string
   }> {
-    const noteFile = new NodeJs.File([content], name, mimeType ? mimeType : NoteType.MD);
+    const noteFile = createFile([content], name, mimeType ? mimeType : NoteTypes.MD);
     const { stackId, transactionId } = await this.stackService.create(
       vaultId,
       noteFile,
@@ -45,10 +47,10 @@ class NoteService extends NodeService<Stack> {
   * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(noteId: string, content: string, name: string, mimeType?: string): Promise<{
+  public async uploadRevision(noteId: string, content: string, name: string, mimeType?: NoteType): Promise<{
     transactionId: string
   }> {
-    const noteFile = new NodeJs.File([content], name, mimeType ? mimeType : NoteType.MD);
+    const noteFile = createFile([content], name, mimeType ? mimeType : NoteTypes.MD);
     return this.stackService.uploadRevision(noteId, noteFile);
   }
 
@@ -73,7 +75,7 @@ class NoteService extends NodeService<Stack> {
   }
 
   private isValidNoteType(type: string) {
-    return Object.values(NoteType).includes(<any>type);
+    return Object.values(NoteTypes).includes(<any>type);
   }
 };
 
