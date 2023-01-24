@@ -6,7 +6,8 @@ import { NodeService } from "./node";
 import { Node } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
-import { objectType, role } from "../constants";
+import { objectType } from "../constants";
+import { RoleType } from "../types/membership";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -82,7 +83,7 @@ class BatchService extends Service {
    * @param  {{id:string,role:string}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async membershipChangeRole(items: { id: string, role: role }[]): Promise<{ transactionId: string }[]> {
+  public async membershipChangeRole(items: { id: string, role: RoleType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const response = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -160,10 +161,10 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{email:string,role:string}[]} items
+   * @param  {{email:string,role:RoleType}[]} items
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: role }[]): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[]): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as { membershipId: string, transactionId: string }[];

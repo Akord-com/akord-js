@@ -1,15 +1,17 @@
 import { Encryptable, Keys } from "@akord/crypto";
 import { ProfileDetails } from "./profile-details";
-import { role, status } from "../constants";
+
+export type RoleType = "VIEWER" | "CONTRIBUTOR";
+export type StatusType = "ACCEPTED" | "PENDING" | "REVOKED" | "INVITED";
 
 export class Membership extends Encryptable {
   id: string;
   owner: string;
   createdAt: string; // number
   updatedAt: string; // number
-  status: status;
+  status: StatusType;
   address: string;
-  role: role;
+  role: RoleType;
   data?: string[];
   encPublicSigningKey: string;
   memberDetails: ProfileDetails;

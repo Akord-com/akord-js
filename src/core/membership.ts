@@ -1,8 +1,8 @@
-import { actionRefs, objectType, status, functions, protocolTags, role } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
-import { Membership } from "../types/membership";
+import { Membership, RoleType } from "../types/membership";
 import { defaultListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 
@@ -51,10 +51,10 @@ class MembershipService extends Service {
    * Invite user with an Akord account
    * @param  {string} vaultId
    * @param  {string} email invitee's email
-   * @param  {string} role CONTRIBUTOR or VIEWER
+   * @param  {RoleType} role CONTRIBUTOR or VIEWER
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async invite(vaultId: string, email: string, role: role): Promise<{
+  public async invite(vaultId: string, email: string, role: RoleType): Promise<{
     membershipId: string,
     transactionId: string
   }> {
@@ -233,10 +233,10 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} membershipId
-   * @param  {string} role CONTRIBUTOR or VIEWER
+   * @param  {RoleType} role CONTRIBUTOR or VIEWER
    * @returns Promise with corresponding transaction id
    */
-  public async changeRole(membershipId: string, role: role): Promise<{ transactionId: string }> {
+  public async changeRole(membershipId: string, role: RoleType): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(membershipId, this.objectType);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
     this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
@@ -250,7 +250,7 @@ class MembershipService extends Service {
    * @param  {string} role CONTRIBUTOR or VIEWER
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async inviteNewUser(vaultId: string, email: string, role: role): Promise<{
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType): Promise<{
     membershipId: string
   }> {
     const { id } = await this.api.inviteNewUser(vaultId, email, role);
