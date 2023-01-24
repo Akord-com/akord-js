@@ -32,7 +32,7 @@ export class Akord {
   public batch: BatchService;
   public contract: ContractService;
 
-  public static init: (wallet: Wallet, jwtToken?: string, apiConfig?: ClientConfig) => Promise<Akord>;
+  public static init: (wallet: Wallet, jwtToken?: string, config?: ClientConfig) => Promise<Akord>;
   public static auth = new Auth();
 
   // TODO: JWT token provider
@@ -45,7 +45,7 @@ export class Akord {
     Logger.debug = config.debug;
     CacheBusters.cache = config.cache;
     Crypto.configure({ wallet: wallet });
-    this.api = new AkordApi(config, jwtToken);
+    this.api = config.api ? config.api : new AkordApi(config, jwtToken);
     this.vault = new VaultService(wallet, this.api);
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);

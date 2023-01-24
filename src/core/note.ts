@@ -2,7 +2,7 @@ import { NodeService } from "./node";
 import { Stack } from "../types/node";
 import { StackService } from "./stack";
 import { defaultListOptions } from "../types/list-options";
-import { objectTypes } from "../constants";
+import { objectType } from "../constants";
 import { arrayToString } from "@akord/crypto";
 import { createFile } from "../types/file";
 
@@ -15,7 +15,7 @@ type NoteType = "text/markdown" | "application/json";
 
 class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
-  objectType: string = objectTypes.STACK;
+  objectType = objectType.STACK;
   NodeType = Stack;
 
   /**

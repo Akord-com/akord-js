@@ -1,9 +1,9 @@
 import { NodeService } from "./node";
-import { actionRefs, functions, objectTypes } from "../constants";
+import { actionRefs, functions, objectType } from "../constants";
 import { Folder } from "../types/node";
 
 class FolderService extends NodeService<Folder> {
-  objectType: string = objectTypes.FOLDER;
+  objectType = objectType.FOLDER;
   NodeType = Folder;
 
   /**
