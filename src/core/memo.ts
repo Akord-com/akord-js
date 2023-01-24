@@ -41,7 +41,7 @@ class MemoService extends NodeService<Memo> {
 
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
-    newState.versions[newState.versions.length -1].reactions.push(await this.memoReaction(reaction));
+    newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
     const { data, metadata } = await this.uploadState(newState);
 
     const txId = await this.api.postContractTransaction(
@@ -76,8 +76,7 @@ class MemoService extends NodeService<Memo> {
     return { transactionId: txId }
   }
 
-  // TODO: return type Promise<MemoVersion>
-  private async memoVersion(message: string): Promise<any> {
+  private async memoVersion(message: string): Promise<MemoVersion> {
     const version = {
       owner: await this.wallet.getAddress(),
       message: await this.processWriteString(message),
@@ -85,24 +84,23 @@ class MemoService extends NodeService<Memo> {
       reactions: [],
       attachments: []
     };
-    return version;
+    return new MemoVersion(version);
   }
 
-  // TODO: return type Promise<MemoReaction>
-  private async memoReaction(reactionEmoji: reactionEmoji): Promise<any> {
+  private async memoReaction(reactionEmoji: reactionEmoji): Promise<MemoReaction> {
     const reaction = {
       reaction: await this.processWriteString(reactionEmoji),
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now())
     };
-    return reaction;
+    return new MemoReaction(reaction);
   }
 
   private async deleteReaction(reaction: string) {
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
-    const index = await this.getReactionIndex(currentState.versions[currentState.versions.length -1].reactions, reaction);
+    const index = await this.getReactionIndex(currentState.versions[currentState.versions.length - 1].reactions, reaction);
     const newState = lodash.cloneDeepWith(currentState);
-    newState.versions[newState.versions.length -1].reactions.splice(index, 1);
+    newState.versions[newState.versions.length - 1].reactions.splice(index, 1);
     return newState;
   }
 

@@ -12,7 +12,7 @@ class StackService extends NodeService<Stack> {
 
   /**
    * @param  {string} vaultId
-   * @param  {any} file file object
+   * @param  {FileLike} file file object
    * @param  {string} name stack name
    * @param  {string} [parentId] parent folder id
    * @param  {(progress:number)=>void} [progressHook]
@@ -39,11 +39,11 @@ class StackService extends NodeService<Stack> {
 
   /**
   * @param  {string} stackId
-  * @param  {any} file file object
+  * @param  {FileLike} file file object
   * @param  {(progress:number)=>void} [progressHook]
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(stackId: string, file: any, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
+  public async uploadRevision(stackId: string, file: FileLike, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
@@ -79,8 +79,7 @@ class StackService extends NodeService<Stack> {
     return { name, data };
   }
 
-  // TODO: return type Promise<FileVersion>
-  private async uploadNewFileVersion(file: any, progressHook?: any, cancelHook?: any): Promise<any> {
+  private async uploadNewFileVersion(file: FileLike, progressHook?: any, cancelHook?: any): Promise<FileVersion> {
     const {
       resourceTx,
       resourceUrl,
@@ -90,7 +89,7 @@ class StackService extends NodeService<Stack> {
       thumbnailTx,
       thumbnailUrl
     } = await this.postFile(file, progressHook, cancelHook);
-    const version = {
+    const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(file.name),
@@ -100,7 +99,7 @@ class StackService extends NodeService<Stack> {
       thumbnailUri: [`arweave:${thumbnailTx}`, `s3:${thumbnailUrl}`],
       numberOfChunks,
       chunkSize,
-    }
+    });
     return version;
   }
 
