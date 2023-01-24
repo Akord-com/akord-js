@@ -3,16 +3,16 @@ import { actionRefs, functions, objectType } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
 import { FileLike } from "../types/file";
-import { FileVersion, Stack } from "../types/node";
+import { FileVersion, Stack, StorageType } from "../types/node";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
-  objectType: objectType = objectType.STACK;
+  objectType = objectType.STACK;
   NodeType = Stack;
 
   /**
    * @param  {string} vaultId
-   * @param  {any} file file object
+   * @param  {FileLike} file file object
    * @param  {string} name stack name
    * @param  {string} [parentId] parent folder id
    * @param  {(progress:number)=>void} [progressHook]
@@ -39,11 +39,11 @@ class StackService extends NodeService<Stack> {
 
   /**
   * @param  {string} stackId
-  * @param  {any} file file object
+  * @param  {FileLike} file file object
   * @param  {(progress:number)=>void} [progressHook]
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(stackId: string, file: any, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
+  public async uploadRevision(stackId: string, file: FileLike, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
     await this.setVaultContextFromObjectId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
@@ -61,8 +61,8 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = await this.api.getObject<Stack>(stackId, objectType.STACK, this.vaultId);
-    let version: any;
+    const stack = new Stack(await this.api.getObject<Stack>(stackId, objectType.STACK, this.vaultId), null);
+    let version: FileVersion;
     if (index) {
       if (stack.versions && stack.versions[index]) {
         version = stack.versions[index];
@@ -73,19 +73,13 @@ class StackService extends NodeService<Stack> {
       version = stack.versions[stack.versions.length - 1];
     }
     await this.setVaultContext(stack.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(this.getResourceTx(version), this.isPublic);
+    const { fileData, headers } = await this.api.downloadFile(version.getUri(StorageType.S3), this.isPublic);
     const data = await this.processReadRaw(fileData, headers);
     const name = await this.processReadString(version.name);
     return { name, data };
   }
 
-  private getResourceTx(version: any) {
-    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("arweave"));
-    return resourceTx.split(':')[1];
-  }
-
-  // TODO: return type Promise<FileVersion>
-  private async uploadNewFileVersion(file: any, progressHook?: any, cancelHook?: any): Promise<any> {
+  private async uploadNewFileVersion(file: FileLike, progressHook?: any, cancelHook?: any): Promise<FileVersion> {
     const {
       resourceTx,
       resourceUrl,
@@ -95,7 +89,7 @@ class StackService extends NodeService<Stack> {
       thumbnailTx,
       thumbnailUrl
     } = await this.postFile(file, progressHook, cancelHook);
-    const version = {
+    const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(file.name),
@@ -105,7 +99,7 @@ class StackService extends NodeService<Stack> {
       thumbnailUri: [`arweave:${thumbnailTx}`, `s3:${thumbnailUrl}`],
       numberOfChunks,
       chunkSize,
-    }
+    });
     return version;
   }
 

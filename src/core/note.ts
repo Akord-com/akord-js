@@ -1,103 +1,81 @@
 import { NodeService } from "./node";
-import { actionRefs, functions, objectType } from "../constants";
-import { FileService } from "./file";
-import { FileVersion, Note } from "../types/node";
+import { Stack } from "../types/node";
+import { StackService } from "./stack";
+import { defaultListOptions } from "../types/list-options";
+import { objectType } from "../constants";
+import { arrayToString } from "@akord/crypto";
+import { createFile } from "../types/file";
 
-class NoteService extends NodeService<Note> {
-  public fileService = new FileService(this.wallet, this.api);
-  objectType = objectType.NOTE;
-  NodeType = Note;
+enum NoteTypes {
+  MD = "text/markdown",
+  JSON = "application/json"
+}
+
+type NoteType = "text/markdown" | "application/json";
+
+class NoteService extends NodeService<Stack> {
+  public stackService = new StackService(this.wallet, this.api);
+  objectType = objectType.STACK;
+  NodeType = Stack;
 
   /**
    * @param  {string} vaultId
+   * @param  {string} content note content, ex: stringified JSON
    * @param  {string} name note name
-   * @param  {any} content JSON note content
    * @param  {string} [parentId] parent folder id
+   * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
    * @returns Promise with new note id & corresponding transaction id
    */
-  public async create(vaultId: string, name: string, content: any, parentId?: string): Promise<{
+  public async create(vaultId: string, content: string, name: string, parentId?: string, mimeType?: NoteType): Promise<{
     noteId: string,
     transactionId: string
   }> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.NOTE_CREATE);
-    this.setFunction(functions.NODE_CREATE);
-    const body = {
-      versions: [await this.uploadNewNoteVersion(name, content)]
-    };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { noteId: nodeId, transactionId };
+    const noteFile = createFile([content], name, mimeType ? mimeType : NoteTypes.MD);
+    const { stackId, transactionId } = await this.stackService.create(
+      vaultId,
+      noteFile,
+      name,
+      parentId
+    );
+    return { noteId: stackId, transactionId };
   }
 
   /**
   * @param  {string} noteId
+  * @param  {string} content note content, ex: stringified JSON
   * @param  {string} name note name
-  * @param  {any} content JSON note content
+  * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(noteId: string, name: string, content: any): Promise<{
+  public async uploadRevision(noteId: string, content: string, name: string, mimeType?: NoteType): Promise<{
     transactionId: string
   }> {
-    await this.setVaultContextFromObjectId(noteId, this.objectType);
-    this.setActionRef(actionRefs.NOTE_UPLOAD_REVISION);
-    const body = {
-      versions: [await this.uploadNewNoteVersion(name, content)]
-    };
-    this.setFunction(functions.NODE_UPDATE);
-    return this.nodeUpdate(body);
+    const noteFile = createFile([content], name, mimeType ? mimeType : NoteTypes.MD);
+    return this.stackService.uploadRevision(noteId, noteFile);
   }
 
   /**
    * Get note version by index, return the latest version by default
    * @param  {string} noteId
    * @param  {string} [index] note version index
-   * @returns Promise with version name & data buffer
+   * @returns Promise with version name & data string
    */
-  public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const note = await this.api.getObject<Note>(noteId, objectType.NOTE, this.vaultId);
-    let version: any;
-    if (index) {
-      if (note.versions && note.versions[index]) {
-        version = note.versions[index];
-      } else {
-        throw new Error("Given index: " + index + " does not exist for note: " + noteId);
-      }
-    } else {
-      version = note.versions[note.versions.length - 1];
-    }
-    await this.setVaultContext(note.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(this.getResourceTx(version), this.isPublic);
-    const data = await this.processReadRaw(fileData, headers);
-    const name = await this.processReadString(version.name);
-    return { name, data };
+  public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: string }> {
+    const version = await this.stackService.getVersion(noteId, index);
+    return { data: arrayToString(version.data), name: version.name };
   }
 
-  private getResourceTx(version: any) {
-    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("arweave"));
-    return resourceTx.split(':')[1];
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with all notes within given vault
+   */
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Stack>> {
+    const stacks = await this.stackService.list(vaultId, listOptions);
+    return stacks.filter((stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
   }
 
-  // TODO: return type Promise<FileVersion>
-  private async uploadNewNoteVersion(name: string, content: any): Promise<any> {
-    const { resourceTx, resourceUrl, resourceHash } = await this.fileService.create(new File([content], name), true);
-
-    const version = {
-      owner: await this.wallet.getAddress(),
-      createdAt: JSON.stringify(Date.now()),
-      name: await this.processWriteString(name),
-      type: "text/markdown",
-      size: Buffer.byteLength(content, 'utf8'),
-      resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`, `s3:${resourceUrl}`]
-    }
-    return version;
-  }
-
-  public async setVaultContext(vaultId: string): Promise<void> {
-    await super.setVaultContext(vaultId);
-    this.fileService.setKeys(this.membershipKeys);
-    this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
-    this.fileService.setVaultId(this.vaultId);
-    this.fileService.setIsPublic(this.isPublic);
+  private isValidNoteType(type: string) {
+    return Object.values(NoteTypes).includes(<any>type);
   }
 };
 

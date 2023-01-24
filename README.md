@@ -755,31 +755,41 @@ const folderArray = await akord.folder.list(vaultId);
 #### `create(vaultId, name, content, parentId)`
 
 - `vaultId` (`string`, required)
+- `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `content` (`any`, required) - JSON note content
 - `parentId` (`string`, optional) - parent folder id
+- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
 - returns `Promise<{ noteId, transactionId }>` - Promise with new note id & corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { noteId } = await akord.note.create(vaultId, "Hello World note", "# Hello World");
+const { noteId } = await akord.note.create(vaultId, "# Hello World", "Hello World note");
+
+const { noteId } = await akord.note.create(
+  vaultId,
+  JSON.stringify({ name: "My first JSON note" }),
+  "My first JSON note",
+  parentId,
+  "application/json"
+);
 ```
 </details>
 
 #### `uploadRevision(noteId, name, content)`
 
 - `noteId` (`string`, required)
+- `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `content` (`string`, required) - JSON note content
+- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.note.uploadRevision(vaultId, "Hello World note bis", "# Hello World bis");
+const { transactionId } = await akord.note.uploadRevision(vaultId, "# Hello World bis", "Hello World note bis");
 ```
 </details>
 
@@ -862,6 +872,26 @@ const note = await akord.note.get(noteId);
 
 ```js
 const noteArray = await akord.note.list(vaultId);
+```
+</details>
+
+#### `getVersion(noteId, index)`
+
+Get note text version by index, return the latest version by default
+
+- `noteId` (`string`, required)
+- `index` (`string`, optional) - note version index
+- returns `Promise<{ name: string, data: string }>` - Promise with note name & data string text
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the latest note version
+const { name: fileName, data: noteText } = await akord.note.getVersion(noteId);
+
+// get the first note version
+const { name: fileName, data: noteText } = await akord.note.getVersion(noteId, 0);
 ```
 </details>
 

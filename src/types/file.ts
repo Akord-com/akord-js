@@ -35,3 +35,12 @@ export namespace NodeJs {
     }
   }
 }
+
+export function createFile(sources: Array<BinaryLike>, name: string, mimeType: string, lastModified?: number)
+  : FileLike {
+  if (typeof window === "undefined") {
+    return new NodeJs.File(sources, name, mimeType, lastModified);
+  } else {
+    return new File(sources, name, { type: mimeType, lastModified })
+  }
+}
