@@ -160,7 +160,7 @@ export class ApiClient {
   }
 
   async updateProfile(): Promise<any> {
-    return await this.fetch("put", `${this._apiurl}/profiles/${jsonToBase64({ address: this._resourceId })}`);
+    return await this.fetch("put", `${this._apiurl}/profiles`);
   }
 
   async deleteVault(): Promise<void> {
@@ -172,7 +172,7 @@ export class ApiClient {
   }
 
   async getProfile(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/profiles/${this._resourceId}`);
+    return await this.get(`${this._apiurl}/profiles`);
   }
 
   async getMembers(): Promise<Array<any>> {
@@ -180,15 +180,15 @@ export class ApiClient {
   }
 
   async getMemberships(): Promise<Array<Membership>> {
-    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`);
+    return await this.get(`${this._apiurl}/memberships`);
   }
 
   async getVaults(): Promise<Array<Vault>> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`);
+    return await this.get(`${this._apiurl}/vaults`);
   }
 
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.get(`${this._apiurl}/vaults/${this._contractId}/memberships/${this._resourceId}/keys`);
+    return await this.get(`${this._apiurl}/vaults/${this._contractId}/keys`);
   }
 
   async getObjects(): Promise<Array<any>> {
