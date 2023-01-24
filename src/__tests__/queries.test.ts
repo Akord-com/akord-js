@@ -1,28 +1,13 @@
 import { Akord } from "../index";
-import fs from "fs";
-import path from "path";
 import { email, password } from './data/test-credentials';
 import { vaults, fileId, message, publicVaultId, privateVaultId } from './data/content';
+import { NodeJs } from "../types/file";
 
 let clientWithAkordApi: Akord;
 let clientWithArweaveApi: Akord;
 let clientWithoutWallet: Akord;
 
 jest.setTimeout(3000000);
-
-function getFileFromPath(filePath: string) {
-  let file = <any>{};
-  if (!fs.existsSync(filePath)) {
-    console.error("Could not find a file in your filesystem: " + filePath);
-    process.exit(0);
-  }
-  const stats = fs.statSync(filePath);
-  file.size = stats.size;
-  file.data = fs.readFileSync(filePath);
-  file.name = path.basename(filePath);
-  return file;
-}
-
 
 describe("Testing querying directly from permaweb", () => {
   beforeAll(async () => {
@@ -69,13 +54,13 @@ describe("Testing querying directly from permaweb", () => {
 
   it("Query chunked file from Akord API", async () => {
     const decryptedFile = await clientWithAkordApi.file.get(fileId, vaults[0].id, { isChunked: true, numberOfChunks: 3 });
-    const file = getFileFromPath("./src/__tests__/data/chunked-file.test");
-    expect(Buffer.from(decryptedFile)).toEqual(file.data);
+    const file = NodeJs.File.fromPath("./src/__tests__/data/chunked-file.test");
+    expect(Buffer.from(decryptedFile)).toEqual(await file.arrayBuffer());
   });
 
   it("Query chunked file from Akord API", async () => {
     const decryptedFile = await clientWithAkordApi.file.get(fileId, vaults[0].id, { isChunked: true, numberOfChunks: 3 });
-    const file = getFileFromPath("./src/__tests__/data/chunked-file.test");
-    expect(Buffer.from(decryptedFile)).toEqual(file.data);
+    const file = NodeJs.File.fromPath("./src/__tests__/data/chunked-file.test");
+    expect(Buffer.from(decryptedFile)).toEqual(await file.arrayBuffer());
   });
 });
