@@ -3,7 +3,7 @@ import { actionRefs, functions, objectTypes } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
 import { FileLike } from "../types/file";
-import { FileVersion, Stack } from "../types/node";
+import { FileVersion, Stack, StorageType } from "../types/node";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -61,8 +61,8 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = await this.api.getObject<Stack>(stackId, objectTypes.STACK, this.vaultId);
-    let version: any;
+    const stack = new Stack(await this.api.getObject<Stack>(stackId, objectTypes.STACK, this.vaultId), null);
+    let version: FileVersion;
     if (index) {
       if (stack.versions && stack.versions[index]) {
         version = stack.versions[index];
@@ -73,15 +73,10 @@ class StackService extends NodeService<Stack> {
       version = stack.versions[stack.versions.length - 1];
     }
     await this.setVaultContext(stack.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(this.getResourceTx(version), this.isPublic);
+    const { fileData, headers } = await this.api.downloadFile(version.getUri(StorageType.S3), this.isPublic);
     const data = await this.processReadRaw(fileData, headers);
     const name = await this.processReadString(version.name);
     return { name, data };
-  }
-
-  private getResourceTx(version: any) {
-    const resourceTx = version.resourceUri.find(resourceUri => resourceUri.includes("s3"));
-    return resourceTx.split(':')[1];
   }
 
   // TODO: return type Promise<FileVersion>
