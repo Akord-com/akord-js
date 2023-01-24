@@ -9,13 +9,14 @@ export enum reactionEmoji {
   PRAY = "128591"
 };
 
-export enum objectTypes {
+export enum objectType {
   VAULT = "Vault",
   MEMBERSHIP = "Membership",
   STACK = "Stack",
   MEMO = "Memo",
   FOLDER = "Folder",
-  NOTE = "Note"
+  NOTE = "Note",
+  PROFILE = "Profile"
 };
 
 export enum status {

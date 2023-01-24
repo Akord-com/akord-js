@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, functions, objectTypes } from "../constants";
+import { actionRefs, functions, objectType } from "../constants";
 import { createThumbnail } from "./thumbnail";
 import { FileService } from "./file";
 import { FileLike } from "../types/file";
@@ -7,7 +7,7 @@ import { FileVersion, Stack } from "../types/node";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
-  objectType: string = objectTypes.STACK;
+  objectType: objectType = objectType.STACK;
   NodeType = Stack;
 
   /**
@@ -61,7 +61,7 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = await this.api.getObject<Stack>(stackId, objectTypes.STACK, this.vaultId);
+    const stack = await this.api.getObject<Stack>(stackId, objectType.STACK, this.vaultId);
     let version: any;
     if (index) {
       if (stack.versions && stack.versions[index]) {

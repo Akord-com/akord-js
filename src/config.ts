@@ -1,4 +1,5 @@
 import { WalletType } from "@akord/crypto"
+import { Api } from "./api/api"
 
 export interface ClientConfig {
   env?: EnvType,
@@ -6,6 +7,7 @@ export interface ClientConfig {
   wallet?: WalletType,
   debug?: boolean,
   cache?: boolean,
+  api?: Api
 }
 
 export enum EnvType {

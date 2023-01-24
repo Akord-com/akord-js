@@ -1,13 +1,12 @@
 import { MembershipService } from "./membership";
-import { actionRefs } from "../constants";
-import { EncryptionType } from "@akord/crypto";
 import { ProfileDetails } from "../types/profile-details";
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
 import { CacheBusters } from "../types/cacheable";
 import { Service } from "./service";
+import { objectType } from "../constants";
 
 class ProfileService extends Service {
-  objectType: string = "Profile";
+  objectType = objectType.PROFILE;
 
   /**
    * Fetch currently authenticated user's profile details

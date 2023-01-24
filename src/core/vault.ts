@@ -1,4 +1,4 @@
-import { actionRefs, objectTypes, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
 import { Vault } from "../types/vault";
@@ -6,7 +6,7 @@ import { Service } from "./service";
 import { Tag } from "../types/contract";
 
 class VaultService extends Service {
-  objectType: string = objectTypes.VAULT;
+  objectType: objectType = objectType.VAULT;
 
   /**
    * @param  {string} name new vault name
@@ -35,7 +35,7 @@ class VaultService extends Service {
       publicKeys = [arrayToBase64(keyPair.publicKey)];
     }
 
-    const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectTypes.VAULT)]);
+    const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
@@ -76,14 +76,14 @@ class VaultService extends Service {
           new Tag(protocolTags.SIGNATURE, membershipSignature),
           new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
           new Tag(protocolTags.VAULT_ID, this.vaultId),
-          new Tag(protocolTags.NODE_TYPE, objectTypes.MEMBERSHIP),
+          new Tag(protocolTags.NODE_TYPE, objectType.MEMBERSHIP),
           new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
         ]
       }], true);
     const metadata = {
       dataRefs: [
-        { ...ids[0], modelId: this.vaultId, modelType: objectTypes.VAULT, data: vaultData },
-        { ...ids[1], modelId: membershipId, modelType: objectTypes.MEMBERSHIP, data: membershipData }
+        { ...ids[0], modelId: this.vaultId, modelType: objectType.VAULT, data: vaultData },
+        { ...ids[1], modelId: membershipId, modelType: objectType.MEMBERSHIP, data: membershipData }
       ],
       publicKeys
     }

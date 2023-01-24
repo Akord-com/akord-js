@@ -1,26 +1,22 @@
-import { Wallet, Keys } from "@akord/crypto";
-import { GraphQLClient } from "graphql-request";
-import gql from "graphql-tag";
+import { Wallet } from "@akord/crypto";
 import { ClientConfig } from "../config";
 import { Api } from "./api";
 import { apiConfig, ApiConfig } from "./config";
-import * as queries from "./graphql/graphql";
 import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
-import { Membership } from "../types/membership";
+import { Membership, MembershipKeys } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
+import { objectType, role } from "../constants";
 
 export default class AkordApi extends Api {
 
   public config!: ApiConfig;
   public jwtToken: string;
-  private gqlClient: any;
 
   constructor(config: ClientConfig, jwtToken: string) {
     super();
     this.config = apiConfig(config.env);
     this.jwtToken = jwtToken;
-    this.initGqlClient()
   }
 
   public async uploadData(items: { data: any, tags: Tags, metadata?: any }[], shouldBundleTransaction?: boolean)
@@ -76,11 +72,11 @@ export default class AkordApi extends Api {
   };
 
   public async getUserFromEmail(email: string): Promise<any> {
-    const result = await this.executeRequest(queries.usersByEmail,
-      {
-        emails: [email]
-      })
-    return result.usersByEmail[0];
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(email)
+      .getUser();
   };
 
   public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
@@ -121,15 +117,12 @@ export default class AkordApi extends Api {
   };
 
   public async getProfile(wallet: any): Promise<any> {
-    const publicSigningKey = await wallet.signingPublicKey();
-    const result = await this.paginatedQuery('profilesByPublicSigningKey',
-      queries.profilesByPublicSigningKey,
-      { publicSigningKey: publicSigningKey }, null)
-    if (!result || result.length === 0) {
-      return {};
-      // throw new Error("Cannot find profile with the given public signing key.")
-    }
-    return result[0];
+    const address = await wallet.getAddress();
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(address)
+      .getProfile();
   };
 
 
@@ -154,7 +147,7 @@ export default class AkordApi extends Api {
       .deleteVault();
   }
 
-  public async inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }> {
+  public async inviteNewUser(vaultId: string, email: string, role: role): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -178,31 +171,23 @@ export default class AkordApi extends Api {
       .invite();
   }
 
-  public async getObject(objectId: string, objectType: string): Promise<any> {
-    let queryName = "get" + objectType;
-    const result = await this.executeRequest(queries[queryName],
-      {
-        id: objectId
-      })
-    const object = result && result[queryName === "getVault" ? "getDataRoom" : queryName];
-    if (!object) {
-      throw new Error("Cannot find object with id: " + objectId + " and type: " + objectType);
-    }
-    return { ...object, vaultId: object.dataRoomId };
+  public async getObject(id: string, type: objectType): Promise<any> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .queryParams({ type })
+      .getObject();
   };
 
-  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<{ isEncrypted: boolean, keys: Array<Keys>, publicKey?: string }> {
-    const publicSigningKey = await wallet.signingPublicKey();
-    const result = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.listVaults,
-      { memberPublicSigningKey: publicSigningKey }, { dataRoomId: { eq: vaultId } });
-    if (!result || result.length === 0) {
-      throw new Error("Cannot find membership for vault: " + vaultId +
-        ", with the given public signing key: " + publicSigningKey);
-    }
-    const membership = result[0];
-    const publicKey = membership.dataRoom.publicKeys ? membership.dataRoom.publicKeys[membership.dataRoom.publicKeys.length - 1] : null
-    return { isEncrypted: !membership.dataRoom.public, keys: membership.keys, publicKey: publicKey };
+  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<MembershipKeys> {
+    const address = await wallet.getAddress();
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .contractId(vaultId)
+      .resourceId(address)
+      .getMembershipKeys();
   };
 
   public async getNodeState(stateId: string): Promise<any> {
@@ -235,117 +220,37 @@ export default class AkordApi extends Api {
   };
 
   public async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
-    const publicSigningKey = await wallet.signingPublicKey();
-    const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.membershipsByMemberPublicSigningKey,
-      { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    return results.map((object: any) => ({ ...object, vaultId: object.dataRoomId }));
+    const address = await wallet.getAddress();
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(address)
+      .getMemberships();
   };
 
   public async getVaults(wallet: Wallet): Promise<Array<any>> {
-    const publicSigningKey = await wallet.signingPublicKey();
-    const results = await this.paginatedQuery('membershipsByMemberPublicSigningKey',
-      queries.listVaults,
-      { memberPublicSigningKey: publicSigningKey }, { status: { eq: "ACCEPTED" } });
-    return results.map((object: any) => ({ ...object.dataRoom, ...{ keys: object.keys } }));
+    const address = await wallet.getAddress();
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(address)
+      .getVaults();
   };
 
-  public async getObjectsByVaultId(vaultId: string, objectType: string, shouldListAll = false): Promise<Array<any>> {
-    let queryName = objectType.toLowerCase() + "sByDataRoomId";
-    const results = await this.paginatedQuery(
-      queryName,
-      queries[queryName],
-      {
-        dataRoomId: vaultId
-      }, this.filter(objectType, shouldListAll));
-    return results.map((object: any) => {
-      if (object.storageTransactions) {
-        const versions = object.versions.map((version, idx) => (
-          {
-            ...version,
-            status: object.storageTransactions.items.length > idx ? object.storageTransactions.items[idx].status : "REJECTED"
-          }
-        )
-        );
-        return { ...object, versions, vaultId: object.dataRoomId }
-      }
-      return { ...object, vaultId: object.dataRoomId }
-    });
+  public async getObjectsByVaultId(vaultId: string, type: objectType, shouldListAll = false): Promise<Array<any>> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(vaultId)
+      .queryParams({
+        type,
+        shouldListAll
+      })
+      .getObjects();
   };
-
-  private filter(objectType: string, shouldListAll: boolean) {
-    if (shouldListAll) {
-      return {};
-    } else {
-      const filter = objectType === "Membership"
-        ? {
-          or: [
-            { status: { eq: "ACCEPTED" } },
-            { status: { eq: "PENDING" } }
-          ]
-        }
-        : objectType === "Memo"
-          ? {}
-          :
-          {
-            status: { ne: "REVOKED" },
-            and: {
-              status: { ne: "DELETED" }
-            }
-          };
-      return filter;
-    }
-  };
-
-  private async executeRequest(request: string | readonly string[], variables: any) {
-    try {
-      const response = await this.gqlClient.request(
-        gql(request),
-        variables
-      );
-      return response;
-    } catch (err) {
-      Logger.log("Error while trying to make gql request");
-      Logger.log(err);
-      throw new Error(JSON.stringify(err));
-    }
-  };
-
-  private async paginatedQuery(queryName: string | number, query: any, args: { [x: string]: any; }, filter: {}) {
-    let variables = {
-      filter: null,
-      nextToken: null
-    };
-    for (let index in args) {
-      variables[index] = args[index];
-    }
-    if (filter && Object.keys(filter).length != 0)
-      variables.filter = filter;
-    let queryResult = await this.executeRequest(query, variables);
-    let nextToken = queryResult[queryName].nextToken;
-    let results = queryResult[queryName].items;
-    while (nextToken) {
-      variables.nextToken = nextToken;
-      queryResult = await this.executeRequest(query, variables);
-      results = results.concat(queryResult[queryName].items);
-      nextToken = queryResult[queryName].nextToken;
-    }
-    return results;
-  };
-
-  private initGqlClient() {
-    this.gqlClient = new GraphQLClient(
-      this.config.aws_appsync_graphqlEndpoint,
-      {
-        headers: {
-          'Authorization': 'Bearer ' + this.jwtToken
-        }
-      }
-    )
-  }
 
   public async getTransactions(vaultId: string): Promise<Array<any>> {
-    throw new Error("Method not implemented")
+    throw new Error("Method not implemented");
   }
 }
 

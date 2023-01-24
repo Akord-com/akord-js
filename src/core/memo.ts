@@ -1,12 +1,12 @@
 import { NodeService } from "./node";
-import { reactionEmoji, actionRefs, objectTypes, functions } from "../constants";
+import { reactionEmoji, actionRefs, objectType, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion } from "../types/node";
 
 class MemoService extends NodeService<Memo> {
   static readonly reactionEmoji = reactionEmoji;
 
-  objectType: string = objectTypes.MEMO;
+  objectType = objectType.MEMO;
   NodeType = Memo;
 
   /**
