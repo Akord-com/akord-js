@@ -1,26 +1,12 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
-import fs from "fs";
-import path from "path";
 import { email, email2, email3, password } from './data/test-credentials';
+import { NodeJs } from "../types/file";
 
 let akord: Akord;
 
 jest.setTimeout(3000000);
-
-function getFileFromPath(filePath: string) {
-  let file = <any>{};
-  if (!fs.existsSync(filePath)) {
-    console.error("Could not find a file in your filesystem: " + filePath);
-    process.exit(0);
-  }
-  const stats = fs.statSync(filePath);
-  file.size = stats.size;
-  file.data = fs.readFileSync(filePath);
-  file.name = path.basename(filePath);
-  return file;
-}
 
 async function vaultCreate() {
   const name = faker.random.words();
@@ -76,8 +62,8 @@ describe("Testing batch actions", () => {
 
     it("should revoke all items in a batch", async () => {
       await akord.batch.revoke([
-        { id: folderId, objectType: "Folder" },
-        { id: noteId, objectType: "Note" },
+        { id: folderId, type: "Folder" },
+        { id: noteId, type: "Note" },
       ])
 
       const folder = await akord.folder.get(folderId);
@@ -89,8 +75,8 @@ describe("Testing batch actions", () => {
 
     it("should restore all items in a batch", async () => {
       await akord.batch.restore([
-        { id: folderId, objectType: "Folder" },
-        { id: noteId, objectType: "Note" },
+        { id: folderId, type: "Folder" },
+        { id: noteId, type: "Note" },
       ])
 
       const folder = await akord.folder.get(folderId);
@@ -103,8 +89,7 @@ describe("Testing batch actions", () => {
 
   describe("Batch upload", () => {
     it("should upload a batch of 10 files", async () => {
-      const file = getFileFromPath("./src/__tests__/data/logo.png");
-      file.type = "image/png";
+      const file = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
 
       const items = [] as { file: any, name: string }[];
 
@@ -131,7 +116,7 @@ describe("Testing batch actions", () => {
           { email: email2, role: "CONTRIBUTOR" },
           { email: email3, role: "VIEWER" }
         ]
-      ));
+      )).data;
       for (let item of response) {
         const membership = await akord.membership.get(item.membershipId);
         if (membership.email === email2) {

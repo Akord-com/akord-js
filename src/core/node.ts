@@ -68,7 +68,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with the decrypted node
    */
   public async get(nodeId: string, vaultId?: string, shouldDecrypt = true): Promise<T> {
-    const nodeProto = await this.api.getObject<any>(nodeId, this.objectType, vaultId);
+    const nodeProto = await this.api.getObject<NodeLike>(nodeId, this.objectType, vaultId);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId, this.wallet)
     const node = this.nodeInstance(nodeProto, keys);
     if (isEncrypted && shouldDecrypt) {
@@ -82,7 +82,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with all nodes within given vault
    */
   public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<T>> {
-    const nodes = await this.api.getObjectsByVaultId<T>(vaultId, this.objectType, listOptions.shouldListAll);
+    const nodes = await this.api.getObjectsByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     return await Promise.all(
       nodes

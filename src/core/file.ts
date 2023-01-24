@@ -187,7 +187,7 @@ class FileService extends Service {
     }
     
     await new ApiClient()
-      .env((<any>this.api.config))
+      .env(this.api.config)
       .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
       .tags(tags.concat(encryptionTags))

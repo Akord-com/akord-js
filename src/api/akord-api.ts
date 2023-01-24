@@ -4,9 +4,10 @@ import { Api } from "./api";
 import { apiConfig, ApiConfig } from "./config";
 import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
-import { Membership, MembershipKeys } from "../types/membership";
+import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
-import { objectType, role } from "../constants";
+import { ObjectType } from "../types/object";
+import { Vault } from "../types/vault";
 
 export default class AkordApi extends Api {
 
@@ -52,7 +53,7 @@ export default class AkordApi extends Api {
     return txId;
   };
 
-  public async getMembers(vaultId: string): Promise<Array<any>> {
+  public async getMembers(vaultId: string): Promise<Array<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -147,7 +148,7 @@ export default class AkordApi extends Api {
       .deleteVault();
   }
 
-  public async inviteNewUser(vaultId: string, email: string, role: role): Promise<{ id: string }> {
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -171,7 +172,7 @@ export default class AkordApi extends Api {
       .invite();
   }
 
-  public async getObject(id: string, type: objectType): Promise<any> {
+  public async getObject<T>(id: string, type: ObjectType): Promise<T> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -228,7 +229,7 @@ export default class AkordApi extends Api {
       .getMemberships();
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<any>> {
+  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
     const address = await wallet.getAddress();
     return await new ApiClient()
       .env(this.config)
@@ -237,7 +238,7 @@ export default class AkordApi extends Api {
       .getVaults();
   };
 
-  public async getObjectsByVaultId(vaultId: string, type: objectType, shouldListAll = false): Promise<Array<any>> {
+  public async getObjectsByVaultId<T>(vaultId: string, type: ObjectType, shouldListAll = false): Promise<Array<T>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)

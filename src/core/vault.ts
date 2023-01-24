@@ -6,7 +6,7 @@ import { Service } from "./service";
 import { Tag } from "../types/contract";
 
 class VaultService extends Service {
-  objectType: objectType = objectType.VAULT;
+  objectType = objectType.VAULT;
 
   /**
    * @param  {string} name new vault name
@@ -145,7 +145,7 @@ class VaultService extends Service {
    * @returns Promise with the decrypted vault
    */
   public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
-    const result = await this.api.getObject<any>(vaultId, this.objectType, vaultId);
+    const result = await this.api.getObject<Vault>(vaultId, this.objectType, vaultId);
     const { keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
     const vault = new Vault(result, keys);
     if (shouldDecrypt && !vault.public) {

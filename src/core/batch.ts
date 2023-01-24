@@ -3,10 +3,10 @@ import { v4 as uuidv4 } from "uuid";
 import { MembershipService } from "./membership";
 import { StackService } from "./stack";
 import { NodeService } from "./node";
-import { Node } from "../types/node";
+import { Node, NodeType } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
-import { objectType, role } from "../constants";
+import { RoleType } from "../types/membership";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -19,14 +19,14 @@ class BatchService extends Service {
   public static BATCH_CHUNK_SIZE = 50;
 
   /**
-   * @param  {{id:string,objectType:string}[]} items
+   * @param  {{id:string,type:NoteType}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async revoke<T extends Node>(items: { id: string, objectType: objectType }[]): Promise<{ transactionId: string }[]> {
+  public async revoke<T extends Node>(items: { id: string, type: NodeType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
+      const service = new ServiceFactory(this.wallet, this.api, item.type).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.revoke(item.id));
     }));
@@ -34,14 +34,14 @@ class BatchService extends Service {
   }
 
   /**
-   * @param  {{id:string,objectType:string}[]} items
+   * @param  {{id:string,type:NoteType}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async restore<T extends Node>(items: { id: string, objectType: objectType }[]): Promise<{ transactionId: string }[]> {
+  public async restore<T extends Node>(items: { id: string, type: NodeType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
+      const service = new ServiceFactory(this.wallet, this.api, item.type).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.restore(item.id));
     }));
@@ -49,14 +49,14 @@ class BatchService extends Service {
   }
 
   /**
-   * @param  {{id:string,objectType:string}[]} items
+   * @param  {{id:string,type:NodeType}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async delete<T extends Node>(items: { id: string, objectType: objectType }[]): Promise<{ transactionId: string }[]> {
+  public async delete<T extends Node>(items: { id: string, type: NodeType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
+      const service = new ServiceFactory(this.wallet, this.api, item.type).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.delete(item.id));
     }));
@@ -64,14 +64,14 @@ class BatchService extends Service {
   }
 
   /**
-   * @param  {{id:string,objectType:string}[]} items
+   * @param  {{id:string,type:NodeType}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async move<T extends Node>(items: { id: string, objectType: objectType }[], parentId?: string): Promise<{ transactionId: string }[]> {
+  public async move<T extends Node>(items: { id: string, type: NodeType }[], parentId?: string): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const transactionIds = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
-      const service = new ServiceFactory(this.wallet, this.api, item.objectType).serviceInstance() as NodeService<T>;
+      const service = new ServiceFactory(this.wallet, this.api, item.type).serviceInstance() as NodeService<T>;
       service.setGroupRef(this.groupRef);
       transactionIds.push(await service.move(item.id, parentId));
     }));
@@ -79,10 +79,10 @@ class BatchService extends Service {
   }
 
   /**
-   * @param  {{id:string,role:string}[]} items
+   * @param  {{id:string,role:RoleType}[]} items
    * @returns Promise with corresponding transaction ids
    */
-  public async membershipChangeRole(items: { id: string, role: role }[]): Promise<{ transactionId: string }[]> {
+  public async membershipChangeRole(items: { id: string, role: RoleType }[]): Promise<{ transactionId: string }[]> {
     this.setGroupRef(items);
     const response = [] as { transactionId: string }[];
     await Promise.all(items.map(async (item) => {
@@ -95,7 +95,7 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{file:any,name:string}[]} items
+   * @param  {{file:FileLike,name:string}[]} items
    * @param  {string} [parentId]
    * @param  {(progress:number)=>void} [progressHook]
    * @param  {AbortController} [cancelHook]
@@ -160,10 +160,10 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{email:string,role:string}[]} items
+   * @param  {{email:string,role:RoleType}[]} items
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: role }[]): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[]): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as { membershipId: string, transactionId: string }[];
