@@ -54,7 +54,7 @@ describe("Testing batch actions", () => {
       const name = faker.random.words();
       const content = faker.lorem.sentences();
 
-      noteId = (await akord.note.create(vaultId, name, content)).noteId;
+      noteId = (await akord.note.create(vaultId, content, name)).noteId;
 
       const note = await akord.note.get(noteId);
       expect(note.versions.length).toEqual(1);

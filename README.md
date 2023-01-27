@@ -752,7 +752,7 @@ const folderArray = await akord.folder.list(vaultId);
 
 ### note
 
-#### `create(vaultId, name, content, parentId)`
+#### `create(vaultId, content, name, parentId)`
 
 - `vaultId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
