@@ -193,7 +193,7 @@ class BatchService extends Service {
   }
 
   public setGroupRef(items: any) {
-    return items && items.length > 1 ? uuidv4() : null;
+    this.groupRef = items && items.length > 1 ? uuidv4() : null;
   }
 }
 
