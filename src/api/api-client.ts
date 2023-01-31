@@ -147,11 +147,11 @@ export class ApiClient {
   }
 
   async getContract(): Promise<Contract> {
-    return await this.get(`${this._storageurl}/${this._contractUri}/${this._contractId}`);
+    return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._contractId}`);
   }
 
   async getNode(): Promise<any> {
-    return await this.get(`${this._apiurl}/nodes/${this._resourceId}`);
+    return await this.public(true).get(`${this._apiurl}/nodes/${this._resourceId}`);
   }
 
   async getNodes(): Promise<any> {
@@ -217,7 +217,7 @@ export class ApiClient {
   }
 
   async fetch(method: string, url: string): Promise<any> {
-    if (!this._jwt) {
+    if (!this._jwt && !this._isPublic) {
       throw Error("Authentication is required to use Akord API");
     }
 
