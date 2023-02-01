@@ -1,5 +1,4 @@
 import { ContractInput, ContractState, Tags } from "../types/contract";
-import { Keys, Wallet } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
 
@@ -23,17 +22,17 @@ abstract class Api {
 
   abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
 
-  abstract getMembershipKeys(vaultId: string, wallet: Wallet): Promise<MembershipKeys>
+  abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
-  abstract getProfile(wallet: Wallet): Promise<any>
+  abstract getProfile(): Promise<any>
 
   abstract getObject<T>(id: string, type: string, vaultId?: string): Promise<T>
 
   abstract getNodeState(stateId: string): Promise<any>
 
-  abstract getVaults(wallet: Wallet): Promise<Array<Vault>>
+  abstract getVaults(): Promise<Array<Vault>>
 
-  abstract getMemberships(wallet: Wallet): Promise<Array<Membership>>
+  abstract getMemberships(): Promise<Array<Membership>>
 
   abstract getObjectsByVaultId<T>(vaultId: string, type: string, shouldListAll?: boolean): Promise<Array<T>>
 
@@ -41,7 +40,7 @@ abstract class Api {
 
   abstract getTransactions(vaultId: string): Promise<Array<any>>
 
-  abstract updateProfile(wallet: Wallet, name: string, avatarUri: string): Promise<void>
+  abstract updateProfile(name: string, avatarUri: string): Promise<void>
 
   abstract deleteVault(vaultId: string): Promise<void>
 

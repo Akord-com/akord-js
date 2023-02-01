@@ -34,7 +34,7 @@ class ProfileService extends Service {
     let transactions = [];
 
     const profilePromise = new Promise<void>(async (resolve, reject) => {
-      const profile = await this.api.getProfile(this.wallet);
+      const profile = await this.api.getProfile();
       this.setObject(profile);
 
       this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
@@ -49,11 +49,11 @@ class ProfileService extends Service {
       }
 
       await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
-      await this.api.updateProfile(this.wallet, mergedProfileDetails.name, mergedProfileDetails.avatarUri);
+      await this.api.updateProfile(mergedProfileDetails.name, mergedProfileDetails.avatarUri);
       resolve();
     })
 
-    const memberships = await this.api.getMemberships(this.wallet);
+    const memberships = await this.api.getMemberships();
     const membershipPromiseArray = memberships.map(async (membership) => {
       const membershipService = new MembershipService(this.wallet, this.api);
       const { transactionId } = await membershipService.profileUpdate(membership.id, name, avatar);

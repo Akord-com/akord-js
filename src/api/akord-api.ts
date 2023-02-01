@@ -1,4 +1,3 @@
-import { Wallet } from "@akord/crypto";
 import { ClientConfig } from "../config";
 import { Api } from "./api";
 import { apiConfig, ApiConfig } from "./config";
@@ -44,7 +43,7 @@ export default class AkordApi extends Api {
     const txId = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .contractId(contractId)
+      .vaultId(contractId)
       .input(input)
       .metadata(metadata ? metadata : {})
       .tags(tags)
@@ -65,8 +64,7 @@ export default class AkordApi extends Api {
     const contractId = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .tags(tags)
-      .data(state)
+      .data({ tags, state })
       .contract()
     Logger.log("Created contract with id: " + contractId);
     return contractId;
@@ -117,22 +115,18 @@ export default class AkordApi extends Api {
     return { fileData: fileData, headers: response.headers };
   };
 
-  public async getProfile(wallet: any): Promise<any> {
-    const address = await wallet.getAddress();
+  public async getProfile(): Promise<any> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(address)
       .getProfile();
   };
 
 
-  public async updateProfile(wallet: Wallet, name: string, avatarUri: string): Promise<void> {
-    const address = await wallet.getAddress();
+  public async updateProfile(name: string, avatarUri: string): Promise<void> {
     await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(address)
       .data({
         name: name,
         avatarUri: avatarUri
@@ -144,7 +138,7 @@ export default class AkordApi extends Api {
     await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(vaultId)
+      .vaultId(vaultId)
       .deleteVault();
   }
 
@@ -152,7 +146,7 @@ export default class AkordApi extends Api {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(vaultId)
+      .vaultId(vaultId)
       .data({
         email: email,
         role: role
@@ -165,11 +159,9 @@ export default class AkordApi extends Api {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(vaultId)
-      .data({
-        membershipId: membershipId,
-      })
-      .invite();
+      .vaultId(vaultId)
+      .resourceId(membershipId)
+      .inviteResend();
   }
 
   public async getObject<T>(id: string, type: ObjectType): Promise<T> {
@@ -181,13 +173,11 @@ export default class AkordApi extends Api {
       .getObject();
   };
 
-  public async getMembershipKeys(vaultId: string, wallet: Wallet): Promise<MembershipKeys> {
-    const address = await wallet.getAddress();
+  public async getMembershipKeys(vaultId: string): Promise<MembershipKeys> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .contractId(vaultId)
-      .resourceId(address)
+      .vaultId(vaultId)
       .getMembershipKeys();
   };
 
@@ -215,26 +205,22 @@ export default class AkordApi extends Api {
     const contract = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .contractId(objectId)
+      .vaultId(objectId)
       .getContract();
     return contract.state;
   };
 
-  public async getMemberships(wallet: Wallet): Promise<Array<Membership>> {
-    const address = await wallet.getAddress();
+  public async getMemberships(): Promise<Array<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(address)
       .getMemberships();
   };
 
-  public async getVaults(wallet: Wallet): Promise<Array<Vault>> {
-    const address = await wallet.getAddress();
+  public async getVaults(): Promise<Array<Vault>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(address)
       .getVaults();
   };
 
@@ -242,7 +228,7 @@ export default class AkordApi extends Api {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(vaultId)
+      .vaultId(vaultId)
       .queryParams({
         type,
         shouldListAll

@@ -146,7 +146,7 @@ class VaultService extends Service {
    */
   public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
     const result = await this.api.getObject<Vault>(vaultId, this.objectType, vaultId);
-    const { keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const { keys } = await this.api.getMembershipKeys(vaultId);
     const vault = new Vault(result, keys);
     if (shouldDecrypt && !vault.public) {
       await vault.decrypt();
@@ -158,7 +158,7 @@ class VaultService extends Service {
    * @returns Promise with currently authenticated user vaults
    */
   public async list(shouldDecrypt = true): Promise<Array<Vault>> {
-    const results = await this.api.getVaults(this.wallet);
+    const results = await this.api.getVaults();
     const vaults = [];
     for (let result of results) {
       const vault = new Vault(result, result.keys);
