@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
+import { Transaction } from "../types/transaction";
 import { Vault } from "../types/vault";
 
 export class ApiClient {
@@ -181,6 +182,10 @@ export class ApiClient {
 
   async getObject<T>(): Promise<T> {
     return await this.get(`${this._apiurl}/objects/${this._resourceId}`);
+  }
+
+  async getTransactions(): Promise<Array<Transaction>> {
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/transactions`);
   }
 
   async invite(): Promise<{ id: string }> {

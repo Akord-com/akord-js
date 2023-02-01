@@ -1,6 +1,7 @@
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
+import { Transaction } from "../types/transaction";
 
 abstract class Api {
   config: any
@@ -38,7 +39,7 @@ abstract class Api {
 
   abstract getMembers(vaultId: string): Promise<Array<Membership>>
 
-  abstract getTransactions(vaultId: string): Promise<Array<any>>
+  abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
   abstract updateProfile(name: string, avatarUri: string): Promise<void>
 

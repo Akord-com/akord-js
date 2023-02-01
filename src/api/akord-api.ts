@@ -7,6 +7,7 @@ import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { Vault } from "../types/vault";
+import { Transaction } from "../types/transaction";
 
 export default class AkordApi extends Api {
 
@@ -236,8 +237,12 @@ export default class AkordApi extends Api {
       .getObjects();
   };
 
-  public async getTransactions(vaultId: string): Promise<Array<any>> {
-    throw new Error("Method not implemented");
+  public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
+    return await new ApiClient()
+    .env(this.config)
+    .auth(this.jwtToken)
+    .vaultId(vaultId)
+    .getTransactions();
   }
 }
 
