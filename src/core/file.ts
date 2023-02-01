@@ -213,7 +213,7 @@ class FileService extends Service {
     cancelHook?: AbortController
   ) {
     const resource = await new ApiClient()
-      .env((<any>this.api.config))
+      .env(this.api.config)
       .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)

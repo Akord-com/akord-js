@@ -26,7 +26,7 @@ export class ApiClient {
   private _cancelHook: AbortController
   private _tags: Tags;
   private _input: ContractInput;
-  private _contractId: string;
+  private _vaultId: string;
   private _metadata: string;
   private _shouldBundleTransaction: boolean;
   private _numberOfChunks: number;
@@ -64,8 +64,8 @@ export class ApiClient {
     return this;
   }
 
-  contractId(contractId: string): ApiClient {
-    this._contractId = contractId;
+  vaultId(vaultId: string): ApiClient {
+    this._vaultId = vaultId;
     return this;
   }
 
@@ -124,30 +124,15 @@ export class ApiClient {
    * @requires: 
    * - auth() 
    * @uses:
-   * - tags()
    * - data()
    */
   async contract() {
-    if (!this._jwt) {
-      throw Error("Authentication is required to use Akord API");
-    }
-
-    const config = {
-      method: 'post',
-      url: `${this._apiurl}/${this._contractUri}`,
-      data: { tags: this._tags, state: this._data },
-      headers: {
-        'Authorization': 'Bearer ' + this._jwt,
-        'Content-Type': 'application/json',
-        'Referer': 'v2.akord.com'
-      }
-    } as AxiosRequestConfig
-    const response = await axios(config);
-    return response.data.contractTxId;
+    const response = await this.post(`${this._apiurl}/${this._contractUri}`);
+    return response.contractTxId;
   }
 
   async getContract(): Promise<Contract> {
-    return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._contractId}`);
+    return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
   }
 
   async getNode(): Promise<any> {
@@ -163,19 +148,19 @@ export class ApiClient {
   }
 
   async deleteVault(): Promise<void> {
-    await this.fetch("delete", `${this._apiurl}/vaults/${this._resourceId}`);
+    await this.fetch("delete", `${this._apiurl}/vaults/${this._vaultId}`);
   }
 
   async getUser(): Promise<any> {
     return await this.get(`${this._apiurl}/users/${this._resourceId}`);
   }
 
-  async getProfile(): Promise<Array<any>> {
+  async getProfile(): Promise<any> {
     return await this.get(`${this._apiurl}/profiles`);
   }
 
-  async getMembers(): Promise<Array<any>> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}/members`);
+  async getMembers(): Promise<Array<Membership>> {
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/members`);
   }
 
   async getMemberships(): Promise<Array<Membership>> {
@@ -187,11 +172,11 @@ export class ApiClient {
   }
 
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.get(`${this._apiurl}/vaults/${this._contractId}/keys`);
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
 
   async getObjects<T>(): Promise<Array<T>> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}/nodes`);
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
   }
 
   async getObject<T>(): Promise<T> {
@@ -199,12 +184,12 @@ export class ApiClient {
   }
 
   async invite(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/vaults/${this._resourceId}/members`);
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/members`);
     return response.id;
   }
 
   async inviteResend(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/vaults/${this._resourceId}/members/${this._data.membershipId}`);
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/members/${this._resourceId}`);
     return response.id;
   }
 
@@ -267,7 +252,7 @@ export class ApiClient {
     }
 
     this.data({
-      contractId: this._contractId,
+      contractId: this._vaultId,
       input: this._input,
       metadata: this._metadata,
       tags: this._tags,

@@ -17,7 +17,7 @@ class MembershipService extends Service {
     const membershipProto = await this.api.getObject<Membership>(membershipId, this.objectType, vaultId);
     let membership: Membership;
     if (shouldDecrypt) {
-      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId, this.wallet);
+      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId);
       membership = new Membership(membershipProto, keys);
       if (isEncrypted) {
         await membership.decrypt();
@@ -35,7 +35,7 @@ class MembershipService extends Service {
    */
   public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
     const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType, listOptions.shouldListAll);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId, this.wallet);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId);
     const memberships = []
     for (const membershipProto of membershipsProto) {
       const membership = new Membership(membershipProto, keys);
@@ -68,7 +68,7 @@ class MembershipService extends Service {
     const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
     const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
-      keys: (<any>keys).map((keyPair) => {
+      keys: keys.map((keyPair) => {
         delete keyPair.publicKey;
         return keyPair;
       })
@@ -123,7 +123,7 @@ class MembershipService extends Service {
     const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
     const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
-      keys: (<any>keys).map((keyPair) => {
+      keys: keys.map((keyPair) => {
         delete keyPair.publicKey;
         return keyPair;
       })

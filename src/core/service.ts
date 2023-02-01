@@ -72,7 +72,7 @@ class Service {
 
   protected async setMembershipKeys(vaultId: string) {
     if (!this.isPublic) {
-      const encryptionKeys = await this.api.getMembershipKeys(vaultId, this.wallet);
+      const encryptionKeys = await this.api.getMembershipKeys(vaultId);
       const keys = encryptionKeys.keys.map(((keyPair: any) => {
         return {
           encPrivateKey: keyPair.encPrivateKey,
@@ -195,7 +195,7 @@ class Service {
   }
 
   protected async getProfileDetails() {
-    const profile = await this.api.getProfile(this.wallet);
+    const profile = await this.api.getProfile();
     if (profile) {
       const profileKeys = new EncryptionKeys(
         profile.state.encryptionType,
@@ -253,7 +253,7 @@ class Service {
 
   protected async getActiveKey() {
     return {
-      address: await deriveAddress(<any>this.dataEncrypter.publicKey, "akord"),
+      address: await deriveAddress(this.dataEncrypter.publicKey, "akord"),
       publicKey: arrayToBase64(<any>this.dataEncrypter.publicKey)
     };
   }
