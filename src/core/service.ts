@@ -12,7 +12,6 @@ import {
   arrayToBase64,
   base64ToJson,
   deriveAddress,
-  AkordWallet,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
 import { objectType, protocolTags, functions, dataTags, encryptionTags } from '../constants';
@@ -97,7 +96,7 @@ class Service {
     return this.nodeUpdate(body);
   }
 
-  protected async nodeUpdate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{ transactionId: string }> {
+  protected async nodeUpdate(body?: any, clientInput?: any): Promise<{ transactionId: string }> {
     const input = {
       function: this.function,
       ...clientInput
@@ -106,23 +105,18 @@ class Service {
     this.tags = await this.getTags();
 
     if (body) {
-      const { data, metadata } = await this.mergeAndUploadBody(body);
-      input.data = data;
-      clientMetadata = {
-        ...clientMetadata,
-        ...metadata
-      }
+      const id = await this.mergeAndUploadBody(body);
+      input.data = id;
     }
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      clientMetadata
+      this.tags
     );
     return { transactionId: txId }
   }
 
-  protected async nodeCreate(body?: any, clientInput?: any, clientMetadata?: any): Promise<{
+  protected async nodeCreate(body?: any, clientInput?: any): Promise<{
     nodeId: string,
     transactionId: string
   }> {
@@ -132,18 +126,20 @@ class Service {
 
     this.tags = await this.getTags();
 
-    const { metadata, data } = await this.uploadState(body);
-
     const input = {
       function: this.function,
-      data,
       ...clientInput
     };
+
+    if (body) {
+      const id = await this.uploadState(body);
+      input.data = id;
+    }
+
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      { ...metadata, ...clientMetadata }
+      this.tags
     );
     this.setActionRef(null);
     return { nodeId, transactionId: txId };
@@ -316,40 +312,34 @@ class Service {
   protected getEncryptedData(data: any, headers: any) {
     const encryptedKey = headers['x-amz-meta-encryptedkey'];
     const iv = headers['x-amz-meta-iv'];
-    const publicKeyIndex = headers['x-amz-meta-public-key-index'];
     if (encryptedKey && iv) {
       return {
         encryptedKey,
         encryptedData: {
           iv: base64ToArray(iv),
           ciphertext: data
-        },
-        publicKeyIndex
+        }
       }
     }
     return null;
   }
 
-  protected async mergeAndUploadBody(body: any) {
+  protected async mergeAndUploadBody(body: any): Promise<string> {
     const mergedBody = await this.mergeState(body);
     return this.uploadState(mergedBody);
   }
 
-  protected async signData(data: any) {
-    if (this.wallet instanceof AkordWallet) {
-      const encodedBody = jsonToBase64(data)
-      const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
-      const signature = await signString(
-        encodedBody,
-        privateKeyRaw
-      )
-      return signature;
-    } else {
-      return "--TODO--"
-    }
+  protected async signData(data: any): Promise<string> {
+    const encodedBody = jsonToBase64(data)
+    const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
+    const signature = await signString(
+      encodedBody,
+      privateKeyRaw
+    )
+    return signature;
   }
 
-  protected async uploadState(state: any) {
+  protected async uploadState(state: any): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -364,13 +354,7 @@ class Service {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
     const ids = await this.api.uploadData([{ data: state, tags }], true);
-    const metadata = {
-      dataRefs: [
-        { ...ids[0], modelId: this.objectId, modelType: this.objectType, data: state }
-      ]
-    }
-    const data = ids[0].id;
-    return { metadata, data }
+    return ids[0];
   }
 
   protected async mergeState(stateUpdates: any) {

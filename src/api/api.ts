@@ -9,7 +9,7 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string>
+  abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags): Promise<string>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 
@@ -17,7 +17,7 @@ abstract class Api {
 
   abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
-  abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<{ id: string, resourceTx: string }>>
+  abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<string>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 

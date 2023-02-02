@@ -42,13 +42,12 @@ class MemoService extends NodeService<Memo> {
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
-    const { data, metadata } = await this.uploadState(newState);
+    const dataTxId = await this.uploadState(newState);
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.function, data },
-      this.tags,
-      metadata
+      { function: this.function, data: dataTxId },
+      this.tags
     );
     return { transactionId: txId }
   }
@@ -65,13 +64,12 @@ class MemoService extends NodeService<Memo> {
     this.tags = await this.getTags();
 
     const body = await this.deleteReaction(reaction);
-    const { data, metadata } = await this.uploadState(body);
+    const dataTxId = await this.uploadState(body);
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
-      { function: this.function, data },
-      this.tags,
-      metadata
+      { function: this.function, data: dataTxId },
+      this.tags
     );
     return { transactionId: txId }
   }

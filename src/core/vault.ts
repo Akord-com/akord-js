@@ -60,7 +60,7 @@ class VaultService extends Service {
       memberDetails: await this.processMemberDetails(memberDetails, true)
     }
     const membershipSignature = await this.signData(membershipData);
-    const ids = await this.api.uploadData([
+    const dataTxIds = await this.api.uploadData([
       {
         data: vaultData, tags: [
           new Tag("Data-Type", "State"),
@@ -80,20 +80,13 @@ class VaultService extends Service {
           new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
         ]
       }], true);
-    const metadata = {
-      dataRefs: [
-        { ...ids[0], modelId: this.vaultId, modelType: objectType.VAULT, data: vaultData },
-        { ...ids[1], modelId: membershipId, modelType: objectType.MEMBERSHIP, data: membershipData }
-      ],
-      publicKeys
-    }
-    const data = { vault: ids[0].id, membership: ids[1].id };
+
+    const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
-      this.tags,
-      metadata
+      this.tags
     );
     return { vaultId, membershipId, transactionId: txId }
   }

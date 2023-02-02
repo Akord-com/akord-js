@@ -19,7 +19,6 @@ export class ApiClient {
   private _isPublic: boolean;
   private _data: any;
   private _queryParams: any;
-  private _dataRefs: string;
   private _responseType: string = "json";
   private _progressHook: (progress: any, data?: any) => void
   private _processed: number
@@ -28,7 +27,6 @@ export class ApiClient {
   private _tags: Tags;
   private _input: ContractInput;
   private _vaultId: string;
-  private _metadata: string;
   private _shouldBundleTransaction: boolean;
   private _numberOfChunks: number;
 
@@ -85,14 +83,6 @@ export class ApiClient {
     return this;
   }
 
-  metadata(metadata: any): ApiClient {
-    this._metadata = metadata
-    if (metadata && metadata.dataRefs) {
-      this._dataRefs = typeof metadata.dataRefs === 'string' ? metadata.dataRefs : JSON.stringify(metadata.dataRefs);
-    }
-    return this;
-  }
-
   setResponseType(responseType: string): ApiClient {
     this._responseType = responseType;
     return this;
@@ -128,8 +118,8 @@ export class ApiClient {
    * - data()
    */
   async contract() {
-    const response = await this.post(`${this._apiurl}/${this._contractUri}`);
-    return response.contractTxId;
+    const response = await this.post(`${this._apiurl}/vaults`);
+    return response.id;
   }
 
   async getContract(): Promise<Contract> {
@@ -242,29 +232,23 @@ export class ApiClient {
    * 
    * @requires: 
    * - auth() 
-   * - contractId() 
-   * - input() 
-   * - metadata() 
-   * @uses:
-   * - tags()
+   * - vaultId() 
+   * - data()
    */
   async transaction() {
     if (!this._input) {
       throw Error("Input is required to use /transactions endpoint");
     }
-    if (!this._metadata) {
-      throw Error("Metadata is required to use /transactions endpoint");
+    if (!this._tags) {
+      throw Error("Tags is required to use /transactions endpoint");
     }
 
     this.data({
-      contractId: this._vaultId,
       input: this._input,
-      metadata: this._metadata,
-      tags: this._tags,
-      state: this._data
+      tags: this._tags
     });
-    const response = await this.post(`${this._apiurl}/${this._transactionUri}`);
-    return response.txId;
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/transactions`);
+    return response.id;
   }
 
 
@@ -273,7 +257,6 @@ export class ApiClient {
    * @requires: 
    * - auth() 
    * - resourceId() 
-   * - metadata() 
    * @uses:
    * - tags()
    */
@@ -282,13 +265,9 @@ export class ApiClient {
       throw Error("Resource id is required to use /transactions/files endpoint");
     }
 
-    const tags = this._tags.filter((tag) =>
-      tag.name !== "Public-Key"
-    )
-
     this.data({
       resourceUrl: this._resourceId,
-      tags: tags,
+      tags: this._tags,
       async: true,
       numberOfChunks: this._numberOfChunks
     });
@@ -300,21 +279,10 @@ export class ApiClient {
    * @requires: 
    * - auth() 
    * - data()
-   * @uses:
-   * - tags()
-   * - dataRefs()
-   * - resourceId()
    */
   async uploadState() {
-    this._dir = this._stateDir;
-    let resourceTx: string;
-    if (this._shouldBundleTransaction) {
-      resourceTx = await this.stateTransaction();
-    }
-    else {
-      resourceTx = (await this.upload()).resourceTx;
-    }
-    return { resourceUrl: this._resourceId || resourceTx, id: resourceTx, resourceTx: resourceTx }
+    const response = await this.post(`${this._apiurl}/states`);
+    return response.id;
   }
 
   /**
@@ -324,7 +292,6 @@ export class ApiClient {
    * - data()
    * @uses:
    * - tags()
-   * - dataRefs()
    * - resourceId()
    */
   async uploadFile() {
@@ -362,7 +329,6 @@ export class ApiClient {
   * @requires: 
   * - auth() 
   * - resourceId() 
-  * - metadata() 
   * @uses:
   * - tags()
   */
@@ -371,41 +337,12 @@ export class ApiClient {
       this._resourceId = uuid();
     }
 
-    const tags = this._tags?.filter((tag) =>
-      tag.name !== "Public-Key"
-    )
-
     this.data({
       resourceUrl: this._resourceId,
-      tags: tags
+      tags: this._tags
     });
 
     const response = await this.post(`${this._apiurl}/${this._transactionUri}/files`);
-    return response.txId;
-  }
-
-  /**
-  * Creates data item from uploaded resource. Schedules bundled transaction
-  * @requires: 
-  * - auth() 
-  * - metadata() 
-  * - data() 
-  * @uses:
-  * - tags()
-  * - resourceId() 
-  */
-  private async stateTransaction() {
-    const tags = this._tags.filter((tag) =>
-      tag.name !== "Public-Key"
-    )
-
-    this.data({
-      resourceUrl: this._resourceId,
-      tags: tags,
-      data: this._data
-    });
-
-    const response = await this.post(`${this._apiurl}/${this._transactionUri}/states`);
     return response.txId;
   }
 
@@ -443,9 +380,6 @@ export class ApiClient {
       }
     } as AxiosRequestConfig
 
-    if (this._dataRefs) {
-      config.headers['x-amz-meta-datarefs'] = this._dataRefs;
-    }
     if (!this._shouldBundleTransaction) {
       config.headers['x-amz-meta-skipbundle'] = "true";
     }
@@ -457,15 +391,11 @@ export class ApiClient {
           config.headers['x-amz-meta-encryptedkey'] = tag.value;
         } else if (tag.name === "Initialization-Vector") {
           config.headers['x-amz-meta-iv'] = tag.value;
-        } else if (tag.name === "Public-Key") {
-          config.headers['x-amz-publickey'] = tag.value;
         } else {
           config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
         }
       }
-      config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags.filter((tag) =>
-        tag.name !== "Public-Key"
-      ));
+      config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
     }
 
     const response = await axios(config);

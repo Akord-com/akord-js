@@ -20,8 +20,8 @@ export default class AkordApi extends Api {
     this.jwtToken = jwtToken;
   }
 
-  public async uploadData(items: { data: any, tags: Tags, metadata?: any }[], shouldBundleTransaction?: boolean)
-    : Promise<Array<{ id: string, resourceTx: string }>> {
+  public async uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean)
+    : Promise<Array<string>> {
 
     const resources = [];
 
@@ -29,10 +29,8 @@ export default class AkordApi extends Api {
       const resource = await new ApiClient()
         .env(this.config)
         .auth(this.jwtToken)
-        .data(item.data)
-        .tags(item.tags)
+        .data({ data: item.data, tags: item.tags })
         .bundle(shouldBundleTransaction)
-        .metadata(item.metadata)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource.id);
       resources[index] = resource;
@@ -40,13 +38,12 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string> {
+  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags): Promise<string> {
     const txId = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(contractId)
       .input(input)
-      .metadata(metadata ? metadata : {})
       .tags(tags)
       .transaction()
     Logger.log("Uploaded contract interaction with id: " + txId);

@@ -77,20 +77,19 @@ class MembershipService extends Service {
     this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const { data, metadata } = await this.uploadState(body);
+    const dataTxId = await this.uploadState(body);
 
     let input = {
       function: this.function,
       address,
       role,
-      data
+      data: dataTxId
     }
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      metadata
+      this.tags
     );
     return { membershipId, transactionId: txId };
   }
@@ -131,20 +130,19 @@ class MembershipService extends Service {
     this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const { data, metadata } = await this.uploadState(body);
+    const dataTxId = await this.uploadState(body);
 
     let input = {
       function: this.function,
       address,
-      data,
+      data: dataTxId,
       role: this.object.role
     }
 
     const txId = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      metadata
+      this.tags
     );
     return { transactionId: txId };
   }
@@ -215,11 +213,11 @@ class MembershipService extends Service {
           newMembershipRefs.push(member.id);
         }
       }
-      const ids = await this.api.uploadData(newMembershipStates, true);
+      const dataTxIds = await this.api.uploadData(newMembershipStates, true);
       data = [];
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
-        data.push({ id: memberId, value: ids[memberIndex].id })
+        data.push({ id: memberId, value: dataTxIds[memberIndex] })
       })
     }
 
