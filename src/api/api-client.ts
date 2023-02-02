@@ -3,6 +3,7 @@ import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
+import { Paginated } from "../types/Paginated";
 import { Vault } from "../types/vault";
 
 export class ApiClient {
@@ -152,6 +153,10 @@ export class ApiClient {
 
   async getMembers(): Promise<Array<Membership>> {
     return await this.get(`${this._apiurl}/vaults/${this._vaultId}/members`);
+  }
+
+  async getNotifications(): Promise<Paginated<any>> {
+    return await this.get(`${this._apiurl}/notifications`);
   }
 
   async getMemberships(): Promise<Array<Membership>> {

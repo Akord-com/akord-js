@@ -8,6 +8,7 @@ import { ContractInput, ContractState, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
+import { Paginated } from "../types/Paginated";
 
 export default class AkordApi extends Api {
 
@@ -197,6 +198,13 @@ export default class AkordApi extends Api {
       .getNode()
 
     return response.data
+  };
+
+  public async getNotifications(): Promise<Paginated<any>> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .getNotifications()
   };
 
   public async getContractState(objectId: string): Promise<ContractState> {
