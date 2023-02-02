@@ -96,7 +96,7 @@ class Service {
     return this.nodeUpdate(body);
   }
 
-  protected async nodeUpdate(body?: any, clientInput?: any): Promise<{ transactionId: string }> {
+  protected async nodeUpdate(body?: any, clientInput?: any): Promise<{ transactionId: string, object: NodeLike }> {
     const input = {
       function: this.function,
       ...clientInput
@@ -108,17 +108,18 @@ class Service {
       const id = await this.mergeAndUploadBody(body);
       input.data = id;
     }
-    const txId = await this.api.postContractTransaction(
+    const { id, object }= await this.api.postContractTransaction<NodeLike>(
       this.vaultId,
       input,
       this.tags
     );
-    return { transactionId: txId }
+    return { transactionId: id, object }
   }
 
-  protected async nodeCreate(body?: any, clientInput?: any): Promise<{
+  protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
     nodeId: string,
-    transactionId: string
+    transactionId: string,
+    object: T
   }> {
     const nodeId = uuidv4();
     this.setObjectId(nodeId);
@@ -136,13 +137,13 @@ class Service {
       input.data = id;
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<T>(
       this.vaultId,
       input,
       this.tags
     );
     this.setActionRef(null);
-    return { nodeId, transactionId: txId };
+    return { nodeId, transactionId: id, object };
   }
 
   setKeys(keys: any) {

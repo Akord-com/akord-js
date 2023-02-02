@@ -235,7 +235,7 @@ export class ApiClient {
    * - vaultId() 
    * - data()
    */
-  async transaction() {
+  async transaction<T>() {
     if (!this._input) {
       throw Error("Input is required to use /transactions endpoint");
     }
@@ -248,9 +248,8 @@ export class ApiClient {
       tags: this._tags
     });
     const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/transactions`);
-    return response.id;
+    return response;
   }
-
 
   /**
    * Schedules transaction posting

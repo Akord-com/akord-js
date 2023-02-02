@@ -38,16 +38,16 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags): Promise<string> {
-    const txId = await new ApiClient()
+  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }> {
+    const { id, object } = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(contractId)
       .input(input)
       .tags(tags)
-      .transaction()
-    Logger.log("Uploaded contract interaction with id: " + txId);
-    return txId;
+      .transaction<T>()
+    Logger.log("Uploaded contract interaction with id: " + id);
+    return { id, object };
   };
 
   public async getMembers(vaultId: string): Promise<Array<Membership>> {
@@ -236,10 +236,10 @@ export default class AkordApi extends Api {
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
     return await new ApiClient()
-    .env(this.config)
-    .auth(this.jwtToken)
-    .vaultId(vaultId)
-    .getTransactions();
+      .env(this.config)
+      .auth(this.jwtToken)
+      .vaultId(vaultId)
+      .getTransactions();
   }
 }
 

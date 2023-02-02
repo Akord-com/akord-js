@@ -16,7 +16,8 @@ class MemoService extends NodeService<Memo> {
   */
   public async create(vaultId: string, message: string): Promise<{
     memoId: string,
-    transactionId: string
+    transactionId: string,
+    memo: Memo
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
@@ -24,8 +25,8 @@ class MemoService extends NodeService<Memo> {
     const body = {
       versions: [await this.memoVersion(message)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body);
-    return { memoId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(body);
+    return { memoId: nodeId, transactionId, memo: object };
   }
 
   /**
@@ -44,12 +45,12 @@ class MemoService extends NodeService<Memo> {
     newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
     const dataTxId = await this.uploadState(newState);
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction<Memo>(
       this.vaultId,
       { function: this.function, data: dataTxId },
       this.tags
     );
-    return { transactionId: txId }
+    return { transactionId: id }
   }
 
   /**
@@ -66,12 +67,12 @@ class MemoService extends NodeService<Memo> {
     const body = await this.deleteReaction(reaction);
     const dataTxId = await this.uploadState(body);
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction<Memo>(
       this.vaultId,
       { function: this.function, data: dataTxId },
       this.tags
     );
-    return { transactionId: txId }
+    return { transactionId: id }
   }
 
   private async memoVersion(message: string): Promise<MemoVersion> {

@@ -83,12 +83,12 @@ class VaultService extends Service {
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
       this.tags
     );
-    return { vaultId, membershipId, transactionId: txId }
+    return { vaultId, membershipId, transactionId: id }
   }
 
   /**

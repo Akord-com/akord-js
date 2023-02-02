@@ -9,7 +9,7 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags): Promise<string>
+  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 

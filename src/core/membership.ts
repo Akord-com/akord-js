@@ -86,12 +86,12 @@ class MembershipService extends Service {
       data: dataTxId
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
       this.tags
     );
-    return { membershipId, transactionId: txId };
+    return { membershipId, transactionId: id };
   }
 
   /**
@@ -139,12 +139,12 @@ class MembershipService extends Service {
       role: this.object.role
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
       this.tags
     );
-    return { transactionId: txId };
+    return { transactionId: id };
   }
 
   /**
@@ -221,12 +221,12 @@ class MembershipService extends Service {
       })
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
       this.tags
     );
-    return { transactionId: txId };
+    return { transactionId: id };
   }
 
   /**
