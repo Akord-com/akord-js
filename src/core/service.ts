@@ -2,7 +2,6 @@ import { Api } from "../api/api";
 import {
   Wallet,
   EncrypterFactory,
-  Encrypter,
   EncryptionKeys,
   signString,
   jsonToBase64,
@@ -12,6 +11,7 @@ import {
   arrayToBase64,
   base64ToJson,
   deriveAddress,
+  KeysStructureEncrypter,
 } from "@akord/crypto";
 import { v4 as uuidv4 } from "uuid";
 import { objectType, protocolTags, functions, dataTags, encryptionTags } from '../constants';
@@ -21,6 +21,7 @@ import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
+import { EncryptedPayload } from "@akord/crypto/dist/types";
 
 declare const Buffer;
 
@@ -28,7 +29,7 @@ class Service {
   api: Api
   wallet: Wallet
 
-  dataEncrypter: Encrypter
+  dataEncrypter: KeysStructureEncrypter
   membershipKeys: MembershipKeys
 
   vaultId: string
@@ -46,10 +47,11 @@ class Service {
     this.wallet = wallet
     this.api = api
     // for the data encryption
-    this.dataEncrypter = new EncrypterFactory(
+    this.dataEncrypter = new KeysStructureEncrypter(
       wallet,
-      encryptionKeys
-    ).encrypterInstance()
+      encryptionKeys?.keys,
+      null
+    )
   }
 
   protected async setVaultContext(vaultId: string) {
@@ -213,9 +215,9 @@ class Service {
       const resourceUri = this.getAvatarUri(profileDetails);
       if (resourceUri) {
         const { fileData, headers } = await this.api.downloadFile(resourceUri);
-        const encryptedData = this.getEncryptedData(fileData, headers);
-        if (encryptedData) {
-          avatar = await profileEncrypter.decryptRaw(encryptedData, false);
+        const encryptedPayload = this.getEncryptedPayload(fileData, headers);
+        if (encryptedPayload) {
+          avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);
         } else {
           const dataString = arrayToString(new Uint8Array(fileData.data));
           avatar = await profileEncrypter.decryptRaw(dataString, true);
@@ -238,7 +240,7 @@ class Service {
     if (this.isPublic) {
       processedData = data;
     } else {
-      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
+      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
       processedData = encryptedFile.encryptedData.ciphertext;
       const { address, publicKey } = await this.getActiveKey();
       tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
@@ -251,13 +253,13 @@ class Service {
   protected async getActiveKey() {
     return {
       address: await deriveAddress(this.dataEncrypter.publicKey, "akord"),
-      publicKey: arrayToBase64(<any>this.dataEncrypter.publicKey)
+      publicKey: arrayToBase64(this.dataEncrypter.publicKey as Uint8Array)
     };
   }
 
   protected async processWriteString(data: string) {
     if (this.isPublic) return data;
-    const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data));
+    const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
     const decodedPayload = base64ToJson(encryptedPayload);
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
     delete decodedPayload.publicKey;
@@ -302,15 +304,15 @@ class Service {
       return Buffer.from(data.data);
     }
 
-    const encryptedData = this.getEncryptedData(data, headers);
-    if (encryptedData) {
-      return this.dataEncrypter.decryptRaw(encryptedData, false);
+    const encryptedPayload = this.getEncryptedPayload(data, headers);
+    if (encryptedPayload) {
+      return this.dataEncrypter.decryptRaw(encryptedPayload, false);
     } else {
       return this.dataEncrypter.decryptRaw(data);
     }
   }
 
-  protected getEncryptedData(data: any, headers: any) {
+  protected getEncryptedPayload(data: any, headers: any): EncryptedPayload {
     const encryptedKey = headers['x-amz-meta-encryptedkey'];
     const iv = headers['x-amz-meta-iv'];
     if (encryptedKey && iv) {

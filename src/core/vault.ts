@@ -29,7 +29,7 @@ class VaultService extends Service {
       const keyPair = await generateKeyPair();
       this.setRawDataEncryptionPublicKey(keyPair.publicKey);
       const userPublicKey = await this.wallet.publicKeyRaw();
-      const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, userPublicKey);
+      const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
       keys = [await keysEncrypter.encryptMemberKey(keyPair)];
       this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];

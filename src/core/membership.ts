@@ -65,7 +65,7 @@ class MembershipService extends Service {
     this.setObjectId(membershipId);
 
     const { address, publicKey } = await this.getUserEncryptionInfo(email, await this.wallet.getAddress());
-    const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
+    const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, publicKey);
     const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
       keys: keys.map((keyPair) => {
@@ -119,7 +119,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
-    const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, publicKey);
+    const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, publicKey);
     const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
       keys: keys.map((keyPair) => {
@@ -194,7 +194,7 @@ class MembershipService extends Service {
           const { publicKey } = await this.getUserEncryptionInfo(member.email, member.address);
           const memberKeysEncrypter = new KeysStructureEncrypter(
             this.wallet,
-            (<any>this.dataEncrypter).keys,
+            this.dataEncrypter.keys,
             publicKey
           );
           const keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
