@@ -6,6 +6,7 @@ import { objectType } from "../constants";
 import { arrayToString } from "@akord/crypto";
 import { BinaryLike } from "crypto";
 import { FileLike } from "../types/file";
+import { Paginated } from "../types/paginated";
 
 enum NoteTypes {
   MD = "text/markdown",
@@ -70,9 +71,10 @@ class NoteService extends NodeService<Stack> {
    * @param  {string} vaultId
    * @returns Promise with all notes within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Stack>> {
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<Stack>> {
     const stacks = await this.stackService.list(vaultId, listOptions);
-    return stacks.filter((stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
+    const notes = stacks.items.filter((stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
+    return { items: notes, nextToken: stacks.nextToken }
   }
 
   private isValidNoteType(type: string) {

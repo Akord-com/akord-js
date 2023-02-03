@@ -3,6 +3,7 @@ import { functions } from "../constants";
 import { NodeLike } from '../types/node';
 import { Keys } from '@akord/crypto';
 import { defaultListOptions } from '../types/list-options';
+import { Paginated } from '../types/paginated';
 
 class NodeService<T = NodeLike> extends Service {
 
@@ -81,18 +82,21 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} vaultId
    * @returns Promise with all nodes within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<T>> {
-    const nodes = await this.api.getObjectsByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId);
-    return await Promise.all(
-      nodes
-        .map(async nodeProto => {
-          const node = this.nodeInstance(nodeProto, keys);
-          if (isEncrypted && listOptions.shouldDecrypt) {
-            await node.decrypt();
-          }
-          return node as T;
-        }))
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<T>> {
+    const response = await this.api.getObjectsByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
+    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: []};
+    return {
+      items: await Promise.all(
+        response.items
+          .map(async nodeProto => {
+            const node = this.nodeInstance(nodeProto, keys);
+            if (isEncrypted) {
+              await node.decrypt();
+            }
+            return node as T;
+          })),
+      nextToken: response.nextToken
+    }
   }
 
   private nodeInstance(nodeProto: any, keys: Array<Keys>): NodeLike {
