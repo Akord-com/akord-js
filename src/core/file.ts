@@ -8,7 +8,7 @@ import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
 import fs from "fs";
 import { Tag, Tags } from "../types/contract";
-
+import { BinaryLike } from "crypto";
 
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
@@ -118,6 +118,64 @@ class FileService extends Service {
     }
   }
 
+  base64ToString(base64: string) {
+    return Buffer.from(base64, "base64").toString();
+  };
+
+  public async import(
+    fileTxId: string,
+    name: string)
+    : Promise<{ file: FileLike, resourceHash: string, resourceUrl: string }> {
+    const tags = [] as Tags;
+    if (this.isPublic) {
+      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(name)))
+    }
+    const fileData = await this.downloadFile(fileTxId);
+    const fileMetadata = await this.downloadFileMetadata(fileTxId);
+    const contentTypeTag = fileMetadata.tags.find((tag: Tag) => this.base64ToString(tag.name) === "Content-Type");
+    const fileType = this.base64ToString(contentTypeTag.value);
+    const file = await createFileLike([fileData], name, fileType);
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
+    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
+    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
+    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
+    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
+    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
+    const resourceHash = await digestRaw(processedData);
+    tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
+    const resource = await new ApiClient()
+      .env(this.api.config)
+      .auth(this.api.jwtToken)
+      .data(processedData)
+      .tags(tags.concat(encryptionTags))
+      .public(this.isPublic)
+      .bundle(false)
+      .uploadFile()
+    return { file, resourceHash, resourceUrl: resource.resourceUrl };
+  }
+
+  private async downloadFile(id: string) {
+    const response = await fetch("https://arweave.net/" + id);
+    if (response.status == 200 || response.status == 202) {
+      const body = await response.arrayBuffer();
+      return body;
+    } else {
+      throw new Error("Cannot fetch arweave transaction data: " + id);
+    }
+  };
+
+  private async downloadFileMetadata(id: string) {
+    const response = await fetch("https://arweave.net/tx/" + id);
+    if (response.status == 200 || response.status == 202) {
+      const body = await response.json();
+      return body;
+    } else {
+      throw new Error("Cannot fetch arweave transaction metadata: " + id);
+    }
+  };
+
   public async stream(path: string, size?: number): Promise<fs.WriteStream | WritableStreamDefaultWriter> {
     if (typeof window === 'undefined') {
       return fs.createWriteStream(path);
@@ -185,7 +243,7 @@ class FileService extends Service {
       const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
       encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
     }
-    
+
     await new ApiClient()
       .env(this.api.config)
       .auth(this.api.jwtToken)
@@ -269,6 +327,17 @@ type DownloadOptions = {
   cancelHook?: AbortController
 }
 
+async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)
+  : Promise<FileLike> {
+  if (typeof window === "undefined") {
+    const node = await import("../types/file")
+    return new node.NodeJs.File(sources, name, mimeType, lastModified);
+  } else {
+    return new File(sources, name, { type: mimeType, lastModified })
+  }
+}
+
 export {
-  FileService
+  FileService,
+  createFileLike
 }

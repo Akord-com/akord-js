@@ -4,8 +4,7 @@ import { StackService } from "./stack";
 import { defaultListOptions } from "../types/list-options";
 import { objectType } from "../constants";
 import { arrayToString } from "@akord/crypto";
-import { BinaryLike } from "crypto";
-import { FileLike } from "../types/file";
+import { createFileLike } from "./file";
 
 enum NoteTypes {
   MD = "text/markdown",
@@ -31,7 +30,7 @@ class NoteService extends NodeService<Stack> {
     noteId: string,
     transactionId: string
   }> {
-    const noteFile = await createFile([content], name, mimeType ? mimeType : NoteTypes.MD);
+    const noteFile = await createFileLike([content], name, mimeType ? mimeType : NoteTypes.MD);
     const { stackId, transactionId } = await this.stackService.create(
       vaultId,
       noteFile,
@@ -51,7 +50,7 @@ class NoteService extends NodeService<Stack> {
   public async uploadRevision(noteId: string, content: string, name: string, mimeType?: NoteType): Promise<{
     transactionId: string
   }> {
-    const noteFile = await createFile([content], name, mimeType ? mimeType : NoteTypes.MD);
+    const noteFile = await createFileLike([content], name, mimeType ? mimeType : NoteTypes.MD);
     return this.stackService.uploadRevision(noteId, noteFile);
   }
 
@@ -79,16 +78,6 @@ class NoteService extends NodeService<Stack> {
     return Object.values(NoteTypes).includes(<any>type);
   }
 };
-
-async function createFile(sources: Array<BinaryLike>, name: string, mimeType: string, lastModified?: number)
-  : Promise<FileLike> {
-  if (typeof window === "undefined") {
-    const node = await import("../types/file")
-    return new node.NodeJs.File(sources, name, mimeType, lastModified);
-  } else {
-    return new File(sources, name, { type: mimeType, lastModified })
-  }
-}
 
 export {
   NoteService

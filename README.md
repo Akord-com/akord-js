@@ -469,6 +469,24 @@ const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
 ```
 </details>
 
+#### `import(vaultId, fileTxId, name, parentId)`
+
+Create new stack from an existing arweave file transaction
+
+- `vaultId` (`string`, required)
+- `fileTxId` (`string`, required) - arweave file transaction id reference
+- `name` (`string`, required) - stack name
+- `parentId` (`string`, optional) - parent folder id
+- returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { stackId } = await akord.stack.import(vaultId, "kzGxbFW_oJ3PyYneRs9cPrChQ-k-8Fym5k9PCZNJ_HA", "your stack name");
+```
+</details>
+
 #### `rename(stackId, name)`
 
 - `stackId` (`string`, required)
