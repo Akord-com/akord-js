@@ -38,6 +38,39 @@ class StackService extends NodeService<Stack> {
   }
 
   /**
+   * @param  {string} vaultId
+   * @param  {string} fileTxId arweave file transaction id reference
+   * @param  {string} name stack name
+   * @param  {string} [parentId] parent folder id
+   * @returns Promise with new stack id & corresponding transaction id
+   */
+  public async import(vaultId: string, fileTxId: string, name: string, parentId?: string):
+    Promise<{
+      stackId: string,
+      transactionId: string
+    }> {
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.STACK_CREATE);
+    this.setFunction(functions.NODE_CREATE);
+
+    const { file, resourceHash, resourceUrl } = await this.fileService.import(fileTxId, name);
+    const version = new FileVersion({
+      owner: await this.wallet.getAddress(),
+      createdAt: JSON.stringify(Date.now()),
+      name: await this.processWriteString(file.name),
+      type: file.type,
+      size: file.size,
+      resourceUri: [`arweave:${fileTxId}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
+    });
+    const body = {
+      name: await this.processWriteString(name),
+      versions: [version]
+    };
+    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
+    return { stackId: nodeId, transactionId };
+  }
+
+  /**
   * @param  {string} stackId
   * @param  {FileLike} file file object
   * @param  {(progress:number)=>void} [progressHook]
@@ -106,21 +139,21 @@ class StackService extends NodeService<Stack> {
   private async postFile(file: FileLike, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceHash: string, resourceUrl?: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
     const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
-      const thumbnail = await createThumbnail(file);
-      if (thumbnail) {
-        const thumbnailPromise = this.fileService.create(thumbnail, false, progressHook);
-        const results = await Promise.all([filePromise, thumbnailPromise]);
-        return {
-          resourceTx: results[0].resourceTx,
-          resourceUrl: results[0].resourceUrl,
-          resourceHash: results[0].resourceHash,
-          numberOfChunks: results[0].numberOfChunks,
-          thumbnailTx: results[1].resourceTx,
-          thumbnailUrl: results[1].resourceUrl
-        };
-      } else {
-        return await filePromise;
-      }
+    const thumbnail = await createThumbnail(file);
+    if (thumbnail) {
+      const thumbnailPromise = this.fileService.create(thumbnail, false, progressHook);
+      const results = await Promise.all([filePromise, thumbnailPromise]);
+      return {
+        resourceTx: results[0].resourceTx,
+        resourceUrl: results[0].resourceUrl,
+        resourceHash: results[0].resourceHash,
+        numberOfChunks: results[0].numberOfChunks,
+        thumbnailTx: results[1].resourceTx,
+        thumbnailUrl: results[1].resourceUrl
+      };
+    } else {
+      return await filePromise;
+    }
   }
 
   protected async setVaultContext(vaultId: string): Promise<void> {

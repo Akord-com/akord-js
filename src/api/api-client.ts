@@ -181,7 +181,7 @@ export class ApiClient {
   }
 
   async getObjects<T>(): Promise<Paginated<T>> {
-    return await this.public(true).get(`http://localhost:3000/vaults/${this._vaultId}/nodes`);
+    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
   }
 
   async getObject<T>(): Promise<T> {
