@@ -39,11 +39,11 @@ const { Akord } = require("@akord/akord-js");
 #### Init Akord
 ##### with email & password
 ```js
-const { akord, wallet, jwtToken } = Akord.auth.signIn(email, password);
+const { akord, wallet, jwtToken } = await Akord.auth.signIn(email, password);
 ```
 ##### with Akord Wallet & JWT
 ```js
-const akord = Akord.init(wallet, jwtToken);
+const akord = await Akord.init(wallet, jwtToken);
 ```
 
 #### Create vault
@@ -85,7 +85,7 @@ We also have some example flows in our [tests](src/__tests__) repository.
   <summary>example</summary>
 
 ```js
-const { akord, wallet, jwtToken } = await akord.auth.signIn("winston@gmail.com", "1984");
+const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -100,7 +100,7 @@ const { akord, wallet, jwtToken } = await akord.auth.signIn("winston@gmail.com",
   <summary>example</summary>
 
 ```js
-const wallet = await akord.auth.signUp("winston@gmail.com", "1984");
+const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -114,7 +114,7 @@ const wallet = await akord.auth.signUp("winston@gmail.com", "1984");
   <summary>example</summary>
 
 ```js
-await akord.auth.verifyAccount("winston@gmail.com", 123456);
+await Akord.auth.verifyAccount("winston@gmail.com", 123456);
 ```
 </details>
 
