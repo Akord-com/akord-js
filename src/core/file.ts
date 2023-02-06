@@ -9,6 +9,7 @@ import { Blob } from 'buffer';
 import fs from "fs";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
+import { getTxData, getTxMetadata } from "../arweave";
 
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
@@ -118,10 +119,6 @@ class FileService extends Service {
     }
   }
 
-  base64ToString(base64: string) {
-    return Buffer.from(base64, "base64").toString();
-  };
-
   public async import(
     fileTxId: string,
     name: string)
@@ -130,10 +127,9 @@ class FileService extends Service {
     if (this.isPublic) {
       tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(name)))
     }
-    const fileData = await this.downloadFile(fileTxId);
-    const fileMetadata = await this.downloadFileMetadata(fileTxId);
-    const contentTypeTag = fileMetadata.tags.find((tag: Tag) => this.base64ToString(tag.name) === "Content-Type");
-    const fileType = this.base64ToString(contentTypeTag.value);
+    const fileData = await getTxData(fileTxId);
+    const fileMetadata = await getTxMetadata(fileTxId);
+    const fileType = (fileMetadata.tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value;
     const file = await createFileLike([fileData], name, fileType);
     tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
     tags.push(new Tag(fileTags.FILE_SIZE, file.size));
@@ -155,26 +151,6 @@ class FileService extends Service {
       .uploadFile()
     return { file, resourceHash, resourceUrl: resource.resourceUrl };
   }
-
-  private async downloadFile(id: string) {
-    const response = await fetch("https://arweave.net/" + id);
-    if (response.status == 200 || response.status == 202) {
-      const body = await response.arrayBuffer();
-      return body;
-    } else {
-      throw new Error("Cannot fetch arweave transaction data: " + id);
-    }
-  };
-
-  private async downloadFileMetadata(id: string) {
-    const response = await fetch("https://arweave.net/tx/" + id);
-    if (response.status == 200 || response.status == 202) {
-      const body = await response.json();
-      return body;
-    } else {
-      throw new Error("Cannot fetch arweave transaction metadata: " + id);
-    }
-  };
 
   public async stream(path: string, size?: number): Promise<fs.WriteStream | WritableStreamDefaultWriter> {
     if (typeof window === 'undefined') {
