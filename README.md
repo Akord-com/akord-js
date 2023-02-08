@@ -39,7 +39,8 @@ const { Akord } = require("@akord/akord-js");
 #### Init Akord
 ##### with email & password
 ```js
-const { akord, wallet, jwtToken } = await Akord.auth.signIn(email, password);
+import { Auth } from "@akord/akord-js";
+const { akord, wallet, jwtToken } = await Auth.signIn(email, password);
 ```
 ##### with Akord Wallet & JWT
 ```js
@@ -85,7 +86,7 @@ We also have some example flows in our [tests](src/__tests__) repository.
   <summary>example</summary>
 
 ```js
-const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com", "1984");
+const { akord, wallet, jwtToken } = await Auth.signIn("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -100,7 +101,7 @@ const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com",
   <summary>example</summary>
 
 ```js
-const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
+const wallet = await Auth.signUp("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -114,7 +115,7 @@ const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
   <summary>example</summary>
 
 ```js
-await Akord.auth.verifyAccount("winston@gmail.com", 123456);
+await Auth.verifyAccount("winston@gmail.com", 123456);
 ```
 </details>
 
