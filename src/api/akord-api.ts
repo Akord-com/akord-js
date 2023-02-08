@@ -238,24 +238,30 @@ export default class AkordApi extends Api {
       .getVaults();
   };
 
-  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, shouldListAll = false): Promise<Array<T>> {
+  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, shouldListAll = false, limit?: number, nextToken?: string): Promise<Paginated<T>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(vaultId)
       .queryParams({
         type,
-        shouldListAll
+        shouldListAll,
+        limit,
+        nextToken
       })
       .getNodesByVaultId();
   };
 
-  public async getMembershipsByVaultId(vaultId: string, shouldListAll = false): Promise<Array<Membership>> {
+  public async getMembershipsByVaultId(vaultId: string, shouldListAll = false, limit?: number, nextToken?: string): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(vaultId)
-      .queryParams({ shouldListAll })
+      .queryParams({
+        shouldListAll,
+        limit,
+        nextToken
+      })
       .getMembershipsByVaultId();
   };
 

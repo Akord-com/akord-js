@@ -34,7 +34,7 @@ class MembershipService extends Service {
    * @returns Promise with the decrypted memberships
    */
   public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
-    const membershipsProto = await this.api.getMembershipsByVaultId(vaultId, listOptions.shouldListAll);
+    const membershipsProto = (await this.api.getMembershipsByVaultId(vaultId, listOptions.shouldListAll)).items;
     const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId);
     const memberships = []
     for (const membershipProto of membershipsProto) {
@@ -184,7 +184,7 @@ class MembershipService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.api.getMembershipsByVaultId(this.vaultId);
+      const memberships = (await this.api.getMembershipsByVaultId(this.vaultId)).items;
 
       this.tags = await this.getTags();
 

@@ -1,6 +1,7 @@
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
+import { Paginated } from "../types/paginated";
 
 abstract class Api {
   config: any
@@ -38,9 +39,9 @@ abstract class Api {
 
   abstract getMemberships(): Promise<Array<Membership>>
 
-  abstract getNodesByVaultId<T>(vaultId: string, type: string, shouldListAll?: boolean): Promise<Array<T>>
+  abstract getNodesByVaultId<T>(vaultId: string, type: string, shouldListAll?: boolean, limit?: number, nextToken?: string): Promise<Paginated<T>>
 
-  abstract getMembershipsByVaultId(vaultId: string, shouldListAll?: boolean): Promise<Array<Membership>>
+  abstract getMembershipsByVaultId(vaultId: string, shouldListAll?: boolean, limit?: number, nextToken?: string): Promise<Paginated<Membership>>
 
   abstract getMembers(vaultId: string): Promise<Array<Membership>>
 
