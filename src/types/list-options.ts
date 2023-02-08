@@ -1,6 +1,8 @@
 export type ListOptions = {
   shouldDecrypt: boolean,
-  shouldListAll: boolean
+  shouldListAll: boolean,
+  limit?: number,
+  nextToken?: string
 }
 
 export const defaultListOptions = {

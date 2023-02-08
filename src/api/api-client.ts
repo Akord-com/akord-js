@@ -2,7 +2,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
-import { Paginated } from "../types/paginated";
+import { isPaginated, Paginated, PAGINATION_HEADER } from "../types/paginated";
 import { Vault } from "../types/vault";
 
 export class ApiClient {
@@ -180,12 +180,12 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
 
-  async getObjects<T>(): Promise<Array<T>> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
+  async getObjects<T>(): Promise<Paginated<T>> {
+    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
   }
 
   async getObject<T>(): Promise<T> {
-    return await this.get(`${this._apiurl}/objects/${this._resourceId}`);
+    return await this.public(true).get(`${this._apiurl}/objects/${this._resourceId}`);
   }
 
   async invite(): Promise<{ id: string }> {
@@ -223,6 +223,9 @@ export class ApiClient {
       config.data = this._data;
     }
     const response = await axios(config);
+    if (isPaginated(response)) {
+      return { items: response.data, nextToken: response.headers[PAGINATION_HEADER] }
+    }
     return response.data;
   }
 
