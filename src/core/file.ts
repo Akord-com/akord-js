@@ -10,6 +10,7 @@ import fs from "fs";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
 import { getTxData, getTxMetadata } from "../arweave";
+import * as mime from "mime-types";
 
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
@@ -119,18 +120,16 @@ class FileService extends Service {
     }
   }
 
-  public async import(
-    fileTxId: string,
-    name: string)
+  public async import(fileTxId: string)
     : Promise<{ file: FileLike, resourceHash: string, resourceUrl: string }> {
     const tags = [] as Tags;
-    if (this.isPublic) {
-      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(name)))
-    }
     const fileData = await getTxData(fileTxId);
     const fileMetadata = await getTxMetadata(fileTxId);
-    const fileType = (fileMetadata.tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value;
-    const file = await createFileLike([fileData], name, fileType);
+    const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
+    const file = await createFileLike([fileData], name, type);
+    if (this.isPublic) {
+      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)));
+    }
     tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
     tags.push(new Tag(fileTags.FILE_SIZE, file.size));
     tags.push(new Tag(fileTags.FILE_TYPE, file.type));
@@ -150,6 +149,19 @@ class FileService extends Service {
       .bundle(false)
       .uploadFile()
     return { file, resourceHash, resourceUrl: resource.resourceUrl };
+  }
+
+  private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
+    : { name: string, type: string } {
+    const type =
+      (tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value
+      || "image/jpeg";
+    const name =
+      (tags?.find((tag: Tag) => tag.name === "File-Name"))?.value
+      || (tags?.find((tag: Tag) => tag.name === "Title"))?.value
+      || (tags?.find((tag: Tag) => tag.name === "Name"))?.value
+      || (fileTxId + "." + mime.extension(type));
+    return { name, type };
   }
 
   public async stream(path: string, size?: number): Promise<fs.WriteStream | WritableStreamDefaultWriter> {
