@@ -136,14 +136,6 @@ export class ApiClient {
     return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
   }
 
-  async getNode(): Promise<any> {
-    return await this.public(true).get(`${this._apiurl}/nodes/${this._resourceId}`);
-  }
-
-  async getNodes(): Promise<any> {
-    return await this.get(`${this._apiurl}/nodes/${this._resourceId}`);
-  }
-
   async updateProfile(): Promise<any> {
     return await this.fetch("put", `${this._apiurl}/profiles`);
   }
@@ -180,12 +172,24 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
 
-  async getObjects<T>(): Promise<Paginated<T>> {
+  async getNodesByVaultId<T>(): Promise<Paginated<T>> {
     return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
   }
 
-  async getObject<T>(): Promise<T> {
-    return await this.public(true).get(`${this._apiurl}/objects/${this._resourceId}`);
+  async getMembershipsByVaultId(): Promise<Paginated<Membership>> {
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/memberships`);
+  }
+
+  async getNode<T>(): Promise<T> {
+    return await this.public(true).get(`${this._apiurl}/nodes/${this._resourceId}`);
+  }
+
+  async getMembership(): Promise<Membership> {
+    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`);
+  }
+
+  async getVault(): Promise<Vault> {
+    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`);
   }
 
   async invite(): Promise<{ id: string }> {

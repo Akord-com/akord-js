@@ -1,13 +1,15 @@
 import { Service } from './service';
-import { functions } from "../constants";
-import { NodeLike } from '../types/node';
+import { functions, protocolTags } from "../constants";
+import { NodeLike, NodeType } from '../types/node';
 import { Keys } from '@akord/crypto';
 import { defaultListOptions } from '../types/list-options';
+import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 
 class NodeService<T = NodeLike> extends Service {
 
   protected NodeType: new (arg0: any, arg1: Keys[]) => NodeLike
+  objectType : NodeType;
 
   /**
    * @param  {string} nodeId
@@ -15,7 +17,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async rename(nodeId: string, name: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType);
+    await this.setVaultContextFromNodeId(nodeId, this.objectType);
     this.setFunction(functions.NODE_UPDATE);
     const body = {
       name: await this.processWriteString(name)
@@ -29,7 +31,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
+    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_MOVE);
     return this.nodeUpdate(null, { parentId });
   }
@@ -39,7 +41,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
+    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_REVOKE);
     return this.nodeUpdate();
   }
@@ -49,7 +51,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async restore(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
+    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_RESTORE);
     return this.nodeUpdate();
   }
@@ -59,7 +61,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async delete(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(nodeId, this.objectType, vaultId);
+    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setFunction(functions.NODE_DELETE);
     return this.nodeUpdate();
   }
@@ -69,8 +71,8 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with the decrypted node
    */
   public async get(nodeId: string, vaultId?: string, shouldDecrypt = true): Promise<T> {
-    const nodeProto = await this.api.getObject<NodeLike>(nodeId, this.objectType, vaultId);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId)
+    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, vaultId);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
     const node = this.nodeInstance(nodeProto, keys);
     if (isEncrypted && shouldDecrypt) {
       await node.decrypt();
@@ -83,7 +85,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with all nodes within given vault
    */
   public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<T>> {
-    const response = await this.api.getObjectsByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: []};
     return {
       items: await Promise.all(
@@ -101,6 +103,19 @@ class NodeService<T = NodeLike> extends Service {
 
   private nodeInstance(nodeProto: any, keys: Array<Keys>): NodeLike {
     return new this.NodeType(nodeProto, keys);
+  }
+
+  protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
+    const object = await this.api.getNode<NodeLike>(nodeId, type, this.vaultId);
+    await this.setVaultContext(vaultId || object.vaultId);
+    this.setObject(object);
+    this.setObjectId(nodeId);
+    this.setObjectType(type);
+  }
+
+  protected async getTags(): Promise<Tags> {
+    const tags = await super.getTags();
+    return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
   }
 }
 
