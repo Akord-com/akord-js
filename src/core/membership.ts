@@ -286,6 +286,11 @@ class MembershipService extends Service {
     this.setObjectId(membershipId);
     this.setObjectType(this.objectType);
   }
+
+  protected async getTags(): Promise<Tags> {
+    const tags = await super.getTags();
+    return tags.concat(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
+  }
 };
 
 export {

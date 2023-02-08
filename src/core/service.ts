@@ -397,11 +397,6 @@ class Service {
     if (this.actionRef) {
       tags.push(new Tag("Action-Ref", this.actionRef));
     }
-    if (this.objectType === objectType.MEMBERSHIP) {
-      tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
-    } else if (this.objectType !== objectType.VAULT) {
-      tags.push(new Tag(protocolTags.NODE_ID, this.objectId));
-    }
     return tags;
   }
 }

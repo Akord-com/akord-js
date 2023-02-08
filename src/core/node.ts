@@ -1,8 +1,9 @@
 import { Service } from './service';
-import { functions } from "../constants";
+import { functions, protocolTags } from "../constants";
 import { NodeLike, NodeType } from '../types/node';
 import { Keys } from '@akord/crypto';
 import { defaultListOptions } from '../types/list-options';
+import { Tag, Tags } from '../types/contract';
 
 class NodeService<T = NodeLike> extends Service {
 
@@ -106,6 +107,11 @@ class NodeService<T = NodeLike> extends Service {
     this.setObject(object);
     this.setObjectId(nodeId);
     this.setObjectType(type);
+  }
+
+  protected async getTags(): Promise<Tags> {
+    const tags = await super.getTags();
+    return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
   }
 }
 
