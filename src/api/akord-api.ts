@@ -7,7 +7,7 @@ import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { Vault } from "../types/vault";
-import { Paginated } from "../types/Paginated";
+import { Paginated } from "../types/paginated";
 
 export default class AkordApi extends Api {
 

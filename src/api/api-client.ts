@@ -2,7 +2,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
-import { Paginated } from "../types/Paginated";
+import { Paginated } from "../types/paginated";
 import { Vault } from "../types/vault";
 
 export class ApiClient {
