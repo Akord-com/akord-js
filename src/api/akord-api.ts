@@ -5,7 +5,7 @@ import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
 import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
-import { ObjectType } from "../types/object";
+import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Paginated } from "../types/paginated";
 
@@ -165,13 +165,29 @@ export default class AkordApi extends Api {
       .inviteResend();
   }
 
-  public async getObject<T>(id: string, type: ObjectType): Promise<T> {
+  public async getNode<T>(id: string, type: NodeType): Promise<T> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .resourceId(id)
       .queryParams({ type })
-      .getObject();
+      .getNode();
+  };
+
+  public async getMembership(id: string): Promise<Membership> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .getMembership();
+  };
+
+  public async getVault(id: string): Promise<Vault> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .resourceId(id)
+      .getVault();
   };
 
   public async getMembershipKeys(vaultId: string): Promise<MembershipKeys> {
@@ -188,16 +204,6 @@ export default class AkordApi extends Api {
       .auth(this.jwtToken)
       .resourceId(stateId)
       .downloadState()
-
-    return response.data
-  };
-
-  public async getNode(id: string): Promise<any> {
-    const response = await new ApiClient()
-      .env(this.config)
-      .auth(this.jwtToken)
-      .resourceId(id)
-      .getNode()
 
     return response.data
   };
@@ -232,7 +238,7 @@ export default class AkordApi extends Api {
       .getVaults();
   };
 
-  public async getObjectsByVaultId<T>(vaultId: string, type: ObjectType, shouldListAll = false): Promise<Array<T>> {
+  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, shouldListAll = false): Promise<Array<T>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
@@ -241,7 +247,16 @@ export default class AkordApi extends Api {
         type,
         shouldListAll
       })
-      .getObjects();
+      .getNodesByVaultId();
+  };
+
+  public async getMembershipsByVaultId(vaultId: string, shouldListAll = false): Promise<Array<Membership>> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .vaultId(vaultId)
+      .queryParams({ shouldListAll })
+      .getMembershipsByVaultId();
   };
 
   public async getTransactions(vaultId: string): Promise<Array<any>> {

@@ -1,8 +1,7 @@
 import { NodeService } from "./node";
-import { Stack } from "../types/node";
+import { Stack, nodeType } from "../types/node";
 import { StackService } from "./stack";
 import { defaultListOptions } from "../types/list-options";
-import { objectType } from "../constants";
 import { arrayToString } from "@akord/crypto";
 import { createFileLike } from "./file";
 
@@ -15,7 +14,7 @@ type NoteType = "text/markdown" | "application/json";
 
 class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
-  objectType = objectType.STACK;
+  objectType = nodeType.STACK;
   NodeType = Stack;
 
   /**

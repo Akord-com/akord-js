@@ -14,7 +14,7 @@ class MembershipService extends Service {
    * @returns Promise with the decrypted membership
    */
   public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
-    const membershipProto = await this.api.getObject<Membership>(membershipId, this.objectType, vaultId);
+    const membershipProto = await this.api.getMembership(membershipId, vaultId);
     let membership: Membership;
     if (shouldDecrypt) {
       const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId);
@@ -34,7 +34,7 @@ class MembershipService extends Service {
    * @returns Promise with the decrypted memberships
    */
   public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
-    const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType, listOptions.shouldListAll);
+    const membershipsProto = await this.api.getMembershipsByVaultId(vaultId, listOptions.shouldListAll);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId);
     const memberships = []
     for (const membershipProto of membershipsProto) {
@@ -101,7 +101,7 @@ class MembershipService extends Service {
    */
   public async accept(membershipId: string): Promise<{ transactionId: string }> {
     const memberDetails = await this.getProfileDetails();
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
@@ -116,7 +116,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async confirm(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
@@ -154,7 +154,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async reject(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_REJECT);
     this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
@@ -165,7 +165,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async leave(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
     this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
@@ -176,7 +176,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
     let data: any;
@@ -184,7 +184,7 @@ class MembershipService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.api.getObjectsByVaultId<Membership>(this.vaultId, this.objectType);
+      const memberships = await this.api.getMembershipsByVaultId(this.vaultId);
 
       this.tags = await this.getTags();
 
@@ -237,7 +237,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async changeRole(membershipId: string, role: RoleType): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
     this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
     return this.nodeUpdate(null, { role });
@@ -262,7 +262,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async inviteResend(membershipId: string): Promise<void> {
-    const object = await this.api.getObject<Membership>(membershipId, this.objectType, this.vaultId);
+    const object = await this.api.getMembership(membershipId, this.vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
     if (object.status !== status.PENDING && object.status !== status.INVITED) {
       throw new Error("Cannot resend the invitation for member: " + membershipId +
@@ -272,11 +272,19 @@ class MembershipService extends Service {
   }
 
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
-    await this.setVaultContextFromObjectId(membershipId, objectType.MEMBERSHIP);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
+  }
+
+  protected async setVaultContextFromMembershipId(membershipId: string, vaultId?: string) {
+    const membership = await this.api.getMembership(membershipId, vaultId);
+    await this.setVaultContext(vaultId || membership.vaultId);
+    this.setObject(membership);
+    this.setObjectId(membershipId);
+    this.setObjectType(this.objectType);
   }
 };
 

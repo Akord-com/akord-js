@@ -1,6 +1,13 @@
 import { Encryptable, encrypted, Keys } from "@akord/crypto";
 import { status } from "../constants";
 
+export enum nodeType {
+  STACK = "Stack",
+  FOLDER = "Folder",
+  MEMO = "Memo",
+  NOTE = "Note"
+}
+
 export type NodeType = "Stack" | "Folder" | "Memo" | "Note";
 
 export abstract class Node extends Encryptable {
@@ -107,8 +114,8 @@ export class MemoVersion extends Encryptable {
   constructor(memoVersionProto: any, keys?: Array<Keys>, publicKey?: string) {
     super(keys, publicKey);
     this.owner = memoVersionProto.owner;
-    this.createdAt =  memoVersionProto.createdAt;
-    this.message =  memoVersionProto.message;
+    this.createdAt = memoVersionProto.createdAt;
+    this.message = memoVersionProto.message;
     this.reactions = (memoVersionProto.reactions || []).map((reaction: MemoReaction) =>
       new MemoReaction(reaction, keys, publicKey)
     );
