@@ -151,19 +151,6 @@ class FileService extends Service {
     return { file, resourceHash, resourceUrl: resource.resourceUrl };
   }
 
-  private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
-    : { name: string, type: string } {
-    const type =
-      (tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value
-      || "image/jpeg";
-    const name =
-      (tags?.find((tag: Tag) => tag.name === "File-Name"))?.value
-      || (tags?.find((tag: Tag) => tag.name === "Title"))?.value
-      || (tags?.find((tag: Tag) => tag.name === "Name"))?.value
-      || (fileTxId + "." + mime.extension(type));
-    return { name, type };
-  }
-
   public async stream(path: string, size?: number): Promise<fs.WriteStream | WritableStreamDefaultWriter> {
     if (typeof window === 'undefined') {
       return fs.createWriteStream(path);
@@ -183,6 +170,26 @@ class FileService extends Service {
       const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
       return fileStream.getWriter();
     }
+  }
+
+  private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
+    : { name: string, type: string } {
+    const type =
+      (tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value
+      || "image/jpeg";
+    const name = this.retrieveDecodedTag(tags, "File-Name")
+      || this.retrieveDecodedTag(tags, "Title")
+      || this.retrieveDecodedTag(tags, "Name")
+      || (fileTxId + "." + mime.extension(type));
+    return { name, type };
+  }
+
+  private retrieveDecodedTag(tags: Tags, tagName: string) {
+    const tagValue = tags?.find((tag: Tag) => tag.name === tagName)?.value;
+    if (tagValue) {
+      return decodeURIComponent(tagValue);
+    }
+    return null;
   }
 
   private async uploadChunked(
