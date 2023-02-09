@@ -9,7 +9,7 @@ import { Paginated } from '../types/paginated';
 class NodeService<T = NodeLike> extends Service {
 
   protected NodeType: new (arg0: any, arg1: Keys[]) => NodeLike
-  objectType : NodeType;
+  objectType: NodeType;
 
   /**
    * @param  {string} nodeId
@@ -82,11 +82,11 @@ class NodeService<T = NodeLike> extends Service {
 
   /**
    * @param  {string} vaultId
-   * @returns Promise with all nodes within given vault
+   * @returns Promise with paginated nodes within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<T>> {
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<NodeLike>> {
     const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
-    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: []};
+    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
       items: await Promise.all(
         response.items
@@ -95,10 +95,29 @@ class NodeService<T = NodeLike> extends Service {
             if (isEncrypted) {
               await node.decrypt();
             }
-            return node as T;
-          })),
+            return node as NodeLike;
+          })) as NodeLike[],
       nextToken: response.nextToken
     }
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with all nodes within given vault
+   */
+  public async listAll(vaultId: string, listOptions = defaultListOptions): Promise<Array<NodeLike>> {
+    let token = null;
+    let nodeArray = [] as NodeLike[];
+    do {
+      const { items, nextToken } = await this.list(vaultId, listOptions);
+      nodeArray = nodeArray.concat(items);
+      token = nextToken;
+      listOptions.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
+    return nodeArray;
   }
 
   private nodeInstance(nodeProto: any, keys: Array<Keys>): NodeLike {
