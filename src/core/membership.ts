@@ -3,12 +3,22 @@ import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, RoleType } from "../types/membership";
-import { defaultListOptions } from "../types/list-options";
+import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
+
+  defaultListOptions = {
+    shouldDecrypt: true,
+    filter: {
+      or: [
+        { status: { eq: status.ACCEPTED } },
+        { status: { eq: status.PENDING } }
+      ]
+    }
+  } as ListOptions;
 
   /**
    * @param  {string} membershipId
@@ -34,8 +44,8 @@ class MembershipService extends Service {
    * @param  {string} vaultId
    * @returns Promise with paginated memberships within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<Membership>> {
-    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
+  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
+    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.filter, listOptions.limit, listOptions.nextToken);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
       items: await Promise.all(
@@ -55,7 +65,7 @@ class MembershipService extends Service {
   * @param  {string} vaultId
   * @returns Promise with all memberships within given vault
   */
-  public async listAll(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
+  public async listAll(vaultId: string, listOptions = this.defaultListOptions): Promise<Array<Membership>> {
     let token = null;
     let nodeArray = [] as Membership[];
     do {
@@ -207,7 +217,7 @@ class MembershipService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false, shouldListAll: false });
+      const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false, filter: this.defaultListOptions.filter });
 
       this.tags = await this.getTags();
 

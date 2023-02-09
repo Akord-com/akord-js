@@ -39,9 +39,9 @@ abstract class Api {
 
   abstract getMemberships(): Promise<Array<Membership>>
 
-  abstract getNodesByVaultId<T>(vaultId: string, type: string, shouldListAll?: boolean, limit?: number, nextToken?: string): Promise<Paginated<T>>
+  abstract getNodesByVaultId<T>(vaultId: string, type: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<T>>
 
-  abstract getMembershipsByVaultId(vaultId: string, shouldListAll?: boolean, limit?: number, nextToken?: string): Promise<Paginated<Membership>>
+  abstract getMembershipsByVaultId(vaultId: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<Membership>>
 
   abstract getMembers(vaultId: string): Promise<Array<Membership>>
 

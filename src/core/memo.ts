@@ -2,12 +2,18 @@ import { NodeService } from "./node";
 import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
+import { ListOptions } from "../types/list-options";
 
 class MemoService extends NodeService<Memo> {
   static readonly reactionEmoji = reactionEmoji;
 
   objectType = nodeType.MEMO;
   NodeType = Memo;
+
+  defaultListOptions = {
+    shouldDecrypt: true,
+    filter: {}
+  } as ListOptions;
 
   /**
   * @param  {string} vaultId

@@ -1,8 +1,8 @@
 import { Service } from './service';
-import { functions, protocolTags } from "../constants";
+import { functions, protocolTags, status } from "../constants";
 import { NodeLike, NodeType } from '../types/node';
 import { Keys } from '@akord/crypto';
-import { defaultListOptions } from '../types/list-options';
+import { ListOptions } from '../types/list-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 
@@ -10,6 +10,16 @@ class NodeService<T = NodeLike> extends Service {
 
   protected NodeType: new (arg0: any, arg1: Keys[]) => NodeLike
   objectType: NodeType;
+
+  defaultListOptions = {
+    shouldDecrypt: true,
+    filter: {
+      status: { ne: status.REVOKED },
+      and: {
+        status: { ne: status.DELETED }
+      }
+    }
+  } as ListOptions;
 
   /**
    * @param  {string} nodeId
@@ -84,8 +94,8 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} vaultId
    * @returns Promise with paginated nodes within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<NodeLike>> {
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
+  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.filter, listOptions.limit, listOptions.nextToken);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
       items: await Promise.all(
@@ -105,7 +115,7 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} vaultId
    * @returns Promise with all nodes within given vault
    */
-  public async listAll(vaultId: string, listOptions = defaultListOptions): Promise<Array<NodeLike>> {
+  public async listAll(vaultId: string, listOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
     let token = null;
     let nodeArray = [] as NodeLike[];
     do {
