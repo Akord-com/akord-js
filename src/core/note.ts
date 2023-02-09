@@ -1,10 +1,9 @@
 import { NodeService } from "./node";
-import { Stack } from "../types/node";
+import { Stack, nodeType } from "../types/node";
 import { StackService } from "./stack";
-import { defaultListOptions } from "../types/list-options";
-import { objectType } from "../constants";
 import { arrayToString } from "@akord/crypto";
 import { createFileLike } from "./file";
+import { Paginated } from "../types/paginated";
 
 enum NoteTypes {
   MD = "text/markdown",
@@ -15,7 +14,7 @@ type NoteType = "text/markdown" | "application/json";
 
 class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
-  objectType = objectType.STACK;
+  objectType = nodeType.STACK;
   NodeType = Stack;
 
   /**
@@ -69,9 +68,10 @@ class NoteService extends NodeService<Stack> {
    * @param  {string} vaultId
    * @returns Promise with all notes within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Stack>> {
-    const stacks = await this.stackService.list(vaultId, listOptions);
-    return stacks.filter((stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
+  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<Stack>> {
+    const stacks = await this.stackService.list(vaultId, listOptions) as Paginated<Stack>;
+    const notes = stacks.items.filter((stack: Stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
+    return { items: notes, nextToken: stacks.nextToken }
   }
 
   private isValidNoteType(type: string) {

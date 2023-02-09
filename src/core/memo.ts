@@ -1,13 +1,19 @@
 import { NodeService } from "./node";
-import { reactionEmoji, actionRefs, objectType, functions } from "../constants";
+import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
-import { Memo, MemoReaction, MemoVersion } from "../types/node";
+import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
+import { ListOptions } from "../types/list-options";
 
 class MemoService extends NodeService<Memo> {
   static readonly reactionEmoji = reactionEmoji;
 
-  objectType = objectType.MEMO;
+  objectType = nodeType.MEMO;
   NodeType = Memo;
+
+  defaultListOptions = {
+    shouldDecrypt: true,
+    filter: {}
+  } as ListOptions;
 
   /**
   * @param  {string} vaultId
@@ -34,7 +40,7 @@ class MemoService extends NodeService<Memo> {
   * @returns Promise with corresponding transaction id
   */
   public async addReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(memoId, this.objectType);
+    await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
     this.setFunction(functions.NODE_UPDATE);
     this.tags = await this.getTags();
@@ -59,7 +65,7 @@ class MemoService extends NodeService<Memo> {
    * @returns Promise with corresponding transaction id
    */
   public async removeReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(memoId, this.objectType);
+    await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
     this.setFunction(functions.NODE_UPDATE);
     this.tags = await this.getTags();
