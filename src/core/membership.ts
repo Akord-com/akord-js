@@ -5,6 +5,7 @@ import { Service } from "./service";
 import { Membership, RoleType } from "../types/membership";
 import { defaultListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
+import { Paginated } from "../types/paginated";
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
@@ -31,20 +32,42 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @returns Promise with the decrypted memberships
+   * @returns Promise with paginated memberships within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
-    const membershipsProto = (await this.api.getMembershipsByVaultId(vaultId, listOptions.shouldListAll)).items;
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId);
-    const memberships = []
-    for (const membershipProto of membershipsProto) {
-      const membership = new Membership(membershipProto, keys);
-      if (isEncrypted && listOptions.shouldDecrypt) {
-        await membership.decrypt();
-      }
-      memberships.push(membership);
+  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Paginated<Membership>> {
+    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.shouldListAll, listOptions.limit, listOptions.nextToken);
+    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+    return {
+      items: await Promise.all(
+        response.items
+          .map(async (membershipProto: Membership) => {
+            const membership = new Membership(membershipProto, keys);
+            if (isEncrypted) {
+              await membership.decrypt();
+            }
+            return membership as Membership;
+          })) as Membership[],
+      nextToken: response.nextToken
     }
-    return memberships;
+  }
+
+  /**
+  * @param  {string} vaultId
+  * @returns Promise with all memberships within given vault
+  */
+  public async listAll(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
+    let token = null;
+    let nodeArray = [] as Membership[];
+    do {
+      const { items, nextToken } = await this.list(vaultId, listOptions);
+      nodeArray = nodeArray.concat(items);
+      token = nextToken;
+      listOptions.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
+    return nodeArray;
   }
 
   /**
@@ -184,7 +207,7 @@ class MembershipService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = (await this.api.getMembershipsByVaultId(this.vaultId)).items;
+      const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false, shouldListAll: false });
 
       this.tags = await this.getTags();
 
