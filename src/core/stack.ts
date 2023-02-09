@@ -40,11 +40,10 @@ class StackService extends NodeService<Stack> {
   /**
    * @param  {string} vaultId
    * @param  {string} fileTxId arweave file transaction id reference
-   * @param  {string} name stack name
    * @param  {string} [parentId] parent folder id
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async import(vaultId: string, fileTxId: string, name: string, parentId?: string):
+  public async import(vaultId: string, fileTxId: string, parentId?: string):
     Promise<{
       stackId: string,
       transactionId: string
@@ -53,7 +52,7 @@ class StackService extends NodeService<Stack> {
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
 
-    const { file, resourceHash, resourceUrl } = await this.fileService.import(fileTxId, name);
+    const { file, resourceHash, resourceUrl } = await this.fileService.import(fileTxId);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
@@ -63,7 +62,7 @@ class StackService extends NodeService<Stack> {
       resourceUri: [`arweave:${fileTxId}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
     });
     const body = {
-      name: await this.processWriteString(name),
+      name: await this.processWriteString(file.name),
       versions: [version]
     };
     const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
