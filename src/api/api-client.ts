@@ -189,7 +189,7 @@ export class ApiClient {
   }
 
   async getVault(): Promise<Vault> {
-    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`);
+    return await this.public(true).get(`${this._apiurl}/vaults/${this._resourceId}`);
   }
 
   async invite(): Promise<{ id: string }> {
