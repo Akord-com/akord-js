@@ -50,7 +50,7 @@ async function vaultCreate() {
   return { vaultId };
 }
 
-describe("Testing folder functions", () => {
+describe("Testing manifest functions", () => {
   let vaultId: string;
 
   beforeEach(async () => {
@@ -65,5 +65,7 @@ describe("Testing folder functions", () => {
   it("should create new manifest", async () => {
     const { transactionId } = await akord.manifest.generate(vaultId, manifest);
     expect(transactionId).not.toBeFalsy();
+    const manifestJSON = await akord.manifest.getVersion(vaultId);
+    expect(manifest).toEqual(manifestJSON);
   });
 });
