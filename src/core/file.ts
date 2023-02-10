@@ -15,6 +15,7 @@ import * as mime from "mime-types";
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
   chunkSize = 209715200;
+  contentType = null as string;
 
   /**
    * Returns file as ArrayBuffer. Puts the whole file into memory. 
@@ -96,20 +97,7 @@ class FileService extends Service {
     progressHook?: (progress: number, data?: any) => void,
     cancelHook?: AbortController)
     : Promise<{ resourceTx: string, resourceUrl?: string, resourceHash: string, numberOfChunks?: number, chunkSize?: number }> {
-    const tags = [] as Tags;
-    if (this.isPublic) {
-      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)))
-      if (file.lastModified) {
-        tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
-      }
-    }
-    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
-    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
-    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
-    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
-    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
-    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
-
+    const tags = this.getFileTags(file);
     if (file.size > this.asyncUploadTreshold) {
       return await this.uploadChunked(file, tags, progressHook, cancelHook);
     } else {
@@ -122,20 +110,11 @@ class FileService extends Service {
 
   public async import(fileTxId: string)
     : Promise<{ file: FileLike, resourceHash: string, resourceUrl: string }> {
-    const tags = [] as Tags;
     const fileData = await getTxData(fileTxId);
     const fileMetadata = await getTxMetadata(fileTxId);
     const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
     const file = await createFileLike([fileData], name, type);
-    if (this.isPublic) {
-      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)));
-    }
-    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
-    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
-    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
-    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
-    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
-    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+    const tags = this.getFileTags(file);
 
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
     const resourceHash = await digestRaw(processedData);
@@ -303,6 +282,23 @@ class FileService extends Service {
         " Please upload the file again if problem persists and/or contact Akord support."
       );
     }
+  }
+
+  private getFileTags(file: FileLike): Tags {
+    const tags = [] as Tags;
+    if (this.isPublic) {
+      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)))
+      if (file.lastModified) {
+        tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
+      }
+    }
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type));
+    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
+    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
+    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
+    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
+    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+    return tags;
   }
 };
 
