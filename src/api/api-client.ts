@@ -3,7 +3,7 @@ import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
-import { Paginated } from "../types/Paginated";
+import { isPaginated, Paginated, PAGINATION_HEADER } from "../types/paginated";
 import { Vault } from "../types/vault";
 
 export class ApiClient {
@@ -127,14 +127,6 @@ export class ApiClient {
     return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
   }
 
-  async getNode(): Promise<any> {
-    return await this.public(true).get(`${this._apiurl}/nodes/${this._resourceId}`);
-  }
-
-  async getNodes(): Promise<any> {
-    return await this.get(`${this._apiurl}/nodes/${this._resourceId}`);
-  }
-
   async updateProfile(): Promise<any> {
     return await this.fetch("put", `${this._apiurl}/profiles`);
   }
@@ -171,12 +163,24 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
 
-  async getObjects<T>(): Promise<Array<T>> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
+  async getNodesByVaultId<T>(): Promise<Paginated<T>> {
+    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
   }
 
-  async getObject<T>(): Promise<T> {
-    return await this.get(`${this._apiurl}/objects/${this._resourceId}`);
+  async getMembershipsByVaultId(): Promise<Paginated<Membership>> {
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/memberships`);
+  }
+
+  async getNode<T>(): Promise<T> {
+    return await this.public(true).get(`${this._apiurl}/nodes/${this._resourceId}`);
+  }
+
+  async getMembership(): Promise<Membership> {
+    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`);
+  }
+
+  async getVault(): Promise<Vault> {
+    return await this.get(`${this._apiurl}/vaults/${this._resourceId}`);
   }
 
   async getTransactions(): Promise<Array<Transaction>> {
@@ -218,6 +222,9 @@ export class ApiClient {
       config.data = this._data;
     }
     const response = await axios(config);
+    if (isPaginated(response)) {
+      return { items: response.data, nextToken: response.headers[PAGINATION_HEADER] }
+    }
     return response.data;
   }
 

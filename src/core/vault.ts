@@ -138,12 +138,13 @@ class VaultService extends Service {
    * @returns Promise with the decrypted vault
    */
   public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
-    const result = await this.api.getObject<Vault>(vaultId, this.objectType, vaultId);
+    const result = await this.api.getVault(vaultId);
+    if (!shouldDecrypt || result.public) {
+      return new Vault(result, []);
+    }
     const { keys } = await this.api.getMembershipKeys(vaultId);
     const vault = new Vault(result, keys);
-    if (shouldDecrypt && !vault.public) {
-      await vault.decrypt();
-    }
+    await vault.decrypt();
     return vault
   }
 

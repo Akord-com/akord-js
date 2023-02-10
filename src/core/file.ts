@@ -8,7 +8,9 @@ import { FileLike } from "../types/file";
 import { Blob } from 'buffer';
 import fs from "fs";
 import { Tag, Tags } from "../types/contract";
-
+import { BinaryLike } from "crypto";
+import { getTxData, getTxMetadata } from "../arweave";
+import * as mime from "mime-types";
 
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
@@ -118,6 +120,37 @@ class FileService extends Service {
     }
   }
 
+  public async import(fileTxId: string)
+    : Promise<{ file: FileLike, resourceHash: string, resourceUrl: string }> {
+    const tags = [] as Tags;
+    const fileData = await getTxData(fileTxId);
+    const fileMetadata = await getTxMetadata(fileTxId);
+    const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
+    const file = await createFileLike([fileData], name, type);
+    if (this.isPublic) {
+      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)));
+    }
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, file.type));
+    tags.push(new Tag(fileTags.FILE_SIZE, file.size));
+    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
+    tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
+    tags.push(new Tag(dataTags.DATA_TYPE, "File"));
+    tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
+    const resourceHash = await digestRaw(processedData);
+    tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
+    const resource = await new ApiClient()
+      .env(this.api.config)
+      .auth(this.api.jwtToken)
+      .data(processedData)
+      .tags(tags.concat(encryptionTags))
+      .public(this.isPublic)
+      .bundle(false)
+      .uploadFile()
+    return { file, resourceHash, resourceUrl: resource.resourceUrl };
+  }
+
   public async stream(path: string, size?: number): Promise<fs.WriteStream | WritableStreamDefaultWriter> {
     if (typeof window === 'undefined') {
       return fs.createWriteStream(path);
@@ -137,6 +170,26 @@ class FileService extends Service {
       const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
       return fileStream.getWriter();
     }
+  }
+
+  private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
+    : { name: string, type: string } {
+    const type =
+      (tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value
+      || "image/jpeg";
+    const name = this.retrieveDecodedTag(tags, "File-Name")
+      || this.retrieveDecodedTag(tags, "Title")
+      || this.retrieveDecodedTag(tags, "Name")
+      || (fileTxId + "." + mime.extension(type));
+    return { name, type };
+  }
+
+  private retrieveDecodedTag(tags: Tags, tagName: string) {
+    const tagValue = tags?.find((tag: Tag) => tag.name === tagName)?.value;
+    if (tagValue) {
+      return decodeURIComponent(tagValue);
+    }
+    return null;
   }
 
   private async uploadChunked(
@@ -185,7 +238,7 @@ class FileService extends Service {
       const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
       encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
     }
-    
+
     await new ApiClient()
       .env(this.api.config)
       .auth(this.api.jwtToken)
@@ -269,6 +322,17 @@ type DownloadOptions = {
   cancelHook?: AbortController
 }
 
+async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)
+  : Promise<FileLike> {
+  if (typeof window === "undefined") {
+    const node = await import("../types/file")
+    return new node.NodeJs.File(sources, name, mimeType, lastModified);
+  } else {
+    return new File(sources, name, { type: mimeType, lastModified })
+  }
+}
+
 export {
-  FileService
+  FileService,
+  createFileLike
 }

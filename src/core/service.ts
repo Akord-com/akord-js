@@ -55,20 +55,11 @@ class Service {
   }
 
   protected async setVaultContext(vaultId: string) {
-    const vault = await this.api.getObject<Vault>(vaultId, objectType.VAULT, vaultId);
+    const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
     await this.setMembershipKeys(vaultId);
-  }
-
-
-  protected async setVaultContextFromObjectId(objectId: string, objectType: ObjectType, vaultId?: string) {
-    const object = await this.api.getObject<Object>(objectId, objectType, this.vaultId);
-    await this.setVaultContext(vaultId || object.vaultId);
-    this.setObject(object);
-    this.setObjectId(objectId);
-    this.setObjectType(objectType);
   }
 
   protected async setMembershipKeys(vaultId: string) {
@@ -392,11 +383,6 @@ class Service {
     }
     if (this.actionRef) {
       tags.push(new Tag("Action-Ref", this.actionRef));
-    }
-    if (this.objectType === objectType.MEMBERSHIP) {
-      tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
-    } else if (this.objectType !== objectType.VAULT) {
-      tags.push(new Tag(protocolTags.NODE_ID, this.objectId));
     }
     return tags;
   }

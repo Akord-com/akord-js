@@ -3,18 +3,29 @@ import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, RoleType } from "../types/membership";
-import { defaultListOptions } from "../types/list-options";
+import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
+import { Paginated } from "../types/paginated";
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
+
+  defaultListOptions = {
+    shouldDecrypt: true,
+    filter: {
+      or: [
+        { status: { eq: status.ACCEPTED } },
+        { status: { eq: status.PENDING } }
+      ]
+    }
+  } as ListOptions;
 
   /**
    * @param  {string} membershipId
    * @returns Promise with the decrypted membership
    */
   public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
-    const membershipProto = await this.api.getObject<Membership>(membershipId, this.objectType, vaultId);
+    const membershipProto = await this.api.getMembership(membershipId, vaultId);
     let membership: Membership;
     if (shouldDecrypt) {
       const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId);
@@ -31,20 +42,42 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @returns Promise with the decrypted memberships
+   * @returns Promise with paginated memberships within given vault
    */
-  public async list(vaultId: string, listOptions = defaultListOptions): Promise<Array<Membership>> {
-    const membershipsProto = await this.api.getObjectsByVaultId<Membership>(vaultId, this.objectType, listOptions.shouldListAll);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(vaultId);
-    const memberships = []
-    for (const membershipProto of membershipsProto) {
-      const membership = new Membership(membershipProto, keys);
-      if (isEncrypted && listOptions.shouldDecrypt) {
-        await membership.decrypt();
-      }
-      memberships.push(membership);
+  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
+    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.filter, listOptions.limit, listOptions.nextToken);
+    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+    return {
+      items: await Promise.all(
+        response.items
+          .map(async (membershipProto: Membership) => {
+            const membership = new Membership(membershipProto, keys);
+            if (isEncrypted) {
+              await membership.decrypt();
+            }
+            return membership as Membership;
+          })) as Membership[],
+      nextToken: response.nextToken
     }
-    return memberships;
+  }
+
+  /**
+  * @param  {string} vaultId
+  * @returns Promise with all memberships within given vault
+  */
+  public async listAll(vaultId: string, listOptions = this.defaultListOptions): Promise<Array<Membership>> {
+    let token = null;
+    let nodeArray = [] as Membership[];
+    do {
+      const { items, nextToken } = await this.list(vaultId, listOptions);
+      nodeArray = nodeArray.concat(items);
+      token = nextToken;
+      listOptions.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
+    return nodeArray;
   }
 
   /**
@@ -100,7 +133,7 @@ class MembershipService extends Service {
    */
   public async accept(membershipId: string): Promise<{ transactionId: string }> {
     const memberDetails = await this.getProfileDetails();
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
@@ -115,7 +148,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async confirm(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
@@ -152,7 +185,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async reject(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_REJECT);
     this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
@@ -163,7 +196,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async leave(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
     this.setFunction(functions.MEMBERSHIP_REJECT);
     return this.nodeUpdate();
@@ -174,7 +207,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(membershipId: string): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
     let data: any;
@@ -182,7 +215,7 @@ class MembershipService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
 
-      const memberships = await this.api.getObjectsByVaultId<Membership>(this.vaultId, this.objectType);
+      const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false, filter: this.defaultListOptions.filter });
 
       this.tags = await this.getTags();
 
@@ -235,7 +268,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async changeRole(membershipId: string, role: RoleType): Promise<{ transactionId: string }> {
-    await this.setVaultContextFromObjectId(membershipId, this.objectType);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
     this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
     return this.nodeUpdate(null, { role });
@@ -260,7 +293,7 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async inviteResend(membershipId: string): Promise<void> {
-    const object = await this.api.getObject<Membership>(membershipId, this.objectType, this.vaultId);
+    const object = await this.api.getMembership(membershipId, this.vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
     if (object.status !== status.PENDING && object.status !== status.INVITED) {
       throw new Error("Cannot resend the invitation for member: " + membershipId +
@@ -270,11 +303,24 @@ class MembershipService extends Service {
   }
 
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
-    await this.setVaultContextFromObjectId(membershipId, objectType.MEMBERSHIP);
+    await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
+  }
+
+  protected async setVaultContextFromMembershipId(membershipId: string, vaultId?: string) {
+    const membership = await this.api.getMembership(membershipId, vaultId);
+    await this.setVaultContext(vaultId || membership.vaultId);
+    this.setObject(membership);
+    this.setObjectId(membershipId);
+    this.setObjectType(this.objectType);
+  }
+
+  protected async getTags(): Promise<Tags> {
+    const tags = await super.getTags();
+    return tags.concat(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
   }
 };
 
