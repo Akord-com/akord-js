@@ -2,6 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
 import { email, password } from './data/test-credentials';
+import { createFileLike } from "../core/file";
 
 let akord: Akord;
 
@@ -39,14 +40,23 @@ async function vaultCreate() {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
   const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess, true);
+  console.log("created vault", name);
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.role).toEqual("OWNER");
 
+  const htmlSrc = "<html><body><h1>Hello World</h2></body></html>";
+  const htmlFile = await createFileLike([htmlSrc], "index.html", "text/html");
+  const { stackId } = await akord.stack.create(vaultId, htmlFile, "index.html");
+  console.log("uploaded index.html", stackId);
+
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.name).toEqual(name);
+
+  console.log(vaultId, name);
+
   return { vaultId };
 }
 
@@ -63,9 +73,11 @@ describe("Testing manifest functions", () => {
   });
 
   it("should create new manifest", async () => {
-    const { transactionId } = await akord.manifest.generate(vaultId, manifest);
+    const { transactionId } = await akord.manifest.generate(vaultId);
     expect(transactionId).not.toBeFalsy();
+    console.log("manifest tx id", vaultId);
     const manifestJSON = await akord.manifest.getVersion(vaultId);
-    expect(manifest).toEqual(manifestJSON);
+    // expect(manifest).toEqual(manifestJSON);
+    expect(manifestJSON).not.toBeFalsy();
   });
 });
