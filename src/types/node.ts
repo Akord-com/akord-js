@@ -36,10 +36,12 @@ export abstract class Node extends Encryptable {
 
 export class Folder extends Node {
   @encrypted() name: string;
+  size: number;
 
   constructor(nodeLike: any, keys: Array<Keys>) {
     super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
+    this.size = nodeLike.size;
   }
 }
 
