@@ -192,6 +192,10 @@ export class ApiClient {
     return await this.public(true).get(`${this._apiurl}/vaults/${this._resourceId}`);
   }
 
+  async patchNotifications(): Promise<Paginated<any>> {
+    return await this.patch(`${this._apiurl}/notifications`);
+  }
+
   async invite(): Promise<{ id: string }> {
     const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/members`);
     return response.id;
@@ -204,6 +208,10 @@ export class ApiClient {
 
   async post(url: string): Promise<any> {
     return this.fetch("post", url);
+  }
+
+  async patch(url: string): Promise<any> {
+    return this.fetch("patch", url);
   }
 
   async get(url: string): Promise<any> {
