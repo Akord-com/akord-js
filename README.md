@@ -383,7 +383,7 @@ const memberships = await akord.membership.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Membership>>` - Promise with paginated memberships within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated memberships within given vault
 
 <details>
   <summary>example</summary>
@@ -486,7 +486,7 @@ const memos = await akord.memo.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Memo>>` - Promise with paginated memos within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated memos within given vault
 
 <details>
   <summary>example</summary>
@@ -663,7 +663,7 @@ const stacks = await akord.stack.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Stack>>` - Promise with paginated stacks within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated stacks within given vault
 
 <details>
   <summary>example</summary>
@@ -862,7 +862,7 @@ const folders = await akord.folder.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Folder>>` - Promise with paginated folders within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated folders within given vault
 
 <details>
   <summary>example</summary>
@@ -1016,7 +1016,7 @@ const notes = await akord.note.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Note>>` - Promise with paginated notes within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated notes within given vault
 
 <details>
   <summary>example</summary>
