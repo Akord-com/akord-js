@@ -3,6 +3,7 @@ import faker from '@faker-js/faker';
 import { initInstance } from './helpers';
 import { email, password } from './data/test-credentials';
 import { createFileLike } from "../core/file";
+import { StorageType } from "../types/node";
 
 let akord: Akord;
 
@@ -70,6 +71,14 @@ describe("Testing manifest functions", () => {
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate()).vaultId;
+  });
+
+  it("should create new manifest", async () => {
+    const { transactionId } = await akord.manifest.generate("bdTOvS3SwNyMOa9rsvjJyQ1bkuU-eCugsHvtEtP8YGU");
+    expect(transactionId).not.toBeFalsy();
+    const manifest = await akord.manifest.get("bdTOvS3SwNyMOa9rsvjJyQ1bkuU-eCugsHvtEtP8YGU");
+    console.log(manifest.versions[manifest.versions.length - 1].getUri(StorageType.ARWEAVE));
+    console.log("manifest url: http://arweave.net/" + transactionId);
   });
 
   it("should create new manifest", async () => {

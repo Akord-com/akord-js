@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { Stack, nodeType } from "../types/node";
+import { Stack, Folder, nodeType } from "../types/node";
 import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { createFileLike } from "./file";
@@ -8,6 +8,8 @@ import { arrayToString } from "@akord/crypto";
 const CONTENT_TYPE = "application/x.arweave-manifest+json";
 const FILE_NAME = "manifest.json";
 const FILE_TYPE = "application/json";
+
+
 
 class ManifestService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
@@ -50,14 +52,15 @@ class ManifestService extends NodeService<Stack> {
   /**
    * @returns Promise with vault manifest JSON data
    */
-  public async getVersion(vaultId: string, index?: string): Promise<JSON> {
+  public async getVersion(vaultId: string): Promise<JSON> {
     const manifest = await this.get(vaultId);
     if (!manifest) {
       throw new Error("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
-    const manifestFile = await this.stackService.getVersion(manifest.id, index);
+    const manifestFile = await this.stackService.getVersion(manifest.id);
     return JSON.parse(arrayToString(manifestFile.data));
   }
+
 
   /**
    * 
@@ -65,9 +68,9 @@ class ManifestService extends NodeService<Stack> {
   */
   private async renderManifestJSON(vaultId: string, indexName?: string) {
     // takes a flat list of folders and stacks and generates a tree
-    const treeify = (folders, stacks) => {
+    const treeify = (folders: any, stacks: any) => {
       // initalize our treelist with a root folder + stacks
-      var treeList = [{ id: null, parentId: null, name: null, stacks: [] }];
+      var treeList = [{ id: null, parentId: null, name: null, stacks: [] as Stack[] }];
       stacks.forEach((s) => {
         if (!s["parentId"]) treeList[0]["stacks"].push(s);
       });
@@ -83,7 +86,7 @@ class ManifestService extends NodeService<Stack> {
         });
       });
       // add the folders  to its parent folder (tree)
-      folders.forEach(function (obj) {
+      folders.forEach((obj) => {
         if (obj["parentId"] != null) {
           lookup[obj["parentId"]]["children"].push(obj);
         } else {
@@ -94,7 +97,7 @@ class ManifestService extends NodeService<Stack> {
     };
 
     // take the hierachical tree and compute the folder paths
-    const computePaths = (tree: Object[], path?: string) => {
+    const computePaths = (tree: Array<Object>, path?: string) => {
       var paths = [];
       tree.forEach((folder) => {
         folder['stacks'].forEach((stack) => {
@@ -126,14 +129,14 @@ class ManifestService extends NodeService<Stack> {
     };
 
     // load and clean list of folders
-    var folders = (await this.folderService.list(vaultId)).items.map((n) => {
+    var folders = (await this.folderService.listAll(vaultId)).map((n) => {
       const { id, parentId, name } = n;
       return { id, parentId, name };
     });
     // console.log(JSON.stringify(folders, null, 2));
 
     // load and clean list of stacks
-    const stacks = (await this.stackService.list(vaultId)).items.map((s) => {
+    const stacks = (await this.stackService.listAll(vaultId)).map((s) => {
       const { id, parentId, name, versions } = s;
       return { id, parentId, name, versions };
     });
