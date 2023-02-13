@@ -55,7 +55,7 @@ export default class AkordApi extends Api {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
-      .resourceId(vaultId)
+      .vaultId(vaultId)
       .getMembers();
   };
 
