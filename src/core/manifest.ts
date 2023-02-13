@@ -9,8 +9,6 @@ const CONTENT_TYPE = "application/x.arweave-manifest+json";
 const FILE_NAME = "manifest.json";
 const FILE_TYPE = "application/json";
 
-
-
 class ManifestService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
   public folderService = new FolderService(this.wallet, this.api);
@@ -52,15 +50,14 @@ class ManifestService extends NodeService<Stack> {
   /**
    * @returns Promise with vault manifest JSON data
    */
-  public async getVersion(vaultId: string): Promise<JSON> {
+  public async getVersion(vaultId: string, index?: string): Promise<JSON> {
     const manifest = await this.get(vaultId);
     if (!manifest) {
       throw new Error("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
-    const manifestFile = await this.stackService.getVersion(manifest.id);
+    const manifestFile = await this.stackService.getVersion(manifest.id, index);
     return JSON.parse(arrayToString(manifestFile.data));
   }
-
 
   /**
    * 
