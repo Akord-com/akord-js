@@ -10,6 +10,7 @@ import { MembershipService } from "./core/membership";
 import { VaultService } from "./core/vault";
 import { StackService } from "./core/stack";
 import { NoteService } from "./core/note";
+import { ManifestService } from "./core/manifest";
 import { ProfileService } from "./core/profile";
 import { Auth } from "./auth";
 import { CacheBusters } from "./types/cacheable";
@@ -28,6 +29,7 @@ export class Akord {
   public stack: StackService;
   public file: FileService;
   public note: NoteService;
+  public manifest: ManifestService;
   public profile: ProfileService;
   public batch: BatchService;
   public contract: ContractService;
@@ -52,6 +54,7 @@ export class Akord {
     this.stack = new StackService(wallet, this.api);
     this.file = new FileService(wallet, this.api);
     this.note = new NoteService(wallet, this.api);
+    this.manifest = new ManifestService(wallet, this.api);
     this.membership = new MembershipService(wallet, this.api);
     this.profile = new ProfileService(wallet, this.api);
     this.batch = new BatchService(wallet, this.api);

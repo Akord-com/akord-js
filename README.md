@@ -16,6 +16,7 @@ This package can be used in both browser and Node.js environments.
   - [File](#file)
   - [Folder](#folder)
   - [Note](#note)
+  - [Manifest](#manifest)
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
@@ -383,7 +384,7 @@ const memberships = await akord.membership.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Membership>>` - Promise with paginated memberships within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated memberships within given vault
 
 <details>
   <summary>example</summary>
@@ -486,7 +487,7 @@ const memos = await akord.memo.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Memo>>` - Promise with paginated memos within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated memos within given vault
 
 <details>
   <summary>example</summary>
@@ -663,7 +664,7 @@ const stacks = await akord.stack.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Stack>>` - Promise with paginated stacks within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated stacks within given vault
 
 <details>
   <summary>example</summary>
@@ -862,7 +863,7 @@ const folders = await akord.folder.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Folder>>` - Promise with paginated folders within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated folders within given vault
 
 <details>
   <summary>example</summary>
@@ -1016,7 +1017,7 @@ const notes = await akord.note.listAll(vaultId);
 
 - `vaultId` (`string`, required)
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
-- returns `Promise<Array<Note>>` - Promise with paginated notes within given vault
+- returns `Promise<{ items, nextToken }>` - Promise with paginated notes within given vault
 
 <details>
   <summary>example</summary>
@@ -1056,6 +1057,61 @@ const { name: fileName, data: noteText } = await akord.note.getVersion(noteId);
 
 // get the first note version
 const { name: fileName, data: noteText } = await akord.note.getVersion(noteId, 0);
+```
+</details>
+
+### manifest
+
+Manifest is a special case of Stack that is unique per vault and follows [Arweave Path Manifest standard](https://github.com/ArweaveTeam/arweave/wiki/Path-Manifests).
+
+#### `generate(vaultId, manifest)`
+
+If there is no manifest for the vault, a new manifest stack will be created, otherwise a new version of the manifest will be generated and uploaded.
+
+If no input JSON is provided by the user, manifest will be genarated automatically from the current vault state.
+
+- `vaultId` (`string`, required)
+- `manifest` (`JSON`, optional) - manifest JSON
+- returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.manifest.generate(vaultId);
+```
+</details>
+
+#### `get(vaultId)`
+
+- `vaultId` (`string`, required)
+- returns `Promise<Stack>` - Promise with the vault manifest object
+
+<details>
+  <summary>example</summary>
+
+```js
+const manifestNode = await akord.manifest.get(vaultId);
+```
+</details>
+
+#### `getVersion(vaultId, index)`
+
+Get vault manifest version by index, return the latest version by default
+
+- `vaultId` (`string`, required)
+- `index` (`string`, optional) - file version index
+- returns `Promise<JSON>` - Promise with JSON manifest
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the latest vault manifest
+const manifest = await akord.manifest.getVersion(vaultId);
+
+// get the first version of the vault manifest
+const manifestV1 = await akord.manifest.getVersion(vaultId, 0);
 ```
 </details>
 
