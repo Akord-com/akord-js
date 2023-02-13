@@ -188,10 +188,11 @@ const { transactionId } = await akord.vault.delete(vaultId);
 ```
 </details>
 
-#### `get(vaultId)`
+#### `get(vaultId, shouldDecrypt)`
 
 - `vaultId` (`string`, required)
-- returns `Promise<any>` - Promise with the decrypted vault
+- `shouldDecrypt` (`boolean`, optional) - default to true
+- returns `Promise<Vault>` - Promise with the vault object
 
 <details>
   <summary>example</summary>
@@ -201,15 +202,16 @@ const vault = await akord.vault.get(vaultId);
 ```
 </details>
 
-#### `list()`
+#### `list(listOptions)`
 
-- returns `Promise<any>` - Promise with currently authenticated user vaults
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Vault>>` - Promise with currently authenticated user vaults
 
 <details>
   <summary>example</summary>
 
 ```js
-const vaultArray = await akord.vault.list();
+const vaults = await akord.vault.list();
 ```
 </details>
 
@@ -349,10 +351,11 @@ const { transactionId } = await akord.membership.inviteResend(membershipId);
 ```
 </details>
 
-#### `get(membershipId)`
+#### `get(membershipId, shouldDecrypt)`
 
 - `membershipId` (`string`, required)
-- returns `Promise<any>` - Promise with the decrypted membership
+- `shouldDecrypt` (`boolean`, optional) - default to true
+- returns `Promise<Membership>` - Promise with the membership object
 
 <details>
   <summary>example</summary>
@@ -362,16 +365,44 @@ const membership = await akord.membership.get(membershipId);
 ```
 </details>
 
-#### `list(vaultId)`
+#### `listAll(vaultId, listOptions)`
 
 - `vaultId` (`string`, required)
-- returns `Promise<any>` - Promise with all memberships within given vault
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Membership>>` - Promise with all memberships within given vault
 
 <details>
   <summary>example</summary>
 
 ```js
-const membershipArray = await akord.membership.list(vaultId);
+const memberships = await akord.membership.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, listOptions)`
+
+- `vaultId` (`string`, required)
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Membership>>` - Promise with paginated memberships within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 memberships for the vault
+const { items } = await akord.membership.list(vaultId);
+
+// retrieve first 20 memberships for the vault
+const { items } = await akord.membership.list(vaultId, { limit: 20 });
+
+// iterate through all memberships
+let token = null;
+let memberships = [];
+do {
+  const { items, nextToken } = await akord.membership.list(vaultId, { nextToken: token });
+  memberships = memberships.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -423,10 +454,11 @@ const { transactionId } = await akord.memo.removeReaction(memoId, Akord.reaction
 ```
 </details>
 
-#### `get(memoId)`
+#### `get(memoId, shouldDecrypt)`
 
 - `memoId` (`string`, required)
-- returns `Promise<any>` - Promise with the decrypted memo
+- `shouldDecrypt` (`boolean`, optional) - default to true
+- returns `Promise<Memo>` - Promise with the memo object
 
 <details>
   <summary>example</summary>
@@ -436,16 +468,44 @@ const memo = await akord.memo.get(memoId);
 ```
 </details>
 
-#### `list(vaultId)`
+#### `listAll(vaultId, listOptions)`
 
 - `vaultId` (`string`, required)
-- returns `Promise<any>` - Promise with all memos within given vault
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Memo>>` - Promise with all memos within given vault
 
 <details>
   <summary>example</summary>
 
 ```js
-const memoArray = await akord.memo.list(vaultId);
+const memos = await akord.memo.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, listOptions)`
+
+- `vaultId` (`string`, required)
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Memo>>` - Promise with paginated memos within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 memos for the vault
+const { items } = await akord.memo.list(vaultId);
+
+// retrieve first 20 memos for the vault
+const { items } = await akord.memo.list(vaultId, { limit: 20 });
+
+// iterate through all memos
+let token = null;
+let memos = [];
+do {
+  const { items, nextToken } = await akord.memo.list(vaultId, { nextToken: token });
+  memos = memos.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -454,7 +514,7 @@ const memoArray = await akord.memo.list(vaultId);
 #### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
 
 - `vaultId` (`string`, required)
-- `file` (`FileLike`, required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
+- `file` ([`FileLike`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8), required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
 - `name` (`string`, required) - stack name
 - `parentId` (`string`, optional) - parent folder id
 - `progressHook` (`(progress:number)=>void`, optional)
@@ -503,7 +563,7 @@ const { transactionId } = await akord.stack.rename(vaultId, "new name for your s
 #### `uploadRevision(stackId, file, progressHook)`
 
 - `stackId` (`string`, required)
-- `file` (`any`, required) - file object
+- `file` ([`FileLike`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8), required) - file object
 - `progressHook` (`(progress:number)=>void`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
@@ -571,10 +631,11 @@ const { transactionId } = await akord.stack.delete(stackId);
 ```
 </details>
 
-#### `get(stackId)`
+#### `get(stackId, shouldDecrypt)`
 
 - `stackId` (`string`, required)
-- returns `Promise<any>` - Promise with the decrypted stack
+- `shouldDecrypt` (`boolean`, optional) - default to true
+- returns `Promise<Stack>` - Promise with the stack object
 
 <details>
   <summary>example</summary>
@@ -584,16 +645,44 @@ const stack = await akord.stack.get(stackId);
 ```
 </details>
 
-#### `list(vaultId)`
+#### `listAll(vaultId, listOptions)`
 
 - `vaultId` (`string`, required)
-- returns `Promise<any>` - Promise with all stacks within given vault
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Stack>>` - Promise with all stacks within given vault
 
 <details>
   <summary>example</summary>
 
 ```js
-const stackArray = await akord.stack.list(vaultId);
+const stacks = await akord.stack.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, listOptions)`
+
+- `vaultId` (`string`, required)
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Stack>>` - Promise with paginated stacks within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 stacks for the vault
+const { items } = await akord.stack.list(vaultId);
+
+// retrieve first 20 stacks for the vault
+const { items } = await akord.stack.list(vaultId, { limit: 20 });
+
+// iterate through all stacks
+let token = null;
+let stacks = [];
+do {
+  const { items, nextToken } = await akord.stack.list(vaultId, { nextToken: token });
+  stacks = stacks.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -741,10 +830,11 @@ const { transactionId } = await akord.folder.delete(folderId);
 ```
 </details>
 
-#### `get(folderId)`
+#### `get(folderId, shouldDecrypt)`
 
 - `folderId` (`string`, required)
-- returns `Promise<any>` - Promise with the decrypted folder
+- `shouldDecrypt` (`boolean`, optional) - default to true
+- returns `Promise<Folder>` - Promise with the folder object
 
 <details>
   <summary>example</summary>
@@ -754,16 +844,44 @@ const folder = await akord.folder.get(folderId);
 ```
 </details>
 
-#### `list(vaultId)`
+#### `listAll(vaultId, listOptions)`
 
 - `vaultId` (`string`, required)
-- returns `Promise<any>` - Promise with all folder within given vault
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Folder>>` - Promise with all folders within given vault
 
 <details>
   <summary>example</summary>
 
 ```js
-const folderArray = await akord.folder.list(vaultId);
+const folders = await akord.folder.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, listOptions)`
+
+- `vaultId` (`string`, required)
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Folder>>` - Promise with paginated folders within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 folders for the vault
+const { items } = await akord.folder.list(vaultId);
+
+// retrieve first 20 folders for the vault
+const { items } = await akord.folder.list(vaultId, { limit: 20 });
+
+// iterate through all folders
+let token = null;
+let folders = [];
+do {
+  const { items, nextToken } = await akord.folder.list(vaultId, { nextToken: token });
+  folders = folders.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -866,10 +984,11 @@ const { transactionId } = await akord.note.delete(noteId);
 ```
 </details>
 
-#### `get(noteId)`
+#### `get(noteId, shouldDecrypt)`
 
 - `noteId` (`string`, required)
-- returns `Promise<any>` - Promise with the decrypted note
+- `shouldDecrypt` (`boolean`, optional) - default to true
+- returns `Promise<Note>` - Promise with the note object
 
 <details>
   <summary>example</summary>
@@ -879,16 +998,44 @@ const note = await akord.note.get(noteId);
 ```
 </details>
 
-#### `list(vaultId)`
+#### `listAll(vaultId, listOptions)`
 
 - `vaultId` (`string`, required)
-- returns `Promise<any>` - Promise with all notes within given vault
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Note>>` - Promise with all notes within given vault
 
 <details>
   <summary>example</summary>
 
 ```js
-const noteArray = await akord.note.list(vaultId);
+const notes = await akord.note.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, listOptions)`
+
+- `vaultId` (`string`, required)
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<Array<Note>>` - Promise with paginated notes within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 notes for the vault
+const { items } = await akord.note.list(vaultId);
+
+// retrieve first 20 notes for the vault
+const { items } = await akord.note.list(vaultId, { limit: 20 });
+
+// iterate through all notes
+let token = null;
+let notes = [];
+do {
+  const { items, nextToken } = await akord.note.list(vaultId, { nextToken: token });
+  notes = notes.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -940,7 +1087,7 @@ Fetch currently authenticated user's profile details
 Update user profile along with all active memberships
 
 - `name` (`string`, required) - new profile name
-- `avatar` (`any`, required) - new avatar buffer
+- `avatar` (`ArrayBuffer`, required) - new avatar buffer
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 ### batch
