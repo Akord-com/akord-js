@@ -147,6 +147,7 @@ export enum functions {
   MEMBERSHIP_REJECT = "membership:reject",
   MEMBERSHIP_CHANGE_ROLE = "membership:change-role",
   MEMBERSHIP_UPDATE = "membership:update",
+  MEMBERSHIP_ADD = "membership:add",
   NODE_CREATE = "node:create",
   NODE_UPDATE = "node:update",
   NODE_REVOKE = "node:revoke",

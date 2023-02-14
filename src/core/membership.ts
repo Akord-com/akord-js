@@ -1,6 +1,6 @@
 import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
+import { base64ToArray, generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, RoleType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
@@ -125,6 +125,52 @@ class MembershipService extends Service {
       this.tags
     );
     return { membershipId, transactionId: id };
+  }
+
+  public async airdrop(vaultId: string, members: Array<{ address: string, publicKey: string }>, role: RoleType): Promise<any> {
+    await this.setVaultContext(vaultId);
+    this.setActionRef("MEMBERSHIP_AIRDROP");
+    this.setFunction(functions.MEMBERSHIP_ADD);
+    const memberArray = [];
+    const dataArray = [];
+    const memberTags = [];
+    for (const member of members) {
+      const membershipId = uuidv4();
+      this.setObjectId(membershipId);
+
+      const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(member.publicKey));
+      const keys = await keysEncrypter.encryptMemberKeys([]);
+      const body = {
+        id: membershipId,
+        address: member.address,
+        keys: keys.map((keyPair) => {
+          delete keyPair.publicKey;
+          return keyPair;
+        }),
+        memberDetails: await this.processMemberDetails({ name: member.address })
+      };
+      const data = await this.uploadState(body);
+      dataArray.push({
+        id: membershipId,
+        data
+      })
+      memberArray.push({ address: member.address, id: membershipId, role, data })
+      memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, member.address));
+    }
+
+    this.tags = memberTags.concat(await this.getTags());
+
+    const input = {
+      function: this.function,
+      members: memberArray
+    };
+
+    const txId = await this.api.postContractTransaction(
+      this.vaultId,
+      input,
+      this.tags
+    );
+    return { members: input.members, transactionId: txId };
   }
 
   /**
