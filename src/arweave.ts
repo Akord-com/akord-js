@@ -1,13 +1,21 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
 const ARWEAVE_URL = "https://arweave.net/";
 
 const getTxData = async (id: string) => {
-  const response = await fetch(ARWEAVE_URL + id);
-  if (response.status == 200 || response.status == 202) {
-    const body = await response.arrayBuffer();
-    return body;
-  } else {
+  const config = {
+    method: "get",
+    url: ARWEAVE_URL + id,
+    responseType: "arraybuffer"
+  } as AxiosRequestConfig;
+  try {
+    const response = await axios(config);
+    if (response.status == 200 || response.status == 202) {
+      return bufferToArrayBuffer(response.data);
+    } else {
+      throw new Error("Cannot fetch arweave transaction data: " + id);
+    }
+  } catch (error) {
     throw new Error("Cannot fetch arweave transaction data: " + id);
   }
 };
@@ -63,6 +71,15 @@ const graphql = async (query: any, variables: any) => {
   } catch (error) {
     throw new Error("Error while trying to make fetch request");
   }
+}
+
+const bufferToArrayBuffer = (buffer: Buffer) => {
+  const arrayBuffer = new ArrayBuffer(buffer.length);
+  var view = new Uint8Array(arrayBuffer);
+  for (var i = 0; i < buffer.length; ++i) {
+    view[i] = buffer[i];
+  }
+  return arrayBuffer;
 }
 
 export {
