@@ -50,6 +50,9 @@ query transactionsById($id: ID!) {
           name
           value
         }
+        block {
+          timestamp
+        }
       }
     }
   }

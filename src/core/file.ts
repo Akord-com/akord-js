@@ -113,7 +113,7 @@ class FileService extends Service {
     const fileData = await getTxData(fileTxId);
     const fileMetadata = await getTxMetadata(fileTxId);
     const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
-    const file = await createFileLike([fileData], name, type);
+    const file = await createFileLike([fileData], name, type, fileMetadata?.block?.timestamp);
     const tags = this.getFileTags(file);
 
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
