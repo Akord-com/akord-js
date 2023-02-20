@@ -170,10 +170,11 @@ class BatchService extends Service {
     const errors = [];
 
     await Promise.all(items.map(async (item) => {
-      const { email, role } = item;
-      const member = members.find(item => item.email === email)
+      const email = item.email.toLowerCase();
+      const role = item.role;
+      const member = members.find(item => item.email?.toLowerCase() === email);
       if (member) {
-        errors.push({ email: email, message: "Membership already exists for this user." })
+        errors.push({ email: email, message: "Membership already exists for this user." });
       } else {
         const userHasAccount = Boolean(await this.api.getUserFromEmail(email));
         const service = new MembershipService(this.wallet, this.api);
