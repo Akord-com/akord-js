@@ -572,7 +572,7 @@ const { transactionId } = await akord.stack.rename(vaultId, "new name for your s
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.stack.uploadRevision(vaultId, file);
+const { transactionId } = await akord.stack.uploadRevision(stackId, file);
 ```
 </details>
 
