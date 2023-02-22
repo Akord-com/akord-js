@@ -11,6 +11,9 @@ import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
 import { getTxData, getTxMetadata } from "../arweave";
 import * as mime from "mime-types";
+import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
+
+const DEFAULT_FILE_TYPE = "image/jpeg";
 
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
@@ -153,14 +156,19 @@ class FileService extends Service {
 
   private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
     : { name: string, type: string } {
-    const type =
-      (tags?.find((tag: Tag) => tag.name === "Content-Type"))?.value
-      || "image/jpeg";
+    const type = this.retrieveFileType(tags);
     const name = this.retrieveDecodedTag(tags, "File-Name")
       || this.retrieveDecodedTag(tags, "Title")
       || this.retrieveDecodedTag(tags, "Name")
       || (fileTxId + "." + mime.extension(type));
     return { name, type };
+  }
+
+  private retrieveFileType(tags: Tags = [])
+    : string {
+    const contentType = this.retrieveDecodedTag(tags, "Content-Type");
+    return (contentType === MANIFEST_CONTENT_TYPE ? MANIFEST_FILE_TYPE : contentType)
+      || DEFAULT_FILE_TYPE;
   }
 
   private retrieveDecodedTag(tags: Tags, tagName: string) {

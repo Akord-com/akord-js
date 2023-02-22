@@ -5,9 +5,9 @@ import { FolderService } from "./folder";
 import { createFileLike } from "./file";
 import { arrayToString } from "@akord/crypto";
 
-const CONTENT_TYPE = "application/x.arweave-manifest+json";
+export const CONTENT_TYPE = "application/x.arweave-manifest+json";
 const FILE_NAME = "manifest.json";
-const FILE_TYPE = "application/json";
+export const FILE_TYPE = "application/json";
 
 
 
