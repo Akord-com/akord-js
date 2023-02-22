@@ -1,4 +1,4 @@
-import { Akord } from "../index";
+import { Akord, Auth } from "../index";
 import { email, password } from './data/test-credentials';
 import { vaults, fileId, message, publicVaultId, privateVaultId } from './data/content';
 import { NodeJs } from "../types/file";
@@ -11,7 +11,7 @@ jest.setTimeout(3000000);
 
 describe("Testing querying directly from permaweb", () => {
   beforeAll(async () => {
-    const { jwtToken, wallet } = await Akord.auth.signIn(email, password);
+    const { jwtToken, wallet } = await Auth.signIn(email, password);
     clientWithAkordApi = new Akord(wallet, jwtToken, { wallet: <any>"Akord" });
     clientWithArweaveApi = new Akord(wallet, undefined, { wallet: <any>"Arweave" });
     clientWithoutWallet = new Akord(undefined, undefined, { wallet: <any>"Akord" });
