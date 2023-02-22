@@ -73,20 +73,21 @@ describe("Testing manifest functions", () => {
     vaultId = (await vaultCreate()).vaultId;
   });
 
-  it("should create new manifest", async () => {
-    const { transactionId } = await akord.manifest.generate("bdTOvS3SwNyMOa9rsvjJyQ1bkuU-eCugsHvtEtP8YGU");
-    expect(transactionId).not.toBeFalsy();
-    const manifest = await akord.manifest.get("bdTOvS3SwNyMOa9rsvjJyQ1bkuU-eCugsHvtEtP8YGU");
-    console.log(manifest.versions[manifest.versions.length - 1].getUri(StorageType.ARWEAVE));
-    console.log("manifest url: http://arweave.net/" + transactionId);
-  });
+  // it("should create new manifest", async () => {
+  //   const { transactionId } = await akord.manifest.generate("bdTOvS3SwNyMOa9rsvjJyQ1bkuU-eCugsHvtEtP8YGU");
+  //   expect(transactionId).not.toBeFalsy();
+  //   const manifest = await akord.manifest.get("bdTOvS3SwNyMOa9rsvjJyQ1bkuU-eCugsHvtEtP8YGU");
+  //   const manifestTxId = manifest.versions[manifest.versions.length - 1].getUri(StorageType.ARWEAVE);
+  //   console.log("manifest url: http://arweave.net/" + manifestTxId);
+  // });
 
   it("should create new manifest", async () => {
     const { transactionId } = await akord.manifest.generate(vaultId);
     expect(transactionId).not.toBeFalsy();
-    console.log("manifest tx id", vaultId);
+    const manifest = await akord.manifest.get(vaultId);
+    const manifestTxId = manifest.versions[manifest.versions.length - 1].getUri(StorageType.ARWEAVE);
+    console.log("manifest tx id: " + manifestTxId);
     const manifestJSON = await akord.manifest.getVersion(vaultId);
-    // expect(manifest).toEqual(manifestJSON);
     expect(manifestJSON).not.toBeFalsy();
   });
 });
