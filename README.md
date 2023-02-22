@@ -557,7 +557,7 @@ const { stackId } = await akord.stack.import(vaultId, "kzGxbFW_oJ3PyYneRs9cPrChQ
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.stack.rename(vaultId, "new name for your stack");
+const { transactionId } = await akord.stack.rename(stackId, "new name for your stack");
 ```
 </details>
 
