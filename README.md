@@ -65,7 +65,7 @@ const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackI
 
 #### Query user vaults
 ```js
-const vaults = await akord.vault.list();
+const vaults = await akord.vault.listAll();
 ```
 
 ### Examples
@@ -204,7 +204,7 @@ const vault = await akord.vault.get(vaultId);
 ```
 </details>
 
-#### `list(listOptions)`
+#### `listAll(listOptions)`
 
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
 - returns `Promise<Array<Vault>>` - Promise with currently authenticated user vaults
@@ -213,7 +213,33 @@ const vault = await akord.vault.get(vaultId);
   <summary>example</summary>
 
 ```js
-const vaults = await akord.vault.list();
+const vaults = await akord.vault.listAll();
+```
+</details>
+
+#### `list(listOptions)`
+
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated user vaults
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 user vaults
+const { items } = await akord.vault.list();
+
+// retrieve first 20 user vaults
+const { items } = await akord.vault.list({ limit: 20 });
+
+// iterate through all user vaults
+let token = null;
+let vaults = [];
+do {
+  const { items, nextToken } = await akord.vault.list({ nextToken: token });
+  vaults = vaults.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
