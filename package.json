@@ -28,7 +28,7 @@
   "author": "Akord Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0 <17.0.0"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@akord/crypto": "0.9.0",
