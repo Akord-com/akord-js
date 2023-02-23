@@ -33,7 +33,7 @@ export default class AkordApi extends Api {
         .data({ data: item.data, tags: item.tags })
         .bundle(shouldBundleTransaction)
         .uploadState()
-      Logger.log("Uploaded state with id: " + resource.id);
+      Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
     }));
     return resources;
