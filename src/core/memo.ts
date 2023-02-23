@@ -17,10 +17,11 @@ class MemoService extends NodeService<Memo> {
 
   /**
   * @param  {string} vaultId
-  * @param  {string} message 
+  * @param  {string} message
+  * @param  {string} [parentId] parent folder id
   * @returns Promise with new node id & corresponding transaction id
   */
-  public async create(vaultId: string, message: string): Promise<{
+  public async create(vaultId: string, message: string, parentId?: string): Promise<{
     memoId: string,
     transactionId: string
   }> {
@@ -30,7 +31,7 @@ class MemoService extends NodeService<Memo> {
     const body = {
       versions: [await this.memoVersion(message)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body);
+    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
     return { memoId: nodeId, transactionId };
   }
 

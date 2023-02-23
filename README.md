@@ -413,6 +413,7 @@ do {
 
 - `vaultId` (`string`, required)
 - `message` (`string`, required) - memo content
+- `parentId` (`string`, optional) - parent folder id
 - returns `Promise<{ memoId, transactionId }>` - Promise with new memo id & corresponding transaction id
 
 <details>
