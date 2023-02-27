@@ -94,8 +94,8 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} vaultId
    * @returns Promise with paginated nodes within given vault
    */
-  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.filter, listOptions.limit, listOptions.nextToken);
+  public async list(vaultId: string, parentId?: string, listOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, parentId, listOptions.filter, listOptions.limit, listOptions.nextToken);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
       items: await Promise.all(
@@ -115,11 +115,11 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} vaultId
    * @returns Promise with all nodes within given vault
    */
-  public async listAll(vaultId: string, listOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
+  public async listAll(vaultId: string, parentId?: string, listOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
     let token = null;
     let nodeArray = [] as NodeLike[];
     do {
-      const { items, nextToken } = await this.list(vaultId, listOptions);
+      const { items, nextToken } = await this.list(vaultId, parentId, listOptions);
       nodeArray = nodeArray.concat(items);
       token = nextToken;
       listOptions.nextToken = nextToken;

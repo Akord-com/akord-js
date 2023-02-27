@@ -251,13 +251,14 @@ export default class AkordApi extends Api {
       .getVaults();
   };
 
-  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, filter = {}, limit?: number, nextToken?: string): Promise<Paginated<T>> {
+  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, parentId?: string, filter = {}, limit?: number, nextToken?: string): Promise<Paginated<T>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(vaultId)
       .queryParams({
         type,
+        parentId,
         filter: JSON.stringify(filter),
         limit,
         nextToken
