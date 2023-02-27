@@ -1,15 +1,15 @@
 import { NodeService } from "./node";
-import { Stack, Folder, nodeType } from "../types/node";
+import { Stack, Folder, nodeType, StorageType } from "../types/node";
 import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { createFileLike } from "./file";
 import { arrayToString } from "@akord/crypto";
 
-const CONTENT_TYPE = "application/x.arweave-manifest+json";
+export const CONTENT_TYPE = "application/x.arweave-manifest+json";
+export const FILE_TYPE = "application/json";
 const FILE_NAME = "manifest.json";
-const FILE_TYPE = "application/json";
-
-
+const MANIFEST_TYPE = "arweave/paths";
+const MANIFEST_VERSION = "0.1.0";
 
 class ManifestService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
@@ -25,9 +25,7 @@ class ManifestService extends NodeService<Stack> {
   public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string }> {
     this.stackService.fileService.contentType = CONTENT_TYPE;
     if (!manifest) {
-      // TODO: generate vault manifest
       manifest = await this.renderManifestJSON(vaultId);
-      console.log(manifest);
     }
     const file = await createFileLike([JSON.stringify(manifest)], FILE_NAME, FILE_TYPE);
     const manifestNode = await this.get(vaultId);
@@ -50,14 +48,17 @@ class ManifestService extends NodeService<Stack> {
   }
 
   /**
+   * Get manifest version by index, return the latest version by default
+   * @param  {string} vaultId
+   * @param  {number} [index] manifest version index
    * @returns Promise with vault manifest JSON data
    */
-  public async getVersion(vaultId: string): Promise<JSON> {
+  public async getVersion(vaultId: string, index?: number): Promise<JSON> {
     const manifest = await this.get(vaultId);
     if (!manifest) {
       throw new Error("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
-    const manifestFile = await this.stackService.getVersion(manifest.id);
+    const manifestFile = await this.stackService.getVersion(manifest.id, index);
     return JSON.parse(arrayToString(manifestFile.data));
   }
 
@@ -98,19 +99,14 @@ class ManifestService extends NodeService<Stack> {
 
     // take the hierachical tree and compute the folder paths
     const computePaths = (tree: Array<Object>, path?: string) => {
-      var paths = [];
+      const paths = [];
       tree.forEach((folder) => {
-        folder['stacks'].forEach((stack) => {
+        folder['stacks'].forEach((stack: Stack) => {
           // construct the path name
-          var pathName = [path, folder['name'], stack.name]
+          const pathName = [path, folder['name'], stack.name]
             .filter((p) => p != null)
             .join("/");
-          var arweaveId = stack.versions
-            .slice(-1)[0]
-            .resourceUri.filter((r) => {
-              if (r.split(":")[0] == "arweave") return r;
-            })
-            .map((r) => r.split(":")[1])[0];
+          const arweaveId = stack.versions.slice(-1)[0].getUri(StorageType.ARWEAVE);
 
           paths.push({
             id: arweaveId,
@@ -119,9 +115,9 @@ class ManifestService extends NodeService<Stack> {
         });
         // process the children
         if (folder['children']) {
-          var pathName = folder['name'];
+          let pathName = folder['name'];
           if (path) pathName = [path, folder['name']].join("/");
-          var children = computePaths(folder['children'], pathName);
+          const children = computePaths(folder['children'], pathName);
           paths.push(...children);
         }
       });
@@ -129,11 +125,10 @@ class ManifestService extends NodeService<Stack> {
     };
 
     // load and clean list of folders
-    var folders = (await this.folderService.listAll(vaultId)).map((n) => {
+    const folders = (await this.folderService.listAll(vaultId)).map((n) => {
       const { id, parentId, name } = n;
       return { id, parentId, name };
     });
-    // console.log(JSON.stringify(folders, null, 2));
 
     // load and clean list of stacks
     const stacks = (await this.stackService.listAll(vaultId)).map((s) => {
@@ -142,20 +137,18 @@ class ManifestService extends NodeService<Stack> {
     });
 
     const tree = treeify(folders, stacks);
-    // console.log(JSON.stringify(tree, null, 2));
 
     const paths = computePaths(tree, null);
-    //   console.log(JSON.stringify(paths, null, 2));
 
     // map paths to manifest hash
-    var manifest = {};
+    const manifest = {};
     paths.forEach((path) => {
       manifest[path.path] = { id: path.id };
     });
 
     return {
-      manifest: "arweave/paths",
-      version: "0.1.0",
+      manifest: MANIFEST_TYPE,
+      version: MANIFEST_VERSION,
       index: {
         path: indexName || "index.html",
       },

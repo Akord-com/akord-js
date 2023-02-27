@@ -413,6 +413,7 @@ do {
 
 - `vaultId` (`string`, required)
 - `message` (`string`, required) - memo content
+- `parentId` (`string`, optional) - parent folder id
 - returns `Promise<{ memoId, transactionId }>` - Promise with new memo id & corresponding transaction id
 
 <details>
@@ -557,7 +558,7 @@ const { stackId } = await akord.stack.import(vaultId, "kzGxbFW_oJ3PyYneRs9cPrChQ
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.stack.rename(vaultId, "new name for your stack");
+const { transactionId } = await akord.stack.rename(stackId, "new name for your stack");
 ```
 </details>
 
@@ -572,7 +573,7 @@ const { transactionId } = await akord.stack.rename(vaultId, "new name for your s
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.stack.uploadRevision(vaultId, file);
+const { transactionId } = await akord.stack.uploadRevision(stackId, file);
 ```
 </details>
 
@@ -692,7 +693,7 @@ do {
 Get file stack version by index, return the latest version by default
 
 - `stackId` (`string`, required)
-- `index` (`string`, optional) - file version index
+- `index` (`number`, optional) - file version index
 - returns `Promise<{ name: string, data: ArrayBuffer }>` - Promise with file name & data buffer
 
 <details>
@@ -1045,7 +1046,7 @@ do {
 Get note text version by index, return the latest version by default
 
 - `noteId` (`string`, required)
-- `index` (`string`, optional) - note version index
+- `index` (`number`, optional) - note version index
 - returns `Promise<{ name: string, data: string }>` - Promise with note name & data string text
 
 <details>
@@ -1100,7 +1101,7 @@ const manifestNode = await akord.manifest.get(vaultId);
 Get vault manifest version by index, return the latest version by default
 
 - `vaultId` (`string`, required)
-- `index` (`string`, optional) - file version index
+- `index` (`number`, optional) - file version index
 - returns `Promise<JSON>` - Promise with JSON manifest
 
 <details>

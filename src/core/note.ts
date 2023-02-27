@@ -56,10 +56,10 @@ class NoteService extends NodeService<Stack> {
   /**
    * Get note version by index, return the latest version by default
    * @param  {string} noteId
-   * @param  {string} [index] note version index
+   * @param  {number} [index] note version index
    * @returns Promise with version name & data string
    */
-  public async getVersion(noteId: string, index?: string): Promise<{ name: string, data: string }> {
+  public async getVersion(noteId: string, index?: number): Promise<{ name: string, data: string }> {
     const version = await this.stackService.getVersion(noteId, index);
     return { data: arrayToString(version.data), name: version.name };
   }

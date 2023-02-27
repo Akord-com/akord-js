@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js",
-  "version": "3.4.0",
+  "version": "3.8.3",
   "description": "A set of core js functions to interact with Akord",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
@@ -28,10 +28,10 @@
   "author": "Akord Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0 <17.0.0"
+    "node": ">=16.0.0"
   },
   "dependencies": {
-    "@akord/crypto": "0.8.2",
+    "@akord/crypto": "0.9.0",
     "@akord/ts-cacheable": "1.0.11",
     "amazon-cognito-identity-js": "^5.2.8",
     "axios": "^0.24.0",
