@@ -89,10 +89,10 @@ class StackService extends NodeService<Stack> {
   /**
    * Get stack version by index, return the latest version by default
    * @param  {string} stackId
-   * @param  {string} [index] stack version index
+   * @param  {number} [index] stack version index
    * @returns Promise with version name & data buffer
    */
-  public async getVersion(stackId: string, index?: string): Promise<{ name: string, data: ArrayBuffer }> {
+  public async getVersion(stackId: string, index?: number): Promise<{ name: string, data: ArrayBuffer }> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     let version: FileVersion;
     if (index) {

@@ -69,7 +69,7 @@ describe("Testing stack functions", () => {
     expect(data).toEqual(await file.arrayBuffer());
 
     const firstFile = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
-    const { data: firstFileData } = await akord.stack.getVersion(stackId, "0");
+    const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
     expect(firstFileData).toEqual(await firstFile.arrayBuffer());
   });
 
@@ -85,7 +85,7 @@ describe("Testing stack functions", () => {
     expect(stack.versions[1].name).toEqual("avatar.jpeg");
 
     const firstFile = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
-    const { data: firstFileData } = await akord.stack.getVersion(stackId, "0");
+    const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
     expect(firstFileData).toEqual(await firstFile.arrayBuffer());
 
     const secondFile = NodeJs.File.fromPath("./src/__tests__/data/avatar.jpeg");
