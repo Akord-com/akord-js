@@ -127,7 +127,10 @@ class MembershipService extends Service {
     return { membershipId, transactionId: id };
   }
 
-  public async airdrop(vaultId: string, members: Array<{ address: string, publicKey: string }>, role: RoleType): Promise<any> {
+  public async airdrop(vaultId: string, members: Array<{ address: string, publicKey: string }>, role: RoleType): Promise<{
+    transactionId: string,
+    members: Array<{ id: string, address: string }>
+  }> {
     await this.setVaultContext(vaultId);
     this.setActionRef("MEMBERSHIP_AIRDROP");
     this.setFunction(functions.MEMBERSHIP_ADD);
@@ -165,12 +168,12 @@ class MembershipService extends Service {
       members: memberArray
     };
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
       this.tags
     );
-    return { members: input.members, transactionId: txId };
+    return { members: input.members, transactionId: id };
   }
 
   /**
