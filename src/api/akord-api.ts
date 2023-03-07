@@ -33,7 +33,7 @@ export default class AkordApi extends Api {
         .data({ data: item.data, tags: item.tags })
         .bundle(shouldBundleTransaction)
         .uploadState()
-      Logger.log("Uploaded state with id: " + resource.id);
+      Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
     }));
     return resources;
@@ -211,6 +211,19 @@ export default class AkordApi extends Api {
       .env(this.config)
       .auth(this.jwtToken)
       .getNotifications()
+  };
+
+  public async readNotifications(options: {
+    id?: string,
+    vaultId?: string,
+    readOnly?: Boolean,
+    shouldDelete?: Boolean
+  }): Promise<void> {
+    await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .queryParams(options)
+      .patchNotifications()
   };
 
   public async getContractState(objectId: string): Promise<ContractState> {

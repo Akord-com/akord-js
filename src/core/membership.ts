@@ -270,7 +270,7 @@ class MembershipService extends Service {
       for (let member of memberships) {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
-          const { publicKey } = await this.getUserEncryptionInfo(member.email, member.address);
+          const { publicKey } = await this.getUserEncryptionInfo(member.memberDetails.email, member.address);
           const memberKeysEncrypter = new KeysStructureEncrypter(
             this.wallet,
             this.dataEncrypter.keys,
