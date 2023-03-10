@@ -51,7 +51,7 @@ describe("Testing stack functions", () => {
     expect(stack.versions.length).toEqual(1);
     expect(stack.versions[0].name).toEqual("logo.png");
 
-    const binary = await akord.file.get(stack.versions[0].getUri(StorageType.S3) as string, vaultId);
+    const binary = await akord.file.get(stack.getUri(StorageType.S3, 0), vaultId);
     expect(binary).toEqual(await file.arrayBuffer());
   });
 

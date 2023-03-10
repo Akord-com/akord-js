@@ -94,21 +94,24 @@ class StackService extends NodeService<Stack> {
    */
   public async getVersion(stackId: string, index?: number): Promise<{ name: string, data: ArrayBuffer }> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
-    let version: FileVersion;
-    if (index) {
-      if (stack.versions && stack.versions[index]) {
-        version = stack.versions[index];
-      } else {
-        throw new Error("Given index: " + index + " does not exist for stack: " + stackId);
-      }
-    } else {
-      version = stack.versions[stack.versions.length - 1];
-    }
+    const version = stack.getVersion(index);
     await this.setVaultContext(stack.vaultId);
     const { fileData, headers } = await this.api.downloadFile(version.getUri(StorageType.S3), this.isPublic);
     const data = await this.processReadRaw(fileData, headers);
     const name = await this.processReadString(version.name);
     return { name, data };
+  }
+
+  /**
+  * Get stack file uri by index, return the latest arweave uri by default
+  * @param  {string} stackId
+  * @param  {StorageType} [type] storage type, default to arweave
+  * @param  {number} [index] file version index, default to latest
+  * @returns Promise with stack file uri
+  */
+  public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
+    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
+    return stack.getUri(type, index);
   }
 
   private async uploadNewFileVersion(file: FileLike, progressHook?: any, cancelHook?: any): Promise<FileVersion> {
