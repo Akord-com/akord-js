@@ -1,6 +1,6 @@
 import { actionRefs, objectType, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, Encrypter } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 import { Tag } from "../types/contract";
@@ -28,8 +28,8 @@ class VaultService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
       this.setRawDataEncryptionPublicKey(keyPair.publicKey);
-      const userPublicKey = await this.wallet.publicKeyRaw();
-      const keysEncrypter = new KeysStructureEncrypter(this.wallet, (<any>this.dataEncrypter).keys, userPublicKey);
+      const userPublicKey = this.wallet.publicKeyRaw();
+      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
       keys = [await keysEncrypter.encryptMemberKey(keyPair)];
       this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];
