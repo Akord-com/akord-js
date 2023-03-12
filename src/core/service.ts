@@ -324,7 +324,7 @@ class Service {
   protected async signData(data: any) {
     if (this.wallet instanceof AkordWallet) {
       const encodedBody = jsonToBase64(data)
-      const privateKeyRaw = await this.wallet.signingPrivateKeyRaw()
+      const privateKeyRaw = this.wallet.signingPrivateKeyRaw()
       const signature = await signString(
         encodedBody,
         privateKeyRaw

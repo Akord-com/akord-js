@@ -138,7 +138,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
-      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey())
+      encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
     this.setFunction(functions.MEMBERSHIP_ACCEPT);
     return this.nodeUpdate(body);

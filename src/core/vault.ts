@@ -56,7 +56,7 @@ class VaultService extends Service {
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
       keys,
-      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey()),
+      encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey()),
       memberDetails: await this.processMemberDetails(memberDetails, true)
     }
     const membershipSignature = await this.signData(membershipData);
