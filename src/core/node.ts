@@ -1,14 +1,14 @@
 import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
 import { NodeLike, NodeType } from '../types/node';
-import { Keys } from '@akord/crypto';
+import { EncryptedKeys } from '@akord/crypto';
 import { ListOptions } from '../types/list-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 
 class NodeService<T = NodeLike> extends Service {
 
-  protected NodeType: new (arg0: any, arg1: Keys[]) => NodeLike
+  protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
   objectType: NodeType;
 
   defaultListOptions = {
@@ -130,7 +130,7 @@ class NodeService<T = NodeLike> extends Service {
     return nodeArray;
   }
 
-  private nodeInstance(nodeProto: any, keys: Array<Keys>): NodeLike {
+  private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
     return new this.NodeType(nodeProto, keys);
   }
 

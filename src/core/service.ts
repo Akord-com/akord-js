@@ -1,7 +1,6 @@
 import { Api } from "../api/api";
 import {
   Wallet,
-  EncrypterFactory,
   Encrypter,
   EncryptionKeys,
   signString,
@@ -22,6 +21,7 @@ import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
+import { EncryptedPayload } from "@akord/crypto/lib/types";
 
 declare const Buffer;
 
@@ -47,10 +47,11 @@ class Service {
     this.wallet = wallet
     this.api = api
     // for the data encryption
-    this.dataEncrypter = new EncrypterFactory(
+    this.dataEncrypter = new Encrypter(
       wallet,
-      encryptionKeys
-    ).encrypterInstance()
+      encryptionKeys?.keys,
+      encryptionKeys?.getPublicKey()
+    )
   }
 
   protected async setVaultContext(vaultId: string) {
@@ -188,16 +189,10 @@ class Service {
   protected async getProfileDetails() {
     const profile = await this.api.getProfile();
     if (profile) {
-      const profileKeys = new EncryptionKeys(
-        profile.state.encryptionType,
-        profile.state.keys,
-        profile.state.encAccessKey,
-        null
-      );
-      const profileEncrypter = new EncrypterFactory(this.wallet, profileKeys).encrypterInstance()
+      const profileEncrypter = new Encrypter(this.wallet, profile.state.keys, null);
       profileEncrypter.decryptedKeys = [
         {
-          publicKey: await this.wallet.publicKey(),
+          publicKey: this.wallet.publicKeyRaw(),
           privateKey: this.wallet.privateKeyRaw()
         }
       ]
@@ -232,9 +227,9 @@ class Service {
     if (this.isPublic) {
       processedData = data;
     } else {
-      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey);
+      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
       processedData = encryptedFile.encryptedData.ciphertext;
-      const { address, publicKey } = await this.getActiveKey();
+      const { address } = await this.getActiveKey();
       tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
       tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
       tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
@@ -244,15 +239,15 @@ class Service {
 
   protected async getActiveKey() {
     return {
-      address: await deriveAddress(this.dataEncrypter.publicKey, "akord"),
-      publicKey: arrayToBase64(<any>this.dataEncrypter.publicKey)
+      address: await deriveAddress(this.dataEncrypter.publicKey),
+      publicKey: arrayToBase64(this.dataEncrypter.publicKey)
     };
   }
 
   protected async processWriteString(data: string) {
     if (this.isPublic) return data;
     const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data));
-    const decodedPayload = base64ToJson(encryptedPayload);
+    const decodedPayload = base64ToJson(encryptedPayload as string) as any;
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
     delete decodedPayload.publicKey;
     return jsonToBase64(decodedPayload);

@@ -31,7 +31,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@akord/crypto": "0.9.1",
+    "@akord/crypto": "0.10.0",
     "@akord/ts-cacheable": "1.0.11",
     "amazon-cognito-identity-js": "^5.2.8",
     "axios": "^0.24.0",

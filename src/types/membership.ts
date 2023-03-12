@@ -1,4 +1,4 @@
-import { Encryptable, Keys } from "@akord/crypto";
+import { Encryptable, EncryptedKeys } from "@akord/crypto";
 import { ProfileDetails } from "./profile-details";
 
 export type RoleType = "VIEWER" | "CONTRIBUTOR";
@@ -17,9 +17,9 @@ export class Membership extends Encryptable {
   memberDetails: ProfileDetails;
 
   vaultId: string; // remove when on warp
-  keys: Keys[];
+  keys: EncryptedKeys[];
 
-  constructor(membershipProto: any, keys?: Array<Keys>) {
+  constructor(membershipProto: any, keys?: Array<EncryptedKeys>) {
     super(keys, null)
     this.id = membershipProto.id;
     this.owner = membershipProto.owner;
@@ -42,6 +42,6 @@ export class Membership extends Encryptable {
 
 export type MembershipKeys = {
   isEncrypted: boolean;
-  keys: Keys[];
+  keys: EncryptedKeys[];
   publicKey?: string;
 };
