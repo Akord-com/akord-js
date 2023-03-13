@@ -32,6 +32,18 @@ export abstract class Node extends Encryptable {
     this.data = data;
     this.parentId = parentId;
   }
+
+  getVersion(index?: number): Version {
+    if (index) {
+      if (this.versions && this.versions[index]) {
+        return this.versions[index];
+      } else {
+        throw new Error("A version with given index: " + index + " does not exist for node: " + this.id);
+      }
+    } else {
+      return this.versions && this.versions[this.versions.length - 1];
+    }
+  }
 }
 
 export class Folder extends Node {
@@ -54,6 +66,15 @@ export class Stack extends Node {
     this.name = nodeLike.name;
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
   }
+
+  getUri(type: StorageType = StorageType.ARWEAVE, index?: number): string {
+    const version = this.getVersion(index);
+    return version.getUri(type);
+  }
+
+  getVersion(index?: number): FileVersion {
+    return super.getVersion(index) as FileVersion;
+  }
 }
 
 export class Note extends Node {
@@ -74,24 +95,35 @@ export class Memo extends Node {
     super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys, publicKey);
     this.versions = (nodeLike.versions || []).map((version: MemoVersion) => new MemoVersion(version, keys, publicKey));
   }
+
+  getVersion(index?: number): MemoVersion {
+    return super.getVersion(index) as MemoVersion;
+  }
 }
 
-export class FileVersion extends Encryptable {
-  @encrypted() name: string;
+export class Version extends Encryptable {
   owner: string;
+  createdAt: string;
+
+  constructor(versionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
+    super(keys, publicKey);
+    this.owner = versionProto.owner;
+    this.createdAt = versionProto.createdAt;
+  }
+}
+
+export class FileVersion extends Version {
+  @encrypted() name: string;
   type: string; //type
   resourceUri: string[];
   size: number;
-  createdAt: string;
   numberOfChunks?: number;
   chunkSize?: number;
 
   constructor(fileVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
-    super(keys, publicKey);
-    this.owner = fileVersionProto.owner;
+    super(fileVersionProto, keys, publicKey);
     this.type = fileVersionProto.type;
     this.resourceUri = fileVersionProto.resourceUri;
-    this.createdAt = fileVersionProto.createdAt;
     this.size = fileVersionProto.size;
     this.numberOfChunks = fileVersionProto.numberOfChunks;
     this.chunkSize = fileVersionProto.chunkSize;
@@ -99,24 +131,20 @@ export class FileVersion extends Encryptable {
     this.status = fileVersionProto.status;
   }
 
-  getUri(type: StorageType) {
+  getUri(type: StorageType): string {
     return this.resourceUri
       ?.find(uri => uri.startsWith(type))
       ?.replace(type, "");
   }
 }
 
-export class MemoVersion extends Encryptable {
+export class MemoVersion extends Version {
   @encrypted() message: string;
-  owner: string;
-  createdAt: string;
   reactions?: Array<MemoReaction>;
   attachments?: Array<FileVersion>;
 
   constructor(memoVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
-    super(keys, publicKey);
-    this.owner = memoVersionProto.owner;
-    this.createdAt = memoVersionProto.createdAt;
+    super(memoVersionProto, keys, publicKey);
     this.message = memoVersionProto.message;
     this.reactions = (memoVersionProto.reactions || []).map((reaction: MemoReaction) =>
       new MemoReaction(reaction, keys, publicKey)

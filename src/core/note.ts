@@ -70,7 +70,7 @@ class NoteService extends NodeService<Stack> {
    */
   public async list(vaultId: string, parentId?: string, listOptions = this.defaultListOptions): Promise<Paginated<Stack>> {
     const stacks = await this.stackService.list(vaultId, parentId, listOptions) as Paginated<Stack>;
-    const notes = stacks.items.filter((stack: Stack) => this.isValidNoteType(stack.versions?.[stack.versions.length - 1].type));
+    const notes = stacks.items.filter((stack: Stack) => this.isValidNoteType(stack.getVersion().type));
     return { items: notes, nextToken: stacks.nextToken }
   }
 

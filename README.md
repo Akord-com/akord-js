@@ -708,6 +708,27 @@ const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackI
 ```
 </details>
 
+#### `getUri(stackId, type, index)`
+
+Get stack file uri by index, return the latest arweave uri by default
+
+- `stackId` (`string`, required)
+- `type` ([`StorageType`](https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149), optional) - storage type, default to arweave
+- `index` (`number`, optional) - file version index, default to latest
+- returns `Promise<string>` - Promise with stack file uri
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the arweave uri for the latest file version
+const arweaveUri = await akord.stack.getUri(stackId);
+
+// get the arweave uri for the first file version
+const arweaveUri = await akord.stack.getUri(stackId, 0);
+```
+</details>
+
 ### file
 
 #### `get(id, vaultId, options)`
