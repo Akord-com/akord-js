@@ -1,10 +1,8 @@
-import { WalletType } from "@akord/crypto"
 import { Api } from "./api/api"
 
 export interface ClientConfig {
   env?: EnvType,
   network?: NetworkType,
-  wallet?: WalletType,
   debug?: boolean,
   cache?: boolean,
   api?: Api

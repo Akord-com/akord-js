@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { Stack, Folder, nodeType, StorageType } from "../types/node";
+import { Stack, nodeType } from "../types/node";
 import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { createFileLike } from "./file";
@@ -106,7 +106,7 @@ class ManifestService extends NodeService<Stack> {
           const pathName = [path, folder['name'], stack.name]
             .filter((p) => p != null)
             .join("/");
-          const arweaveId = stack.versions.slice(-1)[0].getUri(StorageType.ARWEAVE);
+          const arweaveId = stack.getUri();
 
           paths.push({
             id: arweaveId,
