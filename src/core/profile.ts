@@ -37,7 +37,7 @@ class ProfileService extends Service {
       const profile = await this.api.getProfile();
       this.setObject(profile);
 
-      this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
+      this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
       this.setIsPublic(false);
       const profileDetails = await this.processMemberDetails({ name, avatar }, false);
 

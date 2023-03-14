@@ -160,7 +160,7 @@ export class ApiClient {
   }
 
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
+    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
 
   async getNodesByVaultId<T>(): Promise<Paginated<T>> {

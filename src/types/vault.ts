@@ -1,4 +1,4 @@
-import { Encryptable, encrypted, Keys } from "@akord/crypto";
+import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 
 export class Vault extends Encryptable {
   id: string;
@@ -10,7 +10,7 @@ export class Vault extends Encryptable {
   size?: number;
   @encrypted() name: string;
 
-  constructor(vaultProto: any, keys: Array<Keys>) {
+  constructor(vaultProto: any, keys: Array<EncryptedKeys>) {
     super(keys, null);
     this.id = vaultProto.id;
     this.public = vaultProto.public;
