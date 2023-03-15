@@ -42,9 +42,10 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} vaultId
+   * @param  {ListOptions} listOptions
    * @returns Promise with paginated memberships within given vault
    */
-  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
+  public async list(vaultId: string, listOptions: ListOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
     const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.filter, listOptions.limit, listOptions.nextToken);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
@@ -63,9 +64,10 @@ class MembershipService extends Service {
 
   /**
   * @param  {string} vaultId
+  * @param  {ListOptions} listOptions
   * @returns Promise with all memberships within given vault
   */
-  public async listAll(vaultId: string, listOptions = this.defaultListOptions): Promise<Array<Membership>> {
+  public async listAll(vaultId: string, listOptions: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
     let token = null;
     let nodeArray = [] as Membership[];
     do {

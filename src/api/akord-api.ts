@@ -237,17 +237,26 @@ export default class AkordApi extends Api {
     return contract.state;
   };
 
-  public async getMemberships(): Promise<Array<Membership>> {
+  public async getMemberships(limit?: number, nextToken?: string): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
+      .queryParams({
+        limit,
+        nextToken
+      })
       .getMemberships();
   };
 
-  public async getVaults(): Promise<Array<Vault>> {
+  public async getVaults(filter = {}, limit?: number, nextToken?: string): Promise<Paginated<Vault>> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
+      .queryParams({
+        filter: JSON.stringify(filter),
+        limit,
+        nextToken
+      })
       .getVaults();
   };
 
