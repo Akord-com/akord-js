@@ -9,4 +9,4 @@ export const isPaginated = (response: AxiosResponse) => {
   return response.headers[PAGINATION_HEADER] !== undefined
 }
 
-export const PAGINATION_HEADER = 'next-token'
+export const PAGINATION_HEADER = 'next-page'
