@@ -160,7 +160,7 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/notifications`);
   }
 
-  async getMemberships(): Promise<Array<Membership>> {
+  async getMemberships(): Promise<Paginated<Membership>> {
     return await this.get(`${this._apiurl}/memberships`);
   }
 
