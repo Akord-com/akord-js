@@ -14,7 +14,8 @@ class FolderService extends NodeService<Folder> {
    */
   public async create(vaultId: string, name: string, parentId?: string): Promise<{
     folderId: string,
-    transactionId: string
+    transactionId: string,
+    folder: Folder
   }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
@@ -22,8 +23,8 @@ class FolderService extends NodeService<Folder> {
     const body = {
       name: await this.processWriteString(name)
     }
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { folderId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(body, { parentId });
+    return { folderId: nodeId, transactionId, folder: object };
   }
 };
 

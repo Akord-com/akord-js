@@ -23,7 +23,8 @@ class StackService extends NodeService<Stack> {
     progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController):
     Promise<{
       stackId: string,
-      transactionId: string
+      transactionId: string,
+      stack: Stack
     }> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
@@ -33,8 +34,8 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(name ? name : file.name),
       versions: [await this.uploadNewFileVersion(file, progressHook, cancelHook)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { stackId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId });
+    return { stackId: nodeId, transactionId, stack: object };
   }
 
   /**

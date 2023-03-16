@@ -112,22 +112,21 @@ class MembershipService extends Service {
     this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const { data, metadata } = await this.uploadState(body);
+    const dataTxId = await this.uploadState(body);
 
     let input = {
       function: this.function,
       address,
       role,
-      data
+      data: dataTxId
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      metadata
+      this.tags
     );
-    return { membershipId, transactionId: txId };
+    return { membershipId, transactionId: id };
   }
 
   /**
@@ -166,22 +165,21 @@ class MembershipService extends Service {
     this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const { data, metadata } = await this.uploadState(body);
+    const dataTxId = await this.uploadState(body);
 
     let input = {
       function: this.function,
       address,
-      data,
+      data: dataTxId,
       role: this.object.role
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
-      metadata
+      this.tags
     );
-    return { transactionId: txId };
+    return { transactionId: id };
   }
 
   /**
@@ -250,20 +248,20 @@ class MembershipService extends Service {
           newMembershipRefs.push(member.id);
         }
       }
-      const ids = await this.api.uploadData(newMembershipStates, true);
+      const dataTxIds = await this.api.uploadData(newMembershipStates, true);
       data = [];
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
-        data.push({ id: memberId, value: ids[memberIndex].id })
+        data.push({ id: memberId, value: dataTxIds[memberIndex] })
       })
     }
 
-    const txId = await this.api.postContractTransaction(
+    const { id } = await this.api.postContractTransaction(
       this.vaultId,
       { function: this.function, data },
       this.tags
     );
-    return { transactionId: txId };
+    return { transactionId: id };
   }
 
   /**

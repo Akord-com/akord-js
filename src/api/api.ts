@@ -1,6 +1,7 @@
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
+import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 
 abstract class Api {
@@ -9,7 +10,7 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string>
+  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 
@@ -17,7 +18,7 @@ abstract class Api {
 
   abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
-  abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<{ id: string, resourceTx: string }>>
+  abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<string>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
@@ -45,7 +46,7 @@ abstract class Api {
 
   abstract getMembers(vaultId: string): Promise<Array<Membership>>
 
-  abstract getTransactions(vaultId: string): Promise<Array<any>>
+  abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
   abstract updateProfile(name: string, avatarUri: string): Promise<void>
 

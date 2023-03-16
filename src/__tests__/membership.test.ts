@@ -27,18 +27,13 @@ describe("Testing membership functions", () => {
   let vaultId: string;
   let membershipId: string;
 
-  beforeEach(async () => {
-    akord1 = await initInstance(email, password);
-    akord2 = await initInstance(email2, password2);
-  });
-
   beforeAll(async () => {
     akord1 = await initInstance(email, password);
-    akord2 = await initInstance(email2, password2);
     vaultId = (await vaultCreate()).vaultId;
   });
 
   it("should invite new member", async () => {
+    akord1 = await initInstance(email, password);
     membershipId = (await akord1.membership.invite(vaultId, email2, "CONTRIBUTOR")).membershipId;
 
     const membership = await akord1.membership.get(membershipId);
@@ -47,6 +42,7 @@ describe("Testing membership functions", () => {
   });
 
   it("should accept the invite", async () => {
+    akord2 = await initInstance(email2, password2);
     await akord2.membership.accept(membershipId);
 
     const membership = await akord2.membership.get(membershipId);
@@ -63,6 +59,7 @@ describe("Testing membership functions", () => {
   });
 
   it("should change access", async () => {
+    akord1 = await initInstance(email, password);
     await akord1.membership.changeRole(membershipId, "VIEWER");
 
     const membership = await akord1.membership.get(membershipId);
@@ -70,6 +67,7 @@ describe("Testing membership functions", () => {
   });
 
   it("should revoke the invite", async () => {
+    akord1 = await initInstance(email, password);
     await akord1.membership.revoke(membershipId);
 
     const membership = await akord1.membership.get(membershipId);

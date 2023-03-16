@@ -7,6 +7,7 @@ import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
+import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 
 export default class AkordApi extends Api {
@@ -20,8 +21,8 @@ export default class AkordApi extends Api {
     this.jwtToken = jwtToken;
   }
 
-  public async uploadData(items: { data: any, tags: Tags, metadata?: any }[], shouldBundleTransaction?: boolean)
-    : Promise<Array<{ id: string, resourceTx: string }>> {
+  public async uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean)
+    : Promise<Array<string>> {
 
     const resources = [];
 
@@ -29,28 +30,25 @@ export default class AkordApi extends Api {
       const resource = await new ApiClient()
         .env(this.config)
         .auth(this.jwtToken)
-        .data(item.data)
-        .tags(item.tags)
+        .data({ data: item.data, tags: item.tags })
         .bundle(shouldBundleTransaction)
-        .metadata(item.metadata)
         .uploadState()
-      Logger.log("Uploaded state with id: " + resource.id);
+      Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
     }));
     return resources;
   };
 
-  public async postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string> {
-    const txId = await new ApiClient()
+  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }> {
+    const { id, object } = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(contractId)
       .input(input)
-      .metadata(metadata ? metadata : {})
       .tags(tags)
-      .transaction()
-    Logger.log("Uploaded contract interaction with id: " + txId);
-    return txId;
+      .transaction<T>()
+    Logger.log("Uploaded contract interaction with id: " + id);
+    return { id, object };
   };
 
   public async getMembers(vaultId: string): Promise<Array<Membership>> {
@@ -288,8 +286,12 @@ export default class AkordApi extends Api {
       .getMembershipsByVaultId();
   };
 
-  public async getTransactions(vaultId: string): Promise<Array<any>> {
-    throw new Error("Method not implemented");
+  public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
+    return await new ApiClient()
+      .env(this.config)
+      .auth(this.jwtToken)
+      .vaultId(vaultId)
+      .getTransactions();
   }
 }
 

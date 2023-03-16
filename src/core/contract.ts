@@ -1,5 +1,6 @@
 import { Service } from "../core";
 import { ContractState, Tags } from "../types/contract";
+import { Transaction } from "../types/transaction";
 
 class ContractService extends Service {
 
@@ -31,7 +32,7 @@ class ContractService extends Service {
    * @param  id vault contract id
    * @returns Promise with the list of all contract interactions
    */
-  public async list(id: string): Promise<Array<any>> {
+  public async list(id: string): Promise<Array<Transaction>> {
     return this.api.getTransactions(id);
   }
 }
