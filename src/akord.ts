@@ -33,19 +33,17 @@ export class Akord {
   public batch: BatchService;
   public contract: ContractService;
 
-  public static init: (wallet: Wallet, jwtToken?: string, config?: ClientConfig) => Promise<Akord>;
+  public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
-  // TODO: JWT token provider
   /**
    * @param  {ClientConfig} config
    * @param  {Wallet} [wallet]
-   * @param  {string} [jwtToken]
    */
-  constructor(wallet?: Wallet, jwtToken?: string, config: ClientConfig = {}) {
+  constructor(wallet?: Wallet, config: ClientConfig = {}) {
     Logger.debug = config.debug;
     CacheBusters.cache = config.cache;
     Crypto.configure({ wallet: wallet });
-    this.api = config.api ? config.api : new AkordApi(config, jwtToken);
+    this.api = config.api ? config.api : new AkordApi(config);
     this.vault = new VaultService(wallet, this.api);
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);

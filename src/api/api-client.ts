@@ -5,9 +5,9 @@ import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { isPaginated, Paginated, PAGINATION_HEADER } from "../types/paginated";
 import { Vault } from "../types/vault";
+import { Auth } from "@akord/akord-auth";
 
 export class ApiClient {
-  private _jwt: string;
   private _storageurl: string;
   private _apiurl: string;
   private _dir: string = "files";
@@ -36,11 +36,6 @@ export class ApiClient {
   env(config: { apiurl: string, storageurl: string }): ApiClient {
     this._apiurl = config.apiurl;
     this._storageurl = config.storageurl;
-    return this;
-  }
-
-  auth(jwt: string): ApiClient {
-    this._jwt = jwt;
     return this;
   }
 
@@ -214,7 +209,8 @@ export class ApiClient {
   }
 
   async fetch(method: string, url: string): Promise<any> {
-    if (!this._jwt && !this._isPublic) {
+    const jwt = await Auth.getJwt();
+    if (!jwt && !this._isPublic) {
       throw Error("Authentication is required to use Akord API");
     }
 
@@ -222,7 +218,7 @@ export class ApiClient {
       method,
       url: this._queryParams ? this.addQueryParams(url, this._queryParams) : url,
       headers: {
-        'Authorization': 'Bearer ' + this._jwt,
+        'Authorization': 'Bearer ' + jwt,
         'Content-Type': 'application/json'
       }
     } as AxiosRequestConfig;
@@ -366,7 +362,8 @@ export class ApiClient {
   }
 
   private async upload() {
-    if (!this._jwt) {
+    const jwt = await Auth.getJwt();
+    if (!jwt) {
       throw Error("Authentication is required to use Akord API");
     }
     if (!this._data) {
@@ -382,7 +379,7 @@ export class ApiClient {
       url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
       data: this._data,
       headers: {
-        'Authorization': 'Bearer ' + this._jwt,
+        'Authorization': 'Bearer ' + jwt,
         'Content-Type': 'application/octet-stream'
       },
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -422,7 +419,8 @@ export class ApiClient {
   }
 
   private async download() {
-    if (!this._jwt && !this._isPublic) {
+    const jwt = await Auth.getJwt();
+    if (!jwt && !this._isPublic) {
       throw Error("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
@@ -451,7 +449,7 @@ export class ApiClient {
 
     if (!this._isPublic) {
       config.headers = {
-        'Authorization': 'Bearer ' + this._jwt,
+        'Authorization': 'Bearer ' + jwt,
       }
     }
 

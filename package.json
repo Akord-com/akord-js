@@ -31,9 +31,9 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "@akord/akord-auth": "0.1.8",
     "@akord/crypto": "0.10.0",
     "@akord/ts-cacheable": "1.0.11",
-    "amazon-cognito-identity-js": "^5.2.8",
     "axios": "^0.24.0",
     "blueimp-load-image": "^5.16.0",
     "cross-fetch": "^3.1.5",
