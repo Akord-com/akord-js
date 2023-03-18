@@ -209,8 +209,8 @@ export class ApiClient {
   }
 
   async fetch(method: string, url: string): Promise<any> {
-    const jwt = await Auth.getJwt();
-    if (!jwt && !this._isPublic) {
+    const auth = await Auth.getAuthorization()
+    if (!auth && !this._isPublic) {
       throw Error("Authentication is required to use Akord API");
     }
 
@@ -218,7 +218,7 @@ export class ApiClient {
       method,
       url: this._queryParams ? this.addQueryParams(url, this._queryParams) : url,
       headers: {
-        'Authorization': 'Bearer ' + jwt,
+        'Authorization': auth,
         'Content-Type': 'application/json'
       }
     } as AxiosRequestConfig;
@@ -362,8 +362,8 @@ export class ApiClient {
   }
 
   private async upload() {
-    const jwt = await Auth.getJwt();
-    if (!jwt) {
+    const auth = await Auth.getAuthorization();
+    if (!auth) {
       throw Error("Authentication is required to use Akord API");
     }
     if (!this._data) {
@@ -379,7 +379,7 @@ export class ApiClient {
       url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
       data: this._data,
       headers: {
-        'Authorization': 'Bearer ' + jwt,
+        'Authorization': auth,
         'Content-Type': 'application/octet-stream'
       },
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -419,8 +419,8 @@ export class ApiClient {
   }
 
   private async download() {
-    const jwt = await Auth.getJwt();
-    if (!jwt && !this._isPublic) {
+    const auth = await Auth.getAuthorization();
+    if (!auth && !this._isPublic) {
       throw Error("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
@@ -449,7 +449,7 @@ export class ApiClient {
 
     if (!this._isPublic) {
       config.headers = {
-        'Authorization': 'Bearer ' + jwt,
+        'Authorization': auth,
       }
     }
 

@@ -41,11 +41,22 @@ const { Akord } = require("@akord/akord-js");
 ##### with email & password
 ```js
 import { Auth } from "@akord/akord-js";
-const { akord, wallet, jwtToken } = await Auth.signIn(email, password);
+const { wallet } = await Auth.signIn(email, password);
+const akord = await Akord.init(wallet);
 ```
-##### with Akord Wallet & JWT
+##### with API key
 ```js
-const akord = await Akord.init(wallet, jwtToken);
+Auth.init({
+  apiKey: "your_api_key"
+})
+const akord = await Akord.init(wallet);
+```
+##### with your auth token
+```js
+Auth.init({
+  authToken: "your_auth_token"
+})
+const akord = await Akord.init(wallet);
 ```
 
 #### Create vault
