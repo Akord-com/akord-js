@@ -4,6 +4,7 @@ import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cac
 import { CacheBusters } from "../types/cacheable";
 import { Service } from "./service";
 import { objectType } from "../constants";
+import { Membership } from "../types/membership";
 
 class ProfileService extends Service {
   objectType = objectType.PROFILE;
@@ -37,7 +38,7 @@ class ProfileService extends Service {
       const profile = await this.api.getProfile();
       this.setObject(profile);
 
-      this.setRawDataEncryptionPublicKey(await this.wallet.publicKeyRaw());
+      this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
       this.setIsPublic(false);
       const profileDetails = await this.processMemberDetails({ name, avatar }, false);
 
@@ -53,7 +54,16 @@ class ProfileService extends Service {
       resolve();
     })
 
-    const memberships = await this.api.getMemberships();
+    let token = null;
+    let memberships = [] as Membership[];
+    do {
+      const { items, nextToken } = await this.api.getMemberships(100, token);
+      memberships = memberships.concat(items);
+      token = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
     const membershipPromiseArray = memberships.map(async (membership) => {
       const membershipService = new MembershipService(this.wallet, this.api);
       const { transactionId } = await membershipService.profileUpdate(membership.id, name, avatar);

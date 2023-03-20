@@ -36,11 +36,11 @@ abstract class Api {
 
   abstract getNodeState(stateId: string): Promise<any>
 
-  abstract getVaults(): Promise<Array<Vault>>
+  abstract getVaults(filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<Vault>>
 
-  abstract getMemberships(): Promise<Array<Membership>>
+  abstract getMemberships(limit?: number, nextToken?: string): Promise<Paginated<Membership>>
 
-  abstract getNodesByVaultId<T>(vaultId: string, type: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<T>>
+  abstract getNodesByVaultId<T>(vaultId: string, type: string, parentId?: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<T>>
 
   abstract getMembershipsByVaultId(vaultId: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<Membership>>
 

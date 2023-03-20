@@ -1,6 +1,6 @@
 import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { base64ToArray, generateKeyPair, KeysStructureEncrypter } from "@akord/crypto";
+import { base64ToArray, Encrypter, generateKeyPair } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, RoleType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
@@ -42,9 +42,10 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} vaultId
+   * @param  {ListOptions} listOptions
    * @returns Promise with paginated memberships within given vault
    */
-  public async list(vaultId: string, listOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
+  public async list(vaultId: string, listOptions: ListOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
     const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.filter, listOptions.limit, listOptions.nextToken);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
@@ -63,9 +64,10 @@ class MembershipService extends Service {
 
   /**
   * @param  {string} vaultId
+  * @param  {ListOptions} listOptions
   * @returns Promise with all memberships within given vault
   */
-  public async listAll(vaultId: string, listOptions = this.defaultListOptions): Promise<Array<Membership>> {
+  public async listAll(vaultId: string, listOptions: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
     let token = null;
     let nodeArray = [] as Membership[];
     do {
@@ -98,10 +100,10 @@ class MembershipService extends Service {
     this.setObjectId(membershipId);
 
     const { address, publicKey } = await this.getUserEncryptionInfo(email, await this.wallet.getAddress());
-    const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, publicKey);
+    const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
     const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
-      keys: keys.map((keyPair) => {
+      keys: keys.map((keyPair: any) => {
         delete keyPair.publicKey;
         return keyPair;
       })
@@ -141,12 +143,12 @@ class MembershipService extends Service {
       const membershipId = uuidv4();
       this.setObjectId(membershipId);
 
-      const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(member.publicKey));
+      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(member.publicKey));
       const keys = await keysEncrypter.encryptMemberKeys([]);
       const body = {
         id: membershipId,
         address: member.address,
-        keys: keys.map((keyPair) => {
+        keys: keys.map((keyPair: any) => {
           delete keyPair.publicKey;
           return keyPair;
         }),
@@ -186,7 +188,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
-      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey())
+      encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
     this.setFunction(functions.MEMBERSHIP_ACCEPT);
     return this.nodeUpdate(body);
@@ -201,10 +203,10 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
-    const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, publicKey);
+    const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
     const keys = await keysEncrypter.encryptMemberKeys([]);
     const body = {
-      keys: keys.map((keyPair) => {
+      keys: keys.map((keyPair: any) => {
         delete keyPair.publicKey;
         return keyPair;
       })
@@ -274,7 +276,7 @@ class MembershipService extends Service {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
           const { publicKey } = await this.getUserEncryptionInfo(member.memberDetails.email, member.address);
-          const memberKeysEncrypter = new KeysStructureEncrypter(
+          const memberKeysEncrypter = new Encrypter(
             this.wallet,
             this.dataEncrypter.keys,
             publicKey

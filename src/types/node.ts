@@ -1,4 +1,4 @@
-import { Encryptable, encrypted, Keys } from "@akord/crypto";
+import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { status } from "../constants";
 
 export enum nodeType {
@@ -21,7 +21,7 @@ export abstract class Node extends Encryptable {
   data?: Array<string>;
   tags: string[];
 
-  constructor(id: string, createdAt: string, updatedAt: string, status: status, vaultId: string, owner: string, data: Array<string>, parentId: string, keys?: Array<Keys>, publicKey?: string) {
+  constructor(id: string, createdAt: string, updatedAt: string, status: status, vaultId: string, owner: string, data: Array<string>, parentId: string, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
     this.id = id;
     this.createdAt = createdAt;
@@ -32,13 +32,25 @@ export abstract class Node extends Encryptable {
     this.data = data;
     this.parentId = parentId;
   }
+
+  getVersion(index?: number): Version {
+    if (index) {
+      if (this.versions && this.versions[index]) {
+        return this.versions[index];
+      } else {
+        throw new Error("A version with given index: " + index + " does not exist for node: " + this.id);
+      }
+    } else {
+      return this.versions && this.versions[this.versions.length - 1];
+    }
+  }
 }
 
 export class Folder extends Node {
   @encrypted() name: string;
   size: number;
 
-  constructor(nodeLike: any, keys: Array<Keys>) {
+  constructor(nodeLike: any, keys: Array<EncryptedKeys>) {
     super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
     this.size = nodeLike.size;
@@ -49,10 +61,19 @@ export class Stack extends Node {
   @encrypted() name: string;
   versions: Array<FileVersion>;
 
-  constructor(nodeLike: any, keys: Array<Keys>) {
+  constructor(nodeLike: any, keys: Array<EncryptedKeys>) {
     super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
+  }
+
+  getUri(type: StorageType = StorageType.ARWEAVE, index?: number): string {
+    const version = this.getVersion(index);
+    return version.getUri(type);
+  }
+
+  getVersion(index?: number): FileVersion {
+    return super.getVersion(index) as FileVersion;
   }
 }
 
@@ -60,7 +81,7 @@ export class Note extends Node {
   @encrypted() name: string;
   versions: Array<FileVersion>;
 
-  constructor(nodeLike: any, keys: Array<Keys>) {
+  constructor(nodeLike: any, keys: Array<EncryptedKeys>) {
     super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
     this.name = nodeLike.name;
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
@@ -70,28 +91,39 @@ export class Note extends Node {
 export class Memo extends Node {
   versions: Array<MemoVersion>;
 
-  constructor(nodeLike: any, keys: Array<Keys>, publicKey?: string) {
+  constructor(nodeLike: any, keys: Array<EncryptedKeys>, publicKey?: string) {
     super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys, publicKey);
     this.versions = (nodeLike.versions || []).map((version: MemoVersion) => new MemoVersion(version, keys, publicKey));
   }
+
+  getVersion(index?: number): MemoVersion {
+    return super.getVersion(index) as MemoVersion;
+  }
 }
 
-export class FileVersion extends Encryptable {
-  @encrypted() name: string;
+export class Version extends Encryptable {
   owner: string;
+  createdAt: string;
+
+  constructor(versionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
+    super(keys, publicKey);
+    this.owner = versionProto.owner;
+    this.createdAt = versionProto.createdAt;
+  }
+}
+
+export class FileVersion extends Version {
+  @encrypted() name: string;
   type: string; //type
   resourceUri: string[];
   size: number;
-  createdAt: string;
   numberOfChunks?: number;
   chunkSize?: number;
 
-  constructor(fileVersionProto: any, keys?: Array<Keys>, publicKey?: string) {
-    super(keys, publicKey);
-    this.owner = fileVersionProto.owner;
+  constructor(fileVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
+    super(fileVersionProto, keys, publicKey);
     this.type = fileVersionProto.type;
     this.resourceUri = fileVersionProto.resourceUri;
-    this.createdAt = fileVersionProto.createdAt;
     this.size = fileVersionProto.size;
     this.numberOfChunks = fileVersionProto.numberOfChunks;
     this.chunkSize = fileVersionProto.chunkSize;
@@ -99,24 +131,20 @@ export class FileVersion extends Encryptable {
     this.status = fileVersionProto.status;
   }
 
-  getUri(type: StorageType) {
+  getUri(type: StorageType): string {
     return this.resourceUri
       ?.find(uri => uri.startsWith(type))
       ?.replace(type, "");
   }
 }
 
-export class MemoVersion extends Encryptable {
+export class MemoVersion extends Version {
   @encrypted() message: string;
-  owner: string;
-  createdAt: string;
   reactions?: Array<MemoReaction>;
   attachments?: Array<FileVersion>;
 
-  constructor(memoVersionProto: any, keys?: Array<Keys>, publicKey?: string) {
-    super(keys, publicKey);
-    this.owner = memoVersionProto.owner;
-    this.createdAt = memoVersionProto.createdAt;
+  constructor(memoVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
+    super(memoVersionProto, keys, publicKey);
     this.message = memoVersionProto.message;
     this.reactions = (memoVersionProto.reactions || []).map((reaction: MemoReaction) =>
       new MemoReaction(reaction, keys, publicKey)
@@ -130,7 +158,7 @@ export class MemoReaction extends Encryptable {
   owner: string;
   createdAt: string;
 
-  constructor(memoReactionProto: any, keys?: Array<Keys>, publicKey?: string) {
+  constructor(memoReactionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
     this.owner = memoReactionProto.owner;
     this.createdAt = memoReactionProto.createdAt;
@@ -141,7 +169,7 @@ export class MemoReaction extends Encryptable {
 export type NodeLike = Folder | Stack | Note | Memo
 
 export class NodeFactory {
-  static instance<NodeLike, K extends Node>(nodeLike: { new(raw: K, keys: Array<Keys>): NodeLike }, data: K, keys: Array<Keys>): any {
+  static instance<NodeLike, K extends Node>(nodeLike: { new(raw: K, keys: Array<EncryptedKeys>): NodeLike }, data: K, keys: Array<EncryptedKeys>): any {
     return new nodeLike(data, keys);
   }
 }

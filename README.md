@@ -40,7 +40,8 @@ const { Akord } = require("@akord/akord-js");
 #### Init Akord
 ##### with email & password
 ```js
-const { akord, wallet, jwtToken } = await Akord.auth.signIn(email, password);
+import { Auth } from "@akord/akord-js";
+const { akord, wallet, jwtToken } = await Auth.signIn(email, password);
 ```
 ##### with Akord Wallet & JWT
 ```js
@@ -64,7 +65,7 @@ const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackI
 
 #### Query user vaults
 ```js
-const vaults = await akord.vault.list();
+const vaults = await akord.vault.listAll();
 ```
 
 ### Examples
@@ -86,7 +87,7 @@ We also have some example flows in our [tests](src/__tests__) repository.
   <summary>example</summary>
 
 ```js
-const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com", "1984");
+const { akord, wallet, jwtToken } = await Auth.signIn("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -101,7 +102,7 @@ const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com",
   <summary>example</summary>
 
 ```js
-const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
+const wallet = await Auth.signUp("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -115,7 +116,7 @@ const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
   <summary>example</summary>
 
 ```js
-await Akord.auth.verifyAccount("winston@gmail.com", 123456);
+await Auth.verifyAccount("winston@gmail.com", 123456);
 ```
 </details>
 
@@ -203,7 +204,7 @@ const vault = await akord.vault.get(vaultId);
 ```
 </details>
 
-#### `list(listOptions)`
+#### `listAll(listOptions)`
 
 - `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
 - returns `Promise<Array<Vault>>` - Promise with currently authenticated user vaults
@@ -212,7 +213,33 @@ const vault = await akord.vault.get(vaultId);
   <summary>example</summary>
 
 ```js
-const vaults = await akord.vault.list();
+const vaults = await akord.vault.listAll();
+```
+</details>
+
+#### `list(listOptions)`
+
+- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated user vaults
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 user vaults
+const { items } = await akord.vault.list();
+
+// retrieve first 20 user vaults
+const { items } = await akord.vault.list({ limit: 20 });
+
+// iterate through all user vaults
+let token = null;
+let vaults = [];
+do {
+  const { items, nextToken } = await akord.vault.list({ nextToken: token });
+  vaults = vaults.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -705,6 +732,27 @@ const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackI
 
 // get the first stack version
 const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackId, 0);
+```
+</details>
+
+#### `getUri(stackId, type, index)`
+
+Get stack file uri by index, return the latest arweave uri by default
+
+- `stackId` (`string`, required)
+- `type` ([`StorageType`](https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149), optional) - storage type, default to arweave
+- `index` (`number`, optional) - file version index, default to latest
+- returns `Promise<string>` - Promise with stack file uri
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the arweave uri for the latest file version
+const arweaveUri = await akord.stack.getUri(stackId);
+
+// get the arweave uri for the first file version
+const arweaveUri = await akord.stack.getUri(stackId, 0);
 ```
 </details>
 

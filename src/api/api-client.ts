@@ -151,16 +151,16 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/notifications`);
   }
 
-  async getMemberships(): Promise<Array<Membership>> {
+  async getMemberships(): Promise<Paginated<Membership>> {
     return await this.get(`${this._apiurl}/memberships`);
   }
 
-  async getVaults(): Promise<Array<Vault>> {
+  async getVaults(): Promise<Paginated<Vault>> {
     return await this.get(`${this._apiurl}/vaults`);
   }
 
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
+    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
 
   async getNodesByVaultId<T>(): Promise<Paginated<T>> {

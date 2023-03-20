@@ -1,12 +1,19 @@
-import { actionRefs, objectType, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, KeysStructureEncrypter } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, Encrypter } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 import { Tag } from "../types/contract";
+import { ListOptions } from "../types/list-options";
+import { Paginated } from "../types/paginated";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
+
+  defaultListOptions = {
+    shouldDecrypt: true,
+    filter: { status: { eq: status.ACCEPTED } }
+  } as ListOptions;
 
   /**
    * @param  {string} name new vault name
@@ -28,8 +35,8 @@ class VaultService extends Service {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
       this.setRawDataEncryptionPublicKey(keyPair.publicKey);
-      const userPublicKey = await this.wallet.publicKeyRaw();
-      const keysEncrypter = new KeysStructureEncrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
+      const userPublicKey = this.wallet.publicKeyRaw();
+      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
       keys = [await keysEncrypter.encryptMemberKey(keyPair)];
       this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];
@@ -56,7 +63,7 @@ class VaultService extends Service {
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
       keys,
-      encPublicSigningKey: await this.processWriteString(await this.wallet.signingPublicKey()),
+      encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey()),
       memberDetails: await this.processMemberDetails(memberDetails, true)
     }
     const membershipSignature = await this.signData(membershipData);
@@ -149,18 +156,41 @@ class VaultService extends Service {
   }
 
   /**
-   * @returns Promise with currently authenticated user vaults
+   * @param  {ListOptions} listOptions
+   * @returns Promise with paginated user vaults
    */
-  public async list(shouldDecrypt = true): Promise<Array<Vault>> {
-    const results = await this.api.getVaults();
-    const vaults = [];
-    for (let result of results) {
-      const vault = new Vault(result, result.keys);
-      if (shouldDecrypt && !vault.public) {
-        await vault.decrypt();
-      }
-      vaults.push(vault);
+  public async list(listOptions: ListOptions = this.defaultListOptions): Promise<Paginated<Vault>> {
+    const response = await this.api.getVaults(listOptions.filter, listOptions.limit, listOptions.nextToken);
+    return {
+      items: await Promise.all(
+        response.items
+          .map(async (vaultProto: Vault) => {
+            const vault = new Vault(vaultProto, vaultProto.keys);
+            if (listOptions.shouldDecrypt && !vault.public) {
+              await vault.decrypt();
+            }
+            return vault as Vault;
+          })) as Vault[],
+      nextToken: response.nextToken
     }
+  }
+
+  /**
+  * @param  {ListOptions} listOptions
+  * @returns Promise with currently authenticated user vaults
+  */
+  public async listAll(listOptions: ListOptions = this.defaultListOptions): Promise<Array<Vault>> {
+    let token = null;
+    let vaults = [] as Vault[];
+    do {
+      const { items, nextToken } = await this.list(listOptions);
+      vaults = vaults.concat(items);
+      token = nextToken;
+      listOptions.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
     return vaults;
   }
 

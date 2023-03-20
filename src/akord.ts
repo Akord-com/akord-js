@@ -12,7 +12,6 @@ import { StackService } from "./core/stack";
 import { NoteService } from "./core/note";
 import { ManifestService } from "./core/manifest";
 import { ProfileService } from "./core/profile";
-import { Auth } from "./auth";
 import { CacheBusters } from "./types/cacheable";
 import { FileService } from "./core/file";
 import { BatchService } from "./core/batch";
@@ -35,7 +34,6 @@ export class Akord {
   public contract: ContractService;
 
   public static init: (wallet: Wallet, jwtToken?: string, config?: ClientConfig) => Promise<Akord>;
-  public static auth = new Auth();
 
   // TODO: JWT token provider
   /**
