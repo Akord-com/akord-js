@@ -51,14 +51,14 @@ describe("Testing batch actions", () => {
     it("should airdrop to Akord wallets", async () => {
       const wallet1 = await AkordWallet.create(password);
       const wallet2 = await AkordWallet.create(password);
-      const user1 = { address: await wallet1.getAddress(), publicKey: await wallet1.publicKey() };
-      const user2 = { address: await wallet2.getAddress(), publicKey: await wallet2.publicKey() };
+      const user1 = { publicSigningKey: wallet1.signingPublicKey(), publicKey: wallet1.publicKey() };
+      const user2 = { publicSigningKey: wallet2.signingPublicKey(), publicKey: wallet2.publicKey() };
 
       const result = await akord.membership.airdrop(vaultId, [user1, user2], "VIEWER");
       expect(result.transactionId).toBeTruthy();
-      expect(result.members[0].address).toEqual(user1.address);
+      expect(result.members[0].address).toEqual(await wallet1.getAddress());
       expect(result.members[0].id).toBeTruthy();
-      expect(result.members[1].address).toEqual(user2.address);
+      expect(result.members[1].address).toEqual(await wallet2.getAddress());
       expect(result.members[1].id).toBeTruthy();
     });
   });

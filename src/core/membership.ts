@@ -1,6 +1,6 @@
 import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { base64ToArray, Encrypter, generateKeyPair } from "@akord/crypto";
+import { base64ToArray, deriveAddress, Encrypter, generateKeyPair } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, RoleType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
@@ -129,7 +129,7 @@ class MembershipService extends Service {
     return { membershipId, transactionId: id };
   }
 
-  public async airdrop(vaultId: string, members: Array<{ address: string, publicKey: string }>, role: RoleType): Promise<{
+  public async airdrop(vaultId: string, members: Array<{ publicKey: string, publicSigningKey: string }>, role: RoleType): Promise<{
     transactionId: string,
     members: Array<{ id: string, address: string }>
   }> {
@@ -137,30 +137,37 @@ class MembershipService extends Service {
     this.setActionRef("MEMBERSHIP_AIRDROP");
     this.setFunction(functions.MEMBERSHIP_ADD);
     const memberArray = [];
+    const membersPublicInfo = [];
     const dataArray = [];
     const memberTags = [];
     for (const member of members) {
       const membershipId = uuidv4();
       this.setObjectId(membershipId);
 
+      const memberAddress = await deriveAddress(base64ToArray(member.publicSigningKey))
       const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(member.publicKey));
       const keys = await keysEncrypter.encryptMemberKeys([]);
       const body = {
         id: membershipId,
-        address: member.address,
+        address: memberAddress,
         keys: keys.map((keyPair: any) => {
           delete keyPair.publicKey;
           return keyPair;
         }),
-        memberDetails: await this.processMemberDetails({ name: member.address })
+        memberDetails: await this.processMemberDetails({ name: memberAddress })
       };
       const data = await this.uploadState(body);
       dataArray.push({
         id: membershipId,
         data
       })
-      memberArray.push({ address: member.address, id: membershipId, role, data })
-      memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, member.address));
+      membersPublicInfo.push({
+        address: memberAddress,
+        publicKey: member.publicKey,
+        publicSigningKey: member.publicSigningKey,
+      })
+      memberArray.push({ address: memberAddress, id: membershipId, role, data });
+      memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
     }
 
     this.tags = memberTags.concat(await this.getTags());
@@ -173,7 +180,8 @@ class MembershipService extends Service {
     const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags
+      this.tags,
+      { members: membersPublicInfo }
     );
     return { members: input.members, transactionId: id };
   }

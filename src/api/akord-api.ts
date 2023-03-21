@@ -9,6 +9,7 @@ import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
+import { UserPublicInfo } from "../types/user";
 
 export default class AkordApi extends Api {
 
@@ -39,11 +40,12 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }> {
+  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
     const { id, object } = await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)
       .vaultId(contractId)
+      .metadata(metadata)
       .input(input)
       .tags(tags)
       .transaction<T>()
@@ -69,7 +71,7 @@ export default class AkordApi extends Api {
     return contractId;
   };
 
-  public async getUserFromEmail(email: string): Promise<any> {
+  public async getUserFromEmail(email: string): Promise<UserPublicInfo> {
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)

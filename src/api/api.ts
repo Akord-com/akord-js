@@ -3,6 +3,7 @@ import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
+import { UserPublicInfo } from "../types/user";
 
 abstract class Api {
   config: any
@@ -10,11 +11,11 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }>
+  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 
-  abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
+  abstract getUserFromEmail(email: string): Promise<UserPublicInfo>
 
   abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
