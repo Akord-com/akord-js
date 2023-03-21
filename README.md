@@ -47,16 +47,16 @@ const akord = await Akord.init(wallet);
 ##### with API key
 ```js
 const { wallet } = Auth.init({
-  apiKey: "your_api_key",
-  backupPhrase: "your_backup_phrase"
+  apiKey: "api_key",
+  password: "account_password"
 })
 const akord = await Akord.init(wallet);
 ```
 ##### with your auth token
 ```js
 const { wallet } = Auth.init({
-  authToken: "your_auth_token",
-  backupPhrase: "your_backup_phrase"
+  authToken: "auth_token",
+  password: "account_password"
 })
 const akord = await Akord.init(wallet);
 ```
