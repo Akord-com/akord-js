@@ -134,7 +134,6 @@ class Service {
       input,
       this.tags
     );
-    this.setActionRef(null);
     return { nodeId, transactionId: id, object };
   }
 

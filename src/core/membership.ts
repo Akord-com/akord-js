@@ -136,11 +136,11 @@ class MembershipService extends Service {
   public async accept(membershipId: string): Promise<{ transactionId: string }> {
     const memberDetails = await this.getProfileDetails();
     await this.setVaultContextFromMembershipId(membershipId);
-    this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     const body = {
       memberDetails: await this.processMemberDetails(memberDetails, true),
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
+    this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     this.setFunction(functions.MEMBERSHIP_ACCEPT);
     return this.nodeUpdate(body);
   }
@@ -210,6 +210,7 @@ class MembershipService extends Service {
    */
   public async revoke(membershipId: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromMembershipId(membershipId);
+    this.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
     let data: any;
@@ -306,8 +307,8 @@ class MembershipService extends Service {
 
   async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
     await this.setVaultContextFromMembershipId(membershipId);
-    this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
+    this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
     return this.nodeUpdate({ memberDetails });
   }

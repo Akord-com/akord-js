@@ -101,7 +101,7 @@ export class Memo extends Node {
   }
 }
 
-export class Version extends Encryptable {
+export abstract class Version extends Encryptable {
   owner: string;
   createdAt: string;
 
@@ -112,16 +112,20 @@ export class Version extends Encryptable {
   }
 }
 
-export class FileVersion extends Version {
+export class FileVersion extends Encryptable implements Version {
   @encrypted() name: string;
   type: string; //type
   resourceUri: string[];
   size: number;
   numberOfChunks?: number;
   chunkSize?: number;
+  owner: string;
+  createdAt: string;
 
   constructor(fileVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
-    super(fileVersionProto, keys, publicKey);
+    super(keys, publicKey);
+    this.owner = fileVersionProto.owner;
+    this.createdAt = fileVersionProto.createdAt;
     this.type = fileVersionProto.type;
     this.resourceUri = fileVersionProto.resourceUri;
     this.size = fileVersionProto.size;
@@ -138,13 +142,17 @@ export class FileVersion extends Version {
   }
 }
 
-export class MemoVersion extends Version {
+export class MemoVersion extends Encryptable implements Version {
   @encrypted() message: string;
   reactions?: Array<MemoReaction>;
   attachments?: Array<FileVersion>;
+  owner: string;
+  createdAt: string;
 
   constructor(memoVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
-    super(memoVersionProto, keys, publicKey);
+    super(keys, publicKey);
+    this.owner = memoVersionProto.owner;
+    this.createdAt = memoVersionProto.createdAt;
     this.message = memoVersionProto.message;
     this.reactions = (memoVersionProto.reactions || []).map((reaction: MemoReaction) =>
       new MemoReaction(reaction, keys, publicKey)
