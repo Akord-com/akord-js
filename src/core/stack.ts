@@ -66,7 +66,7 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(file.name),
       versions: [version]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
+    const { nodeId, transactionId } = await this.nodeCreate<Stack>(body, { parentId });
     return { stackId: nodeId, transactionId };
   }
 
@@ -161,7 +161,7 @@ class StackService extends NodeService<Stack> {
 
   protected async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
-    this.fileService.setKeys(this.membershipKeys);
+    this.fileService.setKeys(this.keys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
     this.fileService.setVaultId(this.vaultId);
     this.fileService.setIsPublic(this.isPublic);

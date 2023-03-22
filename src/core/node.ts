@@ -5,6 +5,7 @@ import { EncryptedKeys } from '@akord/crypto';
 import { ListOptions } from '../types/list-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
+import { v4 as uuidv4 } from "uuid";
 
 class NodeService<T = NodeLike> extends Service {
 
@@ -20,6 +21,39 @@ class NodeService<T = NodeLike> extends Service {
       }
     }
   } as ListOptions;
+
+  protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
+    nodeId: string,
+    transactionId: string,
+    object: T
+  }> {
+    const nodeId = uuidv4();
+    this.setObjectId(nodeId);
+    this.setFunction(functions.NODE_CREATE);
+
+    this.tags = await this.getTags();
+
+    const input = {
+      function: this.function,
+      ...clientInput
+    };
+
+    if (body) {
+      const id = await this.uploadState(body);
+      input.data = id;
+    }
+
+    const { id, object } = await this.api.postContractTransaction<T>(
+      this.vaultId,
+      input,
+      this.tags
+    );
+    const node = this.nodeInstance(object, this.keys) as any;
+    if (!this.isPublic) {
+      await node.decrypt();
+    }
+    return { nodeId, transactionId: id, object: node };
+  }
 
   /**
    * @param  {string} nodeId
