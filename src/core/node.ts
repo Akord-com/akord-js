@@ -28,6 +28,7 @@ class NodeService<T = NodeLike> extends Service {
    */
   public async rename(nodeId: string, name: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType);
+    this.setActionRef(this.objectType.toUpperCase() + "_RENAME");
     this.setFunction(functions.NODE_UPDATE);
     const body = {
       name: await this.processWriteString(name)
@@ -42,6 +43,7 @@ class NodeService<T = NodeLike> extends Service {
    */
   public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.setActionRef(this.objectType.toUpperCase() + "_MOVE");
     this.setFunction(functions.NODE_MOVE);
     return this.nodeUpdate(null, { parentId });
   }
@@ -52,6 +54,7 @@ class NodeService<T = NodeLike> extends Service {
    */
   public async revoke(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
     this.setFunction(functions.NODE_REVOKE);
     return this.nodeUpdate();
   }
@@ -62,6 +65,7 @@ class NodeService<T = NodeLike> extends Service {
    */
   public async restore(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
     this.setFunction(functions.NODE_RESTORE);
     return this.nodeUpdate();
   }
@@ -72,6 +76,7 @@ class NodeService<T = NodeLike> extends Service {
    */
   public async delete(nodeId: string, vaultId?: string): Promise<{ transactionId: string }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.setActionRef(this.objectType.toUpperCase() + "_DELETE");
     this.setFunction(functions.NODE_DELETE);
     return this.nodeUpdate();
   }
