@@ -115,6 +115,7 @@ export default class AkordApi extends Api {
   };
 
   public async getProfile(): Promise<any> {
+    return null
     return await new ApiClient()
       .env(this.config)
       .auth(this.jwtToken)

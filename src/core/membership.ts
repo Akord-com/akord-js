@@ -134,7 +134,11 @@ class MembershipService extends Service {
       input,
       this.tags
     );
-    return { membershipId, transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { membershipId, transactionId: id, object: membership };
   }
 
   /**
@@ -157,7 +161,11 @@ class MembershipService extends Service {
       { function: this.function, data },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   /**
@@ -194,7 +202,11 @@ class MembershipService extends Service {
       input,
       this.tags
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   /**
@@ -211,7 +223,11 @@ class MembershipService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   /**
@@ -228,7 +244,11 @@ class MembershipService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   /**
@@ -289,7 +309,11 @@ class MembershipService extends Service {
       { function: this.function, data },
       this.tags
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   /**
@@ -307,7 +331,11 @@ class MembershipService extends Service {
       { function: this.function, role },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   /**
@@ -350,7 +378,11 @@ class MembershipService extends Service {
       { function: this.function, data },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const membership = new Membership(object, this.keys);
+    if (!this.isPublic) {
+      await membership.decrypt();
+    }
+    return { transactionId: id, object: membership };
   }
 
   protected async setVaultContextFromMembershipId(membershipId: string, vaultId?: string) {

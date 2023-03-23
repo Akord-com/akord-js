@@ -64,7 +64,11 @@ class MemoService extends NodeService<Memo> {
       { function: this.function, data: dataTxId },
       this.tags
     );
-    return { transactionId: id, object }
+    const memo = new Memo(object, this.keys);
+    if (!this.isPublic) {
+      await memo.decrypt();
+    }
+    return { transactionId: id, object: memo };
   }
 
   /**
@@ -86,7 +90,11 @@ class MemoService extends NodeService<Memo> {
       { function: this.function, data: dataTxId },
       this.tags
     );
-    return { transactionId: id, object }
+    const memo = new Memo(object, this.keys);
+    if (!this.isPublic) {
+      await memo.decrypt();
+    }
+    return { transactionId: id, object: memo };
   }
 
   private async memoVersion(message: string): Promise<MemoVersion> {

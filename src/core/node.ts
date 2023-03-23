@@ -77,7 +77,11 @@ class NodeService<T = NodeLike> extends Service {
       input,
       this.tags
     );
-    return { transactionId: id, object }
+    const node = this.nodeInstance(object, this.keys) as any;
+    if (!this.isPublic) {
+      await node.decrypt();
+    }
+    return { transactionId: id, object: node };
   }
 
   /**

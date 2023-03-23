@@ -103,7 +103,11 @@ class VaultService extends Service {
       { function: this.function, data },
       this.tags
     );
-    return { vaultId, membershipId, transactionId: id, object }
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { vaultId, membershipId, transactionId: id, object: vault };
   }
 
   /**
@@ -124,7 +128,11 @@ class VaultService extends Service {
       { function: this.function, data },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { transactionId: id, object: vault };
   }
 
   /**
@@ -141,7 +149,11 @@ class VaultService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { transactionId: id, object: vault };
   }
 
   /**
@@ -158,7 +170,11 @@ class VaultService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    return { transactionId: id, object };
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { transactionId: id, object: vault };
   }
 
   /**
