@@ -7,6 +7,18 @@ import { Tag } from "../types/contract";
 import { ListOptions } from "../types/list-options";
 import { Paginated } from "../types/paginated";
 
+type VaultCreateResult = {
+  vaultId: string,
+  membershipId: string,
+  transactionId: string,
+  object: Vault
+}
+
+type VaultUpdateResult = {
+  transactionId: string,
+  object: Vault
+}
+
 class VaultService extends Service {
   objectType = objectType.VAULT;
 
@@ -21,11 +33,7 @@ class VaultService extends Service {
    * @param  {boolean} [isPublic]
    * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
-  public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<{
-    transactionId: string,
-    vaultId: string,
-    membershipId: string
-  }> {
+  public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<VaultCreateResult> {
     const memberDetails = await this.getProfileDetails();
     this.setActionRef(actionRefs.VAULT_CREATE);
     this.setIsPublic(isPublic);
@@ -90,12 +98,12 @@ class VaultService extends Service {
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
-    const { id } = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
       this.tags
     );
-    return { vaultId, membershipId, transactionId: id }
+    return { vaultId, membershipId, transactionId: id, object }
   }
 
   /**
@@ -103,32 +111,54 @@ class VaultService extends Service {
    * @param name new vault name
    * @returns Promise with corresponding transaction id
    */
-  public async rename(vaultId: string, name: string): Promise<{ transactionId: string }> {
+  public async rename(vaultId: string, name: string): Promise<VaultUpdateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RENAME);
-    return this.nodeRename(name);
+    this.setFunction(functions.VAULT_UPDATE);
+    const body = {
+      name: await this.processWriteString(name)
+    };
+    const data = await this.mergeAndUploadBody(body);
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function, data },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
-  public async archive(vaultId: string): Promise<{ transactionId: string }> {
+  public async archive(vaultId: string): Promise<VaultUpdateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_ARCHIVE);
     this.setFunction(functions.VAULT_ARCHIVE);
-    return this.nodeUpdate();
+
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
-  public async restore(vaultId: string): Promise<{ transactionId: string }> {
+  public async restore(vaultId: string): Promise<VaultUpdateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RESTORE);
     this.setFunction(functions.VAULT_RESTORE);
-    return this.nodeUpdate();
+
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**

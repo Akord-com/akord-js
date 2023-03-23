@@ -7,6 +7,17 @@ import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 
+type MembershipCreateResult = {
+  membershipId: string,
+  transactionId: string,
+  object: Membership
+}
+
+type MembershipUpdateResult = {
+  transactionId: string,
+  object: Membership
+}
+
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
 
@@ -89,10 +100,7 @@ class MembershipService extends Service {
    * @param  {RoleType} role CONTRIBUTOR or VIEWER
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async invite(vaultId: string, email: string, role: RoleType): Promise<{
-    membershipId: string,
-    transactionId: string
-  }> {
+  public async invite(vaultId: string, email: string, role: RoleType): Promise<MembershipCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
     this.setFunction(functions.MEMBERSHIP_INVITE);
@@ -121,19 +129,19 @@ class MembershipService extends Service {
       data: dataTxId
     }
 
-    const { id } = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       input,
       this.tags
     );
-    return { membershipId, transactionId: id };
+    return { membershipId, transactionId: id, object };
   }
 
   /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */
-  public async accept(membershipId: string): Promise<{ transactionId: string }> {
+  public async accept(membershipId: string): Promise<MembershipUpdateResult> {
     const memberDetails = await this.getProfileDetails();
     await this.setVaultContextFromMembershipId(membershipId);
     const body = {
@@ -142,14 +150,21 @@ class MembershipService extends Service {
     }
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     this.setFunction(functions.MEMBERSHIP_ACCEPT);
-    return this.nodeUpdate(body);
+
+    const data = await this.mergeAndUploadBody(body);
+    const { id, object } = await this.api.postContractTransaction<Membership>(
+      this.vaultId,
+      { function: this.function, data },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */
-  public async confirm(membershipId: string): Promise<{ transactionId: string }> {
+  public async confirm(membershipId: string): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
@@ -174,41 +189,53 @@ class MembershipService extends Service {
       role: this.object.role
     }
 
-    const { id } = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       input,
       this.tags
     );
-    return { transactionId: id };
+    return { transactionId: id, object };
   }
 
   /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */
-  public async reject(membershipId: string): Promise<{ transactionId: string }> {
+  public async reject(membershipId: string): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_REJECT);
     this.setFunction(functions.MEMBERSHIP_REJECT);
-    return this.nodeUpdate();
+
+    const { id, object } = await this.api.postContractTransaction<Membership>(
+      this.vaultId,
+      { function: this.function },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */
-  public async leave(membershipId: string): Promise<{ transactionId: string }> {
+  public async leave(membershipId: string): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
     this.setFunction(functions.MEMBERSHIP_REJECT);
-    return this.nodeUpdate();
+
+    const { id, object } = await this.api.postContractTransaction<Membership>(
+      this.vaultId,
+      { function: this.function },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */
-  public async revoke(membershipId: string): Promise<{ transactionId: string }> {
+  public async revoke(membershipId: string): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
@@ -257,12 +284,12 @@ class MembershipService extends Service {
       })
     }
 
-    const { id } = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, data },
       this.tags
     );
-    return { transactionId: id };
+    return { transactionId: id, object };
   }
 
   /**
@@ -270,11 +297,17 @@ class MembershipService extends Service {
    * @param  {RoleType} role CONTRIBUTOR or VIEWER
    * @returns Promise with corresponding transaction id
    */
-  public async changeRole(membershipId: string, role: RoleType): Promise<{ transactionId: string }> {
+  public async changeRole(membershipId: string, role: RoleType): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
     this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
-    return this.nodeUpdate(null, { role });
+
+    const { id, object } = await this.api.postContractTransaction<Membership>(
+      this.vaultId,
+      { function: this.function, role },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   /**
@@ -305,12 +338,19 @@ class MembershipService extends Service {
     await this.api.inviteResend(object.vaultId, membershipId);
   }
 
-  async profileUpdate(membershipId: string, name: string, avatar: any): Promise<{ transactionId: string; }> {
+  async profileUpdate(membershipId: string, name: string, avatar: any): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
-    return this.nodeUpdate({ memberDetails });
+
+    const data = await this.mergeAndUploadBody({ memberDetails });
+    const { id, object } = await this.api.postContractTransaction<Membership>(
+      this.vaultId,
+      { function: this.function, data },
+      await this.getTags()
+    );
+    return { transactionId: id, object };
   }
 
   protected async setVaultContextFromMembershipId(membershipId: string, vaultId?: string) {

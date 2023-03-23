@@ -80,34 +80,6 @@ class Service {
     }
   }
 
-  protected async nodeRename(name: string): Promise<{ transactionId: string }> {
-    const body = {
-      name: await this.processWriteString(name)
-    };
-    this.setFunction(this.objectType === "Vault" ? functions.VAULT_UPDATE : functions.NODE_UPDATE);
-    return this.nodeUpdate(body);
-  }
-
-  protected async nodeUpdate(body?: any, clientInput?: any): Promise<{ transactionId: string, object: NodeLike }> {
-    const input = {
-      function: this.function,
-      ...clientInput
-    };
-
-    this.tags = await this.getTags();
-
-    if (body) {
-      const id = await this.mergeAndUploadBody(body);
-      input.data = id;
-    }
-    const { id, object } = await this.api.postContractTransaction<NodeLike>(
-      this.vaultId,
-      input,
-      this.tags
-    );
-    return { transactionId: id, object }
-  }
-
   setKeys(keys: any) {
     this.keys = keys;
     this.dataEncrypter.setKeys(keys);
