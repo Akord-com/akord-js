@@ -1,6 +1,6 @@
 import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, Encrypter } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 import { Tag } from "../types/contract";
@@ -38,7 +38,7 @@ class VaultService extends Service {
     this.setActionRef(actionRefs.VAULT_CREATE);
     this.setIsPublic(isPublic);
 
-    let publicKeys: any, keys: any;
+    let publicKeys: Array<string>, keys: Array<EncryptedKeys>;
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
@@ -46,7 +46,7 @@ class VaultService extends Service {
       const userPublicKey = this.wallet.publicKeyRaw();
       const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
       keys = [await keysEncrypter.encryptMemberKey(keyPair)];
-      this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
+      this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];
     }
 
