@@ -5,6 +5,17 @@ import { FileService } from "./file";
 import { FileLike } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
 
+type StackCreateResult = { 
+  stackId: string,
+  transactionId: string, 
+  object: Stack 
+}
+
+type StackUpdateResult = { 
+  transactionId: string, 
+  object: Stack 
+}
+
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
   objectType = nodeType.STACK;
@@ -21,11 +32,7 @@ class StackService extends NodeService<Stack> {
    */
   public async create(vaultId: string, file: FileLike, name: string, parentId?: string,
     progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController):
-    Promise<{
-      stackId: string,
-      transactionId: string,
-      stack: Stack
-    }> {
+    Promise<StackCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
@@ -35,7 +42,7 @@ class StackService extends NodeService<Stack> {
       versions: [await this.uploadNewFileVersion(file, progressHook, cancelHook)]
     };
     const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId });
-    return { stackId: nodeId, transactionId, stack: object };
+    return { stackId: nodeId, transactionId, object };
   }
 
   /**
@@ -44,11 +51,7 @@ class StackService extends NodeService<Stack> {
    * @param  {string} [parentId] parent folder id
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async import(vaultId: string, fileTxId: string, parentId?: string):
-    Promise<{
-      stackId: string,
-      transactionId: string
-    }> {
+  public async import(vaultId: string, fileTxId: string, parentId?: string): Promise<StackCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
@@ -66,8 +69,8 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(file.name),
       versions: [version]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { stackId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId });
+    return { stackId: nodeId, transactionId, object };
   }
 
   /**
@@ -76,7 +79,7 @@ class StackService extends NodeService<Stack> {
   * @param  {(progress:number)=>void} [progressHook]
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(stackId: string, file: FileLike, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
+  public async uploadRevision(stackId: string, file: FileLike, progressHook?: (progress: number, data?: any) => void): Promise<StackUpdateResult> {
     await this.setVaultContextFromNodeId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
@@ -84,7 +87,7 @@ class StackService extends NodeService<Stack> {
       versions: [await this.uploadNewFileVersion(file, progressHook)]
     };
     this.setFunction(functions.NODE_UPDATE);
-    return this.nodeUpdate(body);
+    return this.nodeUpdate<Stack>(body);
   }
 
   /**
@@ -161,7 +164,7 @@ class StackService extends NodeService<Stack> {
 
   protected async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
-    this.fileService.setKeys(this.membershipKeys);
+    this.fileService.setKeys(this.keys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
     this.fileService.setVaultId(this.vaultId);
     this.fileService.setIsPublic(this.isPublic);

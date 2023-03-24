@@ -1,11 +1,23 @@
 import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, Encrypter } from "@akord/crypto";
+import { generateKeyPair, arrayToBase64, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
 import { Tag } from "../types/contract";
 import { ListOptions } from "../types/list-options";
 import { Paginated } from "../types/paginated";
+
+type VaultCreateResult = {
+  vaultId: string,
+  membershipId: string,
+  transactionId: string,
+  object: Vault
+}
+
+type VaultUpdateResult = {
+  transactionId: string,
+  object: Vault
+}
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -21,16 +33,12 @@ class VaultService extends Service {
    * @param  {boolean} [isPublic]
    * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
-  public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<{
-    transactionId: string,
-    vaultId: string,
-    membershipId: string
-  }> {
+  public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<VaultCreateResult> {
     const memberDetails = await this.getProfileDetails();
     this.setActionRef(actionRefs.VAULT_CREATE);
     this.setIsPublic(isPublic);
 
-    let publicKeys: any, keys: any;
+    let publicKeys: Array<string>, keys: Array<EncryptedKeys>;
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
@@ -38,7 +46,7 @@ class VaultService extends Service {
       const userPublicKey = this.wallet.publicKeyRaw();
       const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
       keys = [await keysEncrypter.encryptMemberKey(keyPair)];
-      this.setKeys([{ publicKey: arrayToBase64(keyPair.publicKey), encPrivateKey: keys[0].encPrivateKey }]);
+      this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
       publicKeys = [arrayToBase64(keyPair.publicKey)];
     }
 
@@ -90,12 +98,16 @@ class VaultService extends Service {
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
-    const { id } = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
       this.tags
     );
-    return { vaultId, membershipId, transactionId: id }
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { vaultId, membershipId, transactionId: id, object: vault };
   }
 
   /**
@@ -103,32 +115,66 @@ class VaultService extends Service {
    * @param name new vault name
    * @returns Promise with corresponding transaction id
    */
-  public async rename(vaultId: string, name: string): Promise<{ transactionId: string }> {
+  public async rename(vaultId: string, name: string): Promise<VaultUpdateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RENAME);
-    return this.nodeRename(name);
+    this.setFunction(functions.VAULT_UPDATE);
+    const body = {
+      name: await this.processWriteString(name)
+    };
+    const data = await this.mergeAndUploadBody(body);
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function, data },
+      await this.getTags()
+    );
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { transactionId: id, object: vault };
   }
 
   /**
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
-  public async archive(vaultId: string): Promise<{ transactionId: string }> {
+  public async archive(vaultId: string): Promise<VaultUpdateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_ARCHIVE);
     this.setFunction(functions.VAULT_ARCHIVE);
-    return this.nodeUpdate();
+
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function },
+      await this.getTags()
+    );
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { transactionId: id, object: vault };
   }
 
   /**
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
-  public async restore(vaultId: string): Promise<{ transactionId: string }> {
+  public async restore(vaultId: string): Promise<VaultUpdateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RESTORE);
     this.setFunction(functions.VAULT_RESTORE);
-    return this.nodeUpdate();
+
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function },
+      await this.getTags()
+    );
+    const vault = new Vault(object, this.keys);
+    if (!this.isPublic) {
+      await vault.decrypt();
+    }
+    return { transactionId: id, object: vault };
   }
 
   /**

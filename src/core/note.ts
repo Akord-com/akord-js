@@ -10,6 +10,17 @@ enum NoteTypes {
   JSON = "application/json"
 }
 
+type NoteCreateResult = {
+  noteId: string,
+  transactionId: string,
+  object: Stack
+}
+
+type NoteUpdateResult = {
+  transactionId: string,
+  object: Stack
+}
+
 type NoteType = "text/markdown" | "application/json";
 
 class NoteService extends NodeService<Stack> {
@@ -25,18 +36,15 @@ class NoteService extends NodeService<Stack> {
    * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
    * @returns Promise with new note id & corresponding transaction id
    */
-  public async create(vaultId: string, content: string, name: string, parentId?: string, mimeType?: NoteType): Promise<{
-    noteId: string,
-    transactionId: string
-  }> {
+  public async create(vaultId: string, content: string, name: string, parentId?: string, mimeType?: NoteType): Promise<NoteCreateResult> {
     const noteFile = await createFileLike([content], name, mimeType ? mimeType : NoteTypes.MD);
-    const { stackId, transactionId } = await this.stackService.create(
+    const { stackId, transactionId, object } = await this.stackService.create(
       vaultId,
       noteFile,
       name,
       parentId
     );
-    return { noteId: stackId, transactionId };
+    return { noteId: stackId, transactionId, object };
   }
 
   /**
@@ -46,9 +54,7 @@ class NoteService extends NodeService<Stack> {
   * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
   * @returns Promise with corresponding transaction id
   */
-  public async uploadRevision(noteId: string, content: string, name: string, mimeType?: NoteType): Promise<{
-    transactionId: string
-  }> {
+  public async uploadRevision(noteId: string, content: string, name: string, mimeType?: NoteType): Promise<NoteUpdateResult> {
     const noteFile = await createFileLike([content], name, mimeType ? mimeType : NoteTypes.MD);
     return this.stackService.uploadRevision(noteId, noteFile);
   }
