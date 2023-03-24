@@ -10,15 +10,15 @@ import {
   stringToArray,
   arrayToBase64,
   base64ToJson,
-  deriveAddress
+  deriveAddress,
+  EncryptedKeys
 } from "@akord/crypto";
-import { v4 as uuidv4 } from "uuid";
 import { objectType, protocolTags, functions, dataTags, encryptionTags } from '../constants';
 import lodash from "lodash";
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
-import { Membership, MembershipKeys } from "../types/membership";
+import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 
@@ -29,7 +29,7 @@ class Service {
   wallet: Wallet
 
   dataEncrypter: Encrypter
-  membershipKeys: MembershipKeys
+  keys: Array<EncryptedKeys>
 
   vaultId: string
   objectId: string
@@ -80,65 +80,8 @@ class Service {
     }
   }
 
-  protected async nodeRename(name: string): Promise<{ transactionId: string }> {
-    const body = {
-      name: await this.processWriteString(name)
-    };
-    this.setFunction(this.objectType === "Vault" ? functions.VAULT_UPDATE : functions.NODE_UPDATE);
-    return this.nodeUpdate(body);
-  }
-
-  protected async nodeUpdate(body?: any, clientInput?: any): Promise<{ transactionId: string, object: NodeLike }> {
-    const input = {
-      function: this.function,
-      ...clientInput
-    };
-
-    this.tags = await this.getTags();
-
-    if (body) {
-      const id = await this.mergeAndUploadBody(body);
-      input.data = id;
-    }
-    const { id, object } = await this.api.postContractTransaction<NodeLike>(
-      this.vaultId,
-      input,
-      this.tags
-    );
-    return { transactionId: id, object }
-  }
-
-  protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
-    nodeId: string,
-    transactionId: string,
-    object: T
-  }> {
-    const nodeId = uuidv4();
-    this.setObjectId(nodeId);
-    this.setFunction(functions.NODE_CREATE);
-
-    this.tags = await this.getTags();
-
-    const input = {
-      function: this.function,
-      ...clientInput
-    };
-
-    if (body) {
-      const id = await this.uploadState(body);
-      input.data = id;
-    }
-
-    const { id, object } = await this.api.postContractTransaction<T>(
-      this.vaultId,
-      input,
-      this.tags
-    );
-    return { nodeId, transactionId: id, object };
-  }
-
   setKeys(keys: any) {
-    this.membershipKeys = keys;
+    this.keys = keys;
     this.dataEncrypter.setKeys(keys);
   }
 
