@@ -124,7 +124,6 @@ class FileService extends Service {
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
     const resource = await new ApiClient()
       .env(this.api.config)
-      .auth(this.api.jwtToken)
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
@@ -228,7 +227,6 @@ class FileService extends Service {
 
     await new ApiClient()
       .env(this.api.config)
-      .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
@@ -254,7 +252,6 @@ class FileService extends Service {
   ) {
     const resource = await new ApiClient()
       .env(this.api.config)
-      .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
       .tags(tags.concat(chunk.encryptionTags))

@@ -13,23 +13,19 @@ import { Paginated } from "../types/paginated";
 export default class AkordApi extends Api {
 
   public config!: ApiConfig;
-  public jwtToken: string;
 
-  constructor(config: ClientConfig, jwtToken: string) {
+  constructor(config: ClientConfig) {
     super();
     this.config = apiConfig(config.env);
-    this.jwtToken = jwtToken;
   }
 
   public async uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean)
     : Promise<Array<string>> {
-
     const resources = [];
 
     await Promise.all(items.map(async (item, index) => {
       const resource = await new ApiClient()
         .env(this.config)
-        .auth(this.jwtToken)
         .data({ data: item.data, tags: item.tags })
         .bundle(shouldBundleTransaction)
         .uploadState()
@@ -42,7 +38,6 @@ export default class AkordApi extends Api {
   public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }> {
     const { id, object } = await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(contractId)
       .input(input)
       .tags(tags)
@@ -54,7 +49,6 @@ export default class AkordApi extends Api {
   public async getMembers(vaultId: string): Promise<Array<Membership>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .getMembers();
   };
@@ -62,7 +56,6 @@ export default class AkordApi extends Api {
   public async initContractId(tags: Tags, state?: any): Promise<string> {
     const contractId = await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .data({ tags, state })
       .contract()
     Logger.log("Created contract with id: " + contractId);
@@ -72,7 +65,6 @@ export default class AkordApi extends Api {
   public async getUserFromEmail(email: string): Promise<any> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .resourceId(email)
       .getUser();
   };
@@ -80,7 +72,6 @@ export default class AkordApi extends Api {
   public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .data(file)
       .tags(tags)
       .public(isPublic)
@@ -96,7 +87,6 @@ export default class AkordApi extends Api {
   public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
     const { response } = await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .resourceId(id)
       .public(isPublic)
       .numberOfChunks(numberOfChunks)
@@ -118,7 +108,6 @@ export default class AkordApi extends Api {
     return null
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .getProfile();
   };
 
@@ -126,7 +115,6 @@ export default class AkordApi extends Api {
   public async updateProfile(name: string, avatarUri: string): Promise<void> {
     await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .data({
         name: name,
         avatarUri: avatarUri
@@ -137,7 +125,6 @@ export default class AkordApi extends Api {
   public async deleteVault(vaultId: string): Promise<void> {
     await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .deleteVault();
   }
@@ -145,7 +132,6 @@ export default class AkordApi extends Api {
   public async inviteNewUser(vaultId: string, email: string, role: RoleType): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .data({
         email: email,
@@ -158,7 +144,6 @@ export default class AkordApi extends Api {
   public async inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .resourceId(membershipId)
       .inviteResend();
@@ -167,7 +152,6 @@ export default class AkordApi extends Api {
   public async getNode<T>(id: string, type: NodeType): Promise<T> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .resourceId(id)
       .queryParams({ type })
       .getNode();
@@ -176,7 +160,6 @@ export default class AkordApi extends Api {
   public async getMembership(id: string): Promise<Membership> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .resourceId(id)
       .getMembership();
   };
@@ -184,7 +167,6 @@ export default class AkordApi extends Api {
   public async getVault(id: string): Promise<Vault> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .resourceId(id)
       .getVault();
   };
@@ -192,7 +174,6 @@ export default class AkordApi extends Api {
   public async getMembershipKeys(vaultId: string): Promise<MembershipKeys> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .getMembershipKeys();
   };
@@ -200,7 +181,6 @@ export default class AkordApi extends Api {
   public async getNodeState(stateId: string): Promise<any> {
     const { response } = await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .resourceId(stateId)
       .downloadState()
 
@@ -210,7 +190,6 @@ export default class AkordApi extends Api {
   public async getNotifications(): Promise<Paginated<any>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .getNotifications()
   };
 
@@ -222,7 +201,6 @@ export default class AkordApi extends Api {
   }): Promise<void> {
     await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .queryParams(options)
       .patchNotifications()
   };
@@ -230,7 +208,6 @@ export default class AkordApi extends Api {
   public async getContractState(objectId: string): Promise<ContractState> {
     const contract = await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(objectId)
       .getContract();
     return contract.state;
@@ -239,7 +216,6 @@ export default class AkordApi extends Api {
   public async getMemberships(limit?: number, nextToken?: string): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .queryParams({
         limit,
         nextToken
@@ -250,7 +226,6 @@ export default class AkordApi extends Api {
   public async getVaults(filter = {}, limit?: number, nextToken?: string): Promise<Paginated<Vault>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .queryParams({
         filter: JSON.stringify(filter),
         limit,
@@ -262,7 +237,6 @@ export default class AkordApi extends Api {
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, parentId?: string, filter = {}, limit?: number, nextToken?: string): Promise<Paginated<T>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .queryParams({
         type,
@@ -277,7 +251,6 @@ export default class AkordApi extends Api {
   public async getMembershipsByVaultId(vaultId: string, filter = {}, limit?: number, nextToken?: string): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .queryParams({
         filter: JSON.stringify(filter),
@@ -290,7 +263,6 @@ export default class AkordApi extends Api {
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
     return await new ApiClient()
       .env(this.config)
-      .auth(this.jwtToken)
       .vaultId(vaultId)
       .getTransactions();
   }

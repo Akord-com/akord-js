@@ -1,18 +1,15 @@
 import { Akord } from "./akord";
 import { ClientConfig } from "./config";
 import { Wallet } from "@akord/crypto";
-import { Auth as AkordAuth } from "./auth";
+import { Auth } from "@akord/akord-auth";
 
 /**
  * @param  {Wallet} wallet
- * @param  {string} [jwtToken]
  * @param  {ClientConfig={}} config
  * @returns Promise with Akord Client instance
  */
-Akord.init = async function (wallet: Wallet, jwtToken?: string, config: ClientConfig = {}): Promise<Akord> {
-  return new Akord(wallet, jwtToken, config);
+Akord.init = async function (wallet: Wallet, config: ClientConfig = {}): Promise<Akord> {
+  return new Akord(wallet, config);
 };
-
-const Auth = new AkordAuth();
 
 export { Akord, Auth };

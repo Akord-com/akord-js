@@ -6,7 +6,6 @@ import { Paginated } from "../types/paginated";
 
 abstract class Api {
   config: any
-  jwtToken: string
 
   constructor() { }
 

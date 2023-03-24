@@ -38,14 +38,29 @@ const { Akord } = require("@akord/akord-js");
 ### Quick start
 
 #### Init Akord
-##### with email & password
+##### use short living token with refresh
 ```js
-import { Auth } from "@akord/akord-js";
-const { akord, wallet, jwtToken } = await Auth.signIn(email, password);
+import { Akord, Auth } from "@akord/akord-js";
+
+Auth.init({ storage: window.sessionStorage }) //optionally - configure tokens store
+const { wallet } = await Auth.signIn(email, password);
+const akord = await Akord.init(wallet);
 ```
-##### with Akord Wallet & JWT
+##### use API key
 ```js
-const akord = await Akord.init(wallet, jwtToken);
+import { Akord, Auth } from "@akord/akord-js";
+
+Auth.init({ apiKey: "api_key" })
+const { wallet } = await Auth.signIn(email, password);
+const akord = await Akord.init(wallet);
+```
+##### use self-managed auth token
+```js
+import { Akord, Auth } from "@akord/akord-js";
+
+Auth.init({ authToken: "auth_token" })
+const { wallet } = await Auth.signIn(email, password);
+const akord = await Akord.init(wallet);
 ```
 
 #### Create vault
@@ -69,25 +84,40 @@ const vaults = await akord.vault.listAll();
 ```
 
 ### Examples
-See our [demo app tutorial](https://akord-js-tutorial.akord.com) and learn how to create,
-contribute and access an Akord Vault.\
-We also have some example flows in our [tests](src/__tests__) repository.
+- See our [demo app tutorial](https://akord-js-tutorial.akord.com) and learn how to create,
+contribute and access an Akord Vault from .\
 
-## Modules
+- See example flows in our [tests repo](src/__tests__).
 
-### auth
+- See different setups on [recipes repo](https://github.com/Akord-com/recipes).
+
+## Authentication
+Use `Auth` module to handle authentication.
+
+```js
+import { Auth } from "@akord/akord-js";
+Auth.init()
+```
+
+- By default `Auth` is using SRP authentication
+- `Auth` stores tokens in `Storage` implementation 
+- `Storage` defaults to localStorage on web & memoryStorage on nodeJs
+- `Storage` implementation can be configured with `Auth.init({ storage: window.sessionStorage })`
+- `Auth` is automatically refreshing tokens in SRP mode
+- On server side it is recommended to use API keys: `Auth.init({ apiKey: 'your_api_key' })`
+- API key: can be generated over web app & over CLI
 
 #### `signIn(email, password)`
 
 - `email` (`string`, required)
 - `password` (`string`, required)
-- returns `Promise<{ akord, wallet, jwtToken }>` - Promise with Akord Client instance, JWT token & Akord Wallet
+- returns `Promise<{ wallet, jwt }>` - Promise with JWT token & Akord Wallet
 
 <details>
   <summary>example</summary>
 
 ```js
-const { akord, wallet, jwtToken } = await Auth.signIn("winston@gmail.com", "1984");
+const { wallet } = await Auth.signIn("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -102,7 +132,7 @@ const { akord, wallet, jwtToken } = await Auth.signIn("winston@gmail.com", "1984
   <summary>example</summary>
 
 ```js
-const wallet = await Auth.signUp("winston@gmail.com", "1984");
+const { wallet } = await Auth.signUp("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -119,6 +149,9 @@ const wallet = await Auth.signUp("winston@gmail.com", "1984");
 await Auth.verifyAccount("winston@gmail.com", 123456);
 ```
 </details>
+
+
+## Modules
 
 ### vault
 
