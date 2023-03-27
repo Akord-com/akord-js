@@ -23,6 +23,7 @@ export class Membership extends Encryptable {
     super(keys, null)
     this.id = membershipProto.id;
     this.owner = membershipProto.owner;
+    this.address = membershipProto.address;
     this.createdAt = membershipProto.createdAt;
     this.updatedAt = membershipProto.updatedAt;
     this.data = membershipProto.data;
