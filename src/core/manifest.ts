@@ -4,6 +4,7 @@ import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { createFileLike } from "./file";
 import { arrayToString } from "@akord/crypto";
+import { BadRequest } from "../errors/bad-request";
 
 export const CONTENT_TYPE = "application/x.arweave-manifest+json";
 export const FILE_TYPE = "application/json";
@@ -56,7 +57,7 @@ class ManifestService extends NodeService<Stack> {
   public async getVersion(vaultId: string, index?: number): Promise<JSON> {
     const manifest = await this.get(vaultId);
     if (!manifest) {
-      throw new Error("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
+      throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
     const manifestFile = await this.stackService.getVersion(manifest.id, index);
     return JSON.parse(arrayToString(manifestFile.data));

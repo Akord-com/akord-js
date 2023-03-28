@@ -3,6 +3,7 @@ import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
 import { ListOptions } from "../types/list-options";
+import { NotFound } from "../errors/not-found";
 
 type MemoCreateResult = {
   memoId: string,
@@ -134,7 +135,7 @@ class MemoService extends NodeService<Memo> {
         return key;
       }
     }
-    throw new Error("Could not find reaction: " + reaction + " for given user.")
+    throw new NotFound("Could not find reaction: " + reaction + " for given user.")
   }
 };
 

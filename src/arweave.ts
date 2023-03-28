@@ -1,4 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
+import { throwError } from "./errors/error";
+import { NotFound } from "./errors/not-found";
 
 const ARWEAVE_URL = "https://arweave.net/";
 
@@ -13,24 +15,20 @@ const getTxData = async (id: string) => {
     if (response.status == 200 || response.status == 202) {
       return bufferToArrayBuffer(response.data);
     } else {
-      throw new Error("Cannot fetch arweave transaction data: " + id);
+      throwError(response?.status, response?.data?.msg);
     }
   } catch (error) {
-    throw new Error("Cannot fetch arweave transaction data: " + id);
+    throwError(error.response?.status, error.response?.data?.msg);
   }
 };
 
 const getTxMetadata = async (id: string) => {
-  try {
-    const result = await graphql(getTransaction, { id });
-    const txMetadata = result?.data?.transactions?.edges[0]?.node;
-    if (!txMetadata) {
-      throw new Error("Cannot fetch arweave transaction metadata: " + id);
-    }
-    return txMetadata;
-  } catch (error) {
-    throw new Error("Cannot fetch arweave transaction metadata: " + id);
+  const result = await graphql(getTransaction, { id });
+  const txMetadata = result?.data?.transactions?.edges[0]?.node;
+  if (!txMetadata) {
+    throw new NotFound("Cannot fetch arweave transaction metadata: " + id);
   }
+  return txMetadata;
 };
 
 const getTransaction = /* GraphQL */ `
@@ -72,7 +70,7 @@ const graphql = async (query: any, variables: any) => {
     const response = await axios(config);
     return response.data;
   } catch (error) {
-    throw new Error("Error while trying to make fetch request");
+    throwError(error.response?.status, error.response?.data?.msg);
   }
 }
 

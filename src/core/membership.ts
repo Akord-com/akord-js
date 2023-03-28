@@ -6,6 +6,7 @@ import { Membership, RoleType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
+import { BadRequest } from "../errors/bad-request";
 
 type MembershipCreateResult = {
   membershipId: string,
@@ -360,7 +361,7 @@ class MembershipService extends Service {
     const object = await this.api.getMembership(membershipId, this.vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
     if (object.status !== status.PENDING && object.status !== status.INVITED) {
-      throw new Error("Cannot resend the invitation for member: " + membershipId +
+      throw new BadRequest("Cannot resend the invitation for member: " + membershipId +
         ". Found invalid status: " + object.status);
     }
     await this.api.inviteResend(object.vaultId, membershipId);

@@ -1,5 +1,6 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { status } from "../constants";
+import { NotFound } from "../errors/not-found";
 
 export enum nodeType {
   STACK = "Stack",
@@ -38,7 +39,7 @@ export abstract class Node extends Encryptable {
       if (this.versions && this.versions[index]) {
         return this.versions[index];
       } else {
-        throw new Error("A version with given index: " + index + " does not exist for node: " + this.id);
+        throw new NotFound("A version with given index: " + index + " does not exist for node: " + this.id);
       }
     } else {
       return this.versions && this.versions[this.versions.length - 1];
