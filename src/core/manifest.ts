@@ -133,7 +133,7 @@ class ManifestService extends NodeService<Stack> {
     // load and clean list of stacks
     const stacks = (await this.stackService.listAll(vaultId)).map((s) => {
       const { id, parentId, name, versions } = s;
-      return { id, parentId, name, versions };
+      return new Stack({ id, parentId, name, versions }, null);
     });
 
     const tree = treeify(folders, stacks);
