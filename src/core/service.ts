@@ -13,7 +13,7 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags } from '../constants';
+import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../constants';
 import lodash from "lodash";
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
@@ -21,8 +21,11 @@ import { NodeLike } from "../types/node";
 import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 declare const Buffer;
+
+export const STATE_CONTENT_TYPE = "application/json";
 
 class Service {
   api: Api
@@ -71,11 +74,15 @@ class Service {
         }
       }))
       this.setKeys(keys);
-      if (encryptionKeys.publicKey) {
-        this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
-      } else {
-        const publicKey = await this.dataEncrypter.wallet.decrypt(encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey);
-        this.setRawDataEncryptionPublicKey(publicKey);
+      try {
+        if (encryptionKeys.publicKey) {
+          this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
+        } else {
+          const publicKey = await this.dataEncrypter.wallet.decrypt(encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey);
+          this.setRawDataEncryptionPublicKey(publicKey);
+        }
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
       }
     }
   }
@@ -142,20 +149,28 @@ class Service {
       if (resourceUri) {
         const { fileData, headers } = await this.api.downloadFile(resourceUri);
         const encryptedPayload = this.getEncryptedPayload(fileData, headers);
-        if (encryptedPayload) {
-          avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);
-        } else {
-          const dataString = arrayToString(new Uint8Array(fileData.data));
-          avatar = await profileEncrypter.decryptRaw(dataString, true);
+        try {
+          if (encryptedPayload) {
+            avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);
+          } else {
+            const dataString = arrayToString(new Uint8Array(fileData.data));
+            avatar = await profileEncrypter.decryptRaw(dataString, true);
+          }
+        } catch (error) {
+          throw new IncorrectEncryptionKey(error);
         }
       }
-      const decryptedProfile = await profileEncrypter.decryptObject(
-        profileDetails,
-        ['fullName', 'name', 'phone'],
-      );
-      decryptedProfile.name = decryptedProfile.name || decryptedProfile.fullName;
-      delete decryptedProfile.fullName;
-      return { ...decryptedProfile, avatar }
+      try {
+        const decryptedProfile = await profileEncrypter.decryptObject(
+          profileDetails,
+          ['fullName', 'name', 'phone'],
+        );
+        decryptedProfile.name = decryptedProfile.name || decryptedProfile.fullName;
+        delete decryptedProfile.fullName;
+        return { ...decryptedProfile, avatar }
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
     }
     return {};
   }
@@ -166,7 +181,12 @@ class Service {
     if (this.isPublic) {
       processedData = data;
     } else {
-      const encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
+      let encryptedFile: EncryptedPayload;
+      try {
+        encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
       processedData = encryptedFile.encryptedData.ciphertext;
       const { address } = await this.getActiveKey();
       tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
@@ -185,8 +205,13 @@ class Service {
 
   protected async processWriteString(data: string) {
     if (this.isPublic) return data;
-    const encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data));
-    const decodedPayload = base64ToJson(encryptedPayload as string) as any;
+    let encryptedPayload: string;
+    try {
+      encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
+    }
+    const decodedPayload = base64ToJson(encryptedPayload) as any;
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
     delete decodedPayload.publicKey;
     return jsonToBase64(decodedPayload);
@@ -231,10 +256,14 @@ class Service {
     }
 
     const encryptedPayload = this.getEncryptedPayload(data, headers);
-    if (encryptedPayload) {
-      return this.dataEncrypter.decryptRaw(encryptedPayload, false);
-    } else {
-      return this.dataEncrypter.decryptRaw(data);
+    try {
+      if (encryptedPayload) {
+        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
+      } else {
+        return this.dataEncrypter.decryptRaw(data);
+      }
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
     }
   }
 
@@ -272,6 +301,7 @@ class Service {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
+      new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
       new Tag(protocolTags.SIGNATURE, signature),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
       new Tag(protocolTags.VAULT_ID, this.vaultId),

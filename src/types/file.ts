@@ -4,6 +4,7 @@ import { Blob } from "buffer";
 import * as mime from "mime-types";
 import { BinaryLike } from "crypto";
 import { Readable } from "stream";
+import { NotFound } from "../errors/not-found";
 
 export type FileLike = NodeJs.File | File
 
@@ -26,7 +27,7 @@ export namespace NodeJs {
 
     static fromPath(filePath: string) {
       if (!fs.existsSync(filePath)) {
-        throw new Error("Could not find a file in your filesystem: " + filePath);
+        throw new NotFound("Could not find a file in your filesystem: " + filePath);
       }
       const stats = fs.statSync(filePath);
       const name = path.basename(filePath);

@@ -1,11 +1,13 @@
-import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { Encrypter, generateKeyPair } from "@akord/crypto";
-import { Service } from "./service";
+import { EncryptedKeys, Encrypter, generateKeyPair } from "@akord/crypto";
+import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Membership, RoleType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
+import { BadRequest } from "../errors/bad-request";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 type MembershipCreateResult = {
   membershipId: string,
@@ -40,10 +42,7 @@ class MembershipService extends Service {
     let membership: Membership;
     if (shouldDecrypt) {
       const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId);
-      membership = new Membership(membershipProto, keys);
-      if (isEncrypted) {
-        await membership.decrypt();
-      }
+      membership = await this.processMembership(membershipProto, isEncrypted, keys);
     }
     else {
       membership = new Membership(membershipProto);
@@ -63,11 +62,7 @@ class MembershipService extends Service {
       items: await Promise.all(
         response.items
           .map(async (membershipProto: Membership) => {
-            const membership = new Membership(membershipProto, keys);
-            if (isEncrypted) {
-              await membership.decrypt();
-            }
-            return membership as Membership;
+            return await this.processMembership(membershipProto, isEncrypted && listOptions.shouldDecrypt, keys);
           })) as Membership[],
       nextToken: response.nextToken
     }
@@ -109,7 +104,12 @@ class MembershipService extends Service {
 
     const { address, publicKey } = await this.getUserEncryptionInfo(email, await this.wallet.getAddress());
     const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
-    const keys = await keysEncrypter.encryptMemberKeys([]);
+    let keys: EncryptedKeys[];
+    try {
+      keys = await keysEncrypter.encryptMemberKeys([]);
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
+    }
     const body = {
       keys: keys.map((keyPair: any) => {
         delete keyPair.publicKey;
@@ -134,10 +134,7 @@ class MembershipService extends Service {
       input,
       this.tags
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { membershipId, transactionId: id, object: membership };
   }
 
@@ -161,10 +158,7 @@ class MembershipService extends Service {
       { function: this.function, data },
       await this.getTags()
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -178,13 +172,18 @@ class MembershipService extends Service {
     this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
     const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
-    const keys = await keysEncrypter.encryptMemberKeys([]);
+    let keys: EncryptedKeys[];
+    try {
+      keys = await keysEncrypter.encryptMemberKeys([]);
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
+    }
     const body = {
       keys: keys.map((keyPair: any) => {
         delete keyPair.publicKey;
         return keyPair;
       })
-    };
+    }
     this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
@@ -202,10 +201,7 @@ class MembershipService extends Service {
       input,
       this.tags
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -223,10 +219,7 @@ class MembershipService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -244,10 +237,7 @@ class MembershipService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -280,12 +270,18 @@ class MembershipService extends Service {
             this.dataEncrypter.keys,
             publicKey
           );
-          const keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
+          let keys: EncryptedKeys[];;
+          try {
+            keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
+          } catch (error) {
+            throw new IncorrectEncryptionKey(error);
+          }
           const newState = await this.mergeState({ keys });
           const signature = await this.signData(newState);
           newMembershipStates.push({
             data: newState, tags: [
               new Tag("Data-Type", "State"),
+              new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
               new Tag(protocolTags.SIGNATURE, signature),
               new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
               new Tag(protocolTags.VAULT_ID, this.vaultId),
@@ -309,10 +305,7 @@ class MembershipService extends Service {
       { function: this.function, data },
       this.tags
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -331,10 +324,7 @@ class MembershipService extends Service {
       { function: this.function, role },
       await this.getTags()
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -360,7 +350,7 @@ class MembershipService extends Service {
     const object = await this.api.getMembership(membershipId, this.vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE_RESEND);
     if (object.status !== status.PENDING && object.status !== status.INVITED) {
-      throw new Error("Cannot resend the invitation for member: " + membershipId +
+      throw new BadRequest("Cannot resend the invitation for member: " + membershipId +
         ". Found invalid status: " + object.status);
     }
     await this.api.inviteResend(object.vaultId, membershipId);
@@ -378,10 +368,7 @@ class MembershipService extends Service {
       { function: this.function, data },
       await this.getTags()
     );
-    const membership = new Membership(object, this.keys);
-    if (!this.isPublic) {
-      await membership.decrypt();
-    }
+    const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
   }
 
@@ -396,6 +383,18 @@ class MembershipService extends Service {
   protected async getTags(): Promise<Tags> {
     const tags = await super.getTags();
     return tags.concat(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
+  }
+
+  protected async processMembership(object: Membership, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Membership> {
+    const membership = new Membership(object, keys);
+    if (shouldDecrypt) {
+      try {
+        await membership.decrypt();
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return membership;
   }
 };
 
