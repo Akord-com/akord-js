@@ -6,6 +6,9 @@ import { Transaction } from "../types/transaction";
 import { isPaginated, Paginated, PAGINATION_HEADER } from "../types/paginated";
 import { Vault } from "../types/vault";
 import { Auth } from "@akord/akord-auth";
+import { Unauthorized } from "../errors/unauthorized";
+import { throwError } from "../errors/error";
+import { BadRequest } from "../errors/bad-request";
 
 export class ApiClient {
   private _storageurl: string;
@@ -211,7 +214,7 @@ export class ApiClient {
   async fetch(method: string, url: string): Promise<any> {
     const auth = await Auth.getAuthorization()
     if (!auth && !this._isPublic) {
-      throw Error("Authentication is required to use Akord API");
+      throw new Unauthorized("Authentication is required to use Akord API");
     }
 
     const config = {
@@ -225,11 +228,15 @@ export class ApiClient {
     if (this._data) {
       config.data = this._data;
     }
-    const response = await axios(config);
-    if (isPaginated(response)) {
-      return { items: response.data, nextToken: response.headers[PAGINATION_HEADER] }
+    try {
+      const response = await axios(config);
+      if (isPaginated(response)) {
+        return { items: response.data, nextToken: response.headers[PAGINATION_HEADER] }
+      }
+      return response.data;
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
     }
-    return response.data;
   }
 
   addQueryParams = function (url: string, params: any) {
@@ -253,10 +260,10 @@ export class ApiClient {
    */
   async transaction<T>() {
     if (!this._input) {
-      throw Error("Input is required to use /transactions endpoint");
+      throw new BadRequest("Input is required to use /transactions endpoint");
     }
     if (!this._tags) {
-      throw Error("Tags is required to use /transactions endpoint");
+      throw new BadRequest("Tags is required to use /transactions endpoint");
     }
 
     this.data({
@@ -277,7 +284,7 @@ export class ApiClient {
    */
   async asyncTransaction() {
     if (!this._resourceId) {
-      throw Error("Resource id is required to use /transactions/files endpoint");
+      throw new BadRequest("Resource id is required to use /transactions/files endpoint");
     }
 
     this.data({
@@ -364,10 +371,10 @@ export class ApiClient {
   private async upload() {
     const auth = await Auth.getAuthorization();
     if (!auth) {
-      throw Error("Authentication is required to use Akord API");
+      throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._data) {
-      throw Error('Missing data to upload. Use ApiClient#data() to add it')
+      throw new BadRequest('Missing data to upload. Use ApiClient#data() to add it')
     }
     if (!this._resourceId) {
       this._resourceId = this._isPublic ? this._publicDataDir + '/' + uuid() : uuid();
@@ -414,17 +421,21 @@ export class ApiClient {
       config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
     }
 
-    const response = await axios(config);
-    return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx }
+    try {
+      const response = await axios(config);
+      return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx };
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
   }
 
   private async download() {
     const auth = await Auth.getAuthorization();
     if (!auth && !this._isPublic) {
-      throw Error("Authentication is required to use Akord API");
+      throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
-      throw Error('Missing resource id to download')
+      throw new BadRequest('Missing resource id to download')
     }
 
     const me = this;
@@ -453,8 +464,11 @@ export class ApiClient {
       }
     }
 
-    const response = await axios(config);
-    const downloadResponse = { resourceUrl: this._resourceId, response: response }
-    return downloadResponse
+    try {
+      const response = await axios(config);
+      return { resourceUrl: this._resourceId, response: response };
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
   }
 }

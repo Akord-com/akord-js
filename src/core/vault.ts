@@ -6,6 +6,7 @@ import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Tag } from "../types/contract";
 import { ListOptions } from "../types/list-options";
 import { Paginated } from "../types/paginated";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 type VaultCreateResult = {
   vaultId: string,
@@ -38,16 +39,19 @@ class VaultService extends Service {
     this.setActionRef(actionRefs.VAULT_CREATE);
     this.setIsPublic(isPublic);
 
-    let publicKeys: Array<string>, keys: Array<EncryptedKeys>;
+    let keys: Array<EncryptedKeys>;
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
       this.setRawDataEncryptionPublicKey(keyPair.publicKey);
       const userPublicKey = this.wallet.publicKeyRaw();
       const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
-      keys = [await keysEncrypter.encryptMemberKey(keyPair)];
-      this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
-      publicKeys = [arrayToBase64(keyPair.publicKey)];
+      try {
+        keys = [await keysEncrypter.encryptMemberKey(keyPair)];
+        this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
     }
 
     const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
@@ -105,10 +109,7 @@ class VaultService extends Service {
       { function: this.function, data },
       this.tags
     );
-    const vault = new Vault(object, this.keys);
-    if (!this.isPublic) {
-      await vault.decrypt();
-    }
+    const vault = await this.processVault(object, true, this.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
   }
 
@@ -130,10 +131,7 @@ class VaultService extends Service {
       { function: this.function, data },
       await this.getTags()
     );
-    const vault = new Vault(object, this.keys);
-    if (!this.isPublic) {
-      await vault.decrypt();
-    }
+    const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -151,10 +149,7 @@ class VaultService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    const vault = new Vault(object, this.keys);
-    if (!this.isPublic) {
-      await vault.decrypt();
-    }
+    const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -172,10 +167,7 @@ class VaultService extends Service {
       { function: this.function },
       await this.getTags()
     );
-    const vault = new Vault(object, this.keys);
-    if (!this.isPublic) {
-      await vault.decrypt();
-    }
+    const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -198,8 +190,7 @@ class VaultService extends Service {
       return new Vault(result, []);
     }
     const { keys } = await this.api.getMembershipKeys(vaultId);
-    const vault = new Vault(result, keys);
-    await vault.decrypt();
+    const vault = await this.processVault(result, shouldDecrypt, keys);
     return vault
   }
 
@@ -213,11 +204,8 @@ class VaultService extends Service {
       items: await Promise.all(
         response.items
           .map(async (vaultProto: Vault) => {
-            const vault = new Vault(vaultProto, vaultProto.keys);
-            if (listOptions.shouldDecrypt && !vault.public) {
-              await vault.decrypt();
-            }
-            return vault as Vault;
+            const vault = await this.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
+            return vault;
           })) as Vault[],
       nextToken: response.nextToken
     }
@@ -246,6 +234,18 @@ class VaultService extends Service {
     await super.setVaultContext(vaultId);
     this.setObjectId(vaultId);
     this.setObject(this.vault);
+  }
+
+  protected async processVault(object: Vault, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Vault> {
+    const vault = new Vault(object, keys);
+    if (shouldDecrypt && !vault.public) {
+      try {
+        await vault.decrypt();
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return vault;
   }
 };
 

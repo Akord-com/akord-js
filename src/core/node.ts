@@ -6,6 +6,7 @@ import { ListOptions } from '../types/list-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
+import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 
 type NodeUpdateResult = {
   transactionId: string,
@@ -53,10 +54,7 @@ class NodeService<T = NodeLike> extends Service {
       input,
       this.tags
     );
-    const node = this.nodeInstance(object, this.keys) as any;
-    if (!this.isPublic) {
-      await node.decrypt();
-    }
+    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
     return { nodeId, transactionId: id, object: node };
   }
 
@@ -77,10 +75,7 @@ class NodeService<T = NodeLike> extends Service {
       input,
       this.tags
     );
-    const node = this.nodeInstance(object, this.keys) as any;
-    if (!this.isPublic) {
-      await node.decrypt();
-    }
+    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
     return { transactionId: id, object: node };
   }
 
@@ -151,10 +146,7 @@ class NodeService<T = NodeLike> extends Service {
   public async get(nodeId: string, vaultId?: string, shouldDecrypt = true): Promise<T> {
     const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, vaultId);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
-    const node = this.nodeInstance(nodeProto, keys);
-    if (isEncrypted && shouldDecrypt) {
-      await node.decrypt();
-    }
+    const node = await this.processNode(nodeProto, isEncrypted && shouldDecrypt, keys);
     return node as T;
   }
 
@@ -170,11 +162,7 @@ class NodeService<T = NodeLike> extends Service {
       items: await Promise.all(
         response.items
           .map(async nodeProto => {
-            const node = this.nodeInstance(nodeProto, keys);
-            if (isEncrypted) {
-              await node.decrypt();
-            }
-            return node as NodeLike;
+            return await this.processNode(nodeProto, isEncrypted && listOptions.shouldDecrypt, keys);
           })) as NodeLike[],
       nextToken: response.nextToken
     }
@@ -215,6 +203,18 @@ class NodeService<T = NodeLike> extends Service {
   protected async getTags(): Promise<Tags> {
     const tags = await super.getTags();
     return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
+  }
+
+  protected async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<NodeLike> {
+    const node = this.nodeInstance(object, keys);
+    if (shouldDecrypt) {
+      try {
+        await node.decrypt();
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return node;
   }
 }
 
