@@ -3,7 +3,7 @@ import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
-import { isPaginated, Paginated, PAGINATION_HEADER } from "../types/paginated";
+import { nextToken, isPaginated, Paginated } from "../types/paginated";
 import { Vault } from "../types/vault";
 import { Auth } from "@akord/akord-auth";
 import { Unauthorized } from "../errors/unauthorized";
@@ -231,7 +231,7 @@ export class ApiClient {
     try {
       const response = await axios(config);
       if (isPaginated(response)) {
-        return { items: response.data, nextToken: response.headers[PAGINATION_HEADER] }
+        return { items: response.data, nextToken: nextToken(response) }
       }
       return response.data;
     } catch (error) {
