@@ -4,6 +4,8 @@ import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
 import { ListOptions } from "../types/list-options";
 import { NotFound } from "../errors/not-found";
+import { EncryptedKeys } from "@akord/crypto";
+import { BadRequest } from "../errors/bad-request";
 
 type MemoCreateResult = {
   memoId: string,
@@ -65,10 +67,7 @@ class MemoService extends NodeService<Memo> {
       { function: this.function, data: dataTxId },
       this.tags
     );
-    const memo = new Memo(object, this.keys);
-    if (!this.isPublic) {
-      await memo.decrypt();
-    }
+    const memo = await this.processMemo(object, !this.isPublic, this.keys);
     return { transactionId: id, object: memo };
   }
 
@@ -91,10 +90,7 @@ class MemoService extends NodeService<Memo> {
       { function: this.function, data: dataTxId },
       this.tags
     );
-    const memo = new Memo(object, this.keys);
-    if (!this.isPublic) {
-      await memo.decrypt();
-    }
+    const memo = await this.processMemo(object, !this.isPublic, this.keys);
     return { transactionId: id, object: memo };
   }
 
@@ -136,6 +132,18 @@ class MemoService extends NodeService<Memo> {
       }
     }
     throw new NotFound("Could not find reaction: " + reaction + " for given user.")
+  }
+
+  protected async processMemo(object: Memo, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Memo> {
+    const memo = new Memo(object, keys);
+    if (shouldDecrypt) {
+      try {
+        await memo.decrypt();
+      } catch (error) {
+        throw new BadRequest("Incorrect encryption key.");
+      }
+    }
+    return memo;
   }
 };
 

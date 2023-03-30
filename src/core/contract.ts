@@ -1,4 +1,5 @@
 import { Service } from "../core";
+import { BadRequest } from "../errors/bad-request";
 import { ContractState, Tags } from "../types/contract";
 import { Transaction } from "../types/transaction";
 
@@ -23,7 +24,11 @@ class ContractService extends Service {
     if (contract.public) {
       return contract;
     } else {
-      await contract.decrypt();
+      try {
+        await contract.decrypt();
+      } catch (error) {
+        throw new BadRequest("Incorrect encryption key.");
+      }
     }
     return contract;
   }
