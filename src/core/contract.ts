@@ -27,7 +27,7 @@ class ContractService extends Service {
       try {
         await contract.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
     return contract;

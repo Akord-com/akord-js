@@ -140,7 +140,7 @@ class MemoService extends NodeService<Memo> {
       try {
         await memo.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
     return memo;

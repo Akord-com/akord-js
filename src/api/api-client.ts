@@ -235,7 +235,7 @@ export class ApiClient {
       }
       return response.data;
     } catch (error) {
-      throwError(error.response?.status, error.response?.data?.msg);
+      throwError(error.response?.status, error.response?.data?.msg, error);
     }
   }
 
@@ -425,7 +425,7 @@ export class ApiClient {
       const response = await axios(config);
       return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx };
     } catch (error) {
-      throwError(error.response?.status, error.response?.data?.msg);
+      throwError(error.response?.status, error.response?.data?.msg, error);
     }
   }
 
@@ -468,7 +468,7 @@ export class ApiClient {
       const response = await axios(config);
       return { resourceUrl: this._resourceId, response: response };
     } catch (error) {
-      throwError(error.response?.status, error.response?.data?.msg);
+      throwError(error.response?.status, error.response?.data?.msg, error);
     }
   }
 }

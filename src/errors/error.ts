@@ -4,17 +4,17 @@ import { InternalError } from "./internal-error";
 import { NotFound } from "./not-found";
 import { Unauthorized } from "./unauthorized";
 
-export const throwError = (status: number, message?: string) => {
+export const throwError = (status: number, message?: string, error?: any) => {
   switch (status) {
     case 400:
-      throw new BadRequest(message);
+      throw new BadRequest(message, error);
     case 401:
-      throw new Unauthorized(message);
+      throw new Unauthorized(message, error);
     case 403:
-      throw new Forbidden(message);
+      throw new Forbidden(message, error);
     case 404:
-      throw new NotFound(message);
+      throw new NotFound(message, error);
     default:
-      throw new InternalError("Internal error. Please try again or contact Akord support.");
+      throw new InternalError("Internal error. Please try again or contact Akord support.", error);
   }
 }

@@ -211,7 +211,7 @@ class NodeService<T = NodeLike> extends Service {
       try {
         await node.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
     return node;

@@ -50,7 +50,7 @@ class VaultService extends Service {
         keys = [await keysEncrypter.encryptMemberKey(keyPair)];
         this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
 
@@ -240,7 +240,7 @@ class VaultService extends Service {
       try {
         await vault.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
     return vault;

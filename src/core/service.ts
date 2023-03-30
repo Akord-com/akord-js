@@ -80,7 +80,7 @@ class Service {
           this.setRawDataEncryptionPublicKey(publicKey);
         }
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
   }
@@ -155,7 +155,7 @@ class Service {
             avatar = await profileEncrypter.decryptRaw(dataString, true);
           }
         } catch (error) {
-          throw new BadRequest("Incorrect encryption key.");
+          throw new BadRequest("Incorrect encryption key.", error);
         }
       }
       try {
@@ -167,7 +167,7 @@ class Service {
         delete decryptedProfile.fullName;
         return { ...decryptedProfile, avatar }
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
     }
     return {};
@@ -183,7 +183,7 @@ class Service {
       try {
         encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.");
+        throw new BadRequest("Incorrect encryption key.", error);
       }
       processedData = encryptedFile.encryptedData.ciphertext;
       const { address } = await this.getActiveKey();
@@ -207,7 +207,7 @@ class Service {
     try {
       encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
     } catch (error) {
-      throw new BadRequest("Incorrect encryption key.");
+      throw new BadRequest("Incorrect encryption key.", error);
     }
     const decodedPayload = base64ToJson(encryptedPayload) as any;
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
@@ -261,7 +261,7 @@ class Service {
         return this.dataEncrypter.decryptRaw(data);
       }
     } catch (error) {
-      throw new BadRequest("Incorrect encryption key.");
+      throw new BadRequest("Incorrect encryption key.", error);
     }
   }
 

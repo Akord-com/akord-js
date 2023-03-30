@@ -18,7 +18,7 @@ const getTxData = async (id: string) => {
       throwError(response?.status, response?.data?.msg);
     }
   } catch (error) {
-    throwError(error.response?.status, error.response?.data?.msg);
+    throwError(error.response?.status, error.response?.data?.msg, error);
   }
 };
 
@@ -70,7 +70,7 @@ const graphql = async (query: any, variables: any) => {
     const response = await axios(config);
     return response.data;
   } catch (error) {
-    throwError(error.response?.status, error.response?.data?.msg);
+    throwError(error.response?.status, error.response?.data?.msg, error);
   }
 }
 
