@@ -21,7 +21,7 @@ import { NodeLike } from "../types/node";
 import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
-import { BadRequest } from "../errors/bad-request";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 declare const Buffer;
 
@@ -80,7 +80,7 @@ class Service {
           this.setRawDataEncryptionPublicKey(publicKey);
         }
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
   }
@@ -155,7 +155,7 @@ class Service {
             avatar = await profileEncrypter.decryptRaw(dataString, true);
           }
         } catch (error) {
-          throw new BadRequest("Incorrect encryption key.", error);
+          throw new IncorrectEncryptionKey(error);
         }
       }
       try {
@@ -167,7 +167,7 @@ class Service {
         delete decryptedProfile.fullName;
         return { ...decryptedProfile, avatar }
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
     return {};
@@ -183,7 +183,7 @@ class Service {
       try {
         encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
       processedData = encryptedFile.encryptedData.ciphertext;
       const { address } = await this.getActiveKey();
@@ -207,7 +207,7 @@ class Service {
     try {
       encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
     } catch (error) {
-      throw new BadRequest("Incorrect encryption key.", error);
+      throw new IncorrectEncryptionKey(error);
     }
     const decodedPayload = base64ToJson(encryptedPayload) as any;
     decodedPayload.publicAddress = (await this.getActiveKey()).address;
@@ -261,7 +261,7 @@ class Service {
         return this.dataEncrypter.decryptRaw(data);
       }
     } catch (error) {
-      throw new BadRequest("Incorrect encryption key.", error);
+      throw new IncorrectEncryptionKey(error);
     }
   }
 

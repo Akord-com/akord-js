@@ -7,6 +7,7 @@ import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 type MembershipCreateResult = {
   membershipId: string,
@@ -107,7 +108,7 @@ class MembershipService extends Service {
     try {
       keys = await keysEncrypter.encryptMemberKeys([]);
     } catch (error) {
-      throw new BadRequest("Incorrect encryption key.", error);
+      throw new IncorrectEncryptionKey(error);
     }
     const body = {
       keys: keys.map((keyPair: any) => {
@@ -175,7 +176,7 @@ class MembershipService extends Service {
     try {
       keys = await keysEncrypter.encryptMemberKeys([]);
     } catch (error) {
-      throw new BadRequest("Incorrect encryption key.", error);
+      throw new IncorrectEncryptionKey(error);
     }
     const body = {
       keys: keys.map((keyPair: any) => {
@@ -273,7 +274,7 @@ class MembershipService extends Service {
           try {
             keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
           } catch (error) {
-            throw new BadRequest("Incorrect encryption key.", error);
+            throw new IncorrectEncryptionKey(error);
           }
           const newState = await this.mergeState({ keys });
           const signature = await this.signData(newState);
@@ -389,7 +390,7 @@ class MembershipService extends Service {
       try {
         await membership.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
     return membership;

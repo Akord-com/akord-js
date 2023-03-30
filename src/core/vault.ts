@@ -6,7 +6,7 @@ import { Service } from "./service";
 import { Tag } from "../types/contract";
 import { ListOptions } from "../types/list-options";
 import { Paginated } from "../types/paginated";
-import { BadRequest } from "../errors/bad-request";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 type VaultCreateResult = {
   vaultId: string,
@@ -50,7 +50,7 @@ class VaultService extends Service {
         keys = [await keysEncrypter.encryptMemberKey(keyPair)];
         this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
 
@@ -240,7 +240,7 @@ class VaultService extends Service {
       try {
         await vault.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
     return vault;

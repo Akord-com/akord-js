@@ -5,7 +5,7 @@ import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
 import { ListOptions } from "../types/list-options";
 import { NotFound } from "../errors/not-found";
 import { EncryptedKeys } from "@akord/crypto";
-import { BadRequest } from "../errors/bad-request";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 type MemoCreateResult = {
   memoId: string,
@@ -140,7 +140,7 @@ class MemoService extends NodeService<Memo> {
       try {
         await memo.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
     return memo;

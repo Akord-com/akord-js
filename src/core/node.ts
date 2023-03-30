@@ -6,7 +6,7 @@ import { ListOptions } from '../types/list-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
-import { BadRequest } from '../errors/bad-request';
+import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 
 type NodeUpdateResult = {
   transactionId: string,
@@ -211,7 +211,7 @@ class NodeService<T = NodeLike> extends Service {
       try {
         await node.decrypt();
       } catch (error) {
-        throw new BadRequest("Incorrect encryption key.", error);
+        throw new IncorrectEncryptionKey(error);
       }
     }
     return node;
