@@ -13,7 +13,7 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags } from '../constants';
+import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../constants';
 import lodash from "lodash";
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
@@ -24,6 +24,8 @@ import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 declare const Buffer;
+
+export const STATE_CONTENT_TYPE = "application/json";
 
 class Service {
   api: Api
@@ -299,6 +301,7 @@ class Service {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
+      new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
       new Tag(protocolTags.SIGNATURE, signature),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
       new Tag(protocolTags.VAULT_ID, this.vaultId),

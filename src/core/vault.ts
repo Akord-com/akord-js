@@ -1,8 +1,8 @@
-import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, arrayToBase64, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
-import { Service } from "./service";
+import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Tag } from "../types/contract";
 import { ListOptions } from "../types/list-options";
 import { Paginated } from "../types/paginated";
@@ -83,6 +83,7 @@ class VaultService extends Service {
       {
         data: vaultData, tags: [
           new Tag("Data-Type", "State"),
+          new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
           new Tag(protocolTags.SIGNATURE, vaultSignature),
           new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
           new Tag(protocolTags.VAULT_ID, this.vaultId),
@@ -92,6 +93,7 @@ class VaultService extends Service {
       {
         data: membershipData, tags: [
           new Tag("Data-Type", "State"),
+          new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
           new Tag(protocolTags.SIGNATURE, membershipSignature),
           new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
           new Tag(protocolTags.VAULT_ID, this.vaultId),

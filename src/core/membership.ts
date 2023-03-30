@@ -1,7 +1,7 @@
-import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { Service } from "./service";
 import { EncryptedKeys, Encrypter, generateKeyPair } from "@akord/crypto";
+import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Membership, RoleType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
@@ -281,6 +281,7 @@ class MembershipService extends Service {
           newMembershipStates.push({
             data: newState, tags: [
               new Tag("Data-Type", "State"),
+              new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
               new Tag(protocolTags.SIGNATURE, signature),
               new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
               new Tag(protocolTags.VAULT_ID, this.vaultId),

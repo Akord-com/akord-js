@@ -3,8 +3,7 @@ export const apiConfig = (env: string) => {
     case "v2":
     default:
       return {
-        // apiurl: "https://api.akord.com",
-        apiurl: "http://localhost:3000",
+        apiurl: "https://api.akord.com",
         storageurl: "https://api.v2.prod.permapost-storage.akord.com",
       };
     case "dev":
