@@ -12,9 +12,9 @@ export type GetOptions = {
 }
 
 export type VaultGetOptions = GetOptions & {
-  withNodes: boolean
-  withMemberships: boolean
-  withMemos: boolean
-  withStacks: boolean
-  withFolders: boolean
+  withNodes?: boolean
+  withMemberships?: boolean
+  withMemos?: boolean
+  withStacks?: boolean
+  withFolders?: boolean
 }
