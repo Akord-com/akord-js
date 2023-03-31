@@ -56,7 +56,7 @@ class Service {
     )
   }
 
-  setKeys(keys: any) {
+  setKeys(keys: EncryptedKeys[]) {
     this.keys = keys;
     this.dataEncrypter.setKeys(keys);
   }
@@ -112,7 +112,7 @@ class Service {
       const keys = encryptionKeys.keys.map(((keyPair: any) => {
         return {
           encPrivateKey: keyPair.encPrivateKey,
-          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+          encPublicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
         }
       }))
       this.setKeys(keys);
