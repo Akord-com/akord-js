@@ -2,7 +2,7 @@ import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
 import { NodeLike, NodeType } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
-import { ListOptions } from '../types/list-options';
+import { GetOptions, ListOptions } from '../types/query-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
@@ -20,6 +20,7 @@ class NodeService<T = NodeLike> extends Service {
 
   defaultListOptions = {
     shouldDecrypt: true,
+    parentId: undefined,
     filter: {
       status: { ne: status.REVOKED },
       and: {
@@ -27,6 +28,10 @@ class NodeService<T = NodeLike> extends Service {
       }
     }
   } as ListOptions;
+
+  defaultGetOptions = {
+    shouldDecrypt: true,
+  } as GetOptions;
 
   protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
     nodeId: string,
@@ -143,26 +148,26 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {string} nodeId
    * @returns Promise with the decrypted node
    */
-  public async get(nodeId: string, vaultId?: string, shouldDecrypt = true): Promise<T> {
-    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, vaultId);
+  public async get(nodeId: string, options: GetOptions = this.defaultGetOptions): Promise<T> {
+    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, options.vaultId);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
-    const node = await this.processNode(nodeProto, isEncrypted && shouldDecrypt, keys);
+    const node = await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
     return node as T;
   }
 
   /**
    * @param  {string} vaultId
-   * @param  {ListOptions} listOptions
+   * @param  {ListOptions} options
    * @returns Promise with paginated nodes within given vault
    */
-  public async list(vaultId: string, parentId?: string, listOptions: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, parentId, listOptions.filter, listOptions.limit, listOptions.nextToken);
-    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+  public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, options.parentId, options.filter, options.limit, options.nextToken);
+    const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
       items: await Promise.all(
         response.items
           .map(async nodeProto => {
-            return await this.processNode(nodeProto, isEncrypted && listOptions.shouldDecrypt, keys);
+            return await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
           })) as NodeLike[],
       nextToken: response.nextToken
     }
@@ -170,17 +175,17 @@ class NodeService<T = NodeLike> extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {ListOptions} listOptions
+   * @param  {ListOptions} options
    * @returns Promise with all nodes within given vault
    */
-  public async listAll(vaultId: string, parentId?: string, listOptions: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
+  public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
     let token = null;
     let nodeArray = [] as NodeLike[];
     do {
-      const { items, nextToken } = await this.list(vaultId, parentId, listOptions);
+      const { items, nextToken } = await this.list(vaultId, options);
       nodeArray = nodeArray.concat(items);
       token = nextToken;
-      listOptions.nextToken = nextToken;
+      options.nextToken = nextToken;
       if (nextToken === "null") {
         token = null;
       }

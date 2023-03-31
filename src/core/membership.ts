@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, generateKeyPair } from "@akord/crypto";
 import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Membership, RoleType } from "../types/membership";
-import { ListOptions } from "../types/list-options";
+import { GetOptions, ListOptions } from "../types/query-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
@@ -33,14 +33,18 @@ class MembershipService extends Service {
     }
   } as ListOptions;
 
+  defaultGetOptions = {
+    shouldDecrypt: true,
+  } as GetOptions;
+
   /**
    * @param  {string} membershipId
    * @returns Promise with the decrypted membership
    */
-  public async get(membershipId: string, vaultId?: string, shouldDecrypt = true): Promise<Membership> {
-    const membershipProto = await this.api.getMembership(membershipId, vaultId);
+  public async get(membershipId: string, options: GetOptions = this.defaultGetOptions): Promise<Membership> {
+    const membershipProto = await this.api.getMembership(membershipId, options.vaultId);
     let membership: Membership;
-    if (shouldDecrypt) {
+    if (options.shouldDecrypt) {
       const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId);
       membership = await this.processMembership(membershipProto, isEncrypted, keys);
     }
@@ -52,17 +56,17 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {ListOptions} listOptions
+   * @param  {ListOptions} options
    * @returns Promise with paginated memberships within given vault
    */
-  public async list(vaultId: string, listOptions: ListOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
-    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.filter, listOptions.limit, listOptions.nextToken);
-    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+  public async list(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
+    const response = await this.api.getMembershipsByVaultId(vaultId, options.filter, options.limit, options.nextToken);
+    const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     return {
       items: await Promise.all(
         response.items
           .map(async (membershipProto: Membership) => {
-            return await this.processMembership(membershipProto, isEncrypted && listOptions.shouldDecrypt, keys);
+            return await this.processMembership(membershipProto, isEncrypted && options.shouldDecrypt, keys);
           })) as Membership[],
       nextToken: response.nextToken
     }
@@ -70,17 +74,17 @@ class MembershipService extends Service {
 
   /**
   * @param  {string} vaultId
-  * @param  {ListOptions} listOptions
+  * @param  {ListOptions} options
   * @returns Promise with all memberships within given vault
   */
-  public async listAll(vaultId: string, listOptions: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
+  public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
     let token = null;
     let nodeArray = [] as Membership[];
     do {
-      const { items, nextToken } = await this.list(vaultId, listOptions);
+      const { items, nextToken } = await this.list(vaultId, options);
       nodeArray = nodeArray.concat(items);
       token = nextToken;
-      listOptions.nextToken = nextToken;
+      options.nextToken = nextToken;
       if (nextToken === "null") {
         token = null;
       }

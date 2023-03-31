@@ -2,7 +2,7 @@ import { NodeService } from "./node";
 import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
-import { ListOptions } from "../types/list-options";
+import { ListOptions } from "../types/query-options";
 import { NotFound } from "../errors/not-found";
 import { EncryptedKeys } from "@akord/crypto";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";

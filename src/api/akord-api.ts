@@ -9,6 +9,7 @@ import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
+import { VaultGetOptions } from "../types/query-options";
 
 export default class AkordApi extends Api {
 
@@ -163,10 +164,17 @@ export default class AkordApi extends Api {
       .getMembership();
   };
 
-  public async getVault(id: string): Promise<Vault> {
+  public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
     return await new ApiClient()
       .env(this.config)
       .resourceId(id)
+      .queryParams({
+        withNodes: options?.withNodes,
+        withMemberships: options?.withMemberships,
+        withMemos: options?.withMemos,
+        withStacks: options?.withStacks,
+        withFolders: options?.withFolders,
+      })
       .getVault();
   };
 
