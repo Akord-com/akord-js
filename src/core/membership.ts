@@ -9,17 +9,6 @@ import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
-type MembershipCreateResult = {
-  membershipId: string,
-  transactionId: string,
-  object: Membership
-}
-
-type MembershipUpdateResult = {
-  transactionId: string,
-  object: Membership
-}
-
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
 
@@ -73,10 +62,10 @@ class MembershipService extends Service {
   }
 
   /**
-  * @param  {string} vaultId
-  * @param  {ListOptions} options
-  * @returns Promise with all memberships within given vault
-  */
+   * @param  {string} vaultId
+   * @param  {ListOptions} options
+   * @returns Promise with all memberships within given vault
+   */
   public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
     let token = null;
     let nodeArray = [] as Membership[];
@@ -401,6 +390,17 @@ class MembershipService extends Service {
     return membership;
   }
 };
+
+type MembershipCreateResult = {
+  membershipId: string,
+  transactionId: string,
+  object: Membership
+}
+
+type MembershipUpdateResult = {
+  transactionId: string,
+  object: Membership
+}
 
 export {
   MembershipService

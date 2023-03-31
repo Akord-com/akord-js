@@ -2,12 +2,6 @@ import { NodeService } from "./node";
 import { actionRefs, functions } from "../constants";
 import { Folder, nodeType } from "../types/node";
 
-type FolderCreateResult = {
-  folderId: string,
-  transactionId: string,
-  object: Folder
-}
-
 class FolderService extends NodeService<Folder> {
   objectType = nodeType.FOLDER;
   NodeType = Folder;
@@ -29,6 +23,12 @@ class FolderService extends NodeService<Folder> {
     return { folderId: nodeId, transactionId, object };
   }
 };
+
+type FolderCreateResult = {
+  folderId: string,
+  transactionId: string,
+  object: Folder
+}
 
 export {
   FolderService

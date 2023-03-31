@@ -56,6 +56,48 @@ class Service {
     )
   }
 
+  setKeys(keys: any) {
+    this.keys = keys;
+    this.dataEncrypter.setKeys(keys);
+  }
+
+  setVaultId(vaultId: string) {
+    this.vaultId = vaultId;
+  }
+
+  setGroupRef(groupRef: string) {
+    this.groupRef = groupRef;
+  }
+
+  setIsPublic(isPublic: boolean) {
+    this.isPublic = isPublic;
+  }
+
+  setVault(vault: Vault) {
+    this.vault = vault;
+  }
+
+  setRawDataEncryptionPublicKey(publicKey) {
+    this.dataEncrypter.setRawPublicKey(publicKey);
+  }
+
+  async processReadRaw(data: any, headers: any, shouldDecrypt = true) {
+    if (this.isPublic || !shouldDecrypt) {
+      return Buffer.from(data.data);
+    }
+
+    const encryptedPayload = this.getEncryptedPayload(data, headers);
+    try {
+      if (encryptedPayload) {
+        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
+      } else {
+        return this.dataEncrypter.decryptRaw(data);
+      }
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
+    }
+  }
+
   protected async setVaultContext(vaultId: string) {
     const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
@@ -87,15 +129,6 @@ class Service {
     }
   }
 
-  setKeys(keys: any) {
-    this.keys = keys;
-    this.dataEncrypter.setKeys(keys);
-  }
-
-  setVaultId(vaultId: string) {
-    this.vaultId = vaultId;
-  }
-
   protected setObjectId(objectId: string) {
     this.objectId = objectId;
   }
@@ -112,24 +145,8 @@ class Service {
     this.actionRef = actionRef;
   }
 
-  setGroupRef(groupRef: string) {
-    this.groupRef = groupRef;
-  }
-
-  setIsPublic(isPublic: boolean) {
-    this.isPublic = isPublic;
-  }
-
-  setVault(vault: Vault) {
-    this.vault = vault;
-  }
-
   protected setObject(object: NodeLike | Membership | Vault) {
     this.object = object;
-  }
-
-  setRawDataEncryptionPublicKey(publicKey) {
-    this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
   protected async getProfileDetails() {
@@ -248,23 +265,6 @@ class Service {
     if (this.isPublic || !shouldDecrypt) return data;
     const decryptedDataRaw = await this.processReadRaw(data, {});
     return arrayToString(decryptedDataRaw);
-  }
-
-  async processReadRaw(data: any, headers: any, shouldDecrypt = true) {
-    if (this.isPublic || !shouldDecrypt) {
-      return Buffer.from(data.data);
-    }
-
-    const encryptedPayload = this.getEncryptedPayload(data, headers);
-    try {
-      if (encryptedPayload) {
-        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
-      } else {
-        return this.dataEncrypter.decryptRaw(data);
-      }
-    } catch (error) {
-      throw new IncorrectEncryptionKey(error);
-    }
   }
 
   protected getEncryptedPayload(data: any, headers: any): EncryptedPayload {

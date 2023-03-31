@@ -19,27 +19,6 @@ class ManifestService extends NodeService<Stack> {
   NodeType = Stack;
 
   /**
-   * @param  {string} vaultId
-   * @param  {JSON} manifest manifest JSON
-   * @returns Promise with corresponding transaction id
-   */
-  public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string, object: Stack }> {
-    this.stackService.fileService.contentType = CONTENT_TYPE;
-    if (!manifest) {
-      manifest = await this.renderManifestJSON(vaultId);
-    }
-    const file = await createFileLike([JSON.stringify(manifest)], FILE_NAME, FILE_TYPE);
-    const manifestNode = await this.get(vaultId);
-    if (manifestNode) {
-      // update vault manifest
-      return await this.stackService.uploadRevision(manifestNode.id, file);
-    } else {
-      // create new vault manifest
-      return await this.stackService.create(vaultId, file, file.name);
-    }
-  }
-
-  /**
    * @returns Promise with vault manifest node
    */
   public async get(vaultId: string): Promise<Stack> {
@@ -63,11 +42,31 @@ class ManifestService extends NodeService<Stack> {
     return JSON.parse(arrayToString(manifestFile.data));
   }
 
+  /**
+   * @param  {string} vaultId
+   * @param  {JSON} manifest manifest JSON
+   * @returns Promise with corresponding transaction id
+   */
+  public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string, object: Stack }> {
+    this.stackService.fileService.contentType = CONTENT_TYPE;
+    if (!manifest) {
+      manifest = await this.renderManifestJSON(vaultId);
+    }
+    const file = await createFileLike([JSON.stringify(manifest)], FILE_NAME, FILE_TYPE);
+    const manifestNode = await this.get(vaultId);
+    if (manifestNode) {
+      // update vault manifest
+      return await this.stackService.uploadRevision(manifestNode.id, file);
+    } else {
+      // create new vault manifest
+      return await this.stackService.create(vaultId, file, file.name);
+    }
+  }
 
   /**
    * 
    * @returns manifest in json format
-  */
+   */
   private async renderManifestJSON(vaultId: string, indexName?: string) {
     // takes a flat list of folders and stacks and generates a tree
     const treeify = (folders: any, stacks: any) => {
