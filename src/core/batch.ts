@@ -7,6 +7,7 @@ import { Node, NodeType } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
 import { RoleType } from "../types/membership";
+import { NotFound } from "../errors/not-found";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -176,7 +177,7 @@ class BatchService extends Service {
       if (member) {
         errors.push({ email: email, message: "Membership already exists for this user." });
       } else {
-        const userHasAccount = Boolean(await this.api.getUserFromEmail(email));
+        const userHasAccount = await this.api.existsUser(email);
         const service = new MembershipService(this.wallet, this.api);
         service.setGroupRef(this.groupRef);
         if (userHasAccount) {

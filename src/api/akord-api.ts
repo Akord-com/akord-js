@@ -9,6 +9,7 @@ import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
+import { NotFound } from "../errors/not-found";
 
 export default class AkordApi extends Api {
 
@@ -68,6 +69,18 @@ export default class AkordApi extends Api {
       .resourceId(email)
       .getUser();
   };
+
+  public async existsUser(email: string): Promise<any> {
+    try {
+      await this.getUserFromEmail(email);
+    } catch (e) {
+      if (!(e instanceof NotFound)) {
+        throw e;
+      }
+      return false;
+    }
+    return true;
+  }
 
   public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new ApiClient()

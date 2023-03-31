@@ -14,6 +14,8 @@ abstract class Api {
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 
   abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
+  
+  abstract existsUser(email: string): Promise<Boolean>
 
   abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
