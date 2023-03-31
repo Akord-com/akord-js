@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js",
-  "version": "4.0.0-beta.11",
+  "version": "4.0.0-beta.14",
   "description": "A set of core js functions to interact with Akord",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
@@ -31,7 +31,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@akord/akord-auth": "0.11.0",
+    "@akord/akord-auth": "0.15.0",
     "@akord/crypto": "0.10.1",
     "@akord/ts-cacheable": "1.0.11",
     "axios": "^0.24.0",
