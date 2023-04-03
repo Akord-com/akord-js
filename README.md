@@ -77,31 +77,30 @@ Use `Auth` module to handle authentication.
 
 ```js
 import { Auth } from "@akord/akord-js";
-Auth.init();
 ```
 
 - By default `Auth` is using SRP authentication
 - `Auth` stores tokens in `Storage` implementation 
 - `Storage` defaults to localStorage on web & memoryStorage on nodeJs
-- `Storage` implementation can be configured with `Auth.init({ storage: window.sessionStorage })`
+- `Storage` implementation can be configured with `Auth.configure({ storage: window.sessionStorage })`
 - `Auth` is automatically refreshing tokens in SRP mode
-- On server side it is recommended to use API keys: `Auth.init({ apiKey: 'your_api_key' })`
+- On server side it is recommended to use API keys: `Auth.configure({ apiKey: 'your_api_key' })`
 - API key: can be generated over web app & over CLI
 
 ##### use short living token with refresh
 ```js
 import { Auth } from "@akord/akord-js";
-Auth.init({ storage: window.sessionStorage }); // optionally - configure tokens store
+Auth.configure({ storage: window.sessionStorage }); // optionally - configure tokens store
 ```
 ##### use API key
 ```js
 import { Auth } from "@akord/akord-js";
-Auth.init({ apiKey: "api_key" });
+Auth.configure({ apiKey: "api_key" });
 ```
 ##### use self-managed auth token
 ```js
 import { Akord, Auth } from "@akord/akord-js";
-Auth.init({ authToken: "auth_token" });
+Auth.configure({ authToken: "auth_token" });
 ```
 
 #### `signIn(email, password)`
