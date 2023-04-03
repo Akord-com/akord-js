@@ -8,7 +8,7 @@ This package can be used in both browser and Node.js environments.
   - [Quick Start](#quick-start)
   - [Examples](#examples)
 - [Modules](#modules)
-  - [Auth](#auth)
+  - [Auth](#authentication)
   - [Vault](#vault)
   - [Membership](#membership)
   - [Memo](#memo)
@@ -38,27 +38,8 @@ const { Akord } = require("@akord/akord-js");
 ### Quick start
 
 #### Init Akord
-##### use short living token with refresh
 ```js
 import { Akord, Auth } from "@akord/akord-js";
-
-Auth.init({ storage: window.sessionStorage }) //optionally - configure tokens store
-const { wallet } = await Auth.signIn(email, password);
-const akord = await Akord.init(wallet);
-```
-##### use API key
-```js
-import { Akord, Auth } from "@akord/akord-js";
-
-Auth.init({ apiKey: "api_key" })
-const { wallet } = await Auth.signIn(email, password);
-const akord = await Akord.init(wallet);
-```
-##### use self-managed auth token
-```js
-import { Akord, Auth } from "@akord/akord-js";
-
-Auth.init({ authToken: "auth_token" })
 const { wallet } = await Auth.signIn(email, password);
 const akord = await Akord.init(wallet);
 ```
@@ -96,7 +77,7 @@ Use `Auth` module to handle authentication.
 
 ```js
 import { Auth } from "@akord/akord-js";
-Auth.init()
+Auth.init();
 ```
 
 - By default `Auth` is using SRP authentication
@@ -106,6 +87,22 @@ Auth.init()
 - `Auth` is automatically refreshing tokens in SRP mode
 - On server side it is recommended to use API keys: `Auth.init({ apiKey: 'your_api_key' })`
 - API key: can be generated over web app & over CLI
+
+##### use short living token with refresh
+```js
+import { Auth } from "@akord/akord-js";
+Auth.init({ storage: window.sessionStorage }); // optionally - configure tokens store
+```
+##### use API key
+```js
+import { Auth } from "@akord/akord-js";
+Auth.init({ apiKey: "api_key" });
+```
+##### use self-managed auth token
+```js
+import { Akord, Auth } from "@akord/akord-js";
+Auth.init({ authToken: "auth_token" });
+```
 
 #### `signIn(email, password)`
 
