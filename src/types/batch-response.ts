@@ -1,5 +1,7 @@
+import { Stack } from "./node"
+
 export interface BatchStackCreateResponse {
-  data: Array<{ stackId: string, transactionId: string }>
+  data: Array<{ stackId: string, transactionId: string, object: Stack }>
   errors: Array<{ name: string, message: string }>
   cancelled: number
 }

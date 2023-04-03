@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { MembershipService } from "./membership";
 import { StackService } from "./stack";
 import { NodeService } from "./node";
-import { Node, NodeType } from "../types/node";
+import { Node, NodeType, Stack } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
 import { RoleType } from "../types/membership";
@@ -108,7 +108,7 @@ class BatchService extends Service {
     progressHook?: (progress: number) => void,
     cancelHook?: AbortController,
     processingCountHook?: (count: number) => void,
-    onStackCreated?: (item: { file: FileLike, name: string, parentId?: string }) => Promise<void>
+    onStackCreated?: (item: Stack) => Promise<void>
   ): Promise<BatchStackCreateResponse> {
     const size = items.reduce((sum, stack) => {
       return sum + stack.file.size;
@@ -122,7 +122,7 @@ class BatchService extends Service {
     }
 
 
-    const data = [] as { stackId: string, transactionId: string }[];
+    const data = [] as { stackId: string, transactionId: string, object: Stack }[];
     const errors = [] as { name: string, message: string }[];
 
     const stackProgressHook = (localProgress: number, data: any) => {
@@ -146,7 +146,7 @@ class BatchService extends Service {
           processedStacksCount += 1;
           processingCountHook(processedStacksCount);
           if (onStackCreated) {
-            await onStackCreated(item);
+            await onStackCreated(stackResponse.object);
           }
         } catch (e) {
           errors.push({ name: item.name, message: e.toString() })
