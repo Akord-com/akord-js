@@ -93,9 +93,10 @@ class MembershipService extends Service {
    * @param  {string} vaultId
    * @param  {string} email invitee's email
    * @param  {RoleType} role CONTRIBUTOR or VIEWER
+   * @param  {string} [message] optional email message - unencrypted
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async invite(vaultId: string, email: string, role: RoleType): Promise<MembershipCreateResult> {
+  public async invite(vaultId: string, email: string, role: RoleType, message?: string): Promise<MembershipCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
     this.setFunction(functions.MEMBERSHIP_INVITE);
@@ -132,7 +133,8 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       input,
-      this.tags
+      this.tags,
+      { message }
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { membershipId, transactionId: id, object: membership };
@@ -333,12 +335,13 @@ class MembershipService extends Service {
    * @param  {string} vaultId
    * @param  {string} email invitee's email
    * @param  {string} role CONTRIBUTOR or VIEWER
+   * @param  {string} [message] optional email message - unencrypted
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async inviteNewUser(vaultId: string, email: string, role: RoleType): Promise<{
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: any): Promise<{
     membershipId: string
   }> {
-    const { id } = await this.api.inviteNewUser(vaultId, email, role);
+    const { id } = await this.api.inviteNewUser(vaultId, email, role, message);
     return { membershipId: id };
   }
 

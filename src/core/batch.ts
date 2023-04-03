@@ -161,9 +161,10 @@ class BatchService extends Service {
   /**
    * @param  {string} vaultId
    * @param  {{email:string,role:RoleType}[]} items
+   * @param  {string} [message] optional email message - unencrypted
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[]): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], message?: string): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as { membershipId: string, transactionId: string }[];
@@ -180,10 +181,10 @@ class BatchService extends Service {
         const service = new MembershipService(this.wallet, this.api);
         service.setGroupRef(this.groupRef);
         if (userHasAccount) {
-          data.push(await service.invite(vaultId, email, role));
+          data.push(await service.invite(vaultId, email, role, message));
         } else {
           data.push({
-            ...(await service.inviteNewUser(vaultId, email, role)),
+            ...(await service.inviteNewUser(vaultId, email, role, message)),
             transactionId: null
           })
         }

@@ -35,10 +35,11 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }> {
+  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
     const { id, object } = await new ApiClient()
       .env(this.config)
       .vaultId(contractId)
+      .metadata(metadata)
       .input(input)
       .tags(tags)
       .transaction<T>()
@@ -128,7 +129,7 @@ export default class AkordApi extends Api {
       .deleteVault();
   }
 
-  public async inviteNewUser(vaultId: string, email: string, role: RoleType): Promise<{ id: string }> {
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: any): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
@@ -136,6 +137,7 @@ export default class AkordApi extends Api {
         email: email,
         role: role
       })
+      .metadata({ message })
       .invite();
   }
 
