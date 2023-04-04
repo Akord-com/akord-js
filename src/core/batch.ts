@@ -1,6 +1,6 @@
 import { Service, ServiceFactory } from "../core";
 import { v4 as uuidv4 } from "uuid";
-import { MembershipService } from "./membership";
+import { MembershipService, activeStatus } from "./membership";
 import { StackService } from "./stack";
 import { NodeService } from "./node";
 import { Node, NodeType } from "../types/node";
@@ -174,7 +174,7 @@ class BatchService extends Service {
       const email = item.email.toLowerCase();
       const role = item.role;
       const member = members.find(item => item.email?.toLowerCase() === email);
-      if (member) {
+      if (member && activeStatus.includes(member.status)) {
         errors.push({ email: email, message: "Membership already exists for this user." });
       } else {
         const userHasAccount = Boolean(await this.api.getUserFromEmail(email));

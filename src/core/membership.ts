@@ -2,7 +2,7 @@ import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, generateKeyPair } from "@akord/crypto";
 import { Service, STATE_CONTENT_TYPE } from "./service";
-import { Membership, RoleType } from "../types/membership";
+import { Membership, RoleType, StatusType } from "../types/membership";
 import { ListOptions } from "../types/list-options";
 import { Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
@@ -19,6 +19,8 @@ type MembershipUpdateResult = {
   transactionId: string,
   object: Membership
 }
+
+export const activeStatus = [status.ACCEPTED, status.PENDING, status.INVITED] as StatusType[];
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
