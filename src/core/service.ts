@@ -133,19 +133,17 @@ class Service {
   }
 
   protected async getProfileDetails() {
-    const profile = await this.api.getProfile();
-    if (profile) {
-      const profileEncrypter = new Encrypter(this.wallet, profile.state.keys, null);
+    const user = await this.api.getUser();
+    if (user) {
+      const profileEncrypter = new Encrypter(this.wallet, null, null);
       profileEncrypter.decryptedKeys = [
         {
           publicKey: this.wallet.publicKeyRaw(),
           privateKey: this.wallet.privateKeyRaw()
         }
       ]
-      let profileDetails = profile.state.profileDetails;
-      delete profileDetails.__typename;
       let avatar = null;
-      const resourceUri = this.getAvatarUri(profileDetails);
+      const resourceUri = this.getAvatarUri(user);
       if (resourceUri) {
         const { fileData, headers } = await this.api.downloadFile(resourceUri);
         const encryptedPayload = this.getEncryptedPayload(fileData, headers);
@@ -162,11 +160,9 @@ class Service {
       }
       try {
         const decryptedProfile = await profileEncrypter.decryptObject(
-          profileDetails,
-          ['fullName', 'name', 'phone'],
+          user,
+          ['name'],
         );
-        decryptedProfile.name = decryptedProfile.name || decryptedProfile.fullName;
-        delete decryptedProfile.fullName;
         return { ...decryptedProfile, avatar }
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
@@ -330,8 +326,8 @@ class Service {
     return newState;
   }
 
-  protected async getUserEncryptionInfo(email?: string, userAddress?: string) {
-    const { address, publicKey } = await this.api.getUserFromEmail(email || userAddress);
+  protected async getUserEncryptionInfo(email: string) {
+    const { address, publicKey } = await this.api.getUserPublicData(email);
     return { address, publicKey: base64ToArray(publicKey) }
   }
 

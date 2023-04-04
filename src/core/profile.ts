@@ -35,22 +35,21 @@ class ProfileService extends Service {
     let transactions = [];
 
     const profilePromise = new Promise<void>(async (resolve, reject) => {
-      const profile = await this.api.getProfile();
-      this.setObject(profile);
+      const user = await this.api.getUser();
+      this.setObject(user);
 
       this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
       this.setIsPublic(false);
       const profileDetails = await this.processMemberDetails({ name, avatar }, false);
 
       // merge & upload current profile state to Arweave
-      const currentProfileDetails = profile.state.profileDetails;
       const mergedProfileDetails = {
-        name: profileDetails.name || currentProfileDetails.name || currentProfileDetails.fullName,
-        avatarUri: profileDetails.avatarUri || currentProfileDetails.avatarUri,
+        name: profileDetails.name || user.name || user.fullName,
+        avatarUri: profileDetails.avatarUri || user.avatarUri,
       }
 
       await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
-      await this.api.updateProfile(mergedProfileDetails.name, mergedProfileDetails.avatarUri);
+      await this.api.updateUser(mergedProfileDetails.name, mergedProfileDetails.avatarUri);
       resolve();
     })
 

@@ -9,6 +9,7 @@ import { Auth } from "@akord/akord-auth";
 import { Unauthorized } from "../errors/unauthorized";
 import { throwError } from "../errors/error";
 import { BadRequest } from "../errors/bad-request";
+import { NotFound } from "../errors/not-found";
 
 export class ApiClient {
   private _storageurl: string;
@@ -125,20 +126,32 @@ export class ApiClient {
     return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
   }
 
-  async updateProfile(): Promise<any> {
-    return await this.fetch("put", `${this._apiurl}/profiles`);
+  async existsUser(): Promise<Boolean> {
+    try {
+      await this.get(`${this._apiurl}/users/${this._resourceId}`);
+    } catch (e) {
+      if (!(e instanceof NotFound)) {
+        throw e;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  async getUser(): Promise<any> {
+    return await this.get(`${this._apiurl}/users`);
+  }
+
+  async getUserPublicData(): Promise<{address: string, publicKey: string}> {
+    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
+  }
+
+  async updateUser(): Promise<any> {
+    return await this.fetch("put", `${this._apiurl}/users`);
   }
 
   async deleteVault(): Promise<void> {
     await this.fetch("delete", `${this._apiurl}/vaults/${this._vaultId}`);
-  }
-
-  async getUser(): Promise<any> {
-    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
-  }
-
-  async getProfile(): Promise<any> {
-    return await this.get(`${this._apiurl}/profiles`);
   }
 
   async getMembers(): Promise<Array<Membership>> {
