@@ -102,7 +102,7 @@ class MembershipService extends Service {
     const membershipId = uuidv4();
     this.setObjectId(membershipId);
 
-    const { address, publicKey } = await this.getUserEncryptionInfo(email, await this.wallet.getAddress());
+    const { address, publicKey } = await this.getUserEncryptionInfo(email);
     const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
     let keys: EncryptedKeys[];
     try {
@@ -170,7 +170,7 @@ class MembershipService extends Service {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
-    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email, await this.wallet.getAddress());
+    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email);
     const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
     let keys: EncryptedKeys[];
     try {
@@ -264,7 +264,7 @@ class MembershipService extends Service {
       for (let member of memberships) {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
-          const { publicKey } = await this.getUserEncryptionInfo(member.memberDetails.email, member.address);
+          const { publicKey } = await this.getUserEncryptionInfo(member.memberDetails.email);
           const memberKeysEncrypter = new Encrypter(
             this.wallet,
             this.dataEncrypter.keys,

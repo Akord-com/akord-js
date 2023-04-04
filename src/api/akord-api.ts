@@ -9,7 +9,6 @@ import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
-import { NotFound } from "../errors/not-found";
 
 export default class AkordApi extends Api {
 
@@ -63,25 +62,6 @@ export default class AkordApi extends Api {
     return contractId;
   };
 
-  public async getUserFromEmail(email: string): Promise<any> {
-    return await new ApiClient()
-      .env(this.config)
-      .resourceId(email)
-      .getUser();
-  };
-
-  public async existsUser(email: string): Promise<any> {
-    try {
-      await this.getUserFromEmail(email);
-    } catch (e) {
-      if (!(e instanceof NotFound)) {
-        throw e;
-      }
-      return false;
-    }
-    return true;
-  }
-
   public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
     const resource = await new ApiClient()
       .env(this.config)
@@ -117,21 +97,35 @@ export default class AkordApi extends Api {
     return { fileData: fileData, headers: response.headers };
   };
 
-  public async getProfile(): Promise<any> {
+  public async existsUser(email: string): Promise<any> {
     return await new ApiClient()
       .env(this.config)
-      .getProfile();
+      .resourceId(email)
+      .existsUser();
+  }
+
+  public async getUserPublicData(email: string): Promise<{address: string, publicKey: string}> {
+    return await new ApiClient()
+      .env(this.config)
+      .resourceId(email)
+      .getUserPublicData();
+  };
+
+  public async getUser(): Promise<any> {
+    return await new ApiClient()
+      .env(this.config)
+      .getUser();
   };
 
 
-  public async updateProfile(name: string, avatarUri: string): Promise<void> {
+  public async updateUser(name: string, avatarUri: string): Promise<void> {
     await new ApiClient()
       .env(this.config)
       .data({
         name: name,
         avatarUri: avatarUri
       })
-      .updateProfile();
+      .updateUser();
   };
 
   public async deleteVault(vaultId: string): Promise<void> {

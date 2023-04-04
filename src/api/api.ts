@@ -12,11 +12,7 @@ abstract class Api {
   abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
-
-  abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
   
-  abstract existsUser(email: string): Promise<Boolean>
-
   abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
   abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<string>>
@@ -27,7 +23,11 @@ abstract class Api {
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
-  abstract getProfile(): Promise<any>
+  abstract existsUser(email: string): Promise<Boolean>
+
+  abstract getUser(): Promise<any>
+
+  abstract getUserPublicData(email: string): Promise<{address: string, publicKey: string}>
 
   abstract getNode<T>(id: string, type: string, vaultId?: string): Promise<T>
 
@@ -49,7 +49,7 @@ abstract class Api {
 
   abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
-  abstract updateProfile(name: string, avatarUri: string): Promise<void>
+  abstract updateUser(name: string, avatarUri: string): Promise<void>
 
   abstract deleteVault(vaultId: string): Promise<void>
 
