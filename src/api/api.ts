@@ -3,7 +3,7 @@ import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
-import { VaultGetOptions } from "../types/query-options";
+import { VaultApiGetOptions } from "../types/query-options";
 
 abstract class Api {
   config: any
@@ -32,7 +32,7 @@ abstract class Api {
 
   abstract getMembership(id: string, vaultId?: string): Promise<Membership>
 
-  abstract getVault(id: string, options?: VaultGetOptions): Promise<Vault>
+  abstract getVault(id: string, options?: VaultApiGetOptions): Promise<Vault>
 
   abstract getNodeState(stateId: string): Promise<any>
 

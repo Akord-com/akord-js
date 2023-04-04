@@ -4,7 +4,7 @@ import { generateKeyPair, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Tag } from "../types/contract";
-import { GetOptions, ListOptions } from "../types/query-options";
+import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
@@ -18,13 +18,14 @@ class VaultService extends Service {
 
   defaultGetOptions = {
     shouldDecrypt: true,
-  } as GetOptions;
+    deep: false
+  } as VaultGetOptions;
 
   /**
    * @param  {string} vaultId
    * @returns Promise with the decrypted vault
    */
-  public async get(vaultId: string, options: GetOptions = this.defaultGetOptions): Promise<Vault> {
+  public async get(vaultId: string, options: VaultGetOptions = this.defaultGetOptions): Promise<Vault> {
     const result = await this.api.getVault(vaultId, options);
     if (!options.shouldDecrypt || result.public) {
       return new Vault(result, []);
