@@ -23,7 +23,7 @@ export class ApiClient {
   private _resourceId: string;
   private _isPublic: boolean;
   private _data: any;
-  private _queryParams: any;
+  private _queryParams: any = {};
   private _responseType: string = "json";
   private _progressHook: (progress: any, data?: any) => void
   private _processed: number
@@ -253,14 +253,8 @@ export class ApiClient {
   }
 
   addQueryParams = function (url: string, params: any) {
-    Object.entries(params).forEach(([key, value], index) => {
-      if (value) {
-        let queryParam = index === 0 ? "?" : "&";
-        queryParam += encodeURIComponent(key);
-        queryParam += "=" + encodeURIComponent(value.toString());
-        url += queryParam;
-      }
-    });
+    const queryParams = new URLSearchParams(JSON.parse(JSON.stringify(params)));
+    url += "?" + queryParams.toString();
     return url;
   }
 

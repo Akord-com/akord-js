@@ -1,24 +1,12 @@
 import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, arrayToBase64, Encrypter, EncryptedKeys } from "@akord/crypto";
+import { generateKeyPair, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Tag } from "../types/contract";
-import { ListOptions } from "../types/list-options";
+import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
-
-type VaultCreateResult = {
-  vaultId: string,
-  membershipId: string,
-  transactionId: string,
-  object: Vault
-}
-
-type VaultUpdateResult = {
-  transactionId: string,
-  object: Vault
-}
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -27,6 +15,61 @@ class VaultService extends Service {
     shouldDecrypt: true,
     filter: { status: { eq: status.ACCEPTED } }
   } as ListOptions;
+
+  defaultGetOptions = {
+    shouldDecrypt: true,
+    deep: false
+  } as VaultGetOptions;
+
+  /**
+   * @param  {string} vaultId
+   * @returns Promise with the decrypted vault
+   */
+  public async get(vaultId: string, options: VaultGetOptions = this.defaultGetOptions): Promise<Vault> {
+    const result = await this.api.getVault(vaultId, options);
+    if (!options.shouldDecrypt || result.public) {
+      return new Vault(result, []);
+    }
+    const { keys } = await this.api.getMembershipKeys(vaultId);
+    const vault = await this.processVault(result, options.shouldDecrypt, keys);
+    return vault
+  }
+
+  /**
+   * @param  {ListOptions} options
+   * @returns Promise with paginated user vaults
+   */
+  public async list(options: ListOptions = this.defaultListOptions): Promise<Paginated<Vault>> {
+    const response = await this.api.getVaults(options.filter, options.limit, options.nextToken);
+    return {
+      items: await Promise.all(
+        response.items
+          .map(async (vaultProto: Vault) => {
+            const vault = await this.processVault(vaultProto, options.shouldDecrypt, vaultProto.keys);
+            return vault;
+          })) as Vault[],
+      nextToken: response.nextToken
+    }
+  }
+
+  /**
+   * @param  {ListOptions} options
+   * @returns Promise with currently authenticated user vaults
+   */
+  public async listAll(options: ListOptions = this.defaultListOptions): Promise<Array<Vault>> {
+    let token = null;
+    let vaults = [] as Vault[];
+    do {
+      const { items, nextToken } = await this.list(options);
+      vaults = vaults.concat(items);
+      token = nextToken;
+      options.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
+    return vaults;
+  }
 
   /**
    * @param  {string} name new vault name
@@ -180,56 +223,6 @@ class VaultService extends Service {
     return { transactionId: "" };
   }
 
-  /**
-   * @param  {string} vaultId
-   * @returns Promise with the decrypted vault
-   */
-  public async get(vaultId: string, shouldDecrypt = true): Promise<Vault> {
-    const result = await this.api.getVault(vaultId);
-    if (!shouldDecrypt || result.public) {
-      return new Vault(result, []);
-    }
-    const { keys } = await this.api.getMembershipKeys(vaultId);
-    const vault = await this.processVault(result, shouldDecrypt, keys);
-    return vault
-  }
-
-  /**
-   * @param  {ListOptions} listOptions
-   * @returns Promise with paginated user vaults
-   */
-  public async list(listOptions: ListOptions = this.defaultListOptions): Promise<Paginated<Vault>> {
-    const response = await this.api.getVaults(listOptions.filter, listOptions.limit, listOptions.nextToken);
-    return {
-      items: await Promise.all(
-        response.items
-          .map(async (vaultProto: Vault) => {
-            const vault = await this.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
-            return vault;
-          })) as Vault[],
-      nextToken: response.nextToken
-    }
-  }
-
-  /**
-  * @param  {ListOptions} listOptions
-  * @returns Promise with currently authenticated user vaults
-  */
-  public async listAll(listOptions: ListOptions = this.defaultListOptions): Promise<Array<Vault>> {
-    let token = null;
-    let vaults = [] as Vault[];
-    do {
-      const { items, nextToken } = await this.list(listOptions);
-      vaults = vaults.concat(items);
-      token = nextToken;
-      listOptions.nextToken = nextToken;
-      if (nextToken === "null") {
-        token = null;
-      }
-    } while (token);
-    return vaults;
-  }
-
   public async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
     this.setObjectId(vaultId);
@@ -248,6 +241,18 @@ class VaultService extends Service {
     return vault;
   }
 };
+
+type VaultCreateResult = {
+  vaultId: string,
+  membershipId: string,
+  transactionId: string,
+  object: Vault
+}
+
+type VaultUpdateResult = {
+  transactionId: string,
+  object: Vault
+}
 
 export {
   VaultService

@@ -2,24 +2,18 @@ import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
 import { NodeLike, NodeType } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
-import { ListOptions } from '../types/list-options';
+import { GetOptions, ListOptions } from '../types/query-options';
 import { Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 
-type NodeUpdateResult = {
-  transactionId: string,
-  object: NodeLike
-}
-
 class NodeService<T = NodeLike> extends Service {
-
-  protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
   objectType: NodeType;
 
   defaultListOptions = {
     shouldDecrypt: true,
+    parentId: undefined,
     filter: {
       status: { ne: status.REVOKED },
       and: {
@@ -28,55 +22,57 @@ class NodeService<T = NodeLike> extends Service {
     }
   } as ListOptions;
 
-  protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
-    nodeId: string,
-    transactionId: string,
-    object: T
-  }> {
-    const nodeId = uuidv4();
-    this.setObjectId(nodeId);
-    this.setFunction(functions.NODE_CREATE);
+  defaultGetOptions = {
+    shouldDecrypt: true,
+  } as GetOptions;
 
-    this.tags = await this.getTags();
-
-    const input = {
-      function: this.function,
-      ...clientInput
-    };
-
-    if (body) {
-      const id = await this.uploadState(body);
-      input.data = id;
-    }
-
-    const { id, object } = await this.api.postContractTransaction<T>(
-      this.vaultId,
-      input,
-      this.tags
-    );
-    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
-    return { nodeId, transactionId: id, object: node };
+  /**
+   * @param  {string} nodeId
+   * @returns Promise with the decrypted node
+   */
+  public async get(nodeId: string, options: GetOptions = this.defaultGetOptions): Promise<T> {
+    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, options.vaultId);
+    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
+    const node = await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
+    return node as T;
   }
 
-  protected async nodeUpdate<T>(body?: any, clientInput?: any): Promise<{ transactionId: string, object: T }> {
-    const input = {
-      function: this.function,
-      ...clientInput
-    };
-
-    this.tags = await this.getTags();
-
-    if (body) {
-      const id = await this.mergeAndUploadBody(body);
-      input.data = id;
+  /**
+   * @param  {string} vaultId
+   * @param  {ListOptions} options
+   * @returns Promise with paginated nodes within given vault
+   */
+  public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, options.parentId, options.filter, options.limit, options.nextToken);
+    const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+    return {
+      items: await Promise.all(
+        response.items
+          .map(async nodeProto => {
+            return await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
+          })) as NodeLike[],
+      nextToken: response.nextToken
     }
-    const { id, object } = await this.api.postContractTransaction<T>(
-      this.vaultId,
-      input,
-      this.tags
-    );
-    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
-    return { transactionId: id, object: node };
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @param  {ListOptions} options
+   * @returns Promise with all nodes within given vault
+   */
+  public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
+    let token = null;
+    let nodeArray = [] as NodeLike[];
+    do {
+      const { items, nextToken } = await this.list(vaultId, options);
+      nodeArray = nodeArray.concat(items);
+      token = nextToken;
+      options.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = null;
+      }
+    } while (token);
+    return nodeArray;
   }
 
   /**
@@ -139,57 +135,55 @@ class NodeService<T = NodeLike> extends Service {
     return this.nodeUpdate<NodeLike>();
   }
 
-  /**
-   * @param  {string} nodeId
-   * @returns Promise with the decrypted node
-   */
-  public async get(nodeId: string, vaultId?: string, shouldDecrypt = true): Promise<T> {
-    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, vaultId);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
-    const node = await this.processNode(nodeProto, isEncrypted && shouldDecrypt, keys);
-    return node as T;
-  }
+  protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
+    nodeId: string,
+    transactionId: string,
+    object: T
+  }> {
+    const nodeId = uuidv4();
+    this.setObjectId(nodeId);
+    this.setFunction(functions.NODE_CREATE);
 
-  /**
-   * @param  {string} vaultId
-   * @param  {ListOptions} listOptions
-   * @returns Promise with paginated nodes within given vault
-   */
-  public async list(vaultId: string, parentId?: string, listOptions: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, parentId, listOptions.filter, listOptions.limit, listOptions.nextToken);
-    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
-    return {
-      items: await Promise.all(
-        response.items
-          .map(async nodeProto => {
-            return await this.processNode(nodeProto, isEncrypted && listOptions.shouldDecrypt, keys);
-          })) as NodeLike[],
-      nextToken: response.nextToken
+    this.tags = await this.getTags();
+
+    const input = {
+      function: this.function,
+      ...clientInput
+    };
+
+    if (body) {
+      const id = await this.uploadState(body);
+      input.data = id;
     }
+
+    const { id, object } = await this.api.postContractTransaction<T>(
+      this.vaultId,
+      input,
+      this.tags
+    );
+    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
+    return { nodeId, transactionId: id, object: node };
   }
 
-  /**
-   * @param  {string} vaultId
-   * @param  {ListOptions} listOptions
-   * @returns Promise with all nodes within given vault
-   */
-  public async listAll(vaultId: string, parentId?: string, listOptions: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
-    let token = null;
-    let nodeArray = [] as NodeLike[];
-    do {
-      const { items, nextToken } = await this.list(vaultId, parentId, listOptions);
-      nodeArray = nodeArray.concat(items);
-      token = nextToken;
-      listOptions.nextToken = nextToken;
-      if (nextToken === "null") {
-        token = null;
-      }
-    } while (token);
-    return nodeArray;
-  }
+  protected async nodeUpdate<T>(body?: any, clientInput?: any): Promise<{ transactionId: string, object: T }> {
+    const input = {
+      function: this.function,
+      ...clientInput
+    };
 
-  private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
-    return new this.NodeType(nodeProto, keys);
+    this.tags = await this.getTags();
+
+    if (body) {
+      const id = await this.mergeAndUploadBody(body);
+      input.data = id;
+    }
+    const { id, object } = await this.api.postContractTransaction<T>(
+      this.vaultId,
+      input,
+      this.tags
+    );
+    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
+    return { transactionId: id, object: node };
   }
 
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
@@ -216,6 +210,17 @@ class NodeService<T = NodeLike> extends Service {
     }
     return node;
   }
+
+  protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
+
+  private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
+    return new this.NodeType(nodeProto, keys);
+  }
+}
+
+type NodeUpdateResult = {
+  transactionId: string,
+  object: NodeLike
 }
 
 export {
