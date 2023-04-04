@@ -56,6 +56,48 @@ class Service {
     )
   }
 
+  setKeys(keys: EncryptedKeys[]) {
+    this.keys = keys;
+    this.dataEncrypter.setKeys(keys);
+  }
+
+  setVaultId(vaultId: string) {
+    this.vaultId = vaultId;
+  }
+
+  setGroupRef(groupRef: string) {
+    this.groupRef = groupRef;
+  }
+
+  setIsPublic(isPublic: boolean) {
+    this.isPublic = isPublic;
+  }
+
+  setVault(vault: Vault) {
+    this.vault = vault;
+  }
+
+  setRawDataEncryptionPublicKey(publicKey) {
+    this.dataEncrypter.setRawPublicKey(publicKey);
+  }
+
+  async processReadRaw(data: any, headers: any, shouldDecrypt = true) {
+    if (this.isPublic || !shouldDecrypt) {
+      return Buffer.from(data.data);
+    }
+
+    const encryptedPayload = this.getEncryptedPayload(data, headers);
+    try {
+      if (encryptedPayload) {
+        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
+      } else {
+        return this.dataEncrypter.decryptRaw(data);
+      }
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
+    }
+  }
+
   protected async setVaultContext(vaultId: string) {
     const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
@@ -70,7 +112,7 @@ class Service {
       const keys = encryptionKeys.keys.map(((keyPair: any) => {
         return {
           encPrivateKey: keyPair.encPrivateKey,
-          publicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
+          encPublicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
         }
       }))
       this.setKeys(keys);
@@ -85,15 +127,6 @@ class Service {
         throw new IncorrectEncryptionKey(error);
       }
     }
-  }
-
-  setKeys(keys: any) {
-    this.keys = keys;
-    this.dataEncrypter.setKeys(keys);
-  }
-
-  setVaultId(vaultId: string) {
-    this.vaultId = vaultId;
   }
 
   protected setObjectId(objectId: string) {
@@ -112,40 +145,22 @@ class Service {
     this.actionRef = actionRef;
   }
 
-  setGroupRef(groupRef: string) {
-    this.groupRef = groupRef;
-  }
-
-  setIsPublic(isPublic: boolean) {
-    this.isPublic = isPublic;
-  }
-
-  setVault(vault: Vault) {
-    this.vault = vault;
-  }
-
   protected setObject(object: NodeLike | Membership | Vault) {
     this.object = object;
   }
 
-  setRawDataEncryptionPublicKey(publicKey) {
-    this.dataEncrypter.setRawPublicKey(publicKey);
-  }
-
   protected async getProfileDetails() {
-    const profile = await this.api.getProfile();
-    if (profile) {
-      const profileEncrypter = new Encrypter(this.wallet, profile.state.keys, null);
+    const user = await this.api.getUser();
+    if (user) {
+      const profileEncrypter = new Encrypter(this.wallet, null, null);
       profileEncrypter.decryptedKeys = [
         {
           publicKey: this.wallet.publicKeyRaw(),
           privateKey: this.wallet.privateKeyRaw()
         }
       ]
-      let profileDetails = profile.state.profileDetails;
-      delete profileDetails.__typename;
       let avatar = null;
-      const resourceUri = this.getAvatarUri(profileDetails);
+      const resourceUri = this.getAvatarUri(user);
       if (resourceUri) {
         const { fileData, headers } = await this.api.downloadFile(resourceUri);
         const encryptedPayload = this.getEncryptedPayload(fileData, headers);
@@ -162,11 +177,9 @@ class Service {
       }
       try {
         const decryptedProfile = await profileEncrypter.decryptObject(
-          profileDetails,
-          ['fullName', 'name', 'phone'],
+          user,
+          ['name'],
         );
-        decryptedProfile.name = decryptedProfile.name || decryptedProfile.fullName;
-        delete decryptedProfile.fullName;
         return { ...decryptedProfile, avatar }
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
@@ -250,23 +263,6 @@ class Service {
     return arrayToString(decryptedDataRaw);
   }
 
-  async processReadRaw(data: any, headers: any, shouldDecrypt = true) {
-    if (this.isPublic || !shouldDecrypt) {
-      return Buffer.from(data.data);
-    }
-
-    const encryptedPayload = this.getEncryptedPayload(data, headers);
-    try {
-      if (encryptedPayload) {
-        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
-      } else {
-        return this.dataEncrypter.decryptRaw(data);
-      }
-    } catch (error) {
-      throw new IncorrectEncryptionKey(error);
-    }
-  }
-
   protected getEncryptedPayload(data: any, headers: any): EncryptedPayload {
     const encryptedKey = headers['x-amz-meta-encryptedkey'];
     const iv = headers['x-amz-meta-iv'];
@@ -330,8 +326,8 @@ class Service {
     return newState;
   }
 
-  protected async getUserEncryptionInfo(email?: string, userAddress?: string) {
-    const { address, publicKey } = await this.api.getUserFromEmail(email || userAddress);
+  protected async getUserEncryptionInfo(email: string) {
+    const { address, publicKey } = await this.api.getUserPublicData(email);
     return { address, publicKey: base64ToArray(publicKey) }
   }
 

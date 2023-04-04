@@ -5,17 +5,6 @@ import { FileService } from "./file";
 import { FileLike } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
 
-type StackCreateResult = { 
-  stackId: string,
-  transactionId: string, 
-  object: Stack 
-}
-
-type StackUpdateResult = { 
-  transactionId: string, 
-  object: Stack 
-}
-
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
   objectType = nodeType.STACK;
@@ -74,11 +63,11 @@ class StackService extends NodeService<Stack> {
   }
 
   /**
-  * @param  {string} stackId
-  * @param  {FileLike} file file object
-  * @param  {(progress:number)=>void} [progressHook]
-  * @returns Promise with corresponding transaction id
-  */
+   * @param  {string} stackId
+   * @param  {FileLike} file file object
+   * @param  {(progress:number)=>void} [progressHook]
+   * @returns Promise with corresponding transaction id
+   */
   public async uploadRevision(stackId: string, file: FileLike, progressHook?: (progress: number, data?: any) => void): Promise<StackUpdateResult> {
     await this.setVaultContextFromNodeId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
@@ -107,12 +96,12 @@ class StackService extends NodeService<Stack> {
   }
 
   /**
-  * Get stack file uri by index, return the latest arweave uri by default
-  * @param  {string} stackId
-  * @param  {StorageType} [type] storage type, default to arweave
-  * @param  {number} [index] file version index, default to latest
-  * @returns Promise with stack file uri
-  */
+   * Get stack file uri by index, return the latest arweave uri by default
+   * @param  {string} stackId
+   * @param  {StorageType} [type] storage type, default to arweave
+   * @param  {number} [index] file version index, default to latest
+   * @returns Promise with stack file uri
+   */
   public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     return stack.getUri(type, index);
@@ -170,6 +159,17 @@ class StackService extends NodeService<Stack> {
     this.fileService.setIsPublic(this.isPublic);
   }
 };
+
+type StackCreateResult = { 
+  stackId: string,
+  transactionId: string, 
+  object: Stack 
+}
+
+type StackUpdateResult = { 
+  transactionId: string, 
+  object: Stack 
+}
 
 export {
   StackService

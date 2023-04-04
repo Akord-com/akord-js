@@ -2,21 +2,10 @@ import { NodeService } from "./node";
 import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
-import { ListOptions } from "../types/list-options";
+import { ListOptions } from "../types/query-options";
 import { NotFound } from "../errors/not-found";
 import { EncryptedKeys } from "@akord/crypto";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
-
-type MemoCreateResult = {
-  memoId: string,
-  transactionId: string,
-  object: Memo
-}
-
-type MemoUpdateResult = {
-  transactionId: string,
-  object: Memo
-}
 
 class MemoService extends NodeService<Memo> {
   static readonly reactionEmoji = reactionEmoji;
@@ -30,11 +19,11 @@ class MemoService extends NodeService<Memo> {
   } as ListOptions;
 
   /**
-  * @param  {string} vaultId
-  * @param  {string} message
-  * @param  {string} [parentId] parent folder id
-  * @returns Promise with new node id & corresponding transaction id
-  */
+   * @param  {string} vaultId
+   * @param  {string} message
+   * @param  {string} [parentId] parent folder id
+   * @returns Promise with new node id & corresponding transaction id
+   */
   public async create(vaultId: string, message: string, parentId?: string): Promise<MemoCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
@@ -47,10 +36,10 @@ class MemoService extends NodeService<Memo> {
   }
 
   /**
-  * @param  {string} memoId
-  * @param  {reactionEmoji} reaction
-  * @returns Promise with corresponding transaction id
-  */
+   * @param  {string} memoId
+   * @param  {reactionEmoji} reaction
+   * @returns Promise with corresponding transaction id
+   */
   public async addReaction(memoId: string, reaction: reactionEmoji): Promise<MemoUpdateResult> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
@@ -94,6 +83,18 @@ class MemoService extends NodeService<Memo> {
     return { transactionId: id, object: memo };
   }
 
+  protected async processMemo(object: Memo, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Memo> {
+    const memo = new Memo(object, keys);
+    if (shouldDecrypt) {
+      try {
+        await memo.decrypt();
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return memo;
+  }
+
   private async memoVersion(message: string): Promise<MemoVersion> {
     const version = {
       owner: await this.wallet.getAddress(),
@@ -133,19 +134,18 @@ class MemoService extends NodeService<Memo> {
     }
     throw new NotFound("Could not find reaction: " + reaction + " for given user.")
   }
-
-  protected async processMemo(object: Memo, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Memo> {
-    const memo = new Memo(object, keys);
-    if (shouldDecrypt) {
-      try {
-        await memo.decrypt();
-      } catch (error) {
-        throw new IncorrectEncryptionKey(error);
-      }
-    }
-    return memo;
-  }
 };
+
+type MemoCreateResult = {
+  memoId: string,
+  transactionId: string,
+  object: Memo
+}
+
+type MemoUpdateResult = {
+  transactionId: string,
+  object: Memo
+}
 
 export {
   MemoService

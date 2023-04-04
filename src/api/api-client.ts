@@ -9,6 +9,7 @@ import { Auth } from "@akord/akord-auth";
 import { Unauthorized } from "../errors/unauthorized";
 import { throwError } from "../errors/error";
 import { BadRequest } from "../errors/bad-request";
+import { NotFound } from "../errors/not-found";
 
 export class ApiClient {
   private _storageurl: string;
@@ -23,7 +24,7 @@ export class ApiClient {
   private _isPublic: boolean;
   private _data: any;
   private _metadata: any;
-  private _queryParams: any;
+  private _queryParams: any = {};
   private _responseType: string = "json";
   private _progressHook: (progress: any, data?: any) => void
   private _processed: number
@@ -131,20 +132,32 @@ export class ApiClient {
     return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
   }
 
-  async updateProfile(): Promise<any> {
-    return await this.fetch("put", `${this._apiurl}/profiles`);
+  async existsUser(): Promise<Boolean> {
+    try {
+      await this.get(`${this._apiurl}/users/${this._resourceId}`);
+    } catch (e) {
+      if (!(e instanceof NotFound)) {
+        throw e;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  async getUser(): Promise<any> {
+    return await this.get(`${this._apiurl}/users`);
+  }
+
+  async getUserPublicData(): Promise<{address: string, publicKey: string}> {
+    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
+  }
+
+  async updateUser(): Promise<any> {
+    return await this.fetch("put", `${this._apiurl}/users`);
   }
 
   async deleteVault(): Promise<void> {
     await this.fetch("delete", `${this._apiurl}/vaults/${this._vaultId}`);
-  }
-
-  async getUser(): Promise<any> {
-    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
-  }
-
-  async getProfile(): Promise<any> {
-    return await this.get(`${this._apiurl}/profiles`);
   }
 
   async getMembers(): Promise<Array<Membership>> {
@@ -246,14 +259,8 @@ export class ApiClient {
   }
 
   addQueryParams = function (url: string, params: any) {
-    Object.entries(params).forEach(([key, value], index) => {
-      if (value) {
-        let queryParam = index === 0 ? "?" : "&";
-        queryParam += encodeURIComponent(key);
-        queryParam += "=" + encodeURIComponent(value.toString());
-        url += queryParam;
-      }
-    });
+    const queryParams = new URLSearchParams(JSON.parse(JSON.stringify(params)));
+    url += "?" + queryParams.toString();
     return url;
   }
 
