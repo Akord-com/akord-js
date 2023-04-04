@@ -10,7 +10,7 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags): Promise<{ id: string, object: T }>
+  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
   
@@ -54,7 +54,7 @@ abstract class Api {
 
   abstract deleteVault(vaultId: string): Promise<void>
 
-  abstract inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }>
+  abstract inviteNewUser(vaultId: string, email: string, role: string, message?: any): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
 }

@@ -23,6 +23,7 @@ export class ApiClient {
   private _resourceId: string;
   private _isPublic: boolean;
   private _data: any;
+  private _metadata: any;
   private _queryParams: any = {};
   private _responseType: string = "json";
   private _progressHook: (progress: any, data?: any) => void
@@ -70,6 +71,11 @@ export class ApiClient {
 
   data(data: any): ApiClient {
     this._data = data;
+    return this;
+  }
+
+  metadata(metadata: any): ApiClient {
+    this._metadata = metadata;
     return this;
   }
 
@@ -275,7 +281,8 @@ export class ApiClient {
 
     this.data({
       input: this._input,
-      tags: this._tags
+      tags: this._tags,
+      metadata: this._metadata
     });
     const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/transactions`);
     return response;

@@ -1,6 +1,6 @@
 import { Service, ServiceFactory } from "../core";
 import { v4 as uuidv4 } from "uuid";
-import { MembershipService } from "./membership";
+import { MembershipService, activeStatus } from "./membership";
 import { StackService } from "./stack";
 import { NodeService } from "./node";
 import { Node, NodeType, Stack } from "../types/node";
@@ -162,9 +162,10 @@ class BatchService extends Service {
   /**
    * @param  {string} vaultId
    * @param  {{email:string,role:RoleType}[]} items
+   * @param  {string} [message] optional email message - unencrypted
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[]): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], message?: string): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as { membershipId: string, transactionId: string }[];
@@ -174,17 +175,17 @@ class BatchService extends Service {
       const email = item.email.toLowerCase();
       const role = item.role;
       const member = members.find(item => item.email?.toLowerCase() === email);
-      if (member) {
+      if (member && activeStatus.includes(member.status)) {
         errors.push({ email: email, message: "Membership already exists for this user." });
       } else {
         const userHasAccount = await this.api.existsUser(email);
         const service = new MembershipService(this.wallet, this.api);
         service.setGroupRef(this.groupRef);
         if (userHasAccount) {
-          data.push(await service.invite(vaultId, email, role));
+          data.push(await service.invite(vaultId, email, role, message));
         } else {
           data.push({
-            ...(await service.inviteNewUser(vaultId, email, role)),
+            ...(await service.inviteNewUser(vaultId, email, role, message)),
             transactionId: null
           })
         }
