@@ -279,7 +279,10 @@ class Service {
   }
 
   protected async mergeAndUploadBody(body: any): Promise<string> {
-    const mergedBody = await this.mergeState(body);
+    const currentState = this.object?.data?.length > 0
+      ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
+      : {};
+    const mergedBody = await this.mergeState(currentState, body);
     return this.uploadState(mergedBody);
   }
 
@@ -312,8 +315,7 @@ class Service {
     return ids[0];
   }
 
-  protected async mergeState(stateUpdates: any) {
-    const currentState = this.object.data ? await this.api.getNodeState(this.object.data[this.object.data.length - 1]) : {};
+  protected async mergeState(currentState: any, stateUpdates: any) {
     let newState = lodash.cloneDeepWith(currentState);
     lodash.mergeWith(
       newState,
