@@ -41,14 +41,15 @@ class VaultService extends Service {
    */
   public async list(options: ListOptions = this.defaultListOptions): Promise<Paginated<Vault>> {
     const response = await this.api.getVaults(options.filter, options.limit, options.nextToken);
+    const promises = response.items
+      .map(async (vaultProto: Vault) => {
+        return await this.processVault(vaultProto, options.shouldDecrypt, vaultProto.keys);
+      }) as Promise<Vault>[];
+    const { items, errors } = await this.handleListErrors<Vault>(response.items, promises);
     return {
-      items: await Promise.all(
-        response.items
-          .map(async (vaultProto: Vault) => {
-            const vault = await this.processVault(vaultProto, options.shouldDecrypt, vaultProto.keys);
-            return vault;
-          })) as Vault[],
-      nextToken: response.nextToken
+      items,
+      nextToken: response.nextToken,
+      errors
     }
   }
 

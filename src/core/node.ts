@@ -45,13 +45,15 @@ class NodeService<T = NodeLike> extends Service {
   public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
     const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, options.parentId, options.filter, options.limit, options.nextToken);
     const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+    const promises = response.items
+      .map(async nodeProto => {
+        return await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
+      }) as Promise<NodeLike>[];
+    const { items, errors } = await this.handleListErrors<NodeLike>(response.items, promises);
     return {
-      items: await Promise.all(
-        response.items
-          .map(async nodeProto => {
-            return await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
-          })) as NodeLike[],
-      nextToken: response.nextToken
+      items,
+      nextToken: response.nextToken,
+      errors
     }
   }
 
