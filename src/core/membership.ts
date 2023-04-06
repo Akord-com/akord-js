@@ -273,7 +273,8 @@ class MembershipService extends Service {
           } catch (error) {
             throw new IncorrectEncryptionKey(error);
           }
-          const newState = await this.mergeState({ keys });
+          const currentMemberState = member.data?.length > 0 ? await this.api.getNodeState(member.data[member.data.length - 1]) : {};
+          const newState = await this.mergeState(currentMemberState, { keys });
           const signature = await this.signData(newState);
           newMembershipStates.push({
             data: newState, tags: [
