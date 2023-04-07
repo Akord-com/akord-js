@@ -249,7 +249,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
-    let data: any;
+    let data: { id: string, value: string }[];
     if (!this.isPublic) {
       // generate a new vault key pair
       const keyPair = await generateKeyPair();
@@ -336,7 +336,7 @@ class MembershipService extends Service {
    * @param  {string} [message] optional email message - unencrypted
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: any): Promise<{
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: string): Promise<{
     membershipId: string
   }> {
     const { id } = await this.api.inviteNewUser(vaultId, email, role, message);

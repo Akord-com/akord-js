@@ -137,7 +137,7 @@ export default class AkordApi extends Api {
       .deleteVault();
   }
 
-  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: any): Promise<{ id: string }> {
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: string): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
