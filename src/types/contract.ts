@@ -46,8 +46,13 @@ export type Tags = Tag[];
 
 export interface ContractInput {
   function: functions,
-  data?: any,
+  data?: DataInput,
   parentId?: string,
   address?: string,
   role?: string // type
 }
+
+export type DataInput =
+  { vault: string, membership: string } // vault:init
+  | { id: string, value: string }[] // membership:revoke
+  | string // all other transactions

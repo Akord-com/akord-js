@@ -349,6 +349,17 @@ class Service {
     }
     return tags;
   }
+
+  protected async handleListErrors<T>(originalItems: Array<T>, promises: Array<Promise<T>>)
+    : Promise<{ items: Array<T>, errors: Array<{ id: string, error: string }> }> {
+    const results = await Promise.all(promises.map(p => p.catch(e => e)));
+    const items = results.filter(result => !(result instanceof Error));
+    const errors = results
+      .map((result, index) => ({ result, index }))
+      .filter((mapped) => mapped.result instanceof Error)
+      .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result.message }));
+    return { items, errors };
+  }
 }
 
 export {

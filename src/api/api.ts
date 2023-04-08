@@ -54,7 +54,7 @@ abstract class Api {
 
   abstract deleteVault(vaultId: string): Promise<void>
 
-  abstract inviteNewUser(vaultId: string, email: string, role: string, message?: any): Promise<{ id: string }>
+  abstract inviteNewUser(vaultId: string, email: string, role: string, message?: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
 }
