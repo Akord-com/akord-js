@@ -1228,44 +1228,45 @@ Update user profile along with all active memberships
 
 #### `revoke(items)`
 
-- `items` (`Array<{ id: string, type: string }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `restore(items)`
 
-- `items` (`Array<{ id: string, type: string }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `delete(items)`
 
-- `items` (`Array<{ id: string, type: string }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `move(items, parentId)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - `parentId` (`string`, optional)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `membershipChangeRole(items)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, role: `[`RoleType`][role-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `stackCreate(vaultId, items, parentId, progressHook, cancelHook)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, parentId?: string }>`, required)
 - `parentId` (`string`, optional)
 - `progressHook` (`(progress:number)=>void`, optional)
 - `cancelHook` (`AbortController`, optional)
-- returns `Promise<Array<{ transactionId }>>` - Promise with new stack ids & their corresponding transaction ids
+- returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
 #### `membershipInvite(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ transactionId }>`, required)
-- returns `Promise<Array<{ transactionId }>>` - Promise with new membership ids & their corresponding transaction ids
+- `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
+- `message` (`string`, optional) - email message (unencrypted)
+- returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
 
 ### Development
 > requires Node.js 16
@@ -1309,3 +1310,7 @@ After merging your PR to `main`:
 [vault-get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L14
 [file-like]: https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8
 [storage-type]: https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149
+[role-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/membership.ts#L4
+[node-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/node.ts#L11
+[batch-stack-create-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L1
+[batch-membership-invite-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L7
