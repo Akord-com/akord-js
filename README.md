@@ -1003,7 +1003,7 @@ const { noteId } = await akord.note.create(
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.note.uploadRevision(vaultId, "# Hello World bis", "Hello World note bis");
+const { transactionId } = await akord.note.uploadRevision(noteId, "# Hello World bis", "Hello World note bis");
 ```
 </details>
 
