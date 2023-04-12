@@ -26,12 +26,16 @@ class VaultService extends Service {
    * @returns Promise with the decrypted vault
    */
   public async get(vaultId: string, options: VaultGetOptions = this.defaultGetOptions): Promise<Vault> {
-    const result = await this.api.getVault(vaultId, options);
-    if (!options.shouldDecrypt || result.public) {
+    const getOptions = {
+      ...this.defaultGetOptions,
+      ...options
+    }
+    const result = await this.api.getVault(vaultId, getOptions);
+    if (!getOptions.shouldDecrypt || result.public) {
       return new Vault(result, []);
     }
     const { keys } = await this.api.getMembershipKeys(vaultId);
-    const vault = await this.processVault(result, options.shouldDecrypt, keys);
+    const vault = await this.processVault(result, getOptions.shouldDecrypt, keys);
     return vault
   }
 
@@ -40,10 +44,14 @@ class VaultService extends Service {
    * @returns Promise with paginated user vaults
    */
   public async list(options: ListOptions = this.defaultListOptions): Promise<Paginated<Vault>> {
-    const response = await this.api.getVaults(options.filter, options.limit, options.nextToken);
+    const listOptions = {
+      ...this.defaultListOptions,
+      ...options
+    }
+    const response = await this.api.getVaults(listOptions.filter, listOptions.limit, listOptions.nextToken);
     const promises = response.items
       .map(async (vaultProto: Vault) => {
-        return await this.processVault(vaultProto, options.shouldDecrypt, vaultProto.keys);
+        return await this.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
       }) as Promise<Vault>[];
     const { items, errors } = await this.handleListErrors<Vault>(response.items, promises);
     return {
