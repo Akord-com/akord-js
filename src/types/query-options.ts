@@ -1,13 +1,13 @@
 export type ListOptions = {
-  shouldDecrypt: boolean,
-  filter: Object,
+  shouldDecrypt?: boolean,
+  filter?: Object,
   limit?: number, // the limit of the number of items in a query (default to 100)
   nextToken?: string
   parentId?: string
 }
 
 export type GetOptions = {
-  shouldDecrypt: boolean,
+  shouldDecrypt?: boolean,
   vaultId?: string
 }
 

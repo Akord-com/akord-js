@@ -31,9 +31,13 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with the decrypted node
    */
   public async get(nodeId: string, options: GetOptions = this.defaultGetOptions): Promise<T> {
-    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, options.vaultId);
+    const getOptions = {
+      ...this.defaultGetOptions,
+      ...options
+    }
+    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, getOptions.vaultId);
     const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
-    const node = await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
+    const node = await this.processNode(nodeProto, isEncrypted && getOptions.shouldDecrypt, keys);
     return node as T;
   }
 
@@ -43,11 +47,15 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with paginated nodes within given vault
    */
   public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, options.parentId, options.filter, options.limit, options.nextToken);
-    const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
+    const listOptions = {
+      ...this.defaultListOptions,
+      ...options
+    }
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.parentId, listOptions.filter, listOptions.limit, listOptions.nextToken);
+    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     const promises = response.items
       .map(async nodeProto => {
-        return await this.processNode(nodeProto, isEncrypted && options.shouldDecrypt, keys);
+        return await this.processNode(nodeProto, isEncrypted && listOptions.shouldDecrypt, keys);
       }) as Promise<NodeLike>[];
     const { items, errors } = await this.handleListErrors<NodeLike>(response.items, promises);
     return {
