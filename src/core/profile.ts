@@ -31,25 +31,23 @@ class ProfileService extends Service {
   @PCacheBuster({
     cacheBusterNotifier: CacheBusters.profile
   })
-  public async update(name: string, avatar: any): Promise<{ transactionId: string }[]> {
+  public async update(name: string, avatar: ArrayBuffer): Promise<{ transactionId: string }[]> {
     let transactions = [];
 
     const profilePromise = new Promise<void>(async (resolve, reject) => {
       const user = await this.api.getUser();
-      this.setObject(user);
+      this.setObject(<any>user);
 
       this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
       this.setIsPublic(false);
       const profileDetails = await this.processMemberDetails({ name, avatar }, false);
 
-      // merge & upload current profile state to Arweave
-      const mergedProfileDetails = {
-        name: profileDetails.name || user.name || user.fullName,
-        avatarUri: profileDetails.avatarUri || user.avatarUri,
-      }
-
-      await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
-      await this.api.updateUser(mergedProfileDetails.name, mergedProfileDetails.avatarUri);
+      const newProfileDetails = new ProfileDetails({
+        ...user,
+        ...profileDetails,
+      });
+      await this.api.uploadData([{ data: { profileDetails: newProfileDetails }, tags: [] }], false);
+      await this.api.updateUser(newProfileDetails.name, newProfileDetails.avatarUri);
       resolve();
     })
 

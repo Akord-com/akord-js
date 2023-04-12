@@ -271,7 +271,7 @@ class MembershipService extends Service {
       for (let member of memberships) {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
-          const { publicKey } = await this.getUserEncryptionInfo(member.memberDetails.email);
+          const { publicKey } = await this.getUserEncryptionInfo(member.email);
           const memberKeysEncrypter = new Encrypter(
             this.wallet,
             this.dataEncrypter.keys,
@@ -365,7 +365,7 @@ class MembershipService extends Service {
     await this.api.inviteResend(object.vaultId, membershipId);
   }
 
-  async profileUpdate(membershipId: string, name: string, avatar: any): Promise<MembershipUpdateResult> {
+  async profileUpdate(membershipId: string, name: string, avatar: ArrayBuffer): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);

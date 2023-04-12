@@ -10,6 +10,7 @@ import { Unauthorized } from "../errors/unauthorized";
 import { throwError } from "../errors/error";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
+import { User, UserPublicInfo } from "../types/user";
 
 export class ApiClient {
   private _storageurl: string;
@@ -144,11 +145,11 @@ export class ApiClient {
     return true;
   }
 
-  async getUser(): Promise<any> {
+  async getUser(): Promise<User> {
     return await this.get(`${this._apiurl}/users`);
   }
 
-  async getUserPublicData(): Promise<{address: string, publicKey: string}> {
+  async getUserPublicData(): Promise<UserPublicInfo> {
     return await this.get(`${this._apiurl}/users/${this._resourceId}`);
   }
 
