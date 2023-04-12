@@ -365,7 +365,7 @@ class MembershipService extends Service {
     await this.api.inviteResend(object.vaultId, membershipId);
   }
 
-  async profileUpdate(membershipId: string, name: string, avatar: any): Promise<MembershipUpdateResult> {
+  async profileUpdate(membershipId: string, name: string, avatar: ArrayBuffer): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
     const memberDetails = await this.processMemberDetails({ name, avatar }, true);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);

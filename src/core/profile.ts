@@ -31,7 +31,7 @@ class ProfileService extends Service {
   @PCacheBuster({
     cacheBusterNotifier: CacheBusters.profile
   })
-  public async update(name: string, avatar: any): Promise<{ transactionId: string }[]> {
+  public async update(name: string, avatar: ArrayBuffer): Promise<{ transactionId: string }[]> {
     let transactions = [];
 
     const profilePromise = new Promise<void>(async (resolve, reject) => {
@@ -44,7 +44,7 @@ class ProfileService extends Service {
 
       // merge & upload current profile state to Arweave
       const mergedProfileDetails = {
-        name: profileDetails.name || user.name || user.fullName,
+        name: profileDetails.name || user.name,
         avatarUri: profileDetails.avatarUri || user.avatarUri,
       }
 

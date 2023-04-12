@@ -22,6 +22,7 @@ import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
+import { ProfileDetails } from "../types/profile-details";
 
 declare const Buffer;
 
@@ -149,7 +150,7 @@ class Service {
     this.object = object;
   }
 
-  protected async getProfileDetails() {
+  protected async getProfileDetails(): Promise<ProfileDetails> {
     const user = await this.api.getUser();
     if (user) {
       const profileEncrypter = new Encrypter(this.wallet, null, null);
@@ -185,7 +186,7 @@ class Service {
         throw new IncorrectEncryptionKey(error);
       }
     }
-    return {};
+    return <any>{};
   }
 
   protected async processWriteRaw(data: any, encryptedKey?: string) {
@@ -230,7 +231,7 @@ class Service {
     return jsonToBase64(decodedPayload);
   }
 
-  protected getAvatarUri(profileDetails: any) {
+  protected getAvatarUri(profileDetails: ProfileDetails) {
     if (profileDetails.avatarUri && profileDetails.avatarUri.length) {
       return [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
     }
@@ -245,8 +246,8 @@ class Service {
     return this.api.uploadFile(processedData, encryptionTags, false, shouldBundleTransaction);
   }
 
-  protected async processMemberDetails(memberDetails: any, shouldBundleTransaction?: boolean) {
-    let processedMemberDetails = {} as any;
+  protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, shouldBundleTransaction?: boolean) {
+    let processedMemberDetails = {} as ProfileDetails;
     if (memberDetails.name) {
       processedMemberDetails.name = await this.processWriteString(memberDetails.name);
     }
