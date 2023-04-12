@@ -16,7 +16,7 @@ describe("Testing profile functions", () => {
   it("should update the profile", async () => {
     const name = faker.random.words();
 
-    const file = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
+    const file = await NodeJs.File.fromPath("./src/__tests__/data/logo.png");
     const fileBuffer = await file.arrayBuffer();
     await akord.profile.update(name, fileBuffer);
 
