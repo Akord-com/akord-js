@@ -9,6 +9,7 @@ import { Auth } from "@akord/akord-auth";
  * @returns Promise with Akord Client instance
  */
 Akord.init = async function (wallet: Wallet, config: ClientConfig = {}): Promise<Akord> {
+  Auth.configure(config);
   return new Akord(wallet, config);
 };
 
