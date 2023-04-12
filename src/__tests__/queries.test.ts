@@ -10,15 +10,15 @@ jest.setTimeout(3000000);
 
 describe("Testing querying directly from permaweb", () => {
   beforeAll(async () => {
-    const { jwtToken, wallet } = await Auth.signIn(email, password);
-    privateClient = new Akord(wallet, jwtToken);
+    const { wallet } = await Auth.signIn(email, password);
+    privateClient = new Akord(wallet);
     publicClient = new Akord();
   });
 
-  // it("Query all vaults from Akord API", async () => {
-  //   const result = await privateClient.vault.list();
-  //   expect(result).toEqual(vaults);
-  // });
+  it("Query all vaults from Akord API", async () => {
+    const result = await privateClient.vault.listAll();
+    expect(result).toBeTruthy();
+  });
 
   it("Should query public vault - contract state from Akord API", async () => {
     const contract = await publicClient.contract.getState(publicVaultId);
@@ -34,7 +34,7 @@ describe("Testing querying directly from permaweb", () => {
   });
 
   it("Query stacks by parent id", async () => {
-    const stacks = await publicClient.stack.listAll(publicVaultId, parentId);
+    const stacks = await publicClient.stack.listAll(publicVaultId, { parentId });
     expect(stacks.length).toEqual(2);
     expect(stacks[0].parentId).toEqual(parentId);
     expect(stacks[1].parentId).toEqual(parentId);
