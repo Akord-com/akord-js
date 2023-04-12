@@ -10,6 +10,7 @@ import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { VaultApiGetOptions } from "../types/query-options";
+import { User, UserPublicInfo } from "../types/user";
 
 export default class AkordApi extends Api {
 
@@ -106,21 +107,21 @@ export default class AkordApi extends Api {
       .existsUser();
   }
 
-  public async getUserPublicData(email: string): Promise<{address: string, publicKey: string}> {
+  public async getUserPublicData(email: string): Promise<UserPublicInfo> {
     return await new ApiClient()
       .env(this.config)
       .resourceId(email)
       .getUserPublicData();
   };
 
-  public async getUser(): Promise<any> {
+  public async getUser(): Promise<User> {
     return await new ApiClient()
       .env(this.config)
       .getUser();
   };
 
 
-  public async updateUser(name: string, avatarUri: string): Promise<void> {
+  public async updateUser(name: string, avatarUri: string[]): Promise<void> {
     await new ApiClient()
       .env(this.config)
       .data({

@@ -4,6 +4,7 @@ import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { VaultApiGetOptions } from "../types/query-options";
+import { User, UserPublicInfo } from "../types/user";
 
 abstract class Api {
   config: any
@@ -26,9 +27,9 @@ abstract class Api {
 
   abstract existsUser(email: string): Promise<Boolean>
 
-  abstract getUser(): Promise<any>
+  abstract getUser(): Promise<User>
 
-  abstract getUserPublicData(email: string): Promise<{address: string, publicKey: string}>
+  abstract getUserPublicData(email: string): Promise<UserPublicInfo>
 
   abstract getNode<T>(id: string, type: string, vaultId?: string): Promise<T>
 
@@ -50,7 +51,7 @@ abstract class Api {
 
   abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
-  abstract updateUser(name: string, avatarUri: string): Promise<void>
+  abstract updateUser(name: string, avatarUri: string[]): Promise<void>
 
   abstract deleteVault(vaultId: string): Promise<void>
 

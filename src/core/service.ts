@@ -161,7 +161,7 @@ class Service {
         }
       ]
       let avatar = null;
-      const resourceUri = this.getAvatarUri(user);
+      const resourceUri = this.getAvatarUri(new ProfileDetails(user));
       if (resourceUri) {
         const { fileData, headers } = await this.api.downloadFile(resourceUri);
         const encryptedPayload = this.getEncryptedPayload(fileData, headers);
@@ -234,11 +234,9 @@ class Service {
   protected getAvatarUri(profileDetails: ProfileDetails) {
     if (profileDetails.avatarUri && profileDetails.avatarUri.length) {
       return [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
+    } else {
+      return null;
     }
-    else if (profileDetails.avatarUrl) {
-      return profileDetails.avatarUrl;
-    }
-    return null;
   }
 
   protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
@@ -255,7 +253,7 @@ class Service {
       const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, shouldBundleTransaction);
       processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
     }
-    return processedMemberDetails;
+    return new ProfileDetails(processedMemberDetails);
   }
 
   protected async processReadString(data: any, shouldDecrypt = true) {
