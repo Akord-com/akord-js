@@ -47,7 +47,6 @@ class ProfileService extends Service {
       ...user,
       ...profileDetails,
     });
-    await this.api.uploadData([{ data: { profileDetails: newProfileDetails }, tags: [] }], false);
     await this.api.updateUser(newProfileDetails.name, newProfileDetails.avatarUri);
 
     // update user memberships
