@@ -66,7 +66,7 @@ class VaultService extends Service {
    * @returns Promise with currently authenticated user vaults
    */
   public async listAll(options: ListOptions = this.defaultListOptions): Promise<Array<Vault>> {
-    let token = null;
+    let token = undefined;
     let vaults = [] as Vault[];
     do {
       const { items, nextToken } = await this.list(options);
@@ -74,7 +74,7 @@ class VaultService extends Service {
       token = nextToken;
       options.nextToken = nextToken;
       if (nextToken === "null") {
-        token = null;
+        token = undefined;
       }
     } while (token);
     return vaults;

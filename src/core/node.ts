@@ -71,7 +71,7 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with all nodes within given vault
    */
   public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
-    let token = null;
+    let token = undefined;
     let nodeArray = [] as NodeLike[];
     do {
       const { items, nextToken } = await this.list(vaultId, options);
@@ -79,7 +79,7 @@ class NodeService<T = NodeLike> extends Service {
       token = nextToken;
       options.nextToken = nextToken;
       if (nextToken === "null") {
-        token = null;
+        token = undefined;
       }
     } while (token);
     return nodeArray;
