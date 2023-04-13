@@ -71,18 +71,10 @@ class NodeService<T = NodeLike> extends Service {
    * @returns Promise with all nodes within given vault
    */
   public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
-    let token = undefined;
-    let nodeArray = [] as NodeLike[];
-    do {
-      const { items, nextToken } = await this.list(vaultId, options);
-      nodeArray = nodeArray.concat(items);
-      token = nextToken;
-      options.nextToken = nextToken;
-      if (nextToken === "null") {
-        token = undefined;
-      }
-    } while (token);
-    return nodeArray;
+    const list = async (options: ListOptions & { vaultId: string }) => {
+      return await this.list(options.vaultId, options);
+    }
+    return await this.paginate<NodeLike>(list, { ...options, vaultId });
   }
 
   /**

@@ -23,6 +23,7 @@ import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ProfileDetails } from "../types/profile-details";
+import { ListOptions } from "../types/query-options";
 
 declare const Buffer;
 
@@ -358,6 +359,21 @@ class Service {
       .filter((mapped) => mapped.result instanceof Error)
       .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result.message }));
     return { items, errors };
+  }
+
+  protected async paginate<T>(apiCall: any, listOptions: ListOptions & { vaultId?: string }): Promise<Array<T>> {
+    let token = undefined;
+    let results = [] as T[];
+    do {
+      const { items, nextToken } = await apiCall(listOptions);
+      results = results.concat(items);
+      token = nextToken;
+      listOptions.nextToken = nextToken;
+      if (nextToken === "null") {
+        token = undefined;
+      }
+    } while (token);
+    return results;
   }
 }
 
