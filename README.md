@@ -583,8 +583,11 @@ do {
   <summary>example</summary>
 
 ```js
+import { NodeJs } from "@akord/akord-js/lib/types/file";
+const file = await NodeJs.File.fromPath("path to your file");
 const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
 ```
+> [See Next.js file upload showcase here][file-upload-example]
 </details>
 
 #### `import(vaultId, fileTxId, parentId)`
@@ -629,6 +632,8 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
   <summary>example</summary>
 
 ```js
+import { NodeJs } from "@akord/akord-js/lib/types/file";
+const file = await NodeJs.File.fromPath("path to your file");
 const { transactionId } = await akord.stack.uploadRevision(stackId, file);
 ```
 </details>
@@ -1314,3 +1319,4 @@ After merging your PR to `main`:
 [node-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/node.ts#L11
 [batch-stack-create-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L1
 [batch-membership-invite-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L7
+[file-upload-example]:https://github.com/Akord-com/recipes/blob/a2dbc847097973ef08586f32b0ce3192f0581ed4/nextjs-starter/src/pages/index.tsx#L66
