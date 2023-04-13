@@ -51,14 +51,14 @@ class ProfileService extends Service {
       resolve();
     })
 
-    let token = null;
+    let token = undefined;
     let memberships = [] as Membership[];
     do {
       const { items, nextToken } = await this.api.getMemberships(100, token);
       memberships = memberships.concat(items);
       token = nextToken;
       if (nextToken === "null") {
-        token = null;
+        token = undefined;
       }
     } while (token);
     const membershipPromiseArray = memberships.map(async (membership) => {

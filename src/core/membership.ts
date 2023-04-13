@@ -79,7 +79,7 @@ class MembershipService extends Service {
    * @returns Promise with all memberships within given vault
    */
   public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
-    let token = null;
+    let token = undefined;
     let nodeArray = [] as Membership[];
     do {
       const { items, nextToken } = await this.list(vaultId, options);
@@ -87,7 +87,7 @@ class MembershipService extends Service {
       token = nextToken;
       options.nextToken = nextToken;
       if (nextToken === "null") {
-        token = null;
+        token = undefined;
       }
     } while (token);
     return nodeArray;
