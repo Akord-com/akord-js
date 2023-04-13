@@ -5,6 +5,7 @@ import { CacheBusters } from "../types/cacheable";
 import { Service } from "./service";
 import { objectType } from "../constants";
 import { Membership } from "../types/membership";
+import { ListOptions } from "../types/query-options";
 
 class ProfileService extends Service {
   objectType = objectType.PROFILE;
@@ -52,16 +53,7 @@ class ProfileService extends Service {
     // update user memberships
     let transactions = [];
 
-    let token = undefined;
-    let memberships = [] as Membership[];
-    do {
-      const { items, nextToken } = await this.api.getMemberships(100, token);
-      memberships = memberships.concat(items);
-      token = nextToken;
-      if (nextToken === "null") {
-        token = undefined;
-      }
-    } while (token);
+    const memberships = await this.listMemberships();
 
     const membershipPromises = memberships.map(async (membership) => {
       const membershipService = new MembershipService(this.wallet, this.api);
@@ -71,6 +63,13 @@ class ProfileService extends Service {
     })
     const { errors } = await this.handleListErrors(memberships, membershipPromises);
     return { transactions, errors };
+  }
+
+  private async listMemberships(): Promise<Array<Membership>> {
+    const list = async (listOptions: ListOptions) => {
+      return await this.api.getMemberships(listOptions.limit, listOptions.nextToken);
+    }
+    return await this.paginate<Membership>(list, {});
   }
 };
 

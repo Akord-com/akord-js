@@ -79,18 +79,10 @@ class MembershipService extends Service {
    * @returns Promise with all memberships within given vault
    */
   public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<Membership>> {
-    let token = undefined;
-    let nodeArray = [] as Membership[];
-    do {
-      const { items, nextToken } = await this.list(vaultId, options);
-      nodeArray = nodeArray.concat(items);
-      token = nextToken;
-      options.nextToken = nextToken;
-      if (nextToken === "null") {
-        token = undefined;
-      }
-    } while (token);
-    return nodeArray;
+    const list = async (options: ListOptions & { vaultId: string }) => {
+      return await this.list(options.vaultId, options);
+    }
+    return await this.paginate<Membership>(list, { ...options, vaultId });
   }
 
   /**
