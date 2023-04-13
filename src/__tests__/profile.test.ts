@@ -22,7 +22,6 @@ describe("Testing profile functions", () => {
 
     const profileDetails = await akord.profile.get();
     expect(profileDetails.name).toEqual(name);
-    expect(profileDetails.avatar).not.toBeNull();
-    expect(Buffer.from(profileDetails.avatar || new ArrayBuffer(1))).toEqual(fileBuffer);
+    expect(profileDetails.avatar).toEqual(fileBuffer);
   });
 });
