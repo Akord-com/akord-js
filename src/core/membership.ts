@@ -344,6 +344,15 @@ class MembershipService extends Service {
   }
 
   /**
+ * Revoke invite for user without an Akord account
+ * @param  {string} vaultId
+ * @param  {string} membershipId
+ */
+  public async revokeInvite(vaultId: string, membershipId: string): Promise<void> {
+    await this.api.revokeInvite(vaultId, membershipId);
+  }
+
+  /**
    * @param  {string} membershipId
    * @returns Promise with corresponding transaction id
    */

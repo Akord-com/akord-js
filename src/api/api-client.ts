@@ -158,7 +158,7 @@ export class ApiClient {
   }
 
   async deleteVault(): Promise<void> {
-    await this.fetch("delete", `${this._apiurl}/vaults/${this._vaultId}`);
+    await this.delete(`${this._apiurl}/vaults/${this._vaultId}`);
   }
 
   async getMembers(): Promise<Array<Membership>> {
@@ -219,6 +219,11 @@ export class ApiClient {
     return response.id;
   }
 
+  async revokeInvite(): Promise<{ id: string }> {
+    const response = await this.delete(`${this._apiurl}/vaults/${this._vaultId}/members/${this._resourceId}`);
+    return response.id;
+  }
+
   async post(url: string): Promise<any> {
     return this.fetch("post", url);
   }
@@ -229,6 +234,10 @@ export class ApiClient {
 
   async get(url: string): Promise<any> {
     return this.fetch("get", url);
+  }
+
+  async delete(url: string): Promise<any> {
+    return this.fetch("delete", url);
   }
 
   async fetch(method: string, url: string): Promise<any> {
