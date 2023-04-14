@@ -12,7 +12,7 @@ import { getTxData, getTxMetadata } from "../arweave";
 import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 
-const DEFAULT_FILE_TYPE = "image/jpeg";
+const DEFAULT_FILE_TYPE = "text/plain";
 
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
@@ -304,9 +304,9 @@ class FileService extends Service {
         tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
     }
-    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type));
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type || DEFAULT_FILE_TYPE));
     tags.push(new Tag(fileTags.FILE_SIZE, file.size));
-    tags.push(new Tag(fileTags.FILE_TYPE, file.type));
+    tags.push(new Tag(fileTags.FILE_TYPE, file.type || DEFAULT_FILE_TYPE));
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
