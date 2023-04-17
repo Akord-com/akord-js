@@ -150,6 +150,13 @@ export default class AkordApi extends Api {
       .invite();
   }
 
+  public async revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }> {
+    return await new ApiClient()
+      .env(this.config)
+      .vaultId(vaultId)
+      .resourceId(membershipId)
+      .revokeInvite();
+  }
 
   public async inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }> {
     return await new ApiClient()
