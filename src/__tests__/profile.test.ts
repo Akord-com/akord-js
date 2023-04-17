@@ -16,13 +16,12 @@ describe("Testing profile functions", () => {
   it("should update the profile", async () => {
     const name = faker.random.words();
 
-    const file = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
+    const file = await NodeJs.File.fromPath("./src/__tests__/data/logo.png");
     const fileBuffer = await file.arrayBuffer();
     await akord.profile.update(name, fileBuffer);
 
     const profileDetails = await akord.profile.get();
     expect(profileDetails.name).toEqual(name);
-    expect(profileDetails.avatar).not.toBeNull();
-    expect(Buffer.from(profileDetails.avatar || new ArrayBuffer(1))).toEqual(fileBuffer);
+    expect(profileDetails.avatar).toEqual(fileBuffer);
   });
 });

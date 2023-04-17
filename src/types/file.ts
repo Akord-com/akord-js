@@ -1,9 +1,8 @@
-import fs from "fs";
-import path from "path";
 import { Blob } from "buffer";
 import * as mime from "mime-types";
 import { BinaryLike } from "crypto";
 import { Readable } from "stream";
+import { NotFound } from "../errors/not-found";
 
 export type FileLike = NodeJs.File | File
 
@@ -24,9 +23,11 @@ export namespace NodeJs {
       return new File(chunks, name, mimeType, lastModified);
     }
 
-    static fromPath(filePath: string) {
+    static async fromPath(filePath: string) {
+      const fs = (await import("fs")).default;
+      const path = (await import("path")).default;
       if (!fs.existsSync(filePath)) {
-        throw new Error("Could not find a file in your filesystem: " + filePath);
+        throw new NotFound("Could not find a file in your filesystem: " + filePath);
       }
       const stats = fs.statSync(filePath);
       const name = path.basename(filePath);

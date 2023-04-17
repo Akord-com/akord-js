@@ -53,6 +53,7 @@ describe("Testing membership functions", () => {
   });
 
   it("should fail inviting the same member twice", async () => {
+    akord1 = await initInstance(email, password);
     await expect(async () =>
       akord1.membership.invite(vaultId, email2, "VIEWER")
     ).rejects.toThrow(Error);
@@ -72,5 +73,8 @@ describe("Testing membership functions", () => {
 
     const membership = await akord1.membership.get(membershipId);
     expect(membership.status).toEqual("REVOKED");
+
+    // should be able to decrypt the vault by the owner
+    await akord1.vault.get(vaultId);
   });
 });

@@ -89,7 +89,7 @@ describe("Testing batch actions", () => {
 
   describe("Batch upload", () => {
     it("should upload a batch of 10 files", async () => {
-      const file = NodeJs.File.fromPath("./src/__tests__/data/logo.png");
+      const file = await NodeJs.File.fromPath("./src/__tests__/data/logo.png");
 
       const items = [] as { file: any, name: string }[];
 

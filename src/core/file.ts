@@ -5,8 +5,7 @@ import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
 import { FileLike } from "../types/file";
-import { Blob } from 'buffer';
-import fs from "fs";
+import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
 import { getTxData, getTxMetadata } from "../arweave";
@@ -124,7 +123,6 @@ class FileService extends Service {
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
     const resource = await new ApiClient()
       .env(this.api.config)
-      .auth(this.api.jwtToken)
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
@@ -133,8 +131,9 @@ class FileService extends Service {
     return { file, resourceHash, resourceUrl: resource.resourceUrl };
   }
 
-  public async stream(path: string, size?: number): Promise<fs.WriteStream | WritableStreamDefaultWriter> {
+  public async stream(path: string, size?: number): Promise<any | WritableStreamDefaultWriter> {
     if (typeof window === 'undefined') {
+      const fs = (await import("fs")).default;
       return fs.createWriteStream(path);
     }
     else {
@@ -228,7 +227,6 @@ class FileService extends Service {
 
     await new ApiClient()
       .env(this.api.config)
-      .auth(this.api.jwtToken)
       .resourceId(resourceUrl)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
@@ -254,7 +252,6 @@ class FileService extends Service {
   ) {
     const resource = await new ApiClient()
       .env(this.api.config)
-      .auth(this.api.jwtToken)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
       .tags(tags.concat(chunk.encryptionTags))

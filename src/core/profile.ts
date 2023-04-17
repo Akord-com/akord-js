@@ -5,6 +5,7 @@ import { CacheBusters } from "../types/cacheable";
 import { Service } from "./service";
 import { objectType } from "../constants";
 import { Membership } from "../types/membership";
+import { ListOptions } from "../types/query-options";
 
 class ProfileService extends Service {
   objectType = objectType.PROFILE;
@@ -31,46 +32,44 @@ class ProfileService extends Service {
   @PCacheBuster({
     cacheBusterNotifier: CacheBusters.profile
   })
-  public async update(name: string, avatar: any): Promise<{ transactionId: string }[]> {
+  public async update(name: string, avatar: ArrayBuffer): Promise<{
+    transactions: { id: string, transactionId: string }[],
+    errors: { id: string, error: any }[]
+  }> {
+    // update profile
+    const user = await this.api.getUser();
+    this.setObject(<any>user);
+
+    this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
+    this.setIsPublic(false);
+    const profileDetails = await this.processMemberDetails({ name, avatar }, false);
+
+    const newProfileDetails = new ProfileDetails({
+      ...user,
+      ...profileDetails,
+    });
+    await this.api.updateUser(newProfileDetails.name, newProfileDetails.avatarUri);
+
+    // update user memberships
     let transactions = [];
 
-    const profilePromise = new Promise<void>(async (resolve, reject) => {
-      const profile = await this.api.getProfile();
-      this.setObject(profile);
+    const memberships = await this.listMemberships();
 
-      this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
-      this.setIsPublic(false);
-      const profileDetails = await this.processMemberDetails({ name, avatar }, false);
-
-      // merge & upload current profile state to Arweave
-      const currentProfileDetails = profile.state.profileDetails;
-      const mergedProfileDetails = {
-        name: profileDetails.name || currentProfileDetails.name || currentProfileDetails.fullName,
-        avatarUri: profileDetails.avatarUri || currentProfileDetails.avatarUri,
-      }
-
-      await this.api.uploadData([{ data: { profileDetails: mergedProfileDetails }, tags: [] }], false);
-      await this.api.updateProfile(mergedProfileDetails.name, mergedProfileDetails.avatarUri);
-      resolve();
-    })
-
-    let token = null;
-    let memberships = [] as Membership[];
-    do {
-      const { items, nextToken } = await this.api.getMemberships(100, token);
-      memberships = memberships.concat(items);
-      token = nextToken;
-      if (nextToken === "null") {
-        token = null;
-      }
-    } while (token);
-    const membershipPromiseArray = memberships.map(async (membership) => {
+    const membershipPromises = memberships.map(async (membership) => {
       const membershipService = new MembershipService(this.wallet, this.api);
       const { transactionId } = await membershipService.profileUpdate(membership.id, name, avatar);
-      transactions.push(transactionId);
+      transactions.push({ id: membership.id, transactionId: transactionId });
+      return membership;
     })
-    await Promise.all(membershipPromiseArray.concat([profilePromise]));
-    return transactions;
+    const { errors } = await this.handleListErrors(memberships, membershipPromises);
+    return { transactions, errors };
+  }
+
+  private async listMemberships(): Promise<Array<Membership>> {
+    const list = async (listOptions: ListOptions) => {
+      return await this.api.getMemberships(listOptions.limit, listOptions.nextToken);
+    }
+    return await this.paginate<Membership>(list, {});
   }
 };
 

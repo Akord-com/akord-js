@@ -3,20 +3,18 @@ import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
-import { UserPublicInfo } from "../types/user";
+import { VaultApiGetOptions } from "../types/query-options";
+import { User, UserPublicInfo } from "../types/user";
 
 abstract class Api {
   config: any
-  jwtToken: string
 
   constructor() { }
 
   abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
-
-  abstract getUserFromEmail(email: string): Promise<UserPublicInfo>
-
+  
   abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
 
   abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<string>>
@@ -27,13 +25,17 @@ abstract class Api {
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
-  abstract getProfile(): Promise<any>
+  abstract existsUser(email: string): Promise<Boolean>
+
+  abstract getUser(): Promise<User>
+
+  abstract getUserPublicData(email: string): Promise<UserPublicInfo>
 
   abstract getNode<T>(id: string, type: string, vaultId?: string): Promise<T>
 
   abstract getMembership(id: string, vaultId?: string): Promise<Membership>
 
-  abstract getVault(id: string): Promise<Vault>
+  abstract getVault(id: string, options?: VaultApiGetOptions): Promise<Vault>
 
   abstract getNodeState(stateId: string): Promise<any>
 
@@ -49,11 +51,11 @@ abstract class Api {
 
   abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
-  abstract updateProfile(name: string, avatarUri: string): Promise<void>
+  abstract updateUser(name: string, avatarUri: string[]): Promise<void>
 
   abstract deleteVault(vaultId: string): Promise<void>
 
-  abstract inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }>
+  abstract inviteNewUser(vaultId: string, email: string, role: string, message?: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
 }

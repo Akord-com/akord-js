@@ -14,6 +14,8 @@ export class Membership extends Encryptable {
   role: RoleType;
   data?: string[];
   encPublicSigningKey: string;
+  email: string;
+  memberPublicSigningKey: string;
   memberDetails: ProfileDetails;
 
   vaultId: string; // remove when on warp
@@ -23,20 +25,18 @@ export class Membership extends Encryptable {
     super(keys, null)
     this.id = membershipProto.id;
     this.owner = membershipProto.owner;
+    this.address = membershipProto.address;
     this.createdAt = membershipProto.createdAt;
     this.updatedAt = membershipProto.updatedAt;
     this.data = membershipProto.data;
     this.status = membershipProto.status;
     this.role = membershipProto.role;
     this.encPublicSigningKey = membershipProto.encPublicSigningKey;
+    this.email = membershipProto.email;
+    this.memberPublicSigningKey = membershipProto.memberPublicSigningKey;
     this.vaultId = membershipProto.vaultId;
     this.keys = keys;
-    this.memberDetails = new ProfileDetails(
-      membershipProto.memberDetails?.name, 
-      membershipProto.memberDetails?.publicSigningKey, 
-      membershipProto.memberDetails?.email,
-      membershipProto.memberDetails?.avatarUri, 
-      keys, null);
+    this.memberDetails = new ProfileDetails(membershipProto.memberDetails, keys);
   }
 }
 

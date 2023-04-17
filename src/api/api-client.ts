@@ -3,11 +3,16 @@ import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
-import { isPaginated, Paginated, PAGINATION_HEADER } from "../types/paginated";
+import { nextToken, isPaginated, Paginated } from "../types/paginated";
 import { Vault } from "../types/vault";
+import { Auth } from "@akord/akord-auth";
+import { Unauthorized } from "../errors/unauthorized";
+import { throwError } from "../errors/error";
+import { BadRequest } from "../errors/bad-request";
+import { NotFound } from "../errors/not-found";
+import { User, UserPublicInfo } from "../types/user";
 
 export class ApiClient {
-  private _jwt: string;
   private _storageurl: string;
   private _apiurl: string;
   private _dir: string = "files";
@@ -20,7 +25,7 @@ export class ApiClient {
   private _isPublic: boolean;
   private _data: any;
   private _metadata: any;
-  private _queryParams: any;
+  private _queryParams: any = {};
   private _responseType: string = "json";
   private _progressHook: (progress: any, data?: any) => void
   private _processed: number
@@ -37,11 +42,6 @@ export class ApiClient {
   env(config: { apiurl: string, storageurl: string }): ApiClient {
     this._apiurl = config.apiurl;
     this._storageurl = config.storageurl;
-    return this;
-  }
-
-  auth(jwt: string): ApiClient {
-    this._jwt = jwt;
     return this;
   }
 
@@ -133,20 +133,32 @@ export class ApiClient {
     return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
   }
 
-  async updateProfile(): Promise<any> {
-    return await this.fetch("put", `${this._apiurl}/profiles`);
+  async existsUser(): Promise<Boolean> {
+    try {
+      await this.get(`${this._apiurl}/users/${this._resourceId}`);
+    } catch (e) {
+      if (!(e instanceof NotFound)) {
+        throw e;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  async getUser(): Promise<User> {
+    return await this.get(`${this._apiurl}/users`);
+  }
+
+  async getUserPublicData(): Promise<UserPublicInfo> {
+    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
+  }
+
+  async updateUser(): Promise<any> {
+    return await this.fetch("put", `${this._apiurl}/users`);
   }
 
   async deleteVault(): Promise<void> {
     await this.fetch("delete", `${this._apiurl}/vaults/${this._vaultId}`);
-  }
-
-  async getUser(): Promise<any> {
-    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
-  }
-
-  async getProfile(): Promise<any> {
-    return await this.get(`${this._apiurl}/profiles`);
   }
 
   async getMembers(): Promise<Array<Membership>> {
@@ -220,37 +232,36 @@ export class ApiClient {
   }
 
   async fetch(method: string, url: string): Promise<any> {
-    if (!this._jwt && !this._isPublic) {
-      throw Error("Authentication is required to use Akord API");
+    const auth = await Auth.getAuthorization()
+    if (!auth && !this._isPublic) {
+      throw new Unauthorized("Authentication is required to use Akord API");
     }
 
     const config = {
       method,
       url: this._queryParams ? this.addQueryParams(url, this._queryParams) : url,
       headers: {
-        'Authorization': 'Bearer ' + this._jwt,
+        'Authorization': auth,
         'Content-Type': 'application/json'
       }
     } as AxiosRequestConfig;
     if (this._data) {
       config.data = this._data;
     }
-    const response = await axios(config);
-    if (isPaginated(response)) {
-      return { items: response.data, nextToken: response.headers[PAGINATION_HEADER] }
+    try {
+      const response = await axios(config);
+      if (isPaginated(response)) {
+        return { items: response.data, nextToken: nextToken(response) }
+      }
+      return response.data;
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
     }
-    return response.data;
   }
 
   addQueryParams = function (url: string, params: any) {
-    Object.entries(params).forEach(([key, value], index) => {
-      if (value) {
-        let queryParam = index === 0 ? "?" : "&";
-        queryParam += encodeURIComponent(key);
-        queryParam += "=" + encodeURIComponent(value.toString());
-        url += queryParam;
-      }
-    });
+    const queryParams = new URLSearchParams(JSON.parse(JSON.stringify(params)));
+    url += "?" + queryParams.toString();
     return url;
   }
 
@@ -263,10 +274,10 @@ export class ApiClient {
    */
   async transaction<T>() {
     if (!this._input) {
-      throw Error("Input is required to use /transactions endpoint");
+      throw new BadRequest("Input is required to use /transactions endpoint");
     }
     if (!this._tags) {
-      throw Error("Tags is required to use /transactions endpoint");
+      throw new BadRequest("Tags is required to use /transactions endpoint");
     }
 
     this.data({
@@ -288,7 +299,7 @@ export class ApiClient {
    */
   async asyncTransaction() {
     if (!this._resourceId) {
-      throw Error("Resource id is required to use /transactions/files endpoint");
+      throw new BadRequest("Resource id is required to use /transactions/files endpoint");
     }
 
     this.data({
@@ -373,11 +384,12 @@ export class ApiClient {
   }
 
   private async upload() {
-    if (!this._jwt) {
-      throw Error("Authentication is required to use Akord API");
+    const auth = await Auth.getAuthorization();
+    if (!auth) {
+      throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._data) {
-      throw Error('Missing data to upload. Use ApiClient#data() to add it')
+      throw new BadRequest('Missing data to upload. Use ApiClient#data() to add it')
     }
     if (!this._resourceId) {
       this._resourceId = this._isPublic ? this._publicDataDir + '/' + uuid() : uuid();
@@ -389,7 +401,7 @@ export class ApiClient {
       url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
       data: this._data,
       headers: {
-        'Authorization': 'Bearer ' + this._jwt,
+        'Authorization': auth,
         'Content-Type': 'application/octet-stream'
       },
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -424,16 +436,21 @@ export class ApiClient {
       config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
     }
 
-    const response = await axios(config);
-    return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx }
+    try {
+      const response = await axios(config);
+      return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx };
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
   }
 
   private async download() {
-    if (!this._jwt && !this._isPublic) {
-      throw Error("Authentication is required to use Akord API");
+    const auth = await Auth.getAuthorization();
+    if (!auth && !this._isPublic) {
+      throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
-      throw Error('Missing resource id to download')
+      throw new BadRequest('Missing resource id to download')
     }
 
     const me = this;
@@ -458,12 +475,15 @@ export class ApiClient {
 
     if (!this._isPublic) {
       config.headers = {
-        'Authorization': 'Bearer ' + this._jwt,
+        'Authorization': auth,
       }
     }
 
-    const response = await axios(config);
-    const downloadResponse = { resourceUrl: this._resourceId, response: response }
-    return downloadResponse
+    try {
+      const response = await axios(config);
+      return { resourceUrl: this._resourceId, response: response };
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
   }
 }
