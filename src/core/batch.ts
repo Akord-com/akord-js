@@ -119,11 +119,12 @@ class BatchService extends Service {
     const errors = [] as { name: string, message: string }[];
 
     if (options.progressHook) {
+      const onProgress = options.progressHook
       const stackProgressHook = (localProgress: number, data: any) => {
         const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
         progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
         perFileProgress.set(data.id, stackBytesUploaded);
-        options.progressHook(Math.min(100, Math.round(progress / size * 100)));
+        onProgress(Math.min(100, Math.round(progress / size * 100)));
       }
       options.progressHook = stackProgressHook;
     }
