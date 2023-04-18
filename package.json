@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@akord/akord-auth": "0.24.4",
-    "@akord/crypto": "0.10.2",
+    "@akord/crypto": "0.10.6",
     "@akord/ts-cacheable": "1.0.11",
     "axios": "^0.24.0",
     "blueimp-load-image": "^5.16.0",
