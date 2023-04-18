@@ -1,4 +1,4 @@
-import { NodeService } from "./node";
+import { NodeCreateOptions, NodeService } from "./node";
 import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
@@ -21,17 +21,17 @@ class MemoService extends NodeService<Memo> {
   /**
    * @param  {string} vaultId
    * @param  {string} message
-   * @param  {string} [parentId] parent folder id
+   * @param  {NodeCreateOptions} [options] parent id, etc.
    * @returns Promise with new node id & corresponding transaction id
    */
-  public async create(vaultId: string, message: string, parentId?: string): Promise<MemoCreateResult> {
+  public async create(vaultId: string, message: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<MemoCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setFunction(functions.NODE_CREATE);
     const body = {
       versions: [await this.memoVersion(message)]
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(body, { parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(body, { parentId: options.parentId });
     return { memoId: nodeId, transactionId, object };
   }
 

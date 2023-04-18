@@ -21,6 +21,11 @@ class VaultService extends Service {
     deep: false
   } as VaultGetOptions;
 
+  defaultCreateOptions = {
+    public: false,
+    termsOfAccess: undefined
+  } as VaultCreateOptions;
+
   /**
    * @param  {string} vaultId
    * @returns Promise with the decrypted vault
@@ -74,14 +79,17 @@ class VaultService extends Service {
 
   /**
    * @param  {string} name new vault name
-   * @param  {string} [termsOfAccess] if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-   * @param  {boolean} [isPublic]
+   * @param  {VaultCreateOptions} options
    * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
-  public async create(name: string, termsOfAccess?: string, isPublic?: boolean): Promise<VaultCreateResult> {
+  public async create(name: string, options: VaultCreateOptions = this.defaultCreateOptions): Promise<VaultCreateResult> {
+    const createOptions = {
+      ...this.defaultCreateOptions,
+      ...options
+    }
     const memberDetails = await this.getProfileDetails();
     this.setActionRef(actionRefs.VAULT_CREATE);
-    this.setIsPublic(isPublic);
+    this.setIsPublic(options.public);
 
     let keys: Array<EncryptedKeys>;
     if (!this.isPublic) {
@@ -109,12 +117,12 @@ class VaultService extends Service {
     this.tags = [
       new Tag(protocolTags.MEMBER_ADDRESS, address),
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
-      new Tag(protocolTags.PUBLIC, isPublic ? "true" : "false"),
+      new Tag(protocolTags.PUBLIC, createOptions.public ? "true" : "false"),
     ].concat(await this.getTags());
 
     const vaultData = {
       name: await this.processWriteString(name),
-      termsOfAccess
+      termsOfAccess: options.termsOfAccess
     }
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
@@ -144,7 +152,7 @@ class VaultService extends Service {
           new Tag(protocolTags.NODE_TYPE, objectType.MEMBERSHIP),
           new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
         ]
-      }], true);
+      }]);
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
@@ -242,6 +250,11 @@ class VaultService extends Service {
     return vault;
   }
 };
+
+export type VaultCreateOptions = {
+  public?: boolean,
+  termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
+}
 
 type VaultCreateResult = {
   vaultId: string,

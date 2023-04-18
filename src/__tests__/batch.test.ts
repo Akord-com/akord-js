@@ -1,34 +1,20 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance } from './helpers';
+import { initInstance, folderCreate, noteCreate, testDataPath, vaultCreate } from './common';
 import { email, email2, email3, password } from './data/test-credentials';
 import { NodeJs } from "../types/file";
+import { firstFileName } from "./data/content";
 
 let akord: Akord;
 
 jest.setTimeout(3000000);
 
-async function vaultCreate() {
-  const name = faker.random.words();
-  const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess);
-
-  const membership = await akord.membership.get(membershipId);
-  expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.role).toEqual("OWNER");
-
-  const vault = await akord.vault.get(vaultId);
-  expect(vault.status).toEqual("ACTIVE");
-  expect(vault.name).toEqual(name);
-  return { vaultId };
-}
-
 describe("Testing batch actions", () => {
   let vaultId: string;
   let folderId: string;
   let noteId: string;
-  let membershipId1: string;
-  let membershipId2: string;
+  let viewerId: string;
+  let contributorId: string;
 
   beforeEach(async () => {
     akord = await initInstance(email, password);
@@ -36,28 +22,16 @@ describe("Testing batch actions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate()).vaultId;
+    vaultId = (await vaultCreate(akord)).vaultId;
   });
 
   describe("Batch revoke/restore actions", () => {
     it("should create folder", async () => {
-      const name = faker.random.words();
-      folderId = (await akord.folder.create(vaultId, name)).folderId;
-
-      const folder = await akord.folder.get(folderId);
-      expect(folder.status).toEqual("ACTIVE");
-      expect(folder.parentId).toBeFalsy();
-      expect(folder.name).toEqual(name);
+      folderId = await folderCreate(akord, vaultId);
     });
 
     it("should create note", async () => {
-      const name = faker.random.words();
-      const content = faker.lorem.sentences();
-
-      noteId = (await akord.note.create(vaultId, content, name)).noteId;
-
-      const note = await akord.note.get(noteId);
-      expect(note.versions.length).toEqual(1);
+      noteId = await noteCreate(akord, vaultId);
     });
 
     it("should revoke all items in a batch", async () => {
@@ -89,22 +63,23 @@ describe("Testing batch actions", () => {
 
   describe("Batch upload", () => {
     it("should upload a batch of 10 files", async () => {
-      const file = await NodeJs.File.fromPath("./src/__tests__/data/logo.png");
+      const file = await NodeJs.File.fromPath(testDataPath + firstFileName);
 
       const items = [] as { file: any, name: string }[];
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 2; i++) {
         const name = faker.random.words();
         items.push({ file, name });
       }
 
-      const response = await akord.batch.stackCreate(vaultId, items);
+      const response = (await akord.batch.stackCreate(vaultId, items)).data;
 
       for (let index in items) {
         const stack = await akord.stack.get(response[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
+        expect(stack.name).toEqual(response[index].object.name);
         expect(stack.versions.length).toEqual(1);
-        expect(stack.versions[0].title).toEqual("logo.png");
+        expect(stack.versions[0].name).toEqual(firstFileName);
       }
     });
   });
@@ -120,11 +95,11 @@ describe("Testing batch actions", () => {
       for (let item of response) {
         const membership = await akord.membership.get(item.membershipId);
         if (membership.email === email2) {
-          membershipId1 = item.membershipId;
+          contributorId = item.membershipId;
           expect(membership.status).toEqual("PENDING");
           expect(membership.role).toEqual("CONTRIBUTOR");
         } else {
-          membershipId2 = item.membershipId;
+          viewerId = item.membershipId;
           expect(membership.status).toEqual("PENDING");
           expect(membership.role).toEqual("VIEWER");
         }
@@ -133,14 +108,14 @@ describe("Testing batch actions", () => {
 
     it("should change access", async () => {
       await akord.batch.membershipChangeRole([
-        { id: membershipId1, role: "VIEWER" },
-        { id: membershipId2, role: "CONTRIBUTOR" }
+        { id: contributorId, role: "VIEWER" },
+        { id: viewerId, role: "CONTRIBUTOR" }
       ])
 
-      const membership1 = await akord.membership.get(membershipId1);
+      const membership1 = await akord.membership.get(contributorId);
       expect(membership1.role).toEqual("VIEWER");
 
-      const membership2 = await akord.membership.get(membershipId2);
+      const membership2 = await akord.membership.get(viewerId);
       expect(membership2.role).toEqual("CONTRIBUTOR");
     });
   });

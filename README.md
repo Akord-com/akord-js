@@ -469,7 +469,7 @@ do {
 
 - `vaultId` (`string`, required)
 - `message` (`string`, required) - memo content
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ memoId, transactionId }>` - Promise with new memo id & corresponding transaction id
 
 <details>
@@ -569,14 +569,12 @@ do {
 
 ### stack
 
-#### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
+#### `create(vaultId, file, name)`
 
 - `vaultId` (`string`, required)
 - `file` ([`FileLike`][file-like], required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
 - `name` (`string`, required) - stack name
-- `parentId` (`string`, optional) - parent folder id
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
+- `options` (`StackCreateOptions`, optional)
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
 <details>
@@ -590,13 +588,13 @@ const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
 > [See Next.js file upload showcase here][file-upload-example]
 </details>
 
-#### `import(vaultId, fileTxId, parentId)`
+#### `import(vaultId, fileTxId)`
 
 Create new stack from an existing arweave file transaction
 
 - `vaultId` (`string`, required)
 - `fileTxId` (`string`, required) - arweave file transaction id reference
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
 <details>
@@ -621,11 +619,11 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
 ```
 </details>
 
-#### `uploadRevision(stackId, file, progressHook)`
+#### `uploadRevision(stackId, file)`
 
 - `stackId` (`string`, required)
 - `file` ([`FileLike`][file-like], required) - file object
-- `progressHook` (`(progress:number)=>void`, optional)
+- `options` (`FileUploadOptions`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -821,11 +819,11 @@ See: https://github.com/jimmywarting/StreamSaver.js#configuration
 
 ### folder
 
-#### `create(vaultId, name, parentId)`
+#### `create(vaultId, name)`
 
 - `vaultId` (`string`, required)
 - `name` (`string`, required) - folder name
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ folderId, transactionId }>` - Promise with new folder id & corresponding transaction id
 
 <details>
@@ -971,13 +969,12 @@ do {
 
 ### note
 
-#### `create(vaultId, content, name, parentId)`
+#### `create(vaultId, content, name)`
 
 - `vaultId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `parentId` (`string`, optional) - parent folder id
-- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
+- `options` (`NoteCreateOptions`, optional) - parent id, mime type, etc.
 - returns `Promise<{ noteId, transactionId }>` - Promise with new note id & corresponding transaction id
 
 <details>
@@ -990,8 +987,7 @@ const { noteId } = await akord.note.create(
   vaultId,
   JSON.stringify({ name: "My first JSON note" }),
   "My first JSON note",
-  parentId,
-  "application/json"
+  { parentId: parentId, mimeType: "application/json" }
 );
 ```
 </details>
@@ -1001,7 +997,7 @@ const { noteId } = await akord.note.create(
 - `noteId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
+- `options` (`NoteOptions`, optional) - mime type, etc.
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -1257,20 +1253,18 @@ Update user profile along with all active memberships
 - `items` (`Array<{ id: string, role: `[`RoleType`][role-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `stackCreate(vaultId, items, parentId, progressHook, cancelHook)`
+#### `stackCreate(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, parentId?: string }>`, required)
-- `parentId` (`string`, optional)
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
+- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string }>`, required)
+- `options` (`BatchStackCreateOptions`, optional)
 - returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
 #### `membershipInvite(vaultId, items)`
 
 - `vaultId` (`string`, required)
 - `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
-- `message` (`string`, optional) - email message (unencrypted)
+- `options` ([`MembershipCreateOptions`][membership-create-options], optional)
 - returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
 
 ### Development

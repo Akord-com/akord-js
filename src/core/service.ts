@@ -242,7 +242,7 @@ class Service {
 
   protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, false, shouldBundleTransaction);
+    return this.api.uploadFile(processedData, encryptionTags, { shouldBundleTransaction, public: false });
   }
 
   protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, shouldBundleTransaction?: boolean) {
@@ -311,7 +311,7 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ data: state, tags }], true);
+    const ids = await this.api.uploadData([{ data: state, tags }]);
     return ids[0];
   }
 
