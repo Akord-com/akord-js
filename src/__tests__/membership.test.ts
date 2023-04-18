@@ -1,6 +1,5 @@
 import { Akord } from "../index";
-import faker from '@faker-js/faker';
-import { initInstance } from './helpers';
+import { initInstance, vaultCreate } from './common';
 import { email, email2, password, password2 } from './data/test-credentials';
 
 let akord1: Akord;
@@ -8,28 +7,13 @@ let akord2: Akord;
 
 jest.setTimeout(3000000);
 
-async function vaultCreate() {
-  const name = faker.random.words();
-  const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord1.vault.create(name, termsOfAccess);
-
-  const membership = await akord1.membership.get(membershipId);
-  expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.role).toEqual("OWNER");
-
-  const vault = await akord1.vault.get(vaultId);
-  expect(vault.status).toEqual("ACTIVE");
-  expect(vault.name).toEqual(name);
-  return { vaultId };
-}
-
 describe("Testing membership functions", () => {
   let vaultId: string;
   let membershipId: string;
 
   beforeAll(async () => {
     akord1 = await initInstance(email, password);
-    vaultId = (await vaultCreate()).vaultId;
+    vaultId = (await vaultCreate(akord1)).vaultId;
   });
 
   it("should invite new member", async () => {

@@ -1,6 +1,5 @@
 import { Akord } from "../index";
-import faker from '@faker-js/faker';
-import { initInstance } from './helpers';
+import { initInstance, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
 import { createFileLike } from "../core/file";
 
@@ -36,30 +35,6 @@ const manifest = {
   }
 };
 
-async function vaultCreate() {
-  const name = faker.random.words();
-  const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vault.create(name, termsOfAccess, true);
-  console.log("created vault", name);
-
-  const membership = await akord.membership.get(membershipId);
-  expect(membership.status).toEqual("ACCEPTED");
-  expect(membership.role).toEqual("OWNER");
-
-  const htmlSrc = "<html><body><h1>Hello World</h2></body></html>";
-  const htmlFile = await createFileLike([htmlSrc], "index.html", "text/html");
-  const { stackId } = await akord.stack.create(vaultId, htmlFile, "index.html");
-  console.log("uploaded index.html", stackId);
-
-  const vault = await akord.vault.get(vaultId);
-  expect(vault.status).toEqual("ACTIVE");
-  expect(vault.name).toEqual(name);
-
-  console.log(vaultId, name);
-
-  return { vaultId };
-}
-
 describe("Testing manifest functions", () => {
   let vaultId: string;
 
@@ -69,7 +44,13 @@ describe("Testing manifest functions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate()).vaultId;
+    vaultId = (await vaultCreate(akord)).vaultId;
+
+    // upload html file
+    const htmlSrc = "<html><body><h1>Hello World</h1></body></html>";
+    const htmlFile = await createFileLike([htmlSrc], "index.html", "text/html");
+    const { stackId } = await akord.stack.create(vaultId, htmlFile, "index.html");
+    console.log("uploaded index.html", stackId);
   });
 
   // it("should create new manifest", async () => {
