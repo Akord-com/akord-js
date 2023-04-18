@@ -89,7 +89,7 @@ class VaultService extends Service {
     }
     const memberDetails = await this.getProfileDetails();
     this.setActionRef(actionRefs.VAULT_CREATE);
-    this.setIsPublic(options.public);
+    this.setIsPublic(createOptions.public);
 
     let keys: Array<EncryptedKeys>;
     if (!this.isPublic) {
@@ -122,7 +122,7 @@ class VaultService extends Service {
 
     const vaultData = {
       name: await this.processWriteString(name),
-      termsOfAccess: options.termsOfAccess
+      termsOfAccess: createOptions.termsOfAccess
     }
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
