@@ -79,7 +79,7 @@ class VaultService extends Service {
 
   /**
    * @param  {string} name new vault name
-   * @param  {VaultCreateOptions} options
+   * @param  {VaultCreateOptions} options public/private, terms of access, etc.
    * @returns Promise with new vault id, owner membership id & corresponding transaction id
    */
   public async create(name: string, options: VaultCreateOptions = this.defaultCreateOptions): Promise<VaultCreateResult> {
