@@ -122,7 +122,7 @@ const { wallet } = await Auth.signIn("winston@gmail.com", "1984");
 - `email` (`string`, required)
 - `password` (`string`, required)
 - `clientMetadata` (`any`, optional) - JSON client metadata, ex: { clientType: "CLI" }
-- returns `Promise<AkordWallet>` - Promise with Akord Wallet
+- returns `Promise<{ wallet }>` - Promise with Akord Wallet
 
 <details>
   <summary>example</summary>
