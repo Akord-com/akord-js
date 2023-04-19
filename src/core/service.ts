@@ -79,11 +79,11 @@ class Service {
     this.vault = vault;
   }
 
-  setRawDataEncryptionPublicKey(publicKey) {
+  setRawDataEncryptionPublicKey(publicKey: Uint8Array) {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
-  async processReadRaw(data: any, headers: any, shouldDecrypt = true) {
+  async processReadRaw(data: any, headers: any, shouldDecrypt = true): Promise<ArrayBuffer> {
     if (this.isPublic || !shouldDecrypt) {
       return Buffer.from(data.data);
     }
@@ -190,15 +190,15 @@ class Service {
     return <any>{};
   }
 
-  protected async processWriteRaw(data: any, encryptedKey?: string) {
-    let processedData: any;
+  protected async processWriteRaw(data: ArrayBuffer, encryptedKey?: string) {
+    let processedData: ArrayBuffer;
     const tags = [] as Tags;
     if (this.isPublic) {
       processedData = data;
     } else {
       let encryptedFile: EncryptedPayload;
       try {
-        encryptedFile = await this.dataEncrypter.encryptRaw(data, false, encryptedKey) as EncryptedPayload;
+        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), false, encryptedKey) as EncryptedPayload;
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
@@ -218,7 +218,7 @@ class Service {
     };
   }
 
-  protected async processWriteString(data: string) {
+  protected async processWriteString(data: string): Promise<string> {
     if (this.isPublic) return data;
     let encryptedPayload: string;
     try {
@@ -240,7 +240,7 @@ class Service {
     }
   }
 
-  protected async processAvatar(avatar: any, shouldBundleTransaction?: boolean) {
+  protected async processAvatar(avatar: ArrayBuffer, shouldBundleTransaction?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
     return this.api.uploadFile(processedData, encryptionTags, { shouldBundleTransaction, public: false });
   }
@@ -257,7 +257,7 @@ class Service {
     return new ProfileDetails(processedMemberDetails);
   }
 
-  protected async processReadString(data: any, shouldDecrypt = true) {
+  protected async processReadString(data: string, shouldDecrypt = true): Promise<string> {
     if (this.isPublic || !shouldDecrypt) return data;
     const decryptedDataRaw = await this.processReadRaw(data, {});
     return arrayToString(decryptedDataRaw);
