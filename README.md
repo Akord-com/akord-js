@@ -151,7 +151,7 @@ await Auth.verifyAccount("winston@gmail.com", 123456);
 
 ### vault
 
-#### `create(name, termsOfAccess, isPublic)`
+#### `create(name, options)`
 
 - `name` (`string`, required) - new vault name
 - `options` (`VaultCreateOptions`, optional) - public/private, terms of access, etc.
