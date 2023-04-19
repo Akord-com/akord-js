@@ -154,15 +154,21 @@ await Auth.verifyAccount("winston@gmail.com", 123456);
 #### `create(name, termsOfAccess, isPublic)`
 
 - `name` (`string`, required) - new vault name
-- `termsOfAccess` (`string`, optional) - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-- `isPublic` (`boolean`, optional)
+- `options` (`VaultCreateOptions`, optional) - public/private, terms of access, etc.
 - returns `Promise<{ vaultId, membershipId, transactionId }>` - Promise with new vault id, owner membership id & corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { vaultId, membershipId } = await akord.vault.create("my first vault", "terms of access");
+// create a private vault
+const { vaultId, membershipId } = await akord.vault.create("my first private vault");
+
+// create a public vault with terms of access
+const { vaultId, membershipId } = await akord.vault.create(
+  "my first public vault",
+  { public: true, termsOfAccess: "terms of access here - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault" }
+);
 ```
 </details>
 
@@ -280,7 +286,8 @@ Invite user with an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ membershipId, transactionId }>` - Promise with new membership id & corresponding transaction id
 
 <details>
@@ -297,7 +304,8 @@ Invite user without an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ transactionId }>` - Promise with new membership id & corresponding transaction id
 
 <details>
@@ -382,7 +390,7 @@ const { transactionId } = await akord.membership.revoke(membershipId);
 #### `changeRole(membershipId, role)`
 
 - `membershipId` (`string`, required)
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -1264,7 +1272,7 @@ Update user profile along with all active memberships
 
 - `vaultId` (`string`, required)
 - `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
-- `options` ([`MembershipCreateOptions`][membership-create-options], optional)
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
 
 ### Development

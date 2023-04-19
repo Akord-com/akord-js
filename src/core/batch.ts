@@ -182,7 +182,7 @@ class BatchService extends Service {
           data.push(await service.invite(vaultId, email, role, options));
         } else {
           data.push({
-            ...(await service.inviteNewUser(vaultId, email, role, options.message)),
+            ...(await service.inviteNewUser(vaultId, email, role, options)),
             transactionId: null
           })
         }
