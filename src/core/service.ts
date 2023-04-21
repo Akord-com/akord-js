@@ -234,7 +234,8 @@ class Service {
 
   protected getAvatarUri(profileDetails: ProfileDetails) {
     if (profileDetails.avatarUri && profileDetails.avatarUri.length) {
-      return [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
+      const avatarUri = [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
+      return avatarUri !== "null" && avatarUri;
     } else {
       return null;
     }
