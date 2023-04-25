@@ -1264,7 +1264,7 @@ Update user profile along with all active memberships
 #### `stackCreate(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string }>`, required)
+- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, options: StackCreateOptions>`, required)
 - `options` (`BatchStackCreateOptions`, optional)
 - returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
