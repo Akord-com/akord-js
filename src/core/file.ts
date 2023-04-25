@@ -302,7 +302,7 @@ class FileService extends Service {
   private getFileTags(file: FileLike): Tags {
     const tags = [] as Tags;
     if (this.isPublic) {
-      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)))
+      tags.push(new Tag(fileTags.FILE_NAME, file.name))
       if (file.lastModified) {
         tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
