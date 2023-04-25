@@ -91,7 +91,7 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: any, headers: AxiosResponseHeaders }> {
+  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
@@ -102,12 +102,7 @@ export default class AkordApi extends Api {
       .asArrayBuffer()
       .downloadFile();
 
-    let fileData: any;
-    if (response.headers['x-amz-meta-encryptedkey']) {
-      fileData = response.data;
-    } else {
-      fileData = Buffer.from(response.data).toJSON();
-    }
+    const fileData = response.data;
     return { fileData: fileData, headers: response.headers };
   };
 

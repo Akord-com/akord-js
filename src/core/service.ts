@@ -83,9 +83,9 @@ class Service {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
-  async processReadRaw(data: any, headers: any, shouldDecrypt = true): Promise<ArrayBuffer> {
+  async processReadRaw(data: ArrayBuffer | string, headers: any, shouldDecrypt = true): Promise<ArrayBuffer> {
     if (this.isPublic || !shouldDecrypt) {
-      return Buffer.from(data.data);
+      return data as ArrayBuffer;
     }
 
     const encryptedPayload = this.getEncryptedPayload(data, headers);
@@ -93,7 +93,7 @@ class Service {
       if (encryptedPayload) {
         return this.dataEncrypter.decryptRaw(encryptedPayload, false);
       } else {
-        return this.dataEncrypter.decryptRaw(data);
+        return this.dataEncrypter.decryptRaw(data as string);
       }
     } catch (error) {
       throw new IncorrectEncryptionKey(error);
@@ -170,7 +170,7 @@ class Service {
           if (encryptedPayload) {
             avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);
           } else {
-            const dataString = arrayToString(new Uint8Array(fileData.data));
+            const dataString = arrayToString(new Uint8Array(fileData));
             avatar = await profileEncrypter.decryptRaw(dataString, true);
           }
         } catch (error) {
@@ -263,7 +263,7 @@ class Service {
     return arrayToString(decryptedDataRaw);
   }
 
-  protected getEncryptedPayload(data: any, headers: any): EncryptedPayload {
+  protected getEncryptedPayload(data: ArrayBuffer | string, headers: any): EncryptedPayload {
     const encryptedKey = headers['x-amz-meta-encryptedkey'];
     const iv = headers['x-amz-meta-iv'];
     if (encryptedKey && iv) {
@@ -271,7 +271,7 @@ class Service {
         encryptedKey,
         encryptedData: {
           iv: base64ToArray(iv),
-          ciphertext: data
+          ciphertext: data as ArrayBuffer
         }
       }
     }

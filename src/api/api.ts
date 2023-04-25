@@ -23,7 +23,7 @@ abstract class Api {
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
-  abstract downloadFile(id: string, options?: FileDownloadOptions): Promise<{ fileData: any, headers: AxiosResponseHeaders }>
+  abstract downloadFile(id: string, options?: FileDownloadOptions): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }>
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
