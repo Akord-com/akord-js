@@ -1302,15 +1302,6 @@ node --inspect node_modules/.bin/jest <path-to-test-file>
 node --inspect node_modules/.bin/jest ./src/__tests__/folder.test.ts
 ```
 
-### Deployment
-
-After merging your PR to `main`:
-- go to [Actions Tab](https://github.com/Akord-com/akord-js/actions)
-- select `Start new build` [workflow](https://github.com/Akord-com/akord-js/actions/workflows/version-bump.yml)
-- run `Workflow` for branch `main`
-  - it will update package version
-  - will create a release
-  - will build and publish it to NPM
 
 [list-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L1
 [get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L9
