@@ -46,8 +46,8 @@ class FileService extends Service {
         currentChunk++;
       }
     } else {
-      const file = await this.api.downloadFile(id, downloadOptions);
-      fileBinary = await this.processReadRaw(file.fileData, file.headers)
+      const { fileData, headers } = await this.api.downloadFile(id, downloadOptions);
+      fileBinary = await this.processReadRaw(fileData, headers)
     }
     return fileBinary;
   }
@@ -108,7 +108,7 @@ class FileService extends Service {
       return await this.uploadChunked(file, tags, options);
     } else {
       const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      const resourceHash = await digestRaw(processedData);
+      const resourceHash = await digestRaw(new Uint8Array(processedData));
       tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
       options.public = this.isPublic;
       return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options) };
@@ -124,7 +124,7 @@ class FileService extends Service {
     const tags = this.getFileTags(file);
 
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-    const resourceHash = await digestRaw(processedData);
+    const resourceHash = await digestRaw(new Uint8Array(processedData));
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
     const resource = await new ApiClient()
       .env(this.api.config)
@@ -271,7 +271,7 @@ class FileService extends Service {
   }> {
     const chunkNumber = offset / this.chunkSize;
     const arrayBuffer = await chunk.arrayBuffer();
-    const encryptedData = await this.processWriteRaw(new Uint8Array(arrayBuffer), encryptedKey);
+    const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
     return { encryptedData, chunkNumber }
   }
 
@@ -288,8 +288,8 @@ class FileService extends Service {
   private async getBinary(id: string, options: FileDownloadOptions) {
     try {
       options.public = this.isPublic;
-      const file = await this.api.downloadFile(id, options);
-      return await this.processReadRaw(file.fileData, file.headers);
+      const { fileData, headers } = await this.api.downloadFile(id, options);
+      return await this.processReadRaw(fileData, headers);
     } catch (e) {
       Logger.log(e);
       throw new Error(
@@ -302,7 +302,7 @@ class FileService extends Service {
   private getFileTags(file: FileLike): Tags {
     const tags = [] as Tags;
     if (this.isPublic) {
-      tags.push(new Tag(fileTags.FILE_NAME, encodeURIComponent(file.name)))
+      tags.push(new Tag(fileTags.FILE_NAME, file.name))
       if (file.lastModified) {
         tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }

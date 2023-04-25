@@ -12,6 +12,7 @@ import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
+import { AxiosResponseHeaders } from "axios";
 
 export const defaultFileUploadOptions = {
   shouldBundleTransaction: true,
@@ -71,7 +72,7 @@ export default class AkordApi extends Api {
     return contractId;
   };
 
-  public async uploadFile(file: any, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUrl: string, resourceTx: string }> {
     const uploadOptions = {
       ...defaultFileUploadOptions,
       ...options
@@ -90,7 +91,7 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<any> {
+  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
@@ -101,12 +102,7 @@ export default class AkordApi extends Api {
       .asArrayBuffer()
       .downloadFile();
 
-    let fileData: any;
-    if (response.headers['x-amz-meta-encryptedkey']) {
-      fileData = response.data;
-    } else {
-      fileData = Buffer.from(response.data).toJSON();
-    }
+    const fileData = response.data;
     return { fileData: fileData, headers: response.headers };
   };
 
