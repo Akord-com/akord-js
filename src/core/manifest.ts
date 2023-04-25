@@ -4,6 +4,7 @@ import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { createFileLike } from "./file";
 import { arrayToString } from "@akord/crypto";
+import { BadRequest } from "../errors/bad-request";
 
 export const CONTENT_TYPE = "application/x.arweave-manifest+json";
 export const FILE_TYPE = "application/json";
@@ -16,27 +17,6 @@ class ManifestService extends NodeService<Stack> {
   public folderService = new FolderService(this.wallet, this.api);
   objectType = nodeType.STACK;
   NodeType = Stack;
-
-  /**
-   * @param  {string} vaultId
-   * @param  {JSON} manifest manifest JSON
-   * @returns Promise with corresponding transaction id
-   */
-  public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string }> {
-    this.stackService.fileService.contentType = CONTENT_TYPE;
-    if (!manifest) {
-      manifest = await this.renderManifestJSON(vaultId);
-    }
-    const file = await createFileLike([JSON.stringify(manifest)], FILE_NAME, FILE_TYPE);
-    const manifestNode = await this.get(vaultId);
-    if (manifestNode) {
-      // update vault manifest
-      return await this.stackService.uploadRevision(manifestNode.id, file);
-    } else {
-      // create new vault manifest
-      return await this.stackService.create(vaultId, file, file.name);
-    }
-  }
 
   /**
    * @returns Promise with vault manifest node
@@ -56,17 +36,37 @@ class ManifestService extends NodeService<Stack> {
   public async getVersion(vaultId: string, index?: number): Promise<JSON> {
     const manifest = await this.get(vaultId);
     if (!manifest) {
-      throw new Error("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
+      throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
     const manifestFile = await this.stackService.getVersion(manifest.id, index);
     return JSON.parse(arrayToString(manifestFile.data));
   }
 
+  /**
+   * @param  {string} vaultId
+   * @param  {JSON} manifest manifest JSON
+   * @returns Promise with corresponding transaction id
+   */
+  public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string, object: Stack }> {
+    this.stackService.fileService.contentType = CONTENT_TYPE;
+    if (!manifest) {
+      manifest = await this.renderManifestJSON(vaultId);
+    }
+    const file = await createFileLike([JSON.stringify(manifest)], FILE_NAME, FILE_TYPE);
+    const manifestNode = await this.get(vaultId);
+    if (manifestNode) {
+      // update vault manifest
+      return await this.stackService.uploadRevision(manifestNode.id, file);
+    } else {
+      // create new vault manifest
+      return await this.stackService.create(vaultId, file, file.name);
+    }
+  }
 
   /**
    * 
    * @returns manifest in json format
-  */
+   */
   private async renderManifestJSON(vaultId: string, indexName?: string) {
     // takes a flat list of folders and stacks and generates a tree
     const treeify = (folders: any, stacks: any) => {

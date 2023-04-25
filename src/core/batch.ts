@@ -1,9 +1,9 @@
 import { Service, ServiceFactory } from "../core";
 import { v4 as uuidv4 } from "uuid";
-import { MembershipService } from "./membership";
-import { StackService } from "./stack";
+import { MembershipCreateOptions, MembershipService, activeStatus } from "./membership";
+import { StackCreateOptions, StackService } from "./stack";
 import { NodeService } from "./node";
-import { Node, NodeType } from "../types/node";
+import { Node, NodeType, Stack } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
 import { RoleType } from "../types/membership";
@@ -96,18 +96,13 @@ class BatchService extends Service {
   /**
    * @param  {string} vaultId
    * @param  {{file:FileLike,name:string}[]} items
-   * @param  {string} [parentId]
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
+   * @param  {BatchStackCreateOptions} [options]
    * @returns Promise with new stack ids & their corresponding transaction ids
    */
   public async stackCreate(
     vaultId: string,
-    items: { file: FileLike, name: string, parentId?: string }[],
-    progressHook?: (progress: number) => void,
-    cancelHook?: AbortController,
-    processingCountHook?: (count: number) => void,
-    onStackCreated?: (item: { file: FileLike, name: string, parentId?: string }) => Promise<void>
+    items: { file: FileLike, name: string }[],
+    options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
     const size = items.reduce((sum, stack) => {
       return sum + stack.file.size;
@@ -116,19 +111,22 @@ class BatchService extends Service {
     let processedStacksCount = 0;
     const perFileProgress = new Map();
     this.setGroupRef(items);
-    if (processingCountHook) {
-      processingCountHook(processedStacksCount);
+    if (options.processingCountHook) {
+      options.processingCountHook(processedStacksCount);
     }
 
-
-    const data = [] as { stackId: string, transactionId: string }[];
+    const data = [] as { stackId: string, transactionId: string, object: Stack }[];
     const errors = [] as { name: string, message: string }[];
 
-    const stackProgressHook = (localProgress: number, data: any) => {
-      const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
-      progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
-      perFileProgress.set(data.id, stackBytesUploaded);
-      progressHook(Math.min(100, Math.round(progress / size * 100)));
+    if (options.progressHook) {
+      const onProgress = options.progressHook
+      const stackProgressHook = (localProgress: number, data: any) => {
+        const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
+        progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
+        perFileProgress.set(data.id, stackBytesUploaded);
+        onProgress(Math.min(100, Math.round(progress / size * 100)));
+      }
+      options.progressHook = stackProgressHook;
     }
 
     for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
@@ -137,21 +135,21 @@ class BatchService extends Service {
           const service = new StackService(this.wallet, this.api);
           service.setGroupRef(this.groupRef);
 
-          const stackResponse = await service.create(vaultId, item.file, item.name, item.parentId, stackProgressHook, cancelHook);
-          if (cancelHook.signal.aborted) {
+          const stackResponse = await service.create(vaultId, item.file, item.name, options);
+          if (options.cancelHook?.signal.aborted) {
             return { data, errors, cancelled: items.length - processedStacksCount };
           }
           data.push(stackResponse);
           processedStacksCount += 1;
-          processingCountHook(processedStacksCount);
-          if (onStackCreated) {
-            await onStackCreated(item);
+          options.processingCountHook(processedStacksCount);
+          if (options.onStackCreated) {
+            await options.onStackCreated(stackResponse.object);
           }
         } catch (e) {
           errors.push({ name: item.name, message: e.toString() })
         };
       }))
-      if (cancelHook.signal.aborted) {
+      if (options.cancelHook?.signal.aborted) {
         return { data, errors, cancelled: items.length - processedStacksCount };
       }
     }
@@ -161,9 +159,10 @@ class BatchService extends Service {
   /**
    * @param  {string} vaultId
    * @param  {{email:string,role:RoleType}[]} items
+   * @param  {string} [message] optional email message - unencrypted
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[]): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], options: MembershipCreateOptions = {}): Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as { membershipId: string, transactionId: string }[];
@@ -173,17 +172,17 @@ class BatchService extends Service {
       const email = item.email.toLowerCase();
       const role = item.role;
       const member = members.find(item => item.email?.toLowerCase() === email);
-      if (member) {
+      if (member && activeStatus.includes(member.status)) {
         errors.push({ email: email, message: "Membership already exists for this user." });
       } else {
-        const userHasAccount = Boolean(await this.api.getUserFromEmail(email));
+        const userHasAccount = await this.api.existsUser(email);
         const service = new MembershipService(this.wallet, this.api);
         service.setGroupRef(this.groupRef);
         if (userHasAccount) {
-          data.push(await service.invite(vaultId, email, role));
+          data.push(await service.invite(vaultId, email, role, options));
         } else {
           data.push({
-            ...(await service.inviteNewUser(vaultId, email, role)),
+            ...(await service.inviteNewUser(vaultId, email, role, options)),
             transactionId: null
           })
         }
@@ -197,6 +196,11 @@ class BatchService extends Service {
     this.groupRef = items && items.length > 1 ? uuidv4() : null;
   }
 }
+
+export type BatchStackCreateOptions = StackCreateOptions & {
+  processingCountHook?: (count: number) => void,
+  onStackCreated?: (item: Stack) => Promise<void>
+};
 
 export {
   BatchService

@@ -1,8 +1,11 @@
-import { NodeService } from "./node";
+import { NodeCreateOptions, NodeService } from "./node";
 import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
 import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
-import { ListOptions } from "../types/list-options";
+import { ListOptions } from "../types/query-options";
+import { NotFound } from "../errors/not-found";
+import { EncryptedKeys } from "@akord/crypto";
+import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 
 class MemoService extends NodeService<Memo> {
   static readonly reactionEmoji = reactionEmoji;
@@ -16,31 +19,28 @@ class MemoService extends NodeService<Memo> {
   } as ListOptions;
 
   /**
-  * @param  {string} vaultId
-  * @param  {string} message
-  * @param  {string} [parentId] parent folder id
-  * @returns Promise with new node id & corresponding transaction id
-  */
-  public async create(vaultId: string, message: string, parentId?: string): Promise<{
-    memoId: string,
-    transactionId: string
-  }> {
+   * @param  {string} vaultId
+   * @param  {string} message
+   * @param  {NodeCreateOptions} [options] parent id, etc.
+   * @returns Promise with new node id & corresponding transaction id
+   */
+  public async create(vaultId: string, message: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<MemoCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setFunction(functions.NODE_CREATE);
     const body = {
       versions: [await this.memoVersion(message)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { memoId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(body, { parentId: options.parentId });
+    return { memoId: nodeId, transactionId, object };
   }
 
   /**
-  * @param  {string} memoId
-  * @param  {reactionEmoji} reaction
-  * @returns Promise with corresponding transaction id
-  */
-  public async addReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
+   * @param  {string} memoId
+   * @param  {reactionEmoji} reaction
+   * @returns Promise with corresponding transaction id
+   */
+  public async addReaction(memoId: string, reaction: reactionEmoji): Promise<MemoUpdateResult> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
     this.setFunction(functions.NODE_UPDATE);
@@ -49,15 +49,15 @@ class MemoService extends NodeService<Memo> {
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
-    const { data, metadata } = await this.uploadState(newState);
+    const dataTxId = await this.uploadState(newState);
 
-    const txId = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Memo>(
       this.vaultId,
-      { function: this.function, data },
-      this.tags,
-      metadata
+      { function: this.function, data: dataTxId },
+      this.tags
     );
-    return { transactionId: txId }
+    const memo = await this.processMemo(object, !this.isPublic, this.keys);
+    return { transactionId: id, object: memo };
   }
 
   /**
@@ -65,22 +65,34 @@ class MemoService extends NodeService<Memo> {
    * @param  {reactionEmoji} reaction
    * @returns Promise with corresponding transaction id
    */
-  public async removeReaction(memoId: string, reaction: reactionEmoji): Promise<{ transactionId: string }> {
+  public async removeReaction(memoId: string, reaction: reactionEmoji): Promise<MemoUpdateResult> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
     this.setFunction(functions.NODE_UPDATE);
     this.tags = await this.getTags();
 
     const body = await this.deleteReaction(reaction);
-    const { data, metadata } = await this.uploadState(body);
+    const dataTxId = await this.uploadState(body);
 
-    const txId = await this.api.postContractTransaction(
+    const { id, object } = await this.api.postContractTransaction<Memo>(
       this.vaultId,
-      { function: this.function, data },
-      this.tags,
-      metadata
+      { function: this.function, data: dataTxId },
+      this.tags
     );
-    return { transactionId: txId }
+    const memo = await this.processMemo(object, !this.isPublic, this.keys);
+    return { transactionId: id, object: memo };
+  }
+
+  protected async processMemo(object: Memo, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Memo> {
+    const memo = new Memo(object, keys);
+    if (shouldDecrypt) {
+      try {
+        await memo.decrypt();
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return memo;
   }
 
   private async memoVersion(message: string): Promise<MemoVersion> {
@@ -120,9 +132,20 @@ class MemoService extends NodeService<Memo> {
         return key;
       }
     }
-    throw new Error("Could not find reaction: " + reaction + " for given user.")
+    throw new NotFound("Could not find reaction: " + reaction + " for given user.")
   }
 };
+
+type MemoCreateResult = {
+  memoId: string,
+  transactionId: string,
+  object: Memo
+}
+
+type MemoUpdateResult = {
+  transactionId: string,
+  object: Memo
+}
 
 export {
   MemoService

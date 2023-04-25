@@ -1,57 +1,65 @@
 import { ContractInput, ContractState, Tags } from "../types/contract";
 import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
+import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
+import { ListOptions, VaultApiGetOptions } from "../types/query-options";
+import { User, UserPublicInfo } from "../types/user";
+import { FileDownloadOptions, FileUploadOptions } from "../core/file";
+import { AxiosResponseHeaders } from "axios";
 
 abstract class Api {
   config: any
-  jwtToken: string
 
   constructor() { }
 
-  abstract postContractTransaction(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<string>
+  abstract postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
+  
+  abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<{ resourceTx: string, resourceUrl: string }>
 
-  abstract getUserFromEmail(email: string): Promise<{ address: string, publicKey: string }>
-
-  abstract uploadFile(file: ArrayBufferLike, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number) => void, cancelHook?: AbortController): Promise<{ resourceTx: string, resourceUrl?: string }>
-
-  abstract uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean): Promise<Array<{ id: string, resourceTx: string }>>
+  abstract uploadData(items: { data: any, tags: Tags }[], options?: FileUploadOptions): Promise<Array<string>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
-  abstract downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any>
+  abstract downloadFile(id: string, options?: FileDownloadOptions): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }>
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
-  abstract getProfile(): Promise<any>
+  abstract existsUser(email: string): Promise<Boolean>
+
+  abstract getUser(): Promise<User>
+
+  abstract getUserPublicData(email: string): Promise<UserPublicInfo>
 
   abstract getNode<T>(id: string, type: string, vaultId?: string): Promise<T>
 
   abstract getMembership(id: string, vaultId?: string): Promise<Membership>
 
-  abstract getVault(id: string): Promise<Vault>
+  abstract getVault(id: string, options?: VaultApiGetOptions): Promise<Vault>
 
   abstract getNodeState(stateId: string): Promise<any>
 
-  abstract getVaults(): Promise<Array<Vault>>
+  abstract getVaults(filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<Vault>>
 
-  abstract getMemberships(): Promise<Array<Membership>>
+  abstract getMemberships(limit?: number, nextToken?: string): Promise<Paginated<Membership>>
 
-  abstract getNodesByVaultId<T>(vaultId: string, type: string, parentId?: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<T>>
+  abstract getNodesByVaultId<T>(vaultId: string, type: string, options?: ListOptions): Promise<Paginated<T>>
 
-  abstract getMembershipsByVaultId(vaultId: string, filter?: Object, limit?: number, nextToken?: string): Promise<Paginated<Membership>>
+  abstract getMembershipsByVaultId(vaultId: string, options?: ListOptions): Promise<Paginated<Membership>>
 
   abstract getMembers(vaultId: string): Promise<Array<Membership>>
 
-  abstract getTransactions(vaultId: string): Promise<Array<any>>
+  abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
-  abstract updateProfile(name: string, avatarUri: string): Promise<void>
+  abstract updateUser(name: string, avatarUri: string[]): Promise<void>
 
   abstract deleteVault(vaultId: string): Promise<void>
 
-  abstract inviteNewUser(vaultId: string, email: string, role: string): Promise<{ id: string }>
+  abstract inviteNewUser(vaultId: string, email: string, role: string, message?: string): Promise<{ id: string }>
+  
+  abstract revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
 }

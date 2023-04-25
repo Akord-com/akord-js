@@ -1,7 +1,7 @@
-import { NodeService } from "./node";
+import { NodeCreateOptions, NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
 import { createThumbnail } from "./thumbnail";
-import { FileService } from "./file";
+import { FileService, FileUploadResult, FileUploadOptions } from "./file";
 import { FileLike } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
 
@@ -14,40 +14,34 @@ class StackService extends NodeService<Stack> {
    * @param  {string} vaultId
    * @param  {FileLike} file file object
    * @param  {string} name stack name
-   * @param  {string} [parentId] parent folder id
-   * @param  {(progress:number)=>void} [progressHook]
-   * @param  {AbortController} [cancelHook]
+   * @param  {StackCreateOptions} [options] parent id, progress hook, cancel hook, etc.
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async create(vaultId: string, file: FileLike, name: string, parentId?: string,
-    progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController):
-    Promise<{
-      stackId: string,
-      transactionId: string
-    }> {
+  public async create(vaultId: string, file: FileLike, name: string, options: StackCreateOptions = this.defaultCreateOptions):
+    Promise<StackCreateResult> {
+    const createOptions = {
+      ...this.defaultCreateOptions,
+      ...options
+    }
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
 
     const body = {
       name: await this.processWriteString(name ? name : file.name),
-      versions: [await this.uploadNewFileVersion(file, progressHook, cancelHook)]
+      versions: [await this.uploadNewFileVersion(file, createOptions)]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { stackId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId: createOptions.parentId });
+    return { stackId: nodeId, transactionId, object };
   }
 
   /**
    * @param  {string} vaultId
    * @param  {string} fileTxId arweave file transaction id reference
-   * @param  {string} [parentId] parent folder id
+   * @param  {NodeCreateOptions} [options] parent id, etc.
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async import(vaultId: string, fileTxId: string, parentId?: string):
-    Promise<{
-      stackId: string,
-      transactionId: string
-    }> {
+  public async import(vaultId: string, fileTxId: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<StackCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
@@ -65,25 +59,25 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(file.name),
       versions: [version]
     };
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { stackId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId: options.parentId });
+    return { stackId: nodeId, transactionId, object };
   }
 
   /**
-  * @param  {string} stackId
-  * @param  {FileLike} file file object
-  * @param  {(progress:number)=>void} [progressHook]
-  * @returns Promise with corresponding transaction id
-  */
-  public async uploadRevision(stackId: string, file: FileLike, progressHook?: (progress: number, data?: any) => void): Promise<{ transactionId: string }> {
+   * @param  {string} stackId
+   * @param  {FileLike} file file object
+   * @param  {FileUploadOptions} [options] progress hook, cancel hook, etc.
+   * @returns Promise with corresponding transaction id
+   */
+  public async uploadRevision(stackId: string, file: FileLike, options: FileUploadOptions = {}): Promise<StackUpdateResult> {
     await this.setVaultContextFromNodeId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
     const body = {
-      versions: [await this.uploadNewFileVersion(file, progressHook)]
+      versions: [await this.uploadNewFileVersion(file, options)]
     };
     this.setFunction(functions.NODE_UPDATE);
-    return this.nodeUpdate(body);
+    return this.nodeUpdate<Stack>(body);
   }
 
   /**
@@ -96,25 +90,25 @@ class StackService extends NodeService<Stack> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     const version = stack.getVersion(index);
     await this.setVaultContext(stack.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(version.getUri(StorageType.S3), this.isPublic);
+    const { fileData, headers } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: this.isPublic });
     const data = await this.processReadRaw(fileData, headers);
     const name = await this.processReadString(version.name);
     return { name, data };
   }
 
   /**
-  * Get stack file uri by index, return the latest arweave uri by default
-  * @param  {string} stackId
-  * @param  {StorageType} [type] storage type, default to arweave
-  * @param  {number} [index] file version index, default to latest
-  * @returns Promise with stack file uri
-  */
+   * Get stack file uri by index, return the latest arweave uri by default
+   * @param  {string} stackId
+   * @param  {StorageType} [type] storage type, default to arweave
+   * @param  {number} [index] file version index, default to latest
+   * @returns Promise with stack file uri
+   */
   public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     return stack.getUri(type, index);
   }
 
-  private async uploadNewFileVersion(file: FileLike, progressHook?: any, cancelHook?: any): Promise<FileVersion> {
+  private async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
     const {
       resourceTx,
       resourceUrl,
@@ -123,7 +117,7 @@ class StackService extends NodeService<Stack> {
       chunkSize,
       thumbnailTx,
       thumbnailUrl
-    } = await this.postFile(file, progressHook, cancelHook);
+    } = await this.postFile(file, options);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
@@ -138,12 +132,12 @@ class StackService extends NodeService<Stack> {
     return version;
   }
 
-  private async postFile(file: FileLike, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController)
-    : Promise<{ resourceTx: string, resourceHash: string, resourceUrl?: string, numberOfChunks?: number, chunkSize?: number, thumbnailTx?: string, thumbnailUrl?: string }> {
-    const filePromise = this.fileService.create(file, true, progressHook, cancelHook);
+  private async postFile(file: FileLike, options: FileUploadOptions)
+    : Promise<FileUploadResult> {
+    const filePromise = this.fileService.create(file, options);
     const thumbnail = await createThumbnail(file);
     if (thumbnail) {
-      const thumbnailPromise = this.fileService.create(thumbnail, false, progressHook);
+      const thumbnailPromise = this.fileService.create(thumbnail, { ...options, shouldBundleTransaction: false });
       const results = await Promise.all([filePromise, thumbnailPromise]);
       return {
         resourceTx: results[0].resourceTx,
@@ -160,12 +154,25 @@ class StackService extends NodeService<Stack> {
 
   protected async setVaultContext(vaultId: string): Promise<void> {
     await super.setVaultContext(vaultId);
-    this.fileService.setKeys(this.membershipKeys);
+    this.fileService.setKeys(this.keys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
     this.fileService.setVaultId(this.vaultId);
     this.fileService.setIsPublic(this.isPublic);
   }
 };
+
+export type StackCreateOptions = NodeCreateOptions & FileUploadOptions;
+
+type StackCreateResult = {
+  stackId: string,
+  transactionId: string,
+  object: Stack
+}
+
+type StackUpdateResult = {
+  transactionId: string,
+  object: Stack
+}
 
 export {
   StackService

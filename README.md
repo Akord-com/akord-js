@@ -8,7 +8,7 @@ This package can be used in both browser and Node.js environments.
   - [Quick Start](#quick-start)
   - [Examples](#examples)
 - [Modules](#modules)
-  - [Auth](#auth)
+  - [Auth](#authentication)
   - [Vault](#vault)
   - [Membership](#membership)
   - [Memo](#memo)
@@ -38,13 +38,10 @@ const { Akord } = require("@akord/akord-js");
 ### Quick start
 
 #### Init Akord
-##### with email & password
 ```js
-const { akord, wallet, jwtToken } = await Akord.auth.signIn(email, password);
-```
-##### with Akord Wallet & JWT
-```js
-const akord = await Akord.init(wallet, jwtToken);
+import { Akord, Auth } from "@akord/akord-js";
+const { wallet } = await Auth.signIn(email, password);
+const akord = await Akord.init(wallet);
 ```
 
 #### Create vault
@@ -64,29 +61,59 @@ const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackI
 
 #### Query user vaults
 ```js
-const vaults = await akord.vault.list();
+const vaults = await akord.vault.listAll();
 ```
 
 ### Examples
-See our [demo app tutorial](https://akord-js-tutorial.akord.com) and learn how to create,
-contribute and access an Akord Vault.\
-We also have some example flows in our [tests](src/__tests__) repository.
+- See our [demo app tutorial](https://akord-js-tutorial.akord.com) and learn how to create,
+contribute and access an Akord Vault from .\
 
-## Modules
+- See example flows in our [tests repo](src/__tests__).
 
-### auth
+- See different setups on [recipes repo](https://github.com/Akord-com/recipes).
+
+## Authentication
+Use `Auth` module to handle authentication.
+
+```js
+import { Auth } from "@akord/akord-js";
+```
+
+- By default `Auth` is using SRP authentication
+- `Auth` stores tokens in `Storage` implementation 
+- `Storage` defaults to localStorage on web & memoryStorage on nodeJs
+- `Storage` implementation can be configured with `Auth.configure({ storage: window.sessionStorage })`
+- `Auth` is automatically refreshing tokens in SRP mode
+- On server side it is recommended to use API keys: `Auth.configure({ apiKey: 'your_api_key' })`
+- API key: can be generated over web app & over CLI
+
+##### use short living token with refresh
+```js
+import { Auth } from "@akord/akord-js";
+Auth.configure({ storage: window.sessionStorage }); // optionally - configure tokens store
+```
+##### use API key
+```js
+import { Auth } from "@akord/akord-js";
+Auth.configure({ apiKey: "api_key" });
+```
+##### use self-managed auth token
+```js
+import { Akord, Auth } from "@akord/akord-js";
+Auth.configure({ authToken: "auth_token" });
+```
 
 #### `signIn(email, password)`
 
 - `email` (`string`, required)
 - `password` (`string`, required)
-- returns `Promise<{ akord, wallet, jwtToken }>` - Promise with Akord Client instance, JWT token & Akord Wallet
+- returns `Promise<{ wallet, jwt }>` - Promise with JWT token & Akord Wallet
 
 <details>
   <summary>example</summary>
 
 ```js
-const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com", "1984");
+const { wallet } = await Auth.signIn("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -95,13 +122,13 @@ const { akord, wallet, jwtToken } = await Akord.auth.signIn("winston@gmail.com",
 - `email` (`string`, required)
 - `password` (`string`, required)
 - `clientMetadata` (`any`, optional) - JSON client metadata, ex: { clientType: "CLI" }
-- returns `Promise<AkordWallet>` - Promise with Akord Wallet
+- returns `Promise<{ wallet }>` - Promise with Akord Wallet
 
 <details>
   <summary>example</summary>
 
 ```js
-const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
+const { wallet } = await Auth.signUp("winston@gmail.com", "1984");
 ```
 </details>
 
@@ -115,24 +142,33 @@ const wallet = await Akord.auth.signUp("winston@gmail.com", "1984");
   <summary>example</summary>
 
 ```js
-await Akord.auth.verifyAccount("winston@gmail.com", 123456);
+await Auth.verifyAccount("winston@gmail.com", 123456);
 ```
 </details>
 
+
+## Modules
+
 ### vault
 
-#### `create(name, termsOfAccess, isPublic)`
+#### `create(name, options)`
 
 - `name` (`string`, required) - new vault name
-- `termsOfAccess` (`string`, optional) - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-- `isPublic` (`boolean`, optional)
+- `options` (`VaultCreateOptions`, optional) - public/private, terms of access, etc.
 - returns `Promise<{ vaultId, membershipId, transactionId }>` - Promise with new vault id, owner membership id & corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { vaultId, membershipId } = await akord.vault.create("my first vault", "terms of access");
+// create a private vault
+const { vaultId, membershipId } = await akord.vault.create("my first private vault");
+
+// create a public vault with terms of access
+const { vaultId, membershipId } = await akord.vault.create(
+  "my first public vault",
+  { public: true, termsOfAccess: "terms of access here - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault" }
+);
 ```
 </details>
 
@@ -189,10 +225,10 @@ const { transactionId } = await akord.vault.delete(vaultId);
 ```
 </details>
 
-#### `get(vaultId, shouldDecrypt)`
+#### `get(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `shouldDecrypt` (`boolean`, optional) - default to true
+- `options` ([`VaultGetOptions`][vault-get-options], optional)
 - returns `Promise<Vault>` - Promise with the vault object
 
 <details>
@@ -203,16 +239,42 @@ const vault = await akord.vault.get(vaultId);
 ```
 </details>
 
-#### `list(listOptions)`
+#### `listAll(options)`
 
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<Array<Vault>>` - Promise with currently authenticated user vaults
 
 <details>
   <summary>example</summary>
 
 ```js
-const vaults = await akord.vault.list();
+const vaults = await akord.vault.listAll();
+```
+</details>
+
+#### `list(listOptions)`
+
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated user vaults
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 user vaults
+const { items } = await akord.vault.list();
+
+// retrieve first 20 user vaults
+const { items } = await akord.vault.list({ limit: 20 });
+
+// iterate through all user vaults
+let token = null;
+let vaults = [];
+do {
+  const { items, nextToken } = await akord.vault.list({ nextToken: token });
+  vaults = vaults.concat(items);
+  token = nextToken;
+} while (token);
 ```
 </details>
 
@@ -224,7 +286,8 @@ Invite user with an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ membershipId, transactionId }>` - Promise with new membership id & corresponding transaction id
 
 <details>
@@ -241,7 +304,8 @@ Invite user without an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ transactionId }>` - Promise with new membership id & corresponding transaction id
 
 <details>
@@ -326,7 +390,7 @@ const { transactionId } = await akord.membership.revoke(membershipId);
 #### `changeRole(membershipId, role)`
 
 - `membershipId` (`string`, required)
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -352,10 +416,10 @@ const { transactionId } = await akord.membership.inviteResend(membershipId);
 ```
 </details>
 
-#### `get(membershipId, shouldDecrypt)`
+#### `get(membershipId, options)`
 
 - `membershipId` (`string`, required)
-- `shouldDecrypt` (`boolean`, optional) - default to true
+- `options` ([`GetOptions`][get-options], optional)
 - returns `Promise<Membership>` - Promise with the membership object
 
 <details>
@@ -366,10 +430,10 @@ const membership = await akord.membership.get(membershipId);
 ```
 </details>
 
-#### `listAll(vaultId, listOptions)`
+#### `listAll(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<Array<Membership>>` - Promise with all memberships within given vault
 
 <details>
@@ -380,10 +444,10 @@ const memberships = await akord.membership.listAll(vaultId);
 ```
 </details>
 
-#### `list(vaultId, listOptions)`
+#### `list(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<{ items, nextToken }>` - Promise with paginated memberships within given vault
 
 <details>
@@ -413,7 +477,7 @@ do {
 
 - `vaultId` (`string`, required)
 - `message` (`string`, required) - memo content
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ memoId, transactionId }>` - Promise with new memo id & corresponding transaction id
 
 <details>
@@ -456,10 +520,10 @@ const { transactionId } = await akord.memo.removeReaction(memoId, Akord.reaction
 ```
 </details>
 
-#### `get(memoId, shouldDecrypt)`
+#### `get(memoId, options)`
 
 - `memoId` (`string`, required)
-- `shouldDecrypt` (`boolean`, optional) - default to true
+- `options` ([`GetOptions`][get-options], optional)
 - returns `Promise<Memo>` - Promise with the memo object
 
 <details>
@@ -470,10 +534,10 @@ const memo = await akord.memo.get(memoId);
 ```
 </details>
 
-#### `listAll(vaultId, listOptions)`
+#### `listAll(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<Array<Memo>>` - Promise with all memos within given vault
 
 <details>
@@ -484,10 +548,10 @@ const memos = await akord.memo.listAll(vaultId);
 ```
 </details>
 
-#### `list(vaultId, listOptions)`
+#### `list(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<{ items, nextToken }>` - Promise with paginated memos within given vault
 
 <details>
@@ -513,31 +577,32 @@ do {
 
 ### stack
 
-#### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
+#### `create(vaultId, file, name)`
 
 - `vaultId` (`string`, required)
-- `file` ([`FileLike`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8), required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
+- `file` ([`FileLike`][file-like], required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
 - `name` (`string`, required) - stack name
-- `parentId` (`string`, optional) - parent folder id
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
+- `options` (`StackCreateOptions`, optional)
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
+import { NodeJs } from "@akord/akord-js/lib/types/file";
+const file = await NodeJs.File.fromPath("path to your file");
 const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
 ```
+> [See Next.js file upload showcase here][file-upload-example]
 </details>
 
-#### `import(vaultId, fileTxId, parentId)`
+#### `import(vaultId, fileTxId)`
 
 Create new stack from an existing arweave file transaction
 
 - `vaultId` (`string`, required)
 - `fileTxId` (`string`, required) - arweave file transaction id reference
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
 <details>
@@ -562,17 +627,19 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
 ```
 </details>
 
-#### `uploadRevision(stackId, file, progressHook)`
+#### `uploadRevision(stackId, file)`
 
 - `stackId` (`string`, required)
-- `file` ([`FileLike`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8), required) - file object
-- `progressHook` (`(progress:number)=>void`, optional)
+- `file` ([`FileLike`][file-like], required) - file object
+- `options` (`FileUploadOptions`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
+import { NodeJs } from "@akord/akord-js/lib/types/file";
+const file = await NodeJs.File.fromPath("path to your file");
 const { transactionId } = await akord.stack.uploadRevision(stackId, file);
 ```
 </details>
@@ -633,10 +700,10 @@ const { transactionId } = await akord.stack.delete(stackId);
 ```
 </details>
 
-#### `get(stackId, shouldDecrypt)`
+#### `get(stackId, options)`
 
 - `stackId` (`string`, required)
-- `shouldDecrypt` (`boolean`, optional) - default to true
+- `options` ([`GetOptions`][get-options], optional)
 - returns `Promise<Stack>` - Promise with the stack object
 
 <details>
@@ -647,10 +714,10 @@ const stack = await akord.stack.get(stackId);
 ```
 </details>
 
-#### `listAll(vaultId, listOptions)`
+#### `listAll(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<Array<Stack>>` - Promise with all stacks within given vault
 
 <details>
@@ -661,10 +728,10 @@ const stacks = await akord.stack.listAll(vaultId);
 ```
 </details>
 
-#### `list(vaultId, listOptions)`
+#### `list(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<{ items, nextToken }>` - Promise with paginated stacks within given vault
 
 <details>
@@ -713,7 +780,7 @@ const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackI
 Get stack file uri by index, return the latest arweave uri by default
 
 - `stackId` (`string`, required)
-- `type` ([`StorageType`](https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149), optional) - storage type, default to arweave
+- `type` ([`StorageType`][storage-type], optional) - storage type, default to arweave
 - `index` (`number`, optional) - file version index, default to latest
 - returns `Promise<string>` - Promise with stack file uri
 
@@ -760,11 +827,11 @@ See: https://github.com/jimmywarting/StreamSaver.js#configuration
 
 ### folder
 
-#### `create(vaultId, name, parentId)`
+#### `create(vaultId, name)`
 
 - `vaultId` (`string`, required)
 - `name` (`string`, required) - folder name
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ folderId, transactionId }>` - Promise with new folder id & corresponding transaction id
 
 <details>
@@ -853,10 +920,10 @@ const { transactionId } = await akord.folder.delete(folderId);
 ```
 </details>
 
-#### `get(folderId, shouldDecrypt)`
+#### `get(folderId, options)`
 
 - `folderId` (`string`, required)
-- `shouldDecrypt` (`boolean`, optional) - default to true
+- `options` ([`GetOptions`][get-options], optional)
 - returns `Promise<Folder>` - Promise with the folder object
 
 <details>
@@ -867,10 +934,10 @@ const folder = await akord.folder.get(folderId);
 ```
 </details>
 
-#### `listAll(vaultId, listOptions)`
+#### `listAll(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<Array<Folder>>` - Promise with all folders within given vault
 
 <details>
@@ -881,10 +948,10 @@ const folders = await akord.folder.listAll(vaultId);
 ```
 </details>
 
-#### `list(vaultId, listOptions)`
+#### `list(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<{ items, nextToken }>` - Promise with paginated folders within given vault
 
 <details>
@@ -910,13 +977,12 @@ do {
 
 ### note
 
-#### `create(vaultId, content, name, parentId)`
+#### `create(vaultId, content, name)`
 
 - `vaultId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `parentId` (`string`, optional) - parent folder id
-- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
+- `options` (`NoteCreateOptions`, optional) - parent id, mime type, etc.
 - returns `Promise<{ noteId, transactionId }>` - Promise with new note id & corresponding transaction id
 
 <details>
@@ -929,8 +995,7 @@ const { noteId } = await akord.note.create(
   vaultId,
   JSON.stringify({ name: "My first JSON note" }),
   "My first JSON note",
-  parentId,
-  "application/json"
+  { parentId: parentId, mimeType: "application/json" }
 );
 ```
 </details>
@@ -940,14 +1005,14 @@ const { noteId } = await akord.note.create(
 - `noteId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
+- `options` (`NoteOptions`, optional) - mime type, etc.
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.note.uploadRevision(vaultId, "# Hello World bis", "Hello World note bis");
+const { transactionId } = await akord.note.uploadRevision(noteId, "# Hello World bis", "Hello World note bis");
 ```
 </details>
 
@@ -1007,10 +1072,10 @@ const { transactionId } = await akord.note.delete(noteId);
 ```
 </details>
 
-#### `get(noteId, shouldDecrypt)`
+#### `get(noteId, options)`
 
 - `noteId` (`string`, required)
-- `shouldDecrypt` (`boolean`, optional) - default to true
+- `options` ([`GetOptions`][get-options], optional)
 - returns `Promise<Note>` - Promise with the note object
 
 <details>
@@ -1021,10 +1086,10 @@ const note = await akord.note.get(noteId);
 ```
 </details>
 
-#### `listAll(vaultId, listOptions)`
+#### `listAll(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<Array<Note>>` - Promise with all notes within given vault
 
 <details>
@@ -1035,10 +1100,10 @@ const notes = await akord.note.listAll(vaultId);
 ```
 </details>
 
-#### `list(vaultId, listOptions)`
+#### `list(vaultId, options)`
 
 - `vaultId` (`string`, required)
-- `listOptions` ([`ListOptions`](https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/list-options.ts#L1), optional)
+- `options` ([`ListOptions`][list-options], optional)
 - returns `Promise<{ items, nextToken }>` - Promise with paginated notes within given vault
 
 <details>
@@ -1172,44 +1237,43 @@ Update user profile along with all active memberships
 
 #### `revoke(items)`
 
-- `items` (`Array<{ id: string, type: string }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `restore(items)`
 
-- `items` (`Array<{ id: string, type: string }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `delete(items)`
 
-- `items` (`Array<{ id: string, type: string }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `move(items, parentId)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
 - `parentId` (`string`, optional)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
 #### `membershipChangeRole(items)`
 
-- `items` (`Array<{ transactionId }>`, required)
+- `items` (`Array<{ id: string, role: `[`RoleType`][role-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `stackCreate(vaultId, items, parentId, progressHook, cancelHook)`
+#### `stackCreate(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ transactionId }>`, required)
-- `parentId` (`string`, optional)
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
-- returns `Promise<Array<{ transactionId }>>` - Promise with new stack ids & their corresponding transaction ids
+- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string }>`, required)
+- `options` (`BatchStackCreateOptions`, optional)
+- returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
 #### `membershipInvite(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ transactionId }>`, required)
-- returns `Promise<Array<{ transactionId }>>` - Promise with new membership ids & their corresponding transaction ids
+- `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
+- returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
 
 ### Development
 > requires Node.js 16
@@ -1247,3 +1311,14 @@ After merging your PR to `main`:
   - it will update package version
   - will create a release
   - will build and publish it to NPM
+
+[list-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L1
+[get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L9
+[vault-get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L14
+[file-like]: https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8
+[storage-type]: https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149
+[role-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/membership.ts#L4
+[node-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/node.ts#L11
+[batch-stack-create-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L1
+[batch-membership-invite-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L7
+[file-upload-example]:https://github.com/Akord-com/recipes/blob/a2dbc847097973ef08586f32b0ce3192f0581ed4/nextjs-starter/src/pages/index.tsx#L66

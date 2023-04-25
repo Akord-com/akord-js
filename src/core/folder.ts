@@ -1,4 +1,4 @@
-import { NodeService } from "./node";
+import { NodeCreateOptions, NodeService } from "./node";
 import { actionRefs, functions } from "../constants";
 import { Folder, nodeType } from "../types/node";
 
@@ -9,23 +9,26 @@ class FolderService extends NodeService<Folder> {
   /**
    * @param  {string} vaultId
    * @param  {string} name folder name
-   * @param  {string} [parentId] parent folder id
+   * @param  {NodeCreateOptions} [options] parent id, etc.
    * @returns Promise with new folder id & corresponding transaction id
    */
-  public async create(vaultId: string, name: string, parentId?: string): Promise<{
-    folderId: string,
-    transactionId: string
-  }> {
+  public async create(vaultId: string, name: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<FolderCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
     this.setFunction(functions.NODE_CREATE);
     const body = {
       name: await this.processWriteString(name)
     }
-    const { nodeId, transactionId } = await this.nodeCreate(body, { parentId });
-    return { folderId: nodeId, transactionId };
+    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(body, { parentId: options.parentId });
+    return { folderId: nodeId, transactionId, object };
   }
 };
+
+type FolderCreateResult = {
+  folderId: string,
+  transactionId: string,
+  object: Folder
+}
 
 export {
   FolderService
