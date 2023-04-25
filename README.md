@@ -1,6 +1,6 @@
 # akord-js
 
-Akord Client for interacting with Akord.\
+Akord Client - a set of core js functions to interact with [Akord](https://docs.akord.com/).\
 This package can be used in both browser and Node.js environments.
 
 - [Usage](#usage)
