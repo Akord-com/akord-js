@@ -7,6 +7,7 @@ import { Node, NodeType, Stack } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
 import { RoleType } from "../types/membership";
+import { Hooks } from "./file";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -95,13 +96,13 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{file:FileLike,name:string}[]} items
+   * @param  {{file:FileLike,name:string,options:StackCreateOptions}[]} items
    * @param  {BatchStackCreateOptions} [options]
    * @returns Promise with new stack ids & their corresponding transaction ids
    */
   public async stackCreate(
     vaultId: string,
-    items: { file: FileLike, name: string }[],
+    items: { file: FileLike, name: string, options: StackCreateOptions }[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
     const size = items.reduce((sum, stack) => {
@@ -135,7 +136,11 @@ class BatchService extends Service {
           const service = new StackService(this.wallet, this.api);
           service.setGroupRef(this.groupRef);
 
-          const stackResponse = await service.create(vaultId, item.file, item.name, options);
+          const stackCreateOptions = {
+            ...options,
+            ...item.options
+          }
+          const stackResponse = await service.create(vaultId, item.file, item.name, stackCreateOptions);
           if (options.cancelHook?.signal.aborted) {
             return { data, errors, cancelled: items.length - processedStacksCount };
           }
@@ -159,7 +164,7 @@ class BatchService extends Service {
   /**
    * @param  {string} vaultId
    * @param  {{email:string,role:RoleType}[]} items
-   * @param  {string} [message] optional email message - unencrypted
+   * @param  {MembershipCreateOptions} [options] invitation email message, etc.
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
   public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], options: MembershipCreateOptions = {}): Promise<BatchMembershipInviteResponse> {
@@ -197,7 +202,7 @@ class BatchService extends Service {
   }
 }
 
-export type BatchStackCreateOptions = StackCreateOptions & {
+export type BatchStackCreateOptions = Hooks & {
   processingCountHook?: (count: number) => void,
   onStackCreated?: (item: Stack) => Promise<void>
 };

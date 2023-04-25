@@ -186,7 +186,7 @@ class FileService extends Service {
   private async uploadChunked(
     file: FileLike,
     tags: Tags,
-    options: FileUploadOptions
+    options: Hooks
   ): Promise<FileUploadResult> {
     let resourceUrl = uuid();
     let encryptionTags: Tags;
@@ -250,7 +250,7 @@ class FileService extends Service {
     tags: Tags,
     resourceUrl: string,
     resourceSize: number,
-    options: FileUploadOptions
+    options: Hooks
   ) {
     const resource = await new ApiClient()
       .env(this.api.config)
@@ -329,9 +329,12 @@ export type FileUploadResult = {
   chunkSize?: number,
 }
 
-export type FileUploadOptions = {
+export type Hooks = {
   progressHook?: (progress: number, data?: any) => void,
-  cancelHook?: AbortController,
+  cancelHook?: AbortController
+}
+
+export type FileUploadOptions = Hooks & {
   shouldBundleTransaction?: boolean,
   public?: boolean
 }
