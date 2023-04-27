@@ -102,7 +102,7 @@ class BatchService extends Service {
    */
   public async stackCreate(
     vaultId: string,
-    items: { file: FileLike, name: string, options: StackCreateOptions }[],
+    items: { file: FileLike, name: string, options?: StackCreateOptions }[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
     const size = items.reduce((sum, stack) => {
@@ -138,7 +138,7 @@ class BatchService extends Service {
 
           const stackCreateOptions = {
             ...options,
-            ...item.options
+            ...(item.options || {})
           }
           const stackResponse = await service.create(vaultId, item.file, item.name, stackCreateOptions);
           if (options.cancelHook?.signal.aborted) {
