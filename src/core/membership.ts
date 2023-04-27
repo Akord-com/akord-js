@@ -120,7 +120,7 @@ class MembershipService extends Service {
 
     const dataTxId = await this.uploadState(body);
 
-    let input = {
+    const input = {
       function: this.function,
       address,
       role,
@@ -137,7 +137,16 @@ class MembershipService extends Service {
     return { membershipId, transactionId: id, object: membership };
   }
 
-  public async airdrop(vaultId: string, members: Array<{ publicKey: string, publicSigningKey: string }>, role: RoleType): Promise<{
+  /**
+   * Airdrop access to the vaul directly through public keys
+   * @param  {string} vaultId
+   * @param  {{publicKey:string,publicSigningKey:string,role:RoleType}[]} members
+   * @returns Promise with new memberships & corresponding transaction id
+   */
+  public async airdrop(
+    vaultId: string,
+    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType }>,
+  ): Promise<{
     transactionId: string,
     members: Array<{ id: string, address: string }>
   }> {
@@ -145,7 +154,7 @@ class MembershipService extends Service {
     this.setActionRef("MEMBERSHIP_AIRDROP");
     this.setFunction(functions.MEMBERSHIP_ADD);
     const memberArray = [];
-    const membersPublicInfo = [];
+    const membersMetadata = [];
     const dataArray = [];
     const memberTags = [];
     for (const member of members) {
@@ -164,17 +173,18 @@ class MembershipService extends Service {
         }),
         memberDetails: await this.processMemberDetails({ name: memberAddress })
       };
+
       const data = await this.uploadState(body);
       dataArray.push({
         id: membershipId,
         data
       })
-      membersPublicInfo.push({
+      membersMetadata.push({
         address: memberAddress,
         publicKey: member.publicKey,
-        publicSigningKey: member.publicSigningKey,
+        publicSigningKey: member.publicSigningKey
       })
-      memberArray.push({ address: memberAddress, id: membershipId, role, data });
+      memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
     }
 
@@ -189,7 +199,7 @@ class MembershipService extends Service {
       this.vaultId,
       input,
       this.tags,
-      { members: membersPublicInfo }
+      { members: membersMetadata }
     );
     return { members: input.members, transactionId: id };
   }
