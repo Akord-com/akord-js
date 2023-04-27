@@ -1,6 +1,6 @@
 # akord-js
 
-Akord Client for interacting with Akord.\
+Akord Client - a set of core js functions to interact with [Akord](https://docs.akord.com/).\
 This package can be used in both browser and Node.js environments.
 
 - [Usage](#usage)
@@ -122,7 +122,7 @@ const { wallet } = await Auth.signIn("winston@gmail.com", "1984");
 - `email` (`string`, required)
 - `password` (`string`, required)
 - `clientMetadata` (`any`, optional) - JSON client metadata, ex: { clientType: "CLI" }
-- returns `Promise<AkordWallet>` - Promise with Akord Wallet
+- returns `Promise<{ wallet }>` - Promise with Akord Wallet
 
 <details>
   <summary>example</summary>
@@ -151,18 +151,24 @@ await Auth.verifyAccount("winston@gmail.com", 123456);
 
 ### vault
 
-#### `create(name, termsOfAccess, isPublic)`
+#### `create(name, options)`
 
 - `name` (`string`, required) - new vault name
-- `termsOfAccess` (`string`, optional) - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-- `isPublic` (`boolean`, optional)
+- `options` (`VaultCreateOptions`, optional) - public/private, terms of access, etc.
 - returns `Promise<{ vaultId, membershipId, transactionId }>` - Promise with new vault id, owner membership id & corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { vaultId, membershipId } = await akord.vault.create("my first vault", "terms of access");
+// create a private vault
+const { vaultId, membershipId } = await akord.vault.create("my first private vault");
+
+// create a public vault with terms of access
+const { vaultId, membershipId } = await akord.vault.create(
+  "my first public vault",
+  { public: true, termsOfAccess: "terms of access here - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault" }
+);
 ```
 </details>
 
@@ -280,7 +286,8 @@ Invite user with an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ membershipId, transactionId }>` - Promise with new membership id & corresponding transaction id
 
 <details>
@@ -297,7 +304,8 @@ Invite user without an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ transactionId }>` - Promise with new membership id & corresponding transaction id
 
 <details>
@@ -382,7 +390,7 @@ const { transactionId } = await akord.membership.revoke(membershipId);
 #### `changeRole(membershipId, role)`
 
 - `membershipId` (`string`, required)
-- `role` (`string`, required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -469,7 +477,7 @@ do {
 
 - `vaultId` (`string`, required)
 - `message` (`string`, required) - memo content
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ memoId, transactionId }>` - Promise with new memo id & corresponding transaction id
 
 <details>
@@ -569,14 +577,12 @@ do {
 
 ### stack
 
-#### `create(vaultId, file, name, parentId, progressHook, cancelHook)`
+#### `create(vaultId, file, name)`
 
 - `vaultId` (`string`, required)
 - `file` ([`FileLike`][file-like], required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
 - `name` (`string`, required) - stack name
-- `parentId` (`string`, optional) - parent folder id
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
+- `options` (`StackCreateOptions`, optional)
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
 <details>
@@ -590,13 +596,13 @@ const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
 > [See Next.js file upload showcase here][file-upload-example]
 </details>
 
-#### `import(vaultId, fileTxId, parentId)`
+#### `import(vaultId, fileTxId)`
 
 Create new stack from an existing arweave file transaction
 
 - `vaultId` (`string`, required)
 - `fileTxId` (`string`, required) - arweave file transaction id reference
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
 
 <details>
@@ -621,11 +627,11 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
 ```
 </details>
 
-#### `uploadRevision(stackId, file, progressHook)`
+#### `uploadRevision(stackId, file)`
 
 - `stackId` (`string`, required)
 - `file` ([`FileLike`][file-like], required) - file object
-- `progressHook` (`(progress:number)=>void`, optional)
+- `options` (`FileUploadOptions`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -821,11 +827,11 @@ See: https://github.com/jimmywarting/StreamSaver.js#configuration
 
 ### folder
 
-#### `create(vaultId, name, parentId)`
+#### `create(vaultId, name)`
 
 - `vaultId` (`string`, required)
 - `name` (`string`, required) - folder name
-- `parentId` (`string`, optional) - parent folder id
+- `options` (`NodeCreateOptions`, optional) - parent id, etc.
 - returns `Promise<{ folderId, transactionId }>` - Promise with new folder id & corresponding transaction id
 
 <details>
@@ -971,13 +977,12 @@ do {
 
 ### note
 
-#### `create(vaultId, content, name, parentId)`
+#### `create(vaultId, content, name)`
 
 - `vaultId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `parentId` (`string`, optional) - parent folder id
-- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
+- `options` (`NoteCreateOptions`, optional) - parent id, mime type, etc.
 - returns `Promise<{ noteId, transactionId }>` - Promise with new note id & corresponding transaction id
 
 <details>
@@ -990,8 +995,7 @@ const { noteId } = await akord.note.create(
   vaultId,
   JSON.stringify({ name: "My first JSON note" }),
   "My first JSON note",
-  parentId,
-  "application/json"
+  { parentId: parentId, mimeType: "application/json" }
 );
 ```
 </details>
@@ -1001,7 +1005,7 @@ const { noteId } = await akord.note.create(
 - `noteId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
 - `name` (`string`, required) - note name
-- `mimeType` (`string`, optional) - MIME type for the note text file, default: text/markdown
+- `options` (`NoteOptions`, optional) - mime type, etc.
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
@@ -1257,20 +1261,18 @@ Update user profile along with all active memberships
 - `items` (`Array<{ id: string, role: `[`RoleType`][role-type]` }>`, required)
 - returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
 
-#### `stackCreate(vaultId, items, parentId, progressHook, cancelHook)`
+#### `stackCreate(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, parentId?: string }>`, required)
-- `parentId` (`string`, optional)
-- `progressHook` (`(progress:number)=>void`, optional)
-- `cancelHook` (`AbortController`, optional)
+- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, options: StackCreateOptions>`, required)
+- `options` (`BatchStackCreateOptions`, optional)
 - returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
 #### `membershipInvite(vaultId, items)`
 
 - `vaultId` (`string`, required)
 - `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
-- `message` (`string`, optional) - email message (unencrypted)
+- `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
 
 ### Development
@@ -1300,15 +1302,6 @@ node --inspect node_modules/.bin/jest <path-to-test-file>
 node --inspect node_modules/.bin/jest ./src/__tests__/folder.test.ts
 ```
 
-### Deployment
-
-After merging your PR to `main`:
-- go to [Actions Tab](https://github.com/Akord-com/akord-js/actions)
-- select `Start new build` [workflow](https://github.com/Akord-com/akord-js/actions/workflows/version-bump.yml)
-- run `Workflow` for branch `main`
-  - it will update package version
-  - will create a release
-  - will build and publish it to NPM
 
 [list-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L1
 [get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L9

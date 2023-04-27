@@ -59,7 +59,7 @@ class MembershipService extends Service {
       ...this.defaultListOptions,
       ...options
     }
-    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions.filter, listOptions.limit, listOptions.nextToken);
+    const response = await this.api.getMembershipsByVaultId(vaultId, listOptions);
     const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     const promises = response.items
       .map(async (membershipProto: Membership) => {
@@ -90,10 +90,10 @@ class MembershipService extends Service {
    * @param  {string} vaultId
    * @param  {string} email invitee's email
    * @param  {RoleType} role CONTRIBUTOR or VIEWER
-   * @param  {string} [message] optional email message - unencrypted
+   * @param  {MembershipCreateOptions} [options] invitation email message, etc.
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async invite(vaultId: string, email: string, role: RoleType, message?: string): Promise<MembershipCreateResult> {
+  public async invite(vaultId: string, email: string, role: RoleType, options: MembershipCreateOptions = {}): Promise<MembershipCreateResult> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
     this.setFunction(functions.MEMBERSHIP_INVITE);
@@ -131,7 +131,7 @@ class MembershipService extends Service {
       this.vaultId,
       input,
       this.tags,
-      { message }
+      { message: options.message }
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { membershipId, transactionId: id, object: membership };
@@ -349,7 +349,7 @@ class MembershipService extends Service {
           newMembershipRefs.push(member.id);
         }
       }
-      const dataTxIds = await this.api.uploadData(newMembershipStates, true);
+      const dataTxIds = await this.api.uploadData(newMembershipStates);
       data = [];
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
@@ -390,14 +390,23 @@ class MembershipService extends Service {
    * @param  {string} vaultId
    * @param  {string} email invitee's email
    * @param  {string} role CONTRIBUTOR or VIEWER
-   * @param  {string} [message] optional email message - unencrypted
+   * @param  {MembershipCreateOptions} [options] invitation email message, etc.
    * @returns Promise with new membership id & corresponding transaction id
    */
-  public async inviteNewUser(vaultId: string, email: string, role: RoleType, message?: string): Promise<{
+  public async inviteNewUser(vaultId: string, email: string, role: RoleType, options: MembershipCreateOptions = {}): Promise<{
     membershipId: string
   }> {
-    const { id } = await this.api.inviteNewUser(vaultId, email, role, message);
+    const { id } = await this.api.inviteNewUser(vaultId, email, role, options.message);
     return { membershipId: id };
+  }
+
+  /**
+ * Revoke invite for user without an Akord account
+ * @param  {string} vaultId
+ * @param  {string} membershipId
+ */
+  public async revokeInvite(vaultId: string, membershipId: string): Promise<void> {
+    await this.api.revokeInvite(vaultId, membershipId);
   }
 
   /**
@@ -455,6 +464,10 @@ class MembershipService extends Service {
     return membership;
   }
 };
+
+export type MembershipCreateOptions = {
+  message?: string
+}
 
 type MembershipCreateResult = {
   membershipId: string,

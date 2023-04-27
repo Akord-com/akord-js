@@ -26,6 +26,10 @@ class NodeService<T = NodeLike> extends Service {
     shouldDecrypt: true,
   } as GetOptions;
 
+  defaultCreateOptions = {
+    parentId: undefined
+  } as NodeCreateOptions;
+
   /**
    * @param  {string} nodeId
    * @returns Promise with the decrypted node
@@ -51,7 +55,7 @@ class NodeService<T = NodeLike> extends Service {
       ...this.defaultListOptions,
       ...options
     }
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions.parentId, listOptions.filter, listOptions.limit, listOptions.nextToken);
+    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions);
     const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     const promises = response.items
       .map(async nodeProto => {
@@ -223,6 +227,10 @@ class NodeService<T = NodeLike> extends Service {
 type NodeUpdateResult = {
   transactionId: string,
   object: NodeLike
+}
+
+export type NodeCreateOptions = {
+  parentId?: string
 }
 
 export {

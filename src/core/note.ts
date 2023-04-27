@@ -1,4 +1,4 @@
-import { NodeService } from "./node";
+import { NodeCreateOptions, NodeService } from "./node";
 import { Stack, nodeType } from "../types/node";
 import { StackService } from "./stack";
 import { arrayToString } from "@akord/crypto";
@@ -9,6 +9,11 @@ class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
   objectType = nodeType.STACK;
   NodeType = Stack;
+
+  defaultCreateOptions = {
+    parentId: undefined,
+    mimeType: NoteTypes.MD
+  } as NoteCreateOptions;
 
   /**
    * Get note version by index, return the latest version by default
@@ -35,17 +40,20 @@ class NoteService extends NodeService<Stack> {
    * @param  {string} vaultId
    * @param  {string} content note content, ex: stringified JSON
    * @param  {string} name note name
-   * @param  {string} [parentId] parent folder id
-   * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
+   * @param  {NoteCreateOptions} [options] parent id, mime type, etc.
    * @returns Promise with new note id & corresponding transaction id
    */
-  public async create(vaultId: string, content: string, name: string, parentId?: string, mimeType?: NoteType): Promise<NoteCreateResult> {
-    const noteFile = await createFileLike([content], name, mimeType ? mimeType : NoteTypes.MD);
+  public async create(vaultId: string, content: string, name: string, options: NoteCreateOptions = this.defaultCreateOptions): Promise<NoteCreateResult> {
+    const createOptions = {
+      ...this.defaultCreateOptions,
+      ...options
+    }
+    const noteFile = await createFileLike([content], name, createOptions.mimeType);
     const { stackId, transactionId, object } = await this.stackService.create(
       vaultId,
       noteFile,
       name,
-      parentId
+      createOptions
     );
     return { noteId: stackId, transactionId, object };
   }
@@ -54,11 +62,11 @@ class NoteService extends NodeService<Stack> {
    * @param  {string} noteId
    * @param  {string} content note content, ex: stringified JSON
    * @param  {string} name note name
-   * @param  {string} [mimeType] MIME type for the note text file, default: text/markdown
+   * @param  {NoteOptions} [options] parent id, mime type, etc.
    * @returns Promise with corresponding transaction id
    */
-  public async uploadRevision(noteId: string, content: string, name: string, mimeType?: NoteType): Promise<NoteUpdateResult> {
-    const noteFile = await createFileLike([content], name, mimeType ? mimeType : NoteTypes.MD);
+  public async uploadRevision(noteId: string, content: string, name: string,  options: NoteOptions = this.defaultCreateOptions): Promise<NoteUpdateResult> {
+    const noteFile = await createFileLike([content], name, options.mimeType);
     return this.stackService.uploadRevision(noteId, noteFile);
   }
 
@@ -84,6 +92,12 @@ type NoteUpdateResult = {
 }
 
 type NoteType = "text/markdown" | "application/json";
+
+export type NoteOptions = {
+  mimeType?: string
+}
+
+export type NoteCreateOptions = NodeCreateOptions & NoteOptions
 
 export {
   NoteService

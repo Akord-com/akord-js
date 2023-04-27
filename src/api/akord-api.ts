@@ -9,8 +9,15 @@ import { NodeType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
-import { VaultApiGetOptions } from "../types/query-options";
+import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
+import { FileDownloadOptions, FileUploadOptions } from "../core/file";
+import { AxiosResponseHeaders } from "axios";
+
+export const defaultFileUploadOptions = {
+  shouldBundleTransaction: true,
+  public: false
+};
 
 export default class AkordApi extends Api {
 
@@ -21,7 +28,7 @@ export default class AkordApi extends Api {
     this.config = apiConfig(config.env);
   }
 
-  public async uploadData(items: { data: any, tags: Tags }[], shouldBundleTransaction?: boolean)
+  public async uploadData(items: { data: any, tags: Tags }[], options: FileUploadOptions = defaultFileUploadOptions)
     : Promise<Array<string>> {
     const resources = [];
 
@@ -29,7 +36,7 @@ export default class AkordApi extends Api {
       const resource = await new ApiClient()
         .env(this.config)
         .data({ data: item.data, tags: item.tags })
-        .bundle(shouldBundleTransaction)
+        .bundle(options.shouldBundleTransaction)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
@@ -65,38 +72,37 @@ export default class AkordApi extends Api {
     return contractId;
   };
 
-  public async uploadFile(file: any, tags: Tags, isPublic?: boolean, shouldBundleTransaction?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUrl: string, resourceTx: string }> {
+    const uploadOptions = {
+      ...defaultFileUploadOptions,
+      ...options
+    }
     const resource = await new ApiClient()
       .env(this.config)
       .data(file)
       .tags(tags)
-      .public(isPublic)
-      .bundle(shouldBundleTransaction)
-      .progressHook(progressHook)
-      .cancelHook(cancelHook)
+      .public(uploadOptions.public)
+      .bundle(uploadOptions.shouldBundleTransaction)
+      .progressHook(uploadOptions.progressHook)
+      .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
     Logger.log("Uploaded file with id: " + resource.id);
 
     return resource;
   };
 
-  public async downloadFile(id: string, isPublic?: boolean, progressHook?: (progress: number, data?: any) => void, cancelHook?: AbortController, numberOfChunks?: number, loadedSize?: number, resourceSize?: number): Promise<any> {
+  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
-      .public(isPublic)
-      .numberOfChunks(numberOfChunks)
-      .progressHook(progressHook, loadedSize, resourceSize)
-      .cancelHook(cancelHook)
+      .public(options.public)
+      .numberOfChunks(options.numberOfChunks)
+      .progressHook(options.progressHook, options.loadedSize, options.resourceSize)
+      .cancelHook(options.cancelHook)
       .asArrayBuffer()
       .downloadFile();
 
-    let fileData: any;
-    if (response.headers['x-amz-meta-encryptedkey']) {
-      fileData = response.data;
-    } else {
-      fileData = Buffer.from(response.data).toJSON();
-    }
+    const fileData = response.data;
     return { fileData: fileData, headers: response.headers };
   };
 
@@ -150,6 +156,13 @@ export default class AkordApi extends Api {
       .invite();
   }
 
+  public async revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }> {
+    return await new ApiClient()
+      .env(this.config)
+      .vaultId(vaultId)
+      .resourceId(membershipId)
+      .revokeInvite();
+  }
 
   public async inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }> {
     return await new ApiClient()
@@ -251,28 +264,28 @@ export default class AkordApi extends Api {
       .getVaults();
   };
 
-  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, parentId?: string, filter = {}, limit?: number, nextToken?: string): Promise<Paginated<T>> {
+  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
       .queryParams({
         type,
-        parentId,
-        filter: JSON.stringify(filter),
-        limit,
-        nextToken
+        parentId: options.parentId,
+        filter: JSON.stringify(options.filter ? options.filter : {}),
+        limit: options.limit,
+        nextToken: options.nextToken
       })
       .getNodesByVaultId();
   };
 
-  public async getMembershipsByVaultId(vaultId: string, filter = {}, limit?: number, nextToken?: string): Promise<Paginated<Membership>> {
+  public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
       .queryParams({
-        filter: JSON.stringify(filter),
-        limit,
-        nextToken
+        filter: JSON.stringify(options.filter ? options.filter : {}),
+        limit: options.limit,
+        nextToken: options.nextToken
       })
       .getMembershipsByVaultId();
   };

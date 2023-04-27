@@ -4,7 +4,7 @@ import { InternalError } from "./internal-error";
 import { NotFound } from "./not-found";
 import { Unauthorized } from "./unauthorized";
 
-export const throwError = (status: number, message?: string, error?: any) => {
+export const throwError = (status: number, message?: string, error?: Error) => {
   switch (status) {
     case 400:
       throw new BadRequest(message, error);
