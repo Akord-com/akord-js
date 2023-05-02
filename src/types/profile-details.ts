@@ -4,8 +4,8 @@ export class ProfileDetails extends Encryptable {
 
   constructor(profileDetailsProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
-    this.name = profileDetailsProto.name;
-    this.avatarUri = profileDetailsProto.avatarUri;
+    this.name = profileDetailsProto?.name;
+    this.avatarUri = profileDetailsProto?.avatarUri;
   }
 
   @encrypted() name?: string;
