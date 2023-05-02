@@ -170,8 +170,7 @@ class MembershipService extends Service {
         keys: keys.map((keyPair: any) => {
           delete keyPair.publicKey;
           return keyPair;
-        }),
-        memberDetails: await this.processMemberDetails({ name: memberAddress })
+        })
       };
 
       const data = await this.uploadState(body);
