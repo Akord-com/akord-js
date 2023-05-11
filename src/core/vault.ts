@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service, STATE_CONTENT_TYPE } from "./service";
-import { Tag } from "../types/contract";
+import { Tag, Tags } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
@@ -23,7 +23,9 @@ class VaultService extends Service {
 
   defaultCreateOptions = {
     public: false,
-    termsOfAccess: undefined
+    termsOfAccess: undefined,
+    cacheOnly: false,
+    tags: []
   } as VaultCreateOptions;
 
   /**
@@ -106,7 +108,12 @@ class VaultService extends Service {
       }
     }
 
-    const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
+    let vaultId: string 
+    if (createOptions.cacheOnly) {
+      vaultId = uuidv4();
+    } else {
+      await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
+    }
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
@@ -119,6 +126,10 @@ class VaultService extends Service {
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
       new Tag(protocolTags.PUBLIC, createOptions.public ? "true" : "false"),
     ].concat(await this.getTags());
+
+    if (createOptions.tags && createOptions.tags.length) {
+      this.tags.concat(createOptions.tags);
+    }
 
     const vaultData = {
       name: await this.processWriteString(name),
@@ -152,14 +163,15 @@ class VaultService extends Service {
           new Tag(protocolTags.NODE_TYPE, objectType.MEMBERSHIP),
           new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
         ]
-      }]);
+      }], { shouldBundleTransaction: createOptions.cacheOnly });
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
-      this.tags
+      this.tags,
+      { cacheOnly: createOptions.cacheOnly }
     );
     const vault = await this.processVault(object, true, this.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
@@ -254,6 +266,8 @@ class VaultService extends Service {
 export type VaultCreateOptions = {
   public?: boolean,
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
+  cacheOnly?: boolean,
+  tags?: Tags
 }
 
 type VaultCreateResult = {
