@@ -1,6 +1,7 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { Membership } from "./membership";
 import { Folder, Memo, Stack } from "./node";
+import { Tags } from "./contract";
 
 export class Vault extends Encryptable {
   id: string;
@@ -10,6 +11,8 @@ export class Vault extends Encryptable {
   updatedAt: string;
   data: Array<string>;
   size?: number;
+  cacheOnly?: boolean;
+  tags?: Tags;
   @encrypted() name: string;
 
   memberships?: Array<Membership>;
@@ -27,6 +30,8 @@ export class Vault extends Encryptable {
     this.name = vaultProto.name;
     this.status = vaultProto.status;
     this.data = vaultProto.data;
+    this.cacheOnly = vaultProto.cacheOnly;
+    this.tags = vaultProto.tags;
     this.keys = keys;
     this.memberships = vaultProto?.memberships?.map((membership: Membership) => new Membership(membership, keys));
     this.memos = vaultProto?.memos?.map((memo: Memo) => new Memo(memo, keys));

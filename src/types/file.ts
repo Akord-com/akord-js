@@ -36,21 +36,3 @@ export namespace NodeJs {
 }
 
 export type FileLike = NodeJs.File | File
-
-export class FileFactory {
-  static async fromReadable(stream: Readable, name: string, mimeType?: string, lastModified?: number) {
-    return NodeJs.File.fromReadable(stream, name, mimeType, lastModified);
-  }
-
-  static async fromBlob(blob: Blob, name: string, mimeType?: string, lastModified?: number) {
-    return new NodeJs.File([blob], name, mimeType, lastModified);
-  }
-
-  static async fromBuffer(buffer: Uint8Array, name: string, mimeType?: string, lastModified?: number) {
-    return new NodeJs.File([new Blob([buffer])], name, mimeType, lastModified);
-  }
-
-  static async fromPath(filePath: string) {
-    NodeJs.File.fromPath(filePath);
-  }
-}

@@ -112,7 +112,7 @@ class VaultService extends Service {
     if (createOptions.cacheOnly) {
       vaultId = uuidv4();
     } else {
-      await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
+      vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
     }
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
@@ -128,7 +128,7 @@ class VaultService extends Service {
     ].concat(await this.getTags());
 
     if (createOptions.tags && createOptions.tags.length) {
-      this.tags.concat(createOptions.tags);
+      this.tags.push(...createOptions.tags);
     }
 
     const vaultData = {
