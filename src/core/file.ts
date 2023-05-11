@@ -323,8 +323,6 @@ export type FileUploadResult = {
   resourceTx?: string,
   resourceUrl?: string,
   resourceHash?: string,
-  thumbnailTx?: string,
-  thumbnailUrl?: string,
   numberOfChunks?: number,
   chunkSize?: number,
 }
