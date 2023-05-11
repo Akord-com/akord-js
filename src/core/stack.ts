@@ -108,6 +108,9 @@ class StackService extends NodeService<Stack> {
   }
 
   private async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
+    if (this.vault.cacheOnly) {
+      options.shouldBundleTransaction = true
+    }
     const {
       resourceTx,
       resourceUrl,
