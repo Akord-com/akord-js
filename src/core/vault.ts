@@ -24,6 +24,7 @@ class VaultService extends Service {
   defaultCreateOptions = {
     public: false,
     termsOfAccess: undefined,
+    description: undefined,
     tags: []
   } as VaultCreateOptions;
 
@@ -125,6 +126,7 @@ class VaultService extends Service {
     const vaultData = {
       name: await this.processWriteString(name),
       termsOfAccess: createOptions.termsOfAccess,
+      description: createOptions.description ? await this.processWriteString(createOptions.description) : undefined,
       tags: this.tags
     }
     const vaultSignature = await this.signData(vaultData);
@@ -257,6 +259,7 @@ class VaultService extends Service {
 export type VaultCreateOptions = {
   public?: boolean,
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
+  description?: string,
   tags?: string[]
 }
 
