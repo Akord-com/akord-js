@@ -1,6 +1,5 @@
 import { NodeCreateOptions, NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { createThumbnail } from "./thumbnail";
 import { FileService, FileUploadResult, FileUploadOptions } from "./file";
 import { FileLike } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
@@ -111,15 +110,16 @@ class StackService extends NodeService<Stack> {
   }
 
   private async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
+    if (this.vault.cacheOnly) {
+      options.cacheOnly = true
+    }
     const {
       resourceTx,
       resourceUrl,
       resourceHash,
       numberOfChunks,
-      chunkSize,
-      thumbnailTx,
-      thumbnailUrl
-    } = await this.postFile(file, options);
+      chunkSize
+    } = await this.fileService.create(file, options);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
@@ -127,31 +127,10 @@ class StackService extends NodeService<Stack> {
       type: file.type,
       size: file.size,
       resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
-      thumbnailUri: [`arweave:${thumbnailTx}`, `s3:${thumbnailUrl}`],
       numberOfChunks,
       chunkSize,
     });
     return version;
-  }
-
-  private async postFile(file: FileLike, options: FileUploadOptions)
-    : Promise<FileUploadResult> {
-    const filePromise = this.fileService.create(file, options);
-    const thumbnail = await createThumbnail(file);
-    if (thumbnail) {
-      const thumbnailPromise = this.fileService.create(thumbnail, { ...options, shouldBundleTransaction: false });
-      const results = await Promise.all([filePromise, thumbnailPromise]);
-      return {
-        resourceTx: results[0].resourceTx,
-        resourceUrl: results[0].resourceUrl,
-        resourceHash: results[0].resourceHash,
-        numberOfChunks: results[0].numberOfChunks,
-        thumbnailTx: results[1].resourceTx,
-        thumbnailUrl: results[1].resourceUrl
-      };
-    } else {
-      return await filePromise;
-    }
   }
 
   protected async setVaultContext(vaultId: string): Promise<void> {

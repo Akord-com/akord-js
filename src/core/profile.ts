@@ -42,7 +42,7 @@ class ProfileService extends Service {
 
     this.setRawDataEncryptionPublicKey(this.wallet.publicKeyRaw());
     this.setIsPublic(false);
-    const profileDetails = await this.processMemberDetails({ name, avatar }, false);
+    const profileDetails = await this.processMemberDetails({ name, avatar }, true);
 
     const newProfileDetails = new ProfileDetails({
       ...user,

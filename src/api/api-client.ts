@@ -34,7 +34,7 @@ export class ApiClient {
   private _tags: Tags;
   private _input: ContractInput;
   private _vaultId: string;
-  private _shouldBundleTransaction: boolean;
+  private _cacheOnly: boolean;
   private _numberOfChunks: number;
 
   constructor() { }
@@ -55,8 +55,9 @@ export class ApiClient {
     return this;
   }
 
-  bundle(shouldBundleTransaction: boolean): ApiClient {
-    this._shouldBundleTransaction = shouldBundleTransaction;
+  cacheOnly(cacheOnly: boolean): ApiClient {
+    this._cacheOnly = cacheOnly;
+    this.queryParams(cacheOnly)
     return this;
   }
 
@@ -77,11 +78,18 @@ export class ApiClient {
 
   metadata(metadata: any): ApiClient {
     this._metadata = metadata;
+    if (metadata?.cacheOnly) {
+      this.cacheOnly(metadata.cacheOnly)
+    }
     return this;
   }
 
   queryParams(queryParams: any): ApiClient {
-    this._queryParams = queryParams;
+    if (queryParams) {
+      this._queryParams = { ...this._queryParams, ...queryParams };
+    } else {
+      this._queryParams = {}
+    }
     return this;
   }
 
@@ -344,7 +352,7 @@ export class ApiClient {
     this._dir = this._filesDir;
     await this.upload();
     const resourceId = this._resourceId;
-    const resourceTx = this._shouldBundleTransaction ? await this.fileTransaction() : null;
+    const resourceTx = !this._cacheOnly ? await this.fileTransaction() : null;
     return { resourceUrl: resourceId, id: resourceTx, resourceTx: resourceTx }
   }
 
@@ -427,7 +435,7 @@ export class ApiClient {
       }
     } as AxiosRequestConfig
 
-    if (!this._shouldBundleTransaction) {
+    if (this._cacheOnly) {
       config.headers['x-amz-meta-skipbundle'] = "true";
     }
     if (this._tags) {

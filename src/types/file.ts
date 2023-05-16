@@ -4,20 +4,18 @@ import { BinaryLike } from "crypto";
 import { Readable } from "stream";
 import { NotFound } from "../errors/not-found";
 
-export type FileLike = NodeJs.File | File
-
 export namespace NodeJs {
   export class File extends Blob {
     name: string;
     lastModified: number;
 
-    constructor(sources: Array<BinaryLike | Blob>, name: string, mimeType: string, lastModified?: number) {
-      super(sources, { type: mimeType });
+    constructor(sources: Array<BinaryLike | Blob>, name: string, mimeType?: string, lastModified?: number) {
+      super(sources, { type: mimeType || 'text/plain' });
       this.name = name;
       this.lastModified = lastModified;
     }
 
-    static async fromReadable(stream: Readable, name: string, mimeType: string, lastModified?: number) {
+    static async fromReadable(stream: Readable, name: string, mimeType?: string, lastModified?: number) {
       const chunks = []
       for await (const chunk of stream) chunks.push(chunk);
       return new File(chunks, name, mimeType, lastModified);
@@ -36,3 +34,5 @@ export namespace NodeJs {
     }
   }
 }
+
+export type FileLike = NodeJs.File | File

@@ -13,4 +13,5 @@ Akord.init = async function (wallet: Wallet, config: ClientConfig = {}): Promise
   return new Akord(wallet, config);
 };
 
+export * from "./types";
 export { Akord, Auth };

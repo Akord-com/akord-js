@@ -131,7 +131,7 @@ class FileService extends Service {
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
-      .bundle(false)
+      .cacheOnly(true)
       .uploadFile()
     return { file, resourceHash, resourceUrl: resource.resourceUrl };
   }
@@ -258,7 +258,7 @@ class FileService extends Service {
       .data(chunk.processedData)
       .tags(tags.concat(chunk.encryptionTags))
       .public(this.isPublic)
-      .bundle(false)
+      .cacheOnly(true)
       .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
       .cancelHook(options.cancelHook)
       .uploadFile()
@@ -324,8 +324,6 @@ export type FileUploadResult = {
   resourceTx?: string,
   resourceUrl?: string,
   resourceHash?: string,
-  thumbnailTx?: string,
-  thumbnailUrl?: string,
   numberOfChunks?: number,
   chunkSize?: number,
 }
@@ -336,8 +334,8 @@ export type Hooks = {
 }
 
 export type FileUploadOptions = Hooks & {
-  shouldBundleTransaction?: boolean,
-  public?: boolean,
+  public?: boolean
+  cacheOnly?: boolean,
   arweaveTags?: Tags
 }
 

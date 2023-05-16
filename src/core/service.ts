@@ -250,18 +250,18 @@ class Service {
     }
   }
 
-  protected async processAvatar(avatar: ArrayBuffer, shouldBundleTransaction?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
+  protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, { shouldBundleTransaction, public: false });
+    return this.api.uploadFile(processedData, encryptionTags, { cacheOnly, public: false });
   }
 
-  protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, shouldBundleTransaction?: boolean) {
+  protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
     let processedMemberDetails = {} as ProfileDetails;
     if (memberDetails.name) {
       processedMemberDetails.name = await this.processWriteString(memberDetails.name);
     }
     if (memberDetails.avatar) {
-      const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, shouldBundleTransaction);
+      const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
       processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
     }
     return new ProfileDetails(processedMemberDetails);

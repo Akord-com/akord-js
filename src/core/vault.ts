@@ -25,7 +25,8 @@ class VaultService extends Service {
     public: false,
     termsOfAccess: undefined,
     description: undefined,
-    tags: []
+    tags: [],
+    cacheOnly: false
   } as VaultCreateOptions;
 
   /**
@@ -108,7 +109,12 @@ class VaultService extends Service {
       }
     }
 
-    const vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
+    let vaultId: string 
+    if (createOptions.cacheOnly) {
+      vaultId = uuidv4();
+    } else {
+      vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
+    }
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
@@ -157,14 +163,15 @@ class VaultService extends Service {
           new Tag(protocolTags.NODE_TYPE, objectType.MEMBERSHIP),
           new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
         ]
-      }]);
+      }], { cacheOnly: createOptions.cacheOnly });
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
-      this.arweaveTags
+      this.arweaveTags,
+      { cacheOnly: createOptions.cacheOnly }
     );
     const vault = await this.processVault(object, true, this.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
@@ -260,7 +267,8 @@ export type VaultCreateOptions = {
   public?: boolean,
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
   description?: string,
-  tags?: string[]
+  tags?: string[],
+  cacheOnly?: boolean
 }
 
 type VaultCreateResult = {
