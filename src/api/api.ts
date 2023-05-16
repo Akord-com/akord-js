@@ -6,7 +6,7 @@ import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
-import { AxiosResponseHeaders } from "axios";
+import { EncryptionMetadata } from "../core";
 
 abstract class Api {
   config: any
@@ -23,7 +23,7 @@ abstract class Api {
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
-  abstract downloadFile(id: string, options?: FileDownloadOptions): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }>
+  abstract downloadFile(id: string, options?: FileDownloadOptions): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }>
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
