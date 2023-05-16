@@ -1,6 +1,6 @@
 import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { EncryptedKeys, Encrypter, generateKeyPair } from "@akord/crypto";
+import { EncryptedKeys, Encrypter, generateKeyPair, deriveAddress, base64ToArray } from "@akord/crypto";
 import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Membership, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
@@ -120,7 +120,7 @@ class MembershipService extends Service {
 
     const dataTxId = await this.uploadState(body);
 
-    let input = {
+    const input = {
       function: this.function,
       address,
       role,
@@ -135,6 +135,72 @@ class MembershipService extends Service {
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { membershipId, transactionId: id, object: membership };
+  }
+
+  /**
+   * Airdrop access to the vaul directly through public keys
+   * @param  {string} vaultId
+   * @param  {{publicKey:string,publicSigningKey:string,role:RoleType}[]} members
+   * @returns Promise with new memberships & corresponding transaction id
+   */
+  public async airdrop(
+    vaultId: string,
+    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType }>,
+  ): Promise<{
+    transactionId: string,
+    members: Array<{ id: string, address: string }>
+  }> {
+    await this.setVaultContext(vaultId);
+    this.setActionRef("MEMBERSHIP_AIRDROP");
+    this.setFunction(functions.MEMBERSHIP_ADD);
+    const memberArray = [];
+    const membersMetadata = [];
+    const dataArray = [];
+    const memberTags = [];
+    for (const member of members) {
+      const membershipId = uuidv4();
+      this.setObjectId(membershipId);
+
+      const memberAddress = await deriveAddress(base64ToArray(member.publicSigningKey))
+      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(member.publicKey));
+      const keys = await keysEncrypter.encryptMemberKeys([]);
+      const body = {
+        id: membershipId,
+        address: memberAddress,
+        keys: keys.map((keyPair: any) => {
+          delete keyPair.publicKey;
+          return keyPair;
+        })
+      };
+
+      const data = await this.uploadState(body);
+      dataArray.push({
+        id: membershipId,
+        data
+      })
+      membersMetadata.push({
+        address: memberAddress,
+        publicKey: member.publicKey,
+        publicSigningKey: member.publicSigningKey
+      })
+      memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
+      memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
+    }
+
+    this.tags = memberTags.concat(await this.getTags());
+
+    const input = {
+      function: this.function,
+      members: memberArray
+    };
+
+    const { id } = await this.api.postContractTransaction(
+      this.vaultId,
+      input,
+      this.tags,
+      { members: membersMetadata }
+    );
+    return { members: input.members, transactionId: id };
   }
 
   /**
