@@ -24,8 +24,7 @@ class VaultService extends Service {
   defaultCreateOptions = {
     public: false,
     termsOfAccess: undefined,
-    cacheOnly: false,
-    tags: []
+    cacheOnly: false
   } as VaultCreateOptions;
 
   /**
@@ -127,10 +126,6 @@ class VaultService extends Service {
       new Tag(protocolTags.PUBLIC, createOptions.public ? "true" : "false"),
     ].concat(await this.getTags());
 
-    if (createOptions.tags && createOptions.tags.length) {
-      this.tags.push(...createOptions.tags);
-    }
-
     const vaultData = {
       name: await this.processWriteString(name),
       termsOfAccess: createOptions.termsOfAccess
@@ -163,7 +158,7 @@ class VaultService extends Service {
           new Tag(protocolTags.NODE_TYPE, objectType.MEMBERSHIP),
           new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
         ]
-      }], { shouldBundleTransaction: createOptions.cacheOnly });
+      }], { cacheOnly: createOptions.cacheOnly });
 
     const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
 
@@ -266,8 +261,7 @@ class VaultService extends Service {
 export type VaultCreateOptions = {
   public?: boolean,
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-  cacheOnly?: boolean,
-  tags?: Tags
+  cacheOnly?: boolean
 }
 
 type VaultCreateResult = {

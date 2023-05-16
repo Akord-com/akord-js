@@ -15,7 +15,7 @@ import { FileDownloadOptions, FileUploadOptions } from "../core/file";
 import { AxiosResponseHeaders } from "axios";
 
 export const defaultFileUploadOptions = {
-  shouldBundleTransaction: true,
+  cacheOnly: false,
   public: false
 };
 
@@ -36,7 +36,7 @@ export default class AkordApi extends Api {
       const resource = await new ApiClient()
         .env(this.config)
         .data({ data: item.data, tags: item.tags })
-        .bundle(options.shouldBundleTransaction)
+        .cacheOnly(options.cacheOnly)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
@@ -82,7 +82,7 @@ export default class AkordApi extends Api {
       .data(file)
       .tags(tags)
       .public(uploadOptions.public)
-      .bundle(uploadOptions.shouldBundleTransaction)
+      .cacheOnly(uploadOptions.cacheOnly)
       .progressHook(uploadOptions.progressHook)
       .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
