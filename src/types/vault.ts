@@ -11,6 +11,9 @@ export class Vault extends Encryptable {
   owner: string;
   data: Array<string>;
   size?: number;
+  tags?: string[];
+  description?: string;
+  termsOfAccess?: string;
   @encrypted() name: string;
 
   memberships?: Array<Membership>;
@@ -27,6 +30,9 @@ export class Vault extends Encryptable {
     this.updatedAt = vaultProto.updatedAt;
     this.size = vaultProto.size;
     this.name = vaultProto.name;
+    this.description = vaultProto.description;
+    this.termsOfAccess = vaultProto.termsOfAccess;
+    this.tags = vaultProto.tags;
     this.status = vaultProto.status;
     this.data = vaultProto.data;
     this.keys = keys;

@@ -1,4 +1,4 @@
-import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags, dataTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { generateKeyPair, Encrypter, EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
@@ -23,7 +23,9 @@ class VaultService extends Service {
 
   defaultCreateOptions = {
     public: false,
-    termsOfAccess: undefined
+    termsOfAccess: undefined,
+    description: undefined,
+    tags: []
   } as VaultCreateOptions;
 
   /**
@@ -110,11 +112,12 @@ class VaultService extends Service {
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
+    this.setTags(createOptions.tags);
 
     const address = await this.wallet.getAddress();
     const membershipId = uuidv4();
 
-    this.tags = [
+    this.arweaveTags = [
       new Tag(protocolTags.MEMBER_ADDRESS, address),
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
       new Tag(protocolTags.PUBLIC, createOptions.public ? "true" : "false"),
@@ -122,7 +125,9 @@ class VaultService extends Service {
 
     const vaultData = {
       name: await this.processWriteString(name),
-      termsOfAccess: createOptions.termsOfAccess
+      termsOfAccess: createOptions.termsOfAccess,
+      description: createOptions.description ? await this.processWriteString(createOptions.description) : undefined,
+      tags: this.tags
     }
     const vaultSignature = await this.signData(vaultData);
     const membershipData = {
@@ -134,7 +139,7 @@ class VaultService extends Service {
     const dataTxIds = await this.api.uploadData([
       {
         data: vaultData, tags: [
-          new Tag("Data-Type", "State"),
+          new Tag(dataTags.DATA_TYPE, "State"),
           new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
           new Tag(protocolTags.SIGNATURE, vaultSignature),
           new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
@@ -144,7 +149,7 @@ class VaultService extends Service {
       },
       {
         data: membershipData, tags: [
-          new Tag("Data-Type", "State"),
+          new Tag(dataTags.DATA_TYPE, "State"),
           new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
           new Tag(protocolTags.SIGNATURE, membershipSignature),
           new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
@@ -159,7 +164,7 @@ class VaultService extends Service {
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
-      this.tags
+      this.arweaveTags
     );
     const vault = await this.processVault(object, true, this.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
@@ -254,6 +259,8 @@ class VaultService extends Service {
 export type VaultCreateOptions = {
   public?: boolean,
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
+  description?: string,
+  tags?: string[]
 }
 
 type VaultCreateResult = {

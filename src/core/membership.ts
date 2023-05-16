@@ -1,4 +1,4 @@
-import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags, dataTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, generateKeyPair, deriveAddress, base64ToArray } from "@akord/crypto";
 import { Service, STATE_CONTENT_TYPE } from "./service";
@@ -115,7 +115,7 @@ class MembershipService extends Service {
       })
     }
 
-    this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+    this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
     const dataTxId = await this.uploadState(body);
@@ -130,7 +130,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       input,
-      this.tags,
+      this.arweaveTags,
       { message: options.message }
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
@@ -187,7 +187,7 @@ class MembershipService extends Service {
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
     }
 
-    this.tags = memberTags.concat(await this.getTags());
+    this.arweaveTags = memberTags.concat(await this.getTags());
 
     const input = {
       function: this.function,
@@ -197,7 +197,7 @@ class MembershipService extends Service {
     const { id } = await this.api.postContractTransaction(
       this.vaultId,
       input,
-      this.tags,
+      this.arweaveTags,
       { members: membersMetadata }
     );
     return { members: input.members, transactionId: id };
@@ -249,7 +249,7 @@ class MembershipService extends Service {
         return keyPair;
       })
     }
-    this.tags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+    this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
     const dataTxId = await this.uploadState(body);
@@ -264,7 +264,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       input,
-      this.tags
+      this.arweaveTags
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
@@ -322,7 +322,7 @@ class MembershipService extends Service {
 
       const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false });
 
-      this.tags = await this.getTags();
+      this.arweaveTags = await this.getTags();
 
       let newMembershipStates = [] as { data: any, tags: Tags }[];
       let newMembershipRefs = [];
@@ -346,7 +346,7 @@ class MembershipService extends Service {
           const signature = await this.signData(newState);
           newMembershipStates.push({
             data: newState, tags: [
-              new Tag("Data-Type", "State"),
+              new Tag(dataTags.DATA_TYPE, "State"),
               new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
               new Tag(protocolTags.SIGNATURE, signature),
               new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
@@ -369,7 +369,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, data },
-      this.tags
+      this.arweaveTags
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
