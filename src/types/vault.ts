@@ -11,6 +11,7 @@ export class Vault extends Encryptable {
   owner: string;
   data: Array<string>;
   size?: number;
+  tags?: string[];
   @encrypted() name: string;
 
   memberships?: Array<Membership>;

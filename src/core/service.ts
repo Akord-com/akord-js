@@ -13,7 +13,7 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../constants';
+import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags, AKORD_TAG } from '../constants';
 import lodash from "lodash";
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
@@ -48,7 +48,9 @@ class Service {
   object: Object
   actionRef: string
   groupRef: string
-  tags: Tags
+
+  tags: string[] // akord tags
+  arweaveTags: Tags // arweave tx tags
 
   constructor(wallet: Wallet, api: Api, encryptionKeys?: EncryptionKeys) {
     this.wallet = wallet
@@ -84,6 +86,10 @@ class Service {
 
   setRawDataEncryptionPublicKey(publicKey: Uint8Array) {
     this.dataEncrypter.setRawPublicKey(publicKey);
+  }
+
+  setTags(tags: string[]) {
+    this.tags = tags;
   }
 
   async processReadRaw(data: ArrayBuffer | string, metadata: EncryptionMetadata, shouldDecrypt = true): Promise<ArrayBuffer> {
@@ -345,11 +351,12 @@ class Service {
       new Tag(protocolTags.NODE_TYPE, this.objectType),
     ]
     if (this.groupRef) {
-      tags.push(new Tag("Group-Ref", this.groupRef));
+      tags.push(new Tag(protocolTags.GROUP_REF, this.groupRef));
     }
     if (this.actionRef) {
-      tags.push(new Tag("Action-Ref", this.actionRef));
+      tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
     }
+    this.tags?.map((tag: string) => tags.push(new Tag(AKORD_TAG, tag)));
     return tags;
   }
 
