@@ -103,7 +103,7 @@ class FileService extends Service {
     file: FileLike,
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
-    const tags = this.getFileTags(file);
+    const tags = this.getFileTags(file, options);
     if (file.size > this.asyncUploadTreshold) {
       return await this.uploadChunked(file, tags, options);
     } else {
@@ -299,7 +299,7 @@ class FileService extends Service {
     }
   }
 
-  private getFileTags(file: FileLike): Tags {
+  private getFileTags(file: FileLike, options: FileUploadOptions = {}): Tags {
     const tags = [] as Tags;
     if (this.isPublic) {
       tags.push(new Tag(fileTags.FILE_NAME, file.name))
@@ -313,6 +313,7 @@ class FileService extends Service {
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+    options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     return tags;
   }
 };
@@ -333,11 +334,13 @@ export type Hooks = {
 }
 
 export type FileUploadOptions = Hooks & {
-  cacheOnly?: boolean,
   public?: boolean
+  cacheOnly?: boolean,
+  arweaveTags?: Tags
 }
 
-export type FileDownloadOptions = FileUploadOptions & {
+export type FileDownloadOptions = Hooks & {
+  public?: boolean,
   isChunked?: boolean,
   numberOfChunks?: number,
   loadedSize?: number,

@@ -12,7 +12,10 @@ export class Vault extends Encryptable {
   data: Array<string>;
   size?: number;
   cacheOnly?: boolean;
+  tags?: string[];
+  termsOfAccess?: string;
   @encrypted() name: string;
+  @encrypted() description?: string;
 
   memberships?: Array<Membership>;
   memos?: Array<Memo>;
@@ -28,6 +31,9 @@ export class Vault extends Encryptable {
     this.updatedAt = vaultProto.updatedAt;
     this.size = vaultProto.size;
     this.name = vaultProto.name;
+    this.description = vaultProto.description;
+    this.termsOfAccess = vaultProto.termsOfAccess;
+    this.tags = vaultProto.tags;
     this.status = vaultProto.status;
     this.data = vaultProto.data;
     this.cacheOnly = vaultProto.cacheOnly;

@@ -16,8 +16,10 @@ class FolderService extends NodeService<Folder> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
     this.setFunction(functions.NODE_CREATE);
+    this.setTags(options.tags);
     const body = {
-      name: await this.processWriteString(name)
+      name: await this.processWriteString(name),
+      tags: this.tags
     }
     const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(body, { parentId: options.parentId });
     return { folderId: nodeId, transactionId, object };

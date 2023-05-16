@@ -28,8 +28,10 @@ class MemoService extends NodeService<Memo> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setFunction(functions.NODE_CREATE);
+    this.setTags(options.tags);
     const body = {
-      versions: [await this.memoVersion(message)]
+      versions: [await this.memoVersion(message)],
+      tags: this.tags
     };
     const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(body, { parentId: options.parentId });
     return { memoId: nodeId, transactionId, object };
@@ -44,7 +46,7 @@ class MemoService extends NodeService<Memo> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
     this.setFunction(functions.NODE_UPDATE);
-    this.tags = await this.getTags();
+    this.arweaveTags = await this.getTags();
 
     const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
     const newState = lodash.cloneDeepWith(currentState);
@@ -54,7 +56,7 @@ class MemoService extends NodeService<Memo> {
     const { id, object } = await this.api.postContractTransaction<Memo>(
       this.vaultId,
       { function: this.function, data: dataTxId },
-      this.tags
+      this.arweaveTags
     );
     const memo = await this.processMemo(object, !this.isPublic, this.keys);
     return { transactionId: id, object: memo };
@@ -69,7 +71,7 @@ class MemoService extends NodeService<Memo> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
     this.setFunction(functions.NODE_UPDATE);
-    this.tags = await this.getTags();
+    this.arweaveTags = await this.getTags();
 
     const body = await this.deleteReaction(reaction);
     const dataTxId = await this.uploadState(body);
@@ -77,7 +79,7 @@ class MemoService extends NodeService<Memo> {
     const { id, object } = await this.api.postContractTransaction<Memo>(
       this.vaultId,
       { function: this.function, data: dataTxId },
-      this.tags
+      this.arweaveTags
     );
     const memo = await this.processMemo(object, !this.isPublic, this.keys);
     return { transactionId: id, object: memo };

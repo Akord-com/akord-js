@@ -27,7 +27,8 @@ class NodeService<T = NodeLike> extends Service {
   } as GetOptions;
 
   defaultCreateOptions = {
-    parentId: undefined
+    parentId: undefined,
+    tags: []
   } as NodeCreateOptions;
 
   /**
@@ -150,7 +151,7 @@ class NodeService<T = NodeLike> extends Service {
     this.setObjectId(nodeId);
     this.setFunction(functions.NODE_CREATE);
 
-    this.tags = await this.getTags();
+    this.arweaveTags = await this.getTags();
 
     const input = {
       function: this.function,
@@ -165,7 +166,7 @@ class NodeService<T = NodeLike> extends Service {
     const { id, object } = await this.api.postContractTransaction<T>(
       this.vaultId,
       input,
-      this.tags
+      this.arweaveTags
     );
     const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
     return { nodeId, transactionId: id, object: node };
@@ -177,7 +178,7 @@ class NodeService<T = NodeLike> extends Service {
       ...clientInput
     };
 
-    this.tags = await this.getTags();
+    this.arweaveTags = await this.getTags();
 
     if (body) {
       const id = await this.mergeAndUploadBody(body);
@@ -186,7 +187,7 @@ class NodeService<T = NodeLike> extends Service {
     const { id, object } = await this.api.postContractTransaction<T>(
       this.vaultId,
       input,
-      this.tags
+      this.arweaveTags
     );
     const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
     return { transactionId: id, object: node };
@@ -230,7 +231,8 @@ type NodeUpdateResult = {
 }
 
 export type NodeCreateOptions = {
-  parentId?: string
+  parentId?: string,
+  tags?: string[]
 }
 
 export {

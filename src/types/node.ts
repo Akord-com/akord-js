@@ -20,9 +20,9 @@ export abstract class Node extends Encryptable {
   vaultId: string;
   parentId?: string;
   data?: Array<string>;
-  tags: string[];
+  tags?: string[];
 
-  constructor(id: string, createdAt: string, updatedAt: string, status: status, vaultId: string, owner: string, data: Array<string>, parentId: string, keys?: Array<EncryptedKeys>, publicKey?: string) {
+  constructor(id: string, createdAt: string, updatedAt: string, status: status, vaultId: string, owner: string, data: Array<string>, parentId: string, tags?: string[], keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
     this.id = id;
     this.createdAt = createdAt;
@@ -32,6 +32,7 @@ export abstract class Node extends Encryptable {
     this.owner = owner;
     this.data = data;
     this.parentId = parentId;
+    this.tags = tags;
   }
 
   getVersion(index?: number): Version {
@@ -52,7 +53,7 @@ export class Folder extends Node {
   size: number;
 
   constructor(nodeLike: any, keys: Array<EncryptedKeys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, nodeLike.tags, keys);
     this.name = nodeLike.name;
     this.size = nodeLike.size;
   }
@@ -63,7 +64,7 @@ export class Stack extends Node {
   versions: Array<FileVersion>;
 
   constructor(nodeLike: any, keys: Array<EncryptedKeys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, nodeLike.tags, keys);
     this.name = nodeLike.name;
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
   }
@@ -83,7 +84,7 @@ export class Note extends Node {
   versions: Array<FileVersion>;
 
   constructor(nodeLike: any, keys: Array<EncryptedKeys>) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, nodeLike.tags, keys);
     this.name = nodeLike.name;
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
   }
@@ -93,7 +94,7 @@ export class Memo extends Node {
   versions: Array<MemoVersion>;
 
   constructor(nodeLike: any, keys: Array<EncryptedKeys>, publicKey?: string) {
-    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, keys, publicKey);
+    super(nodeLike.id, nodeLike.createdAt, nodeLike.updatedAt, nodeLike.status, nodeLike.vaultId, nodeLike.owner, nodeLike.data, nodeLike.parentId, nodeLike.tags, keys, publicKey);
     this.versions = (nodeLike.versions || []).map((version: MemoVersion) => new MemoVersion(version, keys, publicKey));
   }
 

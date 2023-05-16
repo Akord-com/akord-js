@@ -25,10 +25,12 @@ class StackService extends NodeService<Stack> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
+    this.setTags(createOptions.tags);
 
     const body = {
       name: await this.processWriteString(name ? name : file.name),
-      versions: [await this.uploadNewFileVersion(file, createOptions)]
+      versions: [await this.uploadNewFileVersion(file, createOptions)],
+      tags: this.tags
     };
     const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId: createOptions.parentId });
     return { stackId: nodeId, transactionId, object };

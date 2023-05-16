@@ -79,6 +79,8 @@ export enum actionRefs {
   PROFILE_UPDATE = "PROFILE_UPDATE"
 };
 
+export const AKORD_TAG = "Akord-Tag";
+
 export enum protocolTags {
   CLIENT_NAME = "Client-Name",
   PROTOCOL_NAME = "Protocol-Name",
