@@ -32,6 +32,7 @@ export class Vault extends Encryptable {
     this.name = vaultProto.name;
     this.description = vaultProto.description;
     this.termsOfAccess = vaultProto.termsOfAccess;
+    this.tags = vaultProto.tags;
     this.status = vaultProto.status;
     this.data = vaultProto.data;
     this.keys = keys;

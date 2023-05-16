@@ -32,6 +32,7 @@ export abstract class Node extends Encryptable {
     this.owner = owner;
     this.data = data;
     this.parentId = parentId;
+    this.tags = tags;
   }
 
   getVersion(index?: number): Version {
