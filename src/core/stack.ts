@@ -89,8 +89,8 @@ class StackService extends NodeService<Stack> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     const version = stack.getVersion(index);
     await this.setVaultContext(stack.vaultId);
-    const { fileData, headers } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: this.isPublic });
-    const data = await this.processReadRaw(fileData, headers);
+    const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: this.isPublic });
+    const data = await this.processReadRaw(fileData, metadata);
     const name = await this.processReadString(version.name);
     return { name, data };
   }

@@ -25,7 +25,10 @@ import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ProfileDetails } from "../types/profile-details";
 import { ListOptions } from "../types/query-options";
 
-declare const Buffer;
+export type EncryptionMetadata = {
+  encryptedKey?: string,
+  iv?: string
+}
 
 export const STATE_CONTENT_TYPE = "application/json";
 
@@ -83,12 +86,12 @@ class Service {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
-  async processReadRaw(data: ArrayBuffer | string, headers: any, shouldDecrypt = true): Promise<ArrayBuffer> {
+  async processReadRaw(data: ArrayBuffer | string, metadata: EncryptionMetadata, shouldDecrypt = true): Promise<ArrayBuffer> {
     if (this.isPublic || !shouldDecrypt) {
       return data as ArrayBuffer;
     }
 
-    const encryptedPayload = this.getEncryptedPayload(data, headers);
+    const encryptedPayload = this.getEncryptedPayload(data, metadata);
     try {
       if (encryptedPayload) {
         return this.dataEncrypter.decryptRaw(encryptedPayload, false);
@@ -164,8 +167,8 @@ class Service {
       let avatar = null;
       const resourceUri = this.getAvatarUri(new ProfileDetails(user));
       if (resourceUri) {
-        const { fileData, headers } = await this.api.downloadFile(resourceUri);
-        const encryptedPayload = this.getEncryptedPayload(fileData, headers);
+        const { fileData, metadata } = await this.api.downloadFile(resourceUri);
+        const encryptedPayload = this.getEncryptedPayload(fileData, metadata);
         try {
           if (encryptedPayload) {
             avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);
@@ -264,9 +267,8 @@ class Service {
     return arrayToString(decryptedDataRaw);
   }
 
-  protected getEncryptedPayload(data: ArrayBuffer | string, headers: any): EncryptedPayload {
-    const encryptedKey = headers['x-amz-meta-encryptedkey'];
-    const iv = headers['x-amz-meta-iv'];
+  protected getEncryptedPayload(data: ArrayBuffer | string, metadata: EncryptionMetadata): EncryptedPayload {
+    const { encryptedKey, iv } = metadata;
     if (encryptedKey && iv) {
       return {
         encryptedKey,

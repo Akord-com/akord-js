@@ -12,7 +12,7 @@ import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
-import { AxiosResponseHeaders } from "axios";
+import { EncryptionMetadata } from "../core";
 
 export const defaultFileUploadOptions = {
   cacheOnly: false,
@@ -91,7 +91,7 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, headers: AxiosResponseHeaders }> {
+  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
@@ -103,7 +103,8 @@ export default class AkordApi extends Api {
       .downloadFile();
 
     const fileData = response.data;
-    return { fileData: fileData, headers: response.headers };
+    const metadata = { encryptedKey: response.headers["x-amz-meta-encryptedkey"], iv: response.headers["x-amz-meta-iv"] };
+    return { fileData, metadata };
   };
 
   public async existsUser(email: string): Promise<any> {

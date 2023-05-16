@@ -46,8 +46,8 @@ class FileService extends Service {
         currentChunk++;
       }
     } else {
-      const { fileData, headers } = await this.api.downloadFile(id, downloadOptions);
-      fileBinary = await this.processReadRaw(fileData, headers)
+      const { fileData, metadata } = await this.api.downloadFile(id, downloadOptions);
+      fileBinary = await this.processReadRaw(fileData, metadata)
     }
     return fileBinary;
   }
@@ -288,8 +288,8 @@ class FileService extends Service {
   private async getBinary(id: string, options: FileDownloadOptions) {
     try {
       options.public = this.isPublic;
-      const { fileData, headers } = await this.api.downloadFile(id, options);
-      return await this.processReadRaw(fileData, headers);
+      const { fileData, metadata } = await this.api.downloadFile(id, options);
+      return await this.processReadRaw(fileData, metadata);
     } catch (e) {
       Logger.log(e);
       throw new Error(

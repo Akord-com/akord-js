@@ -1,7 +1,6 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { Membership } from "./membership";
-import { Folder, Memo, Stack } from "./node";
-import { Tags } from "./contract";
+import { Folder, Memo, NodeLike, Stack } from "./node";
 
 export class Vault extends Encryptable {
   id: string;
@@ -9,16 +8,17 @@ export class Vault extends Encryptable {
   public: boolean;
   createdAt: string;
   updatedAt: string;
+  owner: string;
   data: Array<string>;
   size?: number;
   cacheOnly?: boolean;
-  tags?: Tags;
   @encrypted() name: string;
 
   memberships?: Array<Membership>;
   memos?: Array<Memo>;
   stacks?: Array<Stack>;
   folders?: Array<Folder>;
+  nodes?: Array<NodeLike>;
 
   constructor(vaultProto: any, keys: Array<EncryptedKeys>) {
     super(keys, null);
