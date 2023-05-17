@@ -337,11 +337,6 @@ class Service {
     return newState;
   }
 
-  protected async getUserEncryptionInfo(email: string) {
-    const { address, publicKey } = await this.api.getUserPublicData(email);
-    return { address, publicKey: base64ToArray(publicKey) }
-  }
-
   protected async getTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),

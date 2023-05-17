@@ -100,20 +100,11 @@ class MembershipService extends Service {
     const membershipId = uuidv4();
     this.setObjectId(membershipId);
 
-    const { address, publicKey } = await this.getUserEncryptionInfo(email);
-    const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
-    let keys: EncryptedKeys[];
-    try {
-      keys = await keysEncrypter.encryptMemberKeys([]);
-    } catch (error) {
-      throw new IncorrectEncryptionKey(error);
-    }
+    const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(email);
     const body = {
-      keys: keys.map((keyPair: any) => {
-        delete keyPair.publicKey;
-        return keyPair;
-      })
-    }
+      keys: await this.prepareMemberKeys(publicKey),
+      encPublicSigningKey: await this.processWriteString(publicSigningKey)
+    };
 
     this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
@@ -161,16 +152,13 @@ class MembershipService extends Service {
       const membershipId = uuidv4();
       this.setObjectId(membershipId);
 
-      const memberAddress = await deriveAddress(base64ToArray(member.publicSigningKey))
-      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(member.publicKey));
-      const keys = await keysEncrypter.encryptMemberKeys([]);
+      const memberAddress = await deriveAddress(base64ToArray(member.publicSigningKey));
+
       const body = {
         id: membershipId,
         address: memberAddress,
-        keys: keys.map((keyPair: any) => {
-          delete keyPair.publicKey;
-          return keyPair;
-        })
+        keys: await this.prepareMemberKeys(member.publicKey),
+        encPublicSigningKey: await this.processWriteString(member.publicSigningKey)
       };
 
       const data = await this.uploadState(body);
@@ -235,20 +223,13 @@ class MembershipService extends Service {
     await this.setVaultContextFromMembershipId(membershipId);
     this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
     this.setFunction(functions.MEMBERSHIP_INVITE);
-    const { address, publicKey } = await this.getUserEncryptionInfo(this.object.email);
-    const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, publicKey);
-    let keys: EncryptedKeys[];
-    try {
-      keys = await keysEncrypter.encryptMemberKeys([]);
-    } catch (error) {
-      throw new IncorrectEncryptionKey(error);
-    }
+    const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(this.object.email);
+
     const body = {
-      keys: keys.map((keyPair: any) => {
-        delete keyPair.publicKey;
-        return keyPair;
-      })
-    }
+      keys: await this.prepareMemberKeys(publicKey),
+      encPublicSigningKey: await this.processWriteString(publicSigningKey)
+    };
+
     this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
@@ -329,11 +310,11 @@ class MembershipService extends Service {
       for (let member of memberships) {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
-          const { publicKey } = await this.getUserEncryptionInfo(member.email);
+          const { publicKey } = await this.api.getUserPublicData(member.email);
           const memberKeysEncrypter = new Encrypter(
             this.wallet,
             this.dataEncrypter.keys,
-            publicKey
+            base64ToArray(publicKey)
           );
           let keys: EncryptedKeys[];;
           try {
@@ -471,6 +452,23 @@ class MembershipService extends Service {
       }
     }
     return membership;
+  }
+
+  private async prepareMemberKeys(publicKey: string): Promise<EncryptedKeys[]> {
+    if (!this.isPublic) {
+      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(publicKey));
+      try {
+        const keys = await keysEncrypter.encryptMemberKeys([]);
+        return keys.map((keyPair: EncryptedKeys) => {
+          delete keyPair.publicKey;
+          return keyPair;
+        });
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    } else {
+      return null;
+    }
   }
 };
 
