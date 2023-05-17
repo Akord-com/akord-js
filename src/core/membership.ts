@@ -173,9 +173,10 @@ class MembershipService extends Service {
       })
       memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
+      memberTags.push(new Tag(protocolTags.MEMBERSHIP_ID, membershipId));
     }
 
-    this.arweaveTags = memberTags.concat(await this.getTags());
+    this.arweaveTags = memberTags.concat(await super.getTags());
 
     const input = {
       function: this.function,
