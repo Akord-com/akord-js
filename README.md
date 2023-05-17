@@ -286,7 +286,7 @@ Invite user with an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - VIEWER/CONTRIBUTOR/OWNER
 - `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ membershipId, transactionId }>` - Promise with new membership id & corresponding transaction id
 
@@ -304,7 +304,7 @@ Invite user without an Akord account
 
 - `vaultId` (`string`, required)
 - `email` (`string`, required) - invitee's email
-- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - VIEWER/CONTRIBUTOR/OWNER
 - `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<{ transactionId }>` - Promise with new membership id & corresponding transaction id
 
@@ -390,7 +390,7 @@ const { transactionId } = await akord.membership.revoke(membershipId);
 #### `changeRole(membershipId, role)`
 
 - `membershipId` (`string`, required)
-- `role` ([`RoleType`][role-type], required) - CONTRIBUTOR or VIEWER
+- `role` ([`RoleType`][role-type], required) - VIEWER/CONTRIBUTOR/OWNER
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
