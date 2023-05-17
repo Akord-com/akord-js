@@ -57,7 +57,7 @@ export class ApiClient {
 
   cacheOnly(cacheOnly: boolean): ApiClient {
     this._cacheOnly = cacheOnly;
-    this.queryParams(cacheOnly)
+    this.queryParams({ cacheOnly: cacheOnly })
     return this;
   }
 
