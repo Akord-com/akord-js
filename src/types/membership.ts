@@ -1,7 +1,7 @@
 import { Encryptable, EncryptedKeys } from "@akord/crypto";
 import { ProfileDetails } from "./profile-details";
 
-export type RoleType = "VIEWER" | "CONTRIBUTOR";
+export type RoleType = "VIEWER" | "CONTRIBUTOR" | "OWNER";
 export type StatusType = "ACCEPTED" | "PENDING" | "REVOKED" | "INVITED";
 
 export class Membership extends Encryptable {

@@ -89,7 +89,7 @@ class MembershipService extends Service {
    * Invite user with an Akord account
    * @param  {string} vaultId
    * @param  {string} email invitee's email
-   * @param  {RoleType} role CONTRIBUTOR or VIEWER
+   * @param  {RoleType} role VIEWER/CONTRIBUTOR/OWNER
    * @param  {MembershipCreateOptions} [options] invitation email message, etc.
    * @returns Promise with new membership id & corresponding transaction id
    */
@@ -377,7 +377,7 @@ class MembershipService extends Service {
 
   /**
    * @param  {string} membershipId
-   * @param  {RoleType} role CONTRIBUTOR or VIEWER
+   * @param  {RoleType} role VIEWER/CONTRIBUTOR/OWNER
    * @returns Promise with corresponding transaction id
    */
   public async changeRole(membershipId: string, role: RoleType): Promise<MembershipUpdateResult> {
