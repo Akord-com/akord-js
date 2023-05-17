@@ -237,7 +237,7 @@ class MembershipService extends Service {
 
     const dataTxId = await this.uploadState(body);
 
-    let input = {
+    const input = {
       function: this.function,
       address,
       data: dataTxId,
@@ -307,9 +307,9 @@ class MembershipService extends Service {
 
       this.arweaveTags = await this.getTags();
 
-      let newMembershipStates = [] as { data: any, tags: Tags }[];
-      let newMembershipRefs = [] as string[];
-      for (let member of memberships) {
+      const newMembershipStates = [] as { data: any, tags: Tags }[];
+      const newMembershipRefs = [] as string[];
+      for (const member of memberships) {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
           const { publicKey } = await this.api.getUserPublicData(member.email);
@@ -342,7 +342,7 @@ class MembershipService extends Service {
         }
       }
       const dataTxIds = await this.api.uploadData(newMembershipStates);
-      data = [] as { id: string, value: string }[];
+      data = [];
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
         data.push({ id: memberId, value: dataTxIds[memberIndex] })

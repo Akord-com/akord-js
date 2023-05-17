@@ -256,7 +256,7 @@ class Service {
   }
 
   protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
-    let processedMemberDetails = {} as ProfileDetails;
+    const processedMemberDetails = {} as ProfileDetails;
     if (memberDetails.name) {
       processedMemberDetails.name = await this.processWriteString(memberDetails.name);
     }
