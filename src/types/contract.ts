@@ -48,7 +48,15 @@ export interface ContractInput {
   data?: DataInput,
   parentId?: string,
   address?: string,
-  role?: string // type
+  role?: string // type,
+  members?: MembershipInput[];
+}
+
+export type MembershipInput = {
+  id: string,
+  address: string,
+  role: string,
+  data: string
 }
 
 export type DataInput =

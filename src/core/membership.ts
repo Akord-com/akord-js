@@ -4,10 +4,11 @@ import { EncryptedKeys, Encrypter, generateKeyPair, deriveAddress, base64ToArray
 import { Service, STATE_CONTENT_TYPE } from "./service";
 import { Membership, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
-import { Tag, Tags } from "../types/contract";
+import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
+import { UserPublicInfo } from "../types";
 
 export const activeStatus = [status.ACCEPTED, status.PENDING, status.INVITED] as StatusType[];
 
@@ -144,10 +145,10 @@ class MembershipService extends Service {
     await this.setVaultContext(vaultId);
     this.setActionRef("MEMBERSHIP_AIRDROP");
     this.setFunction(functions.MEMBERSHIP_ADD);
-    const memberArray = [];
-    const membersMetadata = [];
-    const dataArray = [];
-    const memberTags = [];
+    const memberArray = [] as MembershipInput[];
+    const membersMetadata = [] as UserPublicInfo[];
+    const dataArray = [] as { id: string, data: string }[];
+    const memberTags = [] as Tags;
     for (const member of members) {
       const membershipId = uuidv4();
       this.setObjectId(membershipId);
@@ -307,7 +308,7 @@ class MembershipService extends Service {
       this.arweaveTags = await this.getTags();
 
       let newMembershipStates = [] as { data: any, tags: Tags }[];
-      let newMembershipRefs = [];
+      let newMembershipRefs = [] as string[];
       for (let member of memberships) {
         if (member.id !== this.objectId
           && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
@@ -341,7 +342,7 @@ class MembershipService extends Service {
         }
       }
       const dataTxIds = await this.api.uploadData(newMembershipStates);
-      data = [];
+      data = [] as { id: string, value: string }[];
 
       newMembershipRefs.forEach((memberId, memberIndex) => {
         data.push({ id: memberId, value: dataTxIds[memberIndex] })
