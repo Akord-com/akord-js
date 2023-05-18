@@ -298,11 +298,11 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
+    this.arweaveTags = await this.getTags();
+
     let data: { id: string, value: string }[];
     if (!this.isPublic) {
       const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false });
-
-      this.arweaveTags = await this.getTags();
 
       const activeMembers = memberships.filter((member: Membership) =>
         member.id !== this.objectId
