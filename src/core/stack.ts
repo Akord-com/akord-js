@@ -27,12 +27,12 @@ class StackService extends NodeService<Stack> {
     this.setFunction(functions.NODE_CREATE);
     this.setTags(createOptions.tags);
 
-    const body = {
+    const state = {
       name: await this.processWriteString(name ? name : file.name),
       versions: [await this.uploadNewFileVersion(file, createOptions)],
       tags: this.tags
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId: createOptions.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: createOptions.parentId });
     return { stackId: nodeId, transactionId, object };
   }
 
@@ -56,11 +56,11 @@ class StackService extends NodeService<Stack> {
       size: file.size,
       resourceUri: [`arweave:${fileTxId}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
     });
-    const body = {
+    const state = {
       name: await this.processWriteString(file.name),
       versions: [version]
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(body, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: options.parentId });
     return { stackId: nodeId, transactionId, object };
   }
 
@@ -74,11 +74,11 @@ class StackService extends NodeService<Stack> {
     await this.setVaultContextFromNodeId(stackId, this.objectType);
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
-    const body = {
+    const state = {
       versions: [await this.uploadNewFileVersion(file, options)]
     };
     this.setFunction(functions.NODE_UPDATE);
-    return this.nodeUpdate<Stack>(body);
+    return this.nodeUpdate<Stack>(state);
   }
 
   /**

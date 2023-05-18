@@ -1,7 +1,7 @@
-import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags, dataTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { EncryptedKeys, Encrypter, generateKeyPair, deriveAddress, base64ToArray } from "@akord/crypto";
-import { Service, STATE_CONTENT_TYPE } from "./service";
+import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray } from "@akord/crypto";
+import { Service } from "./service";
 import { Membership, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
 import { MembershipInput, Tag, Tags } from "../types/contract";
@@ -102,7 +102,7 @@ class MembershipService extends Service {
     this.setObjectId(membershipId);
 
     const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(email);
-    const body = {
+    const state = {
       keys: await this.prepareMemberKeys(publicKey),
       encPublicSigningKey: await this.processWriteString(publicSigningKey)
     };
@@ -110,7 +110,7 @@ class MembershipService extends Service {
     this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const dataTxId = await this.uploadState(body);
+    const dataTxId = await this.uploadState(state);
 
     const input = {
       function: this.function,
@@ -155,14 +155,14 @@ class MembershipService extends Service {
 
       const memberAddress = await deriveAddress(base64ToArray(member.publicSigningKey));
 
-      const body = {
+      const state = {
         id: membershipId,
         address: memberAddress,
         keys: await this.prepareMemberKeys(member.publicKey),
         encPublicSigningKey: await this.processWriteString(member.publicSigningKey)
       };
 
-      const data = await this.uploadState(body);
+      const data = await this.uploadState(state);
       dataArray.push({
         id: membershipId,
         data
@@ -200,14 +200,14 @@ class MembershipService extends Service {
   public async accept(membershipId: string): Promise<MembershipUpdateResult> {
     const memberDetails = await this.getProfileDetails();
     await this.setVaultContextFromMembershipId(membershipId);
-    const body = {
+    const state = {
       memberDetails: await this.processMemberDetails(memberDetails, false),
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     this.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await this.mergeAndUploadBody(body);
+    const data = await this.mergeAndUploadState(state);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, data },
@@ -227,7 +227,7 @@ class MembershipService extends Service {
     this.setFunction(functions.MEMBERSHIP_INVITE);
     const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(this.object.email);
 
-    const body = {
+    const state = {
       keys: await this.prepareMemberKeys(publicKey),
       encPublicSigningKey: await this.processWriteString(publicSigningKey)
     };
@@ -235,7 +235,7 @@ class MembershipService extends Service {
     this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.getTags());
 
-    const dataTxId = await this.uploadState(body);
+    const dataTxId = await this.uploadState(state);
 
     const input = {
       function: this.function,
@@ -300,53 +300,32 @@ class MembershipService extends Service {
 
     let data: { id: string, value: string }[];
     if (!this.isPublic) {
-      // generate a new vault key pair
-      const keyPair = await generateKeyPair();
-
       const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false });
 
       this.arweaveTags = await this.getTags();
 
-      const newMembershipStates = [] as { data: any, tags: Tags }[];
-      const newMembershipRefs = [] as string[];
-      for (const member of memberships) {
-        if (member.id !== this.objectId
-          && (member.status === status.ACCEPTED || member.status === status.PENDING)) {
-          const { publicKey } = await this.api.getUserPublicData(member.email);
-          const memberKeysEncrypter = new Encrypter(
-            this.wallet,
-            this.dataEncrypter.keys,
-            base64ToArray(publicKey)
-          );
-          let keys: EncryptedKeys[];;
-          try {
-            keys = [await memberKeysEncrypter.encryptMemberKey(keyPair)];
-          } catch (error) {
-            throw new IncorrectEncryptionKey(error);
-          }
-          const currentMemberState = member.data?.length > 0 ? await this.api.getNodeState(member.data[member.data.length - 1]) : {};
-          const newState = await this.mergeState(currentMemberState, { keys });
-          const signature = await this.signData(newState);
-          newMembershipStates.push({
-            data: newState, tags: [
-              new Tag(dataTags.DATA_TYPE, "State"),
-              new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
-              new Tag(protocolTags.SIGNATURE, signature),
-              new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
-              new Tag(protocolTags.VAULT_ID, this.vaultId),
-              new Tag(protocolTags.NODE_TYPE, this.objectType),
-              new Tag(protocolTags.MEMBERSHIP_ID, member.id)
-            ]
-          });
-          newMembershipRefs.push(member.id);
-        }
-      }
-      const dataTxIds = await this.api.uploadData(newMembershipStates);
-      data = [];
+      const activeMembers = memberships.filter((member: Membership) =>
+        member.id !== this.objectId
+        && (member.status === status.ACCEPTED || member.status === status.PENDING));
 
-      newMembershipRefs.forEach((memberId, memberIndex) => {
-        data.push({ id: memberId, value: dataTxIds[memberIndex] })
-      })
+      // rotate keys for all active members
+      const memberPublicKeys = new Map<string, string>();
+      await Promise.all(activeMembers.map(async (member: Membership) => {
+        const { publicKey } = await this.api.getUserPublicData(member.email);
+        memberPublicKeys.set(member.id, publicKey);
+      }));
+      const { memberKeys } = await this.rotateMemberKeys(memberPublicKeys);
+
+      // upload new state for all active members
+      data = [];
+      await Promise.all(activeMembers.map(async (member: Membership) => {
+        const memberService = new MembershipService(this.wallet, this.api);
+        memberService.setVaultId(this.vaultId);
+        memberService.setObjectId(member.id);
+        memberService.setObject(member);
+        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) });
+        data.push({ id: member.id, value: dataTx });
+      }));
     }
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
@@ -421,7 +400,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
 
-    const data = await this.mergeAndUploadBody({ memberDetails });
+    const data = await this.mergeAndUploadState({ memberDetails });
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, data },
