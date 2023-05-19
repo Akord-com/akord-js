@@ -201,7 +201,7 @@ class MembershipService extends Service {
     const memberDetails = await this.getProfileDetails();
     await this.setVaultContextFromMembershipId(membershipId);
     const state = {
-      memberDetails: await this.processMemberDetails(memberDetails, false),
+      memberDetails: await this.processMemberDetails(memberDetails, this.vault.cacheOnly),
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
@@ -396,7 +396,7 @@ class MembershipService extends Service {
 
   async profileUpdate(membershipId: string, name: string, avatar: ArrayBuffer): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
-    const memberDetails = await this.processMemberDetails({ name, avatar }, false);
+    const memberDetails = await this.processMemberDetails({ name, avatar }, this.vault.cacheOnly);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
 

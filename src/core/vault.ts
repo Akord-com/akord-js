@@ -135,7 +135,7 @@ class VaultService extends Service {
     const memberState = {
       keys,
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey()),
-      memberDetails: await this.processMemberDetails(memberDetails, true)
+      memberDetails: await this.processMemberDetails(memberDetails, createOptions.cacheOnly)
     }
     const memberService = new MembershipService(this.wallet, this.api);
     memberService.setVaultId(this.vaultId);
