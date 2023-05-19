@@ -91,10 +91,10 @@ class NodeService<T = NodeLike> extends Service {
     await this.setVaultContextFromNodeId(nodeId, this.objectType);
     this.setActionRef(this.objectType.toUpperCase() + "_RENAME");
     this.setFunction(functions.NODE_UPDATE);
-    const body = {
+    const state = {
       name: await this.processWriteString(name)
     };
-    return this.nodeUpdate<NodeLike>(body);
+    return this.nodeUpdate<NodeLike>(state);
   }
 
   /**
@@ -142,7 +142,7 @@ class NodeService<T = NodeLike> extends Service {
     return this.nodeUpdate<NodeLike>();
   }
 
-  protected async nodeCreate<T>(body?: any, clientInput?: any): Promise<{
+  protected async nodeCreate<T>(state?: any, clientInput?: any): Promise<{
     nodeId: string,
     transactionId: string,
     object: T
@@ -158,8 +158,8 @@ class NodeService<T = NodeLike> extends Service {
       ...clientInput
     };
 
-    if (body) {
-      const id = await this.uploadState(body);
+    if (state) {
+      const id = await this.uploadState(state);
       input.data = id;
     }
 
@@ -172,7 +172,7 @@ class NodeService<T = NodeLike> extends Service {
     return { nodeId, transactionId: id, object: node };
   }
 
-  protected async nodeUpdate<T>(body?: any, clientInput?: any): Promise<{ transactionId: string, object: T }> {
+  protected async nodeUpdate<T>(stateUpdates?: any, clientInput?: any): Promise<{ transactionId: string, object: T }> {
     const input = {
       function: this.function,
       ...clientInput
@@ -180,8 +180,8 @@ class NodeService<T = NodeLike> extends Service {
 
     this.arweaveTags = await this.getTags();
 
-    if (body) {
-      const id = await this.mergeAndUploadBody(body);
+    if (stateUpdates) {
+      const id = await this.mergeAndUploadState(stateUpdates);
       input.data = id;
     }
     const { id, object } = await this.api.postContractTransaction<T>(

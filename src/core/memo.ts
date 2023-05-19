@@ -29,11 +29,11 @@ class MemoService extends NodeService<Memo> {
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setFunction(functions.NODE_CREATE);
     this.setTags(options.tags);
-    const body = {
+    const state = {
       versions: [await this.memoVersion(message)],
       tags: this.tags
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(body, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(state, { parentId: options.parentId });
     return { memoId: nodeId, transactionId, object };
   }
 
@@ -73,8 +73,8 @@ class MemoService extends NodeService<Memo> {
     this.setFunction(functions.NODE_UPDATE);
     this.arweaveTags = await this.getTags();
 
-    const body = await this.deleteReaction(reaction);
-    const dataTxId = await this.uploadState(body);
+    const state = await this.deleteReaction(reaction);
+    const dataTxId = await this.uploadState(state);
 
     const { id, object } = await this.api.postContractTransaction<Memo>(
       this.vaultId,

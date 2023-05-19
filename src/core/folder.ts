@@ -17,11 +17,11 @@ class FolderService extends NodeService<Folder> {
     this.setActionRef(actionRefs.FOLDER_CREATE);
     this.setFunction(functions.NODE_CREATE);
     this.setTags(options.tags);
-    const body = {
+    const state = {
       name: await this.processWriteString(name),
       tags: this.tags
     }
-    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(body, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId });
     return { folderId: nodeId, transactionId, object };
   }
 };

@@ -11,7 +11,9 @@ import {
   arrayToBase64,
   base64ToJson,
   deriveAddress,
-  EncryptedKeys
+  EncryptedKeys,
+  generateKeyPair,
+  Keys
 } from "@akord/crypto";
 import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags, AKORD_TAG } from '../constants';
 import lodash from "lodash";
@@ -70,6 +72,10 @@ class Service {
 
   setVaultId(vaultId: string) {
     this.vaultId = vaultId;
+  }
+
+  setObjectId(objectId: string) {
+    this.objectId = objectId;
   }
 
   setGroupRef(groupRef: string) {
@@ -138,10 +144,6 @@ class Service {
         throw new IncorrectEncryptionKey(error);
       }
     }
-  }
-
-  protected setObjectId(objectId: string) {
-    this.objectId = objectId;
   }
 
   protected setObjectType(objectType: ObjectType) {
@@ -256,7 +258,7 @@ class Service {
   }
 
   protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
-    let processedMemberDetails = {} as ProfileDetails;
+    const processedMemberDetails = {} as ProfileDetails;
     if (memberDetails.name) {
       processedMemberDetails.name = await this.processWriteString(memberDetails.name);
     }
@@ -287,25 +289,24 @@ class Service {
     return null;
   }
 
-  protected async mergeAndUploadBody(body: any): Promise<string> {
+  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
     const currentState = this.object?.data?.length > 0
       ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
       : {};
-    const mergedBody = await this.mergeState(currentState, body);
-    return this.uploadState(mergedBody);
+    const mergedState = await this.mergeState(currentState, stateUpdates);
+    return this.uploadState(mergedState);
   }
 
   protected async signData(data: any): Promise<string> {
-    const encodedBody = jsonToBase64(data)
-    const privateKeyRaw = this.wallet.signingPrivateKeyRaw()
+    const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
     const signature = await signString(
-      encodedBody,
+      jsonToBase64(data),
       privateKeyRaw
-    )
+    );
     return signature;
   }
 
-  protected async uploadState(state: any): Promise<string> {
+  public async uploadState(state: any, cacheOnly = false): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -320,7 +321,7 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ data: state, tags }]);
+    const ids = await this.api.uploadData([{ data: state, tags }], { cacheOnly });
     return ids[0];
   }
 
@@ -335,11 +336,6 @@ class Service {
         }
       });
     return newState;
-  }
-
-  protected async getUserEncryptionInfo(email: string) {
-    const { address, publicKey } = await this.api.getUserPublicData(email);
-    return { address, publicKey: base64ToArray(publicKey) }
   }
 
   protected async getTags(): Promise<Tags> {
@@ -384,6 +380,29 @@ class Service {
       }
     } while (token);
     return results;
+  }
+
+  protected async rotateMemberKeys(publicKeys: Map<string, string>): Promise<{
+    memberKeys: Map<string, EncryptedKeys[]>,
+    keyPair: Keys
+  }> {
+    const memberKeys = new Map<string, EncryptedKeys[]>();
+    // generate a new vault key pair
+    const keyPair = await generateKeyPair();
+
+    for (let [memberId, publicKey] of publicKeys) {
+      const memberKeysEncrypter = new Encrypter(
+        this.wallet,
+        this.dataEncrypter.keys,
+        base64ToArray(publicKey)
+      );
+      try {
+        memberKeys.set(memberId, [await memberKeysEncrypter.encryptMemberKey(keyPair)]);
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return { memberKeys, keyPair };
   }
 }
 

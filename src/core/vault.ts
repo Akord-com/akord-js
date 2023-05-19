@@ -1,12 +1,13 @@
 import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags, dataTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { generateKeyPair, Encrypter, EncryptedKeys } from "@akord/crypto";
+import { EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
-import { Service, STATE_CONTENT_TYPE } from "./service";
+import { Service } from "./service";
 import { Tag } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
+import { MembershipService } from "./membership";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -90,31 +91,17 @@ class VaultService extends Service {
       ...this.defaultCreateOptions,
       ...options
     }
-    const memberDetails = await this.getProfileDetails();
-    this.setActionRef(actionRefs.VAULT_CREATE);
-    this.setIsPublic(createOptions.public);
 
-    let keys: Array<EncryptedKeys>;
-    if (!this.isPublic) {
-      // generate a new vault key pair
-      const keyPair = await generateKeyPair();
-      this.setRawDataEncryptionPublicKey(keyPair.publicKey);
-      const userPublicKey = this.wallet.publicKeyRaw();
-      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, userPublicKey);
-      try {
-        keys = [await keysEncrypter.encryptMemberKey(keyPair)];
-        this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
-      } catch (error) {
-        throw new IncorrectEncryptionKey(error);
-      }
-    }
-
-    let vaultId: string 
+    let vaultId: string
     if (createOptions.cacheOnly) {
       vaultId = uuidv4();
     } else {
       vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
     }
+
+    const memberDetails = await this.getProfileDetails();
+    this.setActionRef(actionRefs.VAULT_CREATE);
+    this.setIsPublic(createOptions.public);
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
@@ -129,43 +116,33 @@ class VaultService extends Service {
       new Tag(protocolTags.PUBLIC, createOptions.public ? "true" : "false"),
     ].concat(await this.getTags());
 
-    const vaultData = {
+    let keys: EncryptedKeys[];
+    if (!this.isPublic) {
+      const { memberKeys, keyPair } = await this.rotateMemberKeys(new Map([[membershipId, this.wallet.publicKey()]]));
+      keys = memberKeys.get(membershipId);
+      this.setRawDataEncryptionPublicKey(keyPair.publicKey);
+      this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
+    }
+
+    const vaultState = {
       name: await this.processWriteString(name),
       termsOfAccess: createOptions.termsOfAccess,
       description: createOptions.description ? await this.processWriteString(createOptions.description) : undefined,
       tags: this.tags
     }
-    const vaultSignature = await this.signData(vaultData);
-    const membershipData = {
+    const vaultStateTx = await this.uploadState(vaultState, createOptions.cacheOnly);
+
+    const memberState = {
       keys,
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey()),
-      memberDetails: await this.processMemberDetails(memberDetails, true)
+      memberDetails: await this.processMemberDetails(memberDetails, createOptions.cacheOnly)
     }
-    const membershipSignature = await this.signData(membershipData);
-    const dataTxIds = await this.api.uploadData([
-      {
-        data: vaultData, tags: [
-          new Tag(dataTags.DATA_TYPE, "State"),
-          new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
-          new Tag(protocolTags.SIGNATURE, vaultSignature),
-          new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
-          new Tag(protocolTags.VAULT_ID, this.vaultId),
-          new Tag(protocolTags.NODE_TYPE, this.objectType),
-        ]
-      },
-      {
-        data: membershipData, tags: [
-          new Tag(dataTags.DATA_TYPE, "State"),
-          new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
-          new Tag(protocolTags.SIGNATURE, membershipSignature),
-          new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
-          new Tag(protocolTags.VAULT_ID, this.vaultId),
-          new Tag(protocolTags.NODE_TYPE, objectType.MEMBERSHIP),
-          new Tag(protocolTags.MEMBERSHIP_ID, membershipId)
-        ]
-      }], { cacheOnly: createOptions.cacheOnly });
+    const memberService = new MembershipService(this.wallet, this.api);
+    memberService.setVaultId(this.vaultId);
+    memberService.setObjectId(membershipId);
+    const memberStateTx = await memberService.uploadState(memberState, createOptions.cacheOnly);
 
-    const data = { vault: dataTxIds[0], membership: dataTxIds[1] };
+    const data = { vault: vaultStateTx, membership: memberStateTx };
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
@@ -186,10 +163,10 @@ class VaultService extends Service {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_RENAME);
     this.setFunction(functions.VAULT_UPDATE);
-    const body = {
+    const state = {
       name: await this.processWriteString(name)
     };
-    const data = await this.mergeAndUploadBody(body);
+    const data = await this.mergeAndUploadState(state);
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
