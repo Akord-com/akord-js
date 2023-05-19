@@ -66,7 +66,7 @@ const vaults = await akord.vault.listAll();
 
 ### Examples
 - See our [demo app tutorial](https://akord-js-tutorial.akord.com) and learn how to create,
-contribute and access an Akord Vault from .\
+contribute and access an Akord Vault from.
 
 - See example flows in our [tests repo](src/__tests__).
 
@@ -169,6 +169,13 @@ const { vaultId, membershipId } = await akord.vault.create(
   "my first public vault",
   { public: true, termsOfAccess: "terms of access here - if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault" }
 );
+
+// create a public vault with description & tags for easier lookup
+const { vaultId, membershipId } = await akord.vault.create("Arty podcast", {
+    public: true,
+    description: "A permanent podcast dedicated to art history",
+    tags: ["art", "podcast", "archive"]
+  });
 ```
 </details>
 
@@ -313,6 +320,38 @@ Invite user without an Akord account
 
 ```js
 const { membershipId } = await akord.membership.inviteNewUser(vaultId, "winston@gmail.com", "VIEWER");
+```
+</details>
+
+#### `airdrop(vaultId, members)`
+
+Airdrop access to the vault to the batch of public keys. New members can access/contribute the vault using their private/public key pair. \
+NOTE: If the new members are contributors, what they contribute is under the domain of the vault owner.
+
+<details>
+  <summary>example</summary>
+
+```js
+import { Akord, Auth } from "@akord/akord-js";
+import { AkordWallet } from "@akord/crypto";
+
+const wallet1 = await AkordWallet.create();
+const wallet2 = await AkordWallet.create();
+
+await akord.membership.airdrop(vaultId, [
+   { publicSigningKey: wallet1.signingPublicKey(), publicKey: wallet1.publicKey(), role: "VIEWER" },
+   { publicSigningKey: wallet2.signingPublicKey(), publicKey: wallet2.publicKey(), role: "CONTRIBUTOR" }
+]);
+
+// access the vault as user 1
+await Auth.signInWithWallet(wallet1);
+const akord1 = new Akord(wallet1);
+console.log(await akord1.vault.get(vaultId));
+
+// access the vault as user 2
+await Auth.signInWithWallet(wallet2);
+const akord2 = new Akord(wallet2);
+console.log(await akord2.vault.get(vaultId));
 ```
 </details>
 
@@ -591,7 +630,15 @@ do {
 ```js
 import { NodeJs } from "@akord/akord-js/lib/types/file";
 const file = await NodeJs.File.fromPath("path to your file");
-const { stackId } = await akord.stack.create(vaultId, file, "your stack name");
+
+// create a stack with custom arweave tags
+const { stackId } = await akord.stack.create(vaultId, file, "jam session vol. 1", {
+   arweaveTags: [
+      { name: "Type", value: "music" },
+      { name: "Genre", value: "rock" },
+      { name: "Genre", value: "new wave" }
+   ]
+});
 ```
 > [See Next.js file upload showcase here][file-upload-example]
 </details>

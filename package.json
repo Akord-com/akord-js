@@ -35,7 +35,6 @@
     "@akord/crypto": "0.11.0",
     "@akord/ts-cacheable": "1.0.11",
     "axios": "^0.24.0",
-    "blueimp-load-image": "^5.16.0",
     "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
     "rxjs": "^7.5.6",
@@ -45,7 +44,6 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^6.2.0",
-    "@types/blueimp-load-image": "^5.16.0",
     "@types/jest": "^27.4.0",
     "@types/mime-types": "^2.1.1",
     "@types/node": "^17.0.8",
