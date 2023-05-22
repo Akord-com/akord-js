@@ -39,15 +39,11 @@ class MembershipService extends Service {
       ...options
     }
     const membershipProto = await this.api.getMembership(membershipId, getOptions.vaultId);
-    let membership: Membership;
-    if (getOptions.shouldDecrypt) {
-      const { isEncrypted, keys } = await this.api.getMembershipKeys(membershipProto.vaultId);
-      membership = await this.processMembership(membershipProto, isEncrypted, keys);
-    }
-    else {
-      membership = new Membership(membershipProto);
-    }
-    return membership
+    return await this.processMembership(
+      membershipProto,
+      !membershipProto.__public__ && getOptions.shouldDecrypt,
+      membershipProto.__keys__
+    );
   }
 
   /**
@@ -61,10 +57,9 @@ class MembershipService extends Service {
       ...options
     }
     const response = await this.api.getMembershipsByVaultId(vaultId, listOptions);
-    const { isEncrypted, keys } = options.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     const promises = response.items
       .map(async (membershipProto: Membership) => {
-        return await this.processMembership(membershipProto, isEncrypted && listOptions.shouldDecrypt, keys);
+        return await this.processMembership(membershipProto, !membershipProto.__public__ && listOptions.shouldDecrypt, membershipProto.__keys__);
       }) as Promise<Membership>[];
     const { items, errors } = await this.handleListErrors<Membership>(response.items, promises);
     return {
@@ -201,7 +196,7 @@ class MembershipService extends Service {
     const memberDetails = await this.getProfileDetails();
     await this.setVaultContextFromMembershipId(membershipId);
     const state = {
-      memberDetails: await this.processMemberDetails(memberDetails, this.vault.cacheOnly),
+      memberDetails: await this.processMemberDetails(memberDetails, this.object.__cacheOnly__),
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
@@ -396,7 +391,7 @@ class MembershipService extends Service {
 
   async profileUpdate(membershipId: string, name: string, avatar: ArrayBuffer): Promise<MembershipUpdateResult> {
     await this.setVaultContextFromMembershipId(membershipId);
-    const memberDetails = await this.processMemberDetails({ name, avatar }, this.vault.cacheOnly);
+    const memberDetails = await this.processMemberDetails({ name, avatar }, this.object.__cacheOnly__);
     this.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     this.setFunction(functions.MEMBERSHIP_UPDATE);
 
@@ -412,7 +407,9 @@ class MembershipService extends Service {
 
   protected async setVaultContextFromMembershipId(membershipId: string, vaultId?: string) {
     const membership = await this.api.getMembership(membershipId, vaultId);
-    await this.setVaultContext(vaultId || membership.vaultId);
+    this.setVaultId(membership.vaultId);
+    this.setIsPublic(membership.__public__);
+    await this.setMembershipKeys(membership);
     this.setObject(membership);
     this.setObjectId(membershipId);
     this.setObjectType(this.objectType);

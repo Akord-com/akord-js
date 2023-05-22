@@ -120,13 +120,12 @@ class Service {
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vaultId);
+    await this.setMembershipKeys(vault);
   }
 
-  protected async setMembershipKeys(vaultId: string) {
+  protected async setMembershipKeys(object: Object) {
     if (!this.isPublic) {
-      const encryptionKeys = await this.api.getMembershipKeys(vaultId);
-      const keys = encryptionKeys.keys.map(((keyPair: any) => {
+      const keys = object.__keys__.map(((keyPair: any) => {
         return {
           encPrivateKey: keyPair.encPrivateKey,
           encPublicKey: keyPair.publicKey ? keyPair.publicKey : keyPair.encPublicKey
@@ -134,10 +133,11 @@ class Service {
       }))
       this.setKeys(keys);
       try {
-        if (encryptionKeys.publicKey) {
-          this.setRawDataEncryptionPublicKey(base64ToArray(encryptionKeys.publicKey));
+        if (object.__publicKey__) {
+          this.setRawDataEncryptionPublicKey(base64ToArray(object.__publicKey__));
         } else {
-          const publicKey = await this.dataEncrypter.wallet.decrypt(encryptionKeys.keys[encryptionKeys.keys.length - 1].encPublicKey);
+          const currentEncPublicKey = object.__keys__[object.__keys__.length - 1].encPublicKey;
+          const publicKey = await this.dataEncrypter.wallet.decrypt(currentEncPublicKey);
           this.setRawDataEncryptionPublicKey(publicKey);
         }
       } catch (error) {
