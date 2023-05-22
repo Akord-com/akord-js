@@ -193,6 +193,34 @@ const { transactionId } = await akord.vault.rename(vaultId, "updated name");
 ```
 </details>
 
+#### `addTags(vaultId, tags)`
+
+- `vaultId` (`string`, required)
+- `tags` (`string[]`, required) - tags to be added
+- returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.addTags(vaultId, ["taupe", "burgundy"]);
+```
+</details>
+
+#### `removeTags(vaultId, tags)`
+
+- `vaultId` (`string`, required)
+- `tags` (`string[]`, required) - tags to be removed
+- returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.removeTags(vaultId, ["taupe", "burgundy"]);
+```
+</details>
+
 #### `archive(vaultId)`
 
 - `vaultId` (`string`, required)

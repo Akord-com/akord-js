@@ -48,7 +48,7 @@ class MemoService extends NodeService<Memo> {
     this.setFunction(functions.NODE_UPDATE);
     this.arweaveTags = await this.getTags();
 
-    const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
+    const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
     const dataTxId = await this.uploadState(newState);
@@ -118,7 +118,7 @@ class MemoService extends NodeService<Memo> {
   }
 
   private async deleteReaction(reaction: string) {
-    const currentState = await this.api.getNodeState(this.object.data[this.object.data.length - 1]);
+    const currentState = await this.getCurrentState();
     const index = await this.getReactionIndex(currentState.versions[currentState.versions.length - 1].reactions, reaction);
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.splice(index, 1);

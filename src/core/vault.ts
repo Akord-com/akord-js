@@ -1,4 +1,4 @@
-import { actionRefs, objectType, status, functions, protocolTags, smartweaveTags, dataTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
@@ -8,6 +8,8 @@ import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { MembershipService } from "./membership";
+import lodash from "lodash";
+import { NotFound } from "../errors/not-found";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -177,6 +179,65 @@ class VaultService extends Service {
   }
 
   /**
+   * @param vaultId
+   * @param tags tags to be added
+   * @returns Promise with corresponding transaction id
+   */
+  public async addTags(vaultId: string, tags: string[]): Promise<VaultUpdateResult> {
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.VAULT_ADD_TAGS);
+    this.setFunction(functions.VAULT_UPDATE);
+    this.arweaveTags = await this.getTags();
+
+    this.setTags(tags);
+
+    const currentState = await this.getCurrentState();
+    const newState = lodash.cloneDeepWith(currentState);
+    for (const tag of tags) {
+      if (newState.tags.indexOf(tag) === -1) {
+        newState.tags.push(tag);
+      }
+    }
+    const dataTxId = await this.uploadState(newState);
+
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function, data: dataTxId },
+      this.arweaveTags
+    );
+    const vault = await this.processVault(object, true, this.keys);
+    return { transactionId: id, object: vault };
+  }
+
+  /**
+   * @param vaultId
+   * @param tags tags to be removed
+   * @returns Promise with corresponding transaction id
+   */
+  public async removeTags(vaultId: string, tags: string[]): Promise<VaultUpdateResult> {
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.VAULT_REMOVE_TAGS);
+    this.setFunction(functions.VAULT_UPDATE);
+    this.arweaveTags = await this.getTags();
+
+    const currentState = await this.getCurrentState();
+    const newState = lodash.cloneDeepWith(currentState);
+    for (const tag of tags) {
+      const index = this.getTagIndex(newState.tags, tag);
+      newState.tags.splice(index, 1);
+    }
+    const dataTxId = await this.uploadState(newState);
+
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function, data: dataTxId },
+      this.arweaveTags
+    );
+    const vault = await this.processVault(object, true, this.keys);
+    return { transactionId: id, object: vault };
+  }
+
+  /**
    * @param  {string} vaultId
    * @returns Promise with corresponding transaction id
    */
@@ -237,6 +298,14 @@ class VaultService extends Service {
       }
     }
     return vault;
+  }
+
+  private getTagIndex(tags: string[], tag: string): number {
+    const index = tags.indexOf(tag);
+    if (index === -1) {
+      throw new NotFound("Could not find tag: " + tag + " for given vault.");
+    }
+    return index;
   }
 };
 
