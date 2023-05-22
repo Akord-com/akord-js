@@ -49,6 +49,24 @@ describe("Testing vault functions", () => {
     expect(vault.name).toEqual(name);
   });
 
+  it("should update the vault metadata", async () => {
+    const name = faker.random.words();
+    const description = faker.lorem.paragraph();
+    const tag1 = faker.random.word();
+    const tag2 = faker.random.word();
+
+    await akord.vault.update(vaultId, {
+      name: name,
+      description: description,
+      tags: [tag1, tag2]
+    });
+
+    const vault = await akord.vault.get(vaultId);
+    expect(vault.name).toEqual(name);
+    expect(vault.description).toEqual(description);
+    expect(vault.tags?.length).toEqual(2);
+  });
+
   it("should archive the vault", async () => {
     await akord.vault.archive(vaultId);
 

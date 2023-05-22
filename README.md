@@ -179,6 +179,24 @@ const { vaultId, membershipId } = await akord.vault.create("Arty podcast", {
 ```
 </details>
 
+#### `update(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` (`VaultUpdateOptions`, required) - name, description & tags
+- returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+const { transactionId } = await akord.vault.update(vaultId, {
+  name: "color palette",
+  description: "color inspiration for design and art projects",
+  tags: ["taupe", "burgundy", "mauve"]
+});
+```
+</details>
+
 #### `rename(vaultId, name)`
 
 - `vaultId` (`string`, required)

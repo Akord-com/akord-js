@@ -10,6 +10,7 @@ import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { MembershipService } from "./membership";
 import lodash from "lodash";
 import { NotFound } from "../errors/not-found";
+import { BadRequest } from "../errors/bad-request";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -154,6 +155,43 @@ class VaultService extends Service {
     );
     const vault = await this.processVault(object, true, this.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @param  {VaultUpdateOptions} options name, description & tags
+   * @returns Promise with corresponding transaction id
+   */
+  public async update(vaultId: string, options: VaultUpdateOptions): Promise<VaultUpdateResult> {
+    if (!options.name && !options.tags && !options.description) {
+      throw new BadRequest("Nothing to update");
+    }
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.VAULT_UPDATE_METADATA);
+    this.setFunction(functions.VAULT_UPDATE);
+    this.arweaveTags = await this.getTags();
+
+    const currentState = await this.getCurrentState();
+    const newState = lodash.cloneDeepWith(currentState);
+
+    if (options.name) {
+      newState.name = await this.processWriteString(options.name);
+    }
+    if (options.tags) {
+      this.setTags(options.tags);
+      newState.tags = options.tags;
+    }
+    if (options.description) {
+      newState.description = await this.processWriteString(options.description);
+    }
+    const dataTxId = await this.uploadState(newState);
+    const { id, object } = await this.api.postContractTransaction<Vault>(
+      this.vaultId,
+      { function: this.function, data: dataTxId },
+      await this.getTags()
+    );
+    const vault = await this.processVault(object, true, this.keys);
+    return { transactionId: id, object: vault };
   }
 
   /**
@@ -315,6 +353,12 @@ export type VaultCreateOptions = {
   description?: string,
   tags?: string[],
   cacheOnly?: boolean
+}
+
+export type VaultUpdateOptions = {
+  name?: string,
+  description?: string,
+  tags?: string[]
 }
 
 type VaultCreateResult = {
