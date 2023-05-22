@@ -231,6 +231,9 @@ class VaultService extends Service {
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
+    if (!newState.tags) {
+      newState.tags = [];
+    }
     for (const tag of tags) {
       if (newState.tags.indexOf(tag) === -1) {
         newState.tags.push(tag);
@@ -260,6 +263,9 @@ class VaultService extends Service {
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
+    if (!newState.tags || newState.tags.length === 0) {
+      throw new BadRequest("Tags cannot be removed, vault does not have any");
+    }
     for (const tag of tags) {
       const index = this.getTagIndex(newState.tags, tag);
       newState.tags.splice(index, 1);
