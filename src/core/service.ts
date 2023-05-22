@@ -289,10 +289,14 @@ class Service {
     return null;
   }
 
-  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
-    const currentState = this.object?.data?.length > 0
+  protected async getCurrentState(): Promise<any> {
+    return this.object?.data?.length > 0
       ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
       : {};
+  }
+
+  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
+    const currentState = this.getCurrentState();
     const mergedState = await this.mergeState(currentState, stateUpdates);
     return this.uploadState(mergedState);
   }

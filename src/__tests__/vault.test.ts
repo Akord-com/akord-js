@@ -9,6 +9,8 @@ jest.setTimeout(3000000);
 
 describe("Testing vault functions", () => {
   let vaultId: string;
+  let vaultTag1: string;
+  let vaultTag2: string;
 
   beforeEach(async () => {
     akord = await initInstance(email, password);
@@ -17,6 +19,24 @@ describe("Testing vault functions", () => {
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await vaultCreate(akord)).vaultId;
+  });
+
+  it("should add new vault tags", async () => {
+    vaultTag1 = faker.random.word();
+    vaultTag2 = faker.random.word();
+
+    await akord.vault.addTags(vaultId, [vaultTag1, vaultTag2]);
+
+    const vault = await akord.vault.get(vaultId);
+    expect(vault.tags?.length).toEqual(2);
+  });
+
+  it("should remove one tag", async () => {
+    await akord.vault.removeTags(vaultId, [vaultTag1]);
+
+    const vault = await akord.vault.get(vaultId);
+    expect(vault.tags?.length).toEqual(1);
+    expect(vault.tags?.[0]).toEqual(vaultTag2);
   });
 
   it("should rename the vault", async () => {
