@@ -296,7 +296,7 @@ class Service {
   }
 
   protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
-    const currentState = this.getCurrentState();
+    const currentState = await this.getCurrentState();
     const mergedState = await this.mergeState(currentState, stateUpdates);
     return this.uploadState(mergedState);
   }
