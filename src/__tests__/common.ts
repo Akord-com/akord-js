@@ -1,15 +1,17 @@
+require("dotenv").config();
 import { Akord, Auth } from "../index";
 import faker from '@faker-js/faker';
 
 export async function initInstance(email: string, password: string): Promise<Akord> {
+  Auth.configure({ env: process.env.ENV as any });
   const { wallet } = await Auth.signIn(email, password);
-  return new Akord(wallet, { debug: true });
+  return new Akord(wallet, { debug: true, env: process.env.ENV as any });
 }
 
 export const vaultCreate = async (akord: Akord) => {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vault.create(name, { termsOfAccess });
+  const { vaultId, membershipId } = await akord.vault.create(name, { termsOfAccess, cacheOnly: true });
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");

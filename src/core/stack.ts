@@ -23,9 +23,12 @@ class StackService extends NodeService<Stack> {
       ...options
     }
     await this.setVaultContext(vaultId);
+    this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
     this.setTags(createOptions.tags);
+
+    createOptions.cacheOnly = this.vault.cacheOnly;
 
     const state = {
       name: await this.processWriteString(name ? name : file.name),
@@ -44,6 +47,7 @@ class StackService extends NodeService<Stack> {
    */
   public async import(vaultId: string, fileTxId: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<StackCreateResult> {
     await this.setVaultContext(vaultId);
+    this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
 
@@ -72,7 +76,10 @@ class StackService extends NodeService<Stack> {
    */
   public async uploadRevision(stackId: string, file: FileLike, options: FileUploadOptions = {}): Promise<StackUpdateResult> {
     await this.setVaultContextFromNodeId(stackId, this.objectType);
+    this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
+
+    options.cacheOnly = this.object.__cacheOnly__;
 
     const state = {
       versions: [await this.uploadNewFileVersion(file, options)]
@@ -91,6 +98,7 @@ class StackService extends NodeService<Stack> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     const version = stack.getVersion(index);
     await this.setVaultContext(stack.vaultId);
+    this.setVaultContextForFile();
     const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: this.isPublic });
     const data = await this.processReadRaw(fileData, metadata);
     const name = await this.processReadString(version.name);
@@ -110,9 +118,6 @@ class StackService extends NodeService<Stack> {
   }
 
   private async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
-    if (this.object.__cacheOnly__) {
-      options.cacheOnly = true
-    }
     const {
       resourceTx,
       resourceUrl,
@@ -133,8 +138,7 @@ class StackService extends NodeService<Stack> {
     return version;
   }
 
-  protected async setVaultContext(vaultId: string): Promise<void> {
-    await super.setVaultContext(vaultId);
+  protected setVaultContextForFile(): void {
     this.fileService.setKeys(this.keys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
     this.fileService.setVaultId(this.vaultId);

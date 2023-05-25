@@ -10,9 +10,10 @@ jest.setTimeout(3000000);
 
 describe("Testing querying directly from permaweb", () => {
   beforeAll(async () => {
+    Auth.configure({ env: process.env.ENV as any });
     const { wallet } = await Auth.signIn(email, password);
-    privateClient = new Akord(wallet);
-    publicClient = new Akord();
+    privateClient = new Akord(wallet, { debug: true, env: process.env.ENV as any });
+    publicClient = new Akord(undefined, { debug: true, env: process.env.ENV as any });
   });
 
   it("Query all vaults from Akord API", async () => {

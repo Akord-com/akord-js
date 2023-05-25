@@ -2,6 +2,7 @@ import { Akord } from "../index";
 import { email, email2, password, password2 } from './data/test-credentials';
 import { initInstance, vaultCreate } from './common';
 import { Membership } from "../types/membership";
+import { BadRequest } from "../errors/bad-request";
 
 let ownerAkordInstance: Akord;
 let inviteeAkordInstance: Akord;
@@ -84,7 +85,7 @@ describe("Testing membership functions", () => {
     ownerAkordInstance = await initInstance(email, password);
     await expect(async () =>
       ownerAkordInstance.membership.invite(vaultId, email2, "VIEWER")
-    ).rejects.toThrow(Error);
+    ).rejects.toThrow(BadRequest);
   });
 
   it("should change access", async () => {
