@@ -252,7 +252,7 @@ class Service {
     }
   }
 
-  protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
+  protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
     return this.api.uploadFile(processedData, encryptionTags, { cacheOnly, public: false });
   }
@@ -263,8 +263,8 @@ class Service {
       processedMemberDetails.name = await this.processWriteString(memberDetails.name);
     }
     if (memberDetails.avatar) {
-      const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
-      processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
+      const resourceUri = await this.processAvatar(memberDetails.avatar, cacheOnly);
+      processedMemberDetails.avatarUri = resourceUri;
     }
     return new ProfileDetails(processedMemberDetails);
   }

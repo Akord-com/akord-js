@@ -110,12 +110,14 @@ class FileService extends Service {
       tags.push(new Tag(protocolTags.SIGNATURE, signature));
       tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
       options.public = this.isPublic;
-      return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options) };
+      const resourceUri = await this.api.uploadFile(processedData, tags.concat(encryptionTags), options)
+      resourceUri.push(`hash:${resourceHash}`);
+      return { resourceUri: resourceUri };
     }
   }
 
   public async import(fileTxId: string)
-    : Promise<{ file: FileLike, resourceHash: string, resourceUrl: string }> {
+    : Promise<{ file: FileLike, resourceUri: string[] }> {
     const fileData = await getTxData(fileTxId);
     const fileMetadata = await getTxMetadata(fileTxId);
     const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
@@ -125,14 +127,15 @@ class FileService extends Service {
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-    const resource = await new ApiClient()
+    const resourceUri = await new ApiClient()
       .env(this.api.config)
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
       .cacheOnly(true)
       .uploadFile()
-    return { file, resourceHash, resourceUrl: resource.resourceUrl };
+    resourceUri.push(`arweave:${fileTxId}`);
+    return { file, resourceUri };
   }
 
   public async stream(path: string, size?: number): Promise<any | WritableStreamDefaultWriter> {
@@ -236,8 +239,7 @@ class FileService extends Service {
       .asyncTransaction();
 
     return {
-      resourceUrl: resourceUrl,
-      resourceHash: resourceUrl,
+      resourceUri: [`hash:${resourceUrl}`, `s3:${resourceUrl}`],
       numberOfChunks: uploadedChunks,
       chunkSize: this.chunkSize
     };
@@ -251,7 +253,7 @@ class FileService extends Service {
     resourceSize: number,
     options: Hooks
   ) {
-    const resource = await new ApiClient()
+    const resourceUri = await new ApiClient()
       .env(this.api.config)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
@@ -261,7 +263,7 @@ class FileService extends Service {
       .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
       .cancelHook(options.cancelHook)
       .uploadFile()
-    Logger.log("Uploaded file with id: " + resource.resourceUrl);
+    Logger.log("Uploaded file with id: " + JSON.stringify(resourceUri));
   }
 
   private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
@@ -320,9 +322,7 @@ class FileService extends Service {
 type DownloadOptions = FileDownloadOptions & { name?: string }
 
 export type FileUploadResult = {
-  resourceTx?: string,
-  resourceUrl?: string,
-  resourceHash?: string,
+  resourceUri: string[],
   numberOfChunks?: number,
   chunkSize?: number,
 }
@@ -333,7 +333,8 @@ export type Hooks = {
 }
 
 export type FileUploadOptions = Hooks & {
-  public?: boolean
+  public?: boolean,
+  storage?: StorageClass,
   cacheOnly?: boolean,
   arweaveTags?: Tags
 }
@@ -344,6 +345,12 @@ export type FileDownloadOptions = Hooks & {
   numberOfChunks?: number,
   loadedSize?: number,
   resourceSize?: number
+}
+
+export enum StorageClass {
+  CLOUD = "cloud",
+  DECENTRALISED = "decentralised",
+  PERMANENT = "permanent"
 }
 
 async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)

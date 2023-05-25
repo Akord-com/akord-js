@@ -72,7 +72,7 @@ export default class AkordApi extends Api {
     return contractId;
   };
 
-  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<string[]> {
     const uploadOptions = {
       ...defaultFileUploadOptions,
       ...options
@@ -82,11 +82,12 @@ export default class AkordApi extends Api {
       .data(file)
       .tags(tags)
       .public(uploadOptions.public)
+      .storage(uploadOptions.storage)
       .cacheOnly(uploadOptions.cacheOnly)
       .progressHook(uploadOptions.progressHook)
       .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
-    Logger.log("Uploaded file with id: " + resource.id);
+    Logger.log("Uploaded file with id: " + resource);
 
     return resource;
   };

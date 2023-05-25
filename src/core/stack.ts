@@ -1,6 +1,6 @@
 import { NodeCreateOptions, NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileService, FileUploadResult, FileUploadOptions } from "./file";
+import { FileService, FileUploadResult, FileUploadOptions, StorageClass } from "./file";
 import { FileLike } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
 
@@ -8,6 +8,11 @@ class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
   objectType = nodeType.STACK;
   NodeType = Stack;
+
+  defaultCreateOptions = {
+    ...this.defaultCreateOptions,
+    storage: StorageClass.PERMANENT
+  } as StackCreateOptions;
 
   /**
    * @param  {string} vaultId
@@ -51,14 +56,14 @@ class StackService extends NodeService<Stack> {
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
 
-    const { file, resourceHash, resourceUrl } = await this.fileService.import(fileTxId);
+    const { file, resourceUri } = await this.fileService.import(fileTxId);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(file.name),
       type: file.type,
       size: file.size,
-      resourceUri: [`arweave:${fileTxId}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
+      resourceUri: resourceUri,
     });
     const state = {
       name: await this.processWriteString(file.name),
@@ -119,9 +124,7 @@ class StackService extends NodeService<Stack> {
 
   private async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
     const {
-      resourceTx,
-      resourceUrl,
-      resourceHash,
+      resourceUri,
       numberOfChunks,
       chunkSize
     } = await this.fileService.create(file, options);
@@ -131,7 +134,7 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(file.name),
       type: file.type,
       size: file.size,
-      resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
+      resourceUri: resourceUri,
       numberOfChunks,
       chunkSize,
     });

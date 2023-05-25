@@ -11,6 +11,7 @@ import { throwError } from "../errors/error";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
+import { StorageClass } from "../core/file";
 
 export class ApiClient {
   private _storageurl: string;
@@ -35,6 +36,7 @@ export class ApiClient {
   private _input: ContractInput;
   private _vaultId: string;
   private _cacheOnly: boolean;
+  private _storage: StorageClass;
   private _numberOfChunks: number;
 
   constructor() { }
@@ -58,6 +60,11 @@ export class ApiClient {
   cacheOnly(cacheOnly: boolean): ApiClient {
     this._cacheOnly = cacheOnly;
     this.queryParams({ cacheOnly: cacheOnly })
+    return this;
+  }
+
+  storage(storage: StorageClass): ApiClient {
+    this._storage = storage;
     return this;
   }
 
@@ -351,12 +358,14 @@ export class ApiClient {
    * - tags()
    * - resourceId()
    */
-  async uploadFile() {
+  async uploadFile(): Promise<string[]> {
     this._dir = this._filesDir;
-    await this.upload();
-    const resourceId = this._resourceId;
-    const resourceTx = !this._cacheOnly ? await this.fileTransaction() : null;
-    return { resourceUrl: resourceId, id: resourceTx, resourceTx: resourceTx }
+    const { resourceUri } = await this.upload();
+    if (!this._cacheOnly) {
+      const arweaveTx = await this.fileTransaction();
+      resourceUri.push(`arweave:${arweaveTx}`);
+    }
+    return resourceUri;
   }
 
   /**
@@ -453,12 +462,14 @@ export class ApiClient {
           config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
         }
       }
+      config.headers['x-amz-meta-storage-class'] = this._storage;
       config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
     }
 
     try {
       const response = await axios(config);
-      return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx };
+      return { resourceUri: [`s3:${this._resourceId}`] };
+      // return { resourceUri: response.data.resourceUri };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
