@@ -43,12 +43,7 @@ class VaultService extends Service {
       ...options
     }
     const result = await this.api.getVault(vaultId, getOptions);
-    if (!getOptions.shouldDecrypt || result.public) {
-      return new Vault(result, []);
-    }
-    const { keys } = await this.api.getMembershipKeys(vaultId);
-    const vault = await this.processVault(result, getOptions.shouldDecrypt, keys);
-    return vault
+    return await this.processVault(result, !result.public && getOptions.shouldDecrypt, result.__keys__);
   }
 
   /**

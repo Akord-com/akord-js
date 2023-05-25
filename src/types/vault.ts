@@ -38,7 +38,6 @@ export class Vault extends Encryptable {
     this.data = vaultProto.data;
     this.cacheOnly = vaultProto.cacheOnly;
     this.tags = vaultProto.tags;
-    this.keys = keys;
     this.memberships = vaultProto?.memberships?.map((membership: Membership) => new Membership(membership, keys));
     this.memos = vaultProto?.memos?.map((memo: Memo) => new Memo(memo, keys));
     this.stacks = vaultProto?.stacks?.map((stack: Stack) => new Stack(stack, keys));

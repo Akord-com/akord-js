@@ -41,8 +41,7 @@ class NodeService<T = NodeLike> extends Service {
       ...options
     }
     const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, getOptions.vaultId);
-    const { isEncrypted, keys } = await this.api.getMembershipKeys(nodeProto.vaultId);
-    const node = await this.processNode(nodeProto, isEncrypted && getOptions.shouldDecrypt, keys);
+    const node = await this.processNode(nodeProto, !nodeProto.__public__ && getOptions.shouldDecrypt, nodeProto.__keys__);
     return node as T;
   }
 
@@ -57,10 +56,9 @@ class NodeService<T = NodeLike> extends Service {
       ...options
     }
     const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions);
-    const { isEncrypted, keys } = listOptions.shouldDecrypt ? await this.api.getMembershipKeys(vaultId) : { isEncrypted: false, keys: [] };
     const promises = response.items
       .map(async nodeProto => {
-        return await this.processNode(nodeProto, isEncrypted && listOptions.shouldDecrypt, keys);
+        return await this.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
       }) as Promise<NodeLike>[];
     const { items, errors } = await this.handleListErrors<NodeLike>(response.items, promises);
     return {
@@ -195,7 +193,9 @@ class NodeService<T = NodeLike> extends Service {
 
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
     const object = await this.api.getNode<NodeLike>(nodeId, type, this.vaultId);
-    await this.setVaultContext(vaultId || object.vaultId);
+    this.setVaultId(object.vaultId);
+    this.setIsPublic(object.__public__);
+    await this.setMembershipKeys(object);
     this.setObject(object);
     this.setObjectId(nodeId);
     this.setObjectType(type);
