@@ -2,6 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, folderCreate, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
+import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
 
@@ -43,7 +44,7 @@ describe("Testing folder functions", () => {
     const name = faker.random.words();
     await expect(async () =>
       await akord.folder.create(vaultId, name, { parentId: rootFolderId })
-    ).rejects.toThrow(Error);
+    ).rejects.toThrow(BadRequest);
   });
 
   it("should restore root folder", async () => {

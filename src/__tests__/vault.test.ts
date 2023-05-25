@@ -2,6 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
+import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
 
@@ -78,7 +79,7 @@ describe("Testing vault functions", () => {
     const name = faker.random.words();
     await expect(async () =>
       await akord.vault.rename(vaultId, name)
-    ).rejects.toThrow(Error);
+    ).rejects.toThrow(BadRequest);
   });
 
   it("should restore the vault", async () => {
