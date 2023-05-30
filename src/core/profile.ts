@@ -67,7 +67,7 @@ class ProfileService extends Service {
 
   private async listMemberships(): Promise<Array<Membership>> {
     const list = async (listOptions: ListOptions) => {
-      return await this.api.getMemberships(listOptions.limit, listOptions.nextToken);
+      return await this.api.getMemberships(listOptions);
     }
     return await this.paginate<Membership>(list, {});
   }

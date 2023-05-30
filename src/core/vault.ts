@@ -55,7 +55,7 @@ class VaultService extends Service {
       ...this.defaultListOptions,
       ...options
     }
-    const response = await this.api.getVaults(listOptions.filter, listOptions.limit, listOptions.nextToken);
+    const response = await this.api.getVaults(listOptions);
     const promises = response.items
       .map(async (vaultProto: Vault) => {
         return await this.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);

@@ -2,8 +2,9 @@ export type ListOptions = {
   shouldDecrypt?: boolean,
   filter?: Object,
   limit?: number, // the limit of the number of items in a query (default to 100)
-  nextToken?: string
-  parentId?: string
+  nextToken?: string,
+  parentId?: string,
+  tags?: string[]
 }
 
 export type GetOptions = {

@@ -244,42 +244,44 @@ export default class AkordApi extends Api {
     return contract.state;
   };
 
-  public async getMemberships(limit?: number, nextToken?: string): Promise<Paginated<Membership>> {
+  public async getMemberships(options: ListOptions = {}): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .queryParams({
-        limit,
-        nextToken
+        limit: options.limit,
+        nextToken: options.nextToken
       })
       .getMemberships();
   };
 
-  public async getVaults(filter = {}, limit?: number, nextToken?: string): Promise<Paginated<Vault>> {
+  public async getVaults(options: ListOptions = {}): Promise<Paginated<Vault>> {
     return await new ApiClient()
       .env(this.config)
       .queryParams({
-        filter: JSON.stringify(filter),
-        limit,
-        nextToken
+        tags: options.tags,
+        filter: JSON.stringify(options.filter ? options.filter : {}),
+        limit: options.limit,
+        nextToken: options.nextToken
       })
       .getVaults();
   };
 
-  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
+  public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions = {}): Promise<Paginated<T>> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
       .queryParams({
         type,
         parentId: options.parentId,
+        tags: options.tags,
         filter: JSON.stringify(options.filter ? options.filter : {}),
         limit: options.limit,
         nextToken: options.nextToken
       })
-      .getNodesByVaultId();
+      .getNodesByVaultId<T>();
   };
 
-  public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
+  public async getMembershipsByVaultId(vaultId: string, options: ListOptions = {}): Promise<Paginated<Membership>> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
