@@ -9,6 +9,7 @@ export class Membership extends Encryptable {
   owner: string;
   createdAt: string; // number
   updatedAt: string; // number
+  expiresAt: string;
   status: StatusType;
   address: string;
   role: RoleType;
@@ -32,6 +33,7 @@ export class Membership extends Encryptable {
     this.address = membershipProto.address;
     this.createdAt = membershipProto.createdAt;
     this.updatedAt = membershipProto.updatedAt;
+    this.expiresAt = membershipProto.expiresAt;
     this.data = membershipProto.data;
     this.status = membershipProto.status;
     this.role = membershipProto.role;

@@ -132,7 +132,7 @@ class MembershipService extends Service {
    */
   public async airdrop(
     vaultId: string,
-    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType }>,
+    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: { email: string, expirationDate: Date } }>,
   ): Promise<{
     transactionId: string,
     members: Array<{ id: string, address: string }>
@@ -141,7 +141,7 @@ class MembershipService extends Service {
     this.setActionRef("MEMBERSHIP_AIRDROP");
     this.setFunction(functions.MEMBERSHIP_ADD);
     const memberArray = [] as MembershipInput[];
-    const membersMetadata = [] as UserPublicInfo[];
+    const membersMetadata = [];
     const dataArray = [] as { id: string, data: string }[];
     const memberTags = [] as Tags;
     for (const member of members) {
@@ -165,7 +165,8 @@ class MembershipService extends Service {
       membersMetadata.push({
         address: memberAddress,
         publicKey: member.publicKey,
-        publicSigningKey: member.publicSigningKey
+        publicSigningKey: member.publicSigningKey,
+        options: member.options
       })
       memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
