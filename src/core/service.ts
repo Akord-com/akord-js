@@ -26,6 +26,7 @@ import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ProfileDetails } from "../types/profile-details";
 import { ListOptions } from "../types/query-options";
+import { StorageClass } from "./file";
 
 export type EncryptionMetadata = {
   encryptedKey?: string,
@@ -254,7 +255,8 @@ class Service {
 
   protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, { cacheOnly, public: false });
+    const storage = cacheOnly ? StorageClass.CLOUD : StorageClass.PERMANENT;
+    return this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
   }
 
   protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
@@ -325,7 +327,7 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ data: state, tags }], { cacheOnly });
+    const ids = await this.api.uploadData([{ data: state, tags }], cacheOnly);
     return ids[0];
   }
 

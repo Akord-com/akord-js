@@ -9,11 +9,6 @@ class StackService extends NodeService<Stack> {
   objectType = nodeType.STACK;
   NodeType = Stack;
 
-  defaultCreateOptions = {
-    ...this.defaultCreateOptions,
-    storage: StorageClass.PERMANENT
-  } as StackCreateOptions;
-
   /**
    * @param  {string} vaultId
    * @param  {FileLike} file file object
@@ -23,8 +18,12 @@ class StackService extends NodeService<Stack> {
    */
   public async create(vaultId: string, file: FileLike, name: string, options: StackCreateOptions = this.defaultCreateOptions):
     Promise<StackCreateResult> {
+    const optionsFromVault = {
+      storage: this.vault.cacheOnly ? StorageClass.CLOUD : StorageClass.PERMANENT
+    }
     const createOptions = {
       ...this.defaultCreateOptions,
+      ...optionsFromVault,
       ...options
     }
     await this.setVaultContext(vaultId);
@@ -32,8 +31,6 @@ class StackService extends NodeService<Stack> {
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
     this.setAkordTags(createOptions.tags);
-
-    createOptions.cacheOnly = this.vault.cacheOnly;
 
     const state = {
       name: await this.processWriteString(name ? name : file.name),
@@ -84,10 +81,17 @@ class StackService extends NodeService<Stack> {
     this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
-    options.cacheOnly = this.object.__cacheOnly__;
+    const optionsFromVault = {
+      storage: this.object.__cacheOnly__ ? StorageClass.CLOUD : StorageClass.PERMANENT
+    }
+
+    const uploadOptions = {
+      ...optionsFromVault,
+      ...options
+    }
 
     const state = {
-      versions: [await this.uploadNewFileVersion(file, options)]
+      versions: [await this.uploadNewFileVersion(file, uploadOptions)]
     };
     this.setFunction(functions.NODE_UPDATE);
     return this.nodeUpdate<Stack>(state);

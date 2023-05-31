@@ -132,7 +132,7 @@ class FileService extends Service {
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
-      .cacheOnly(true)
+      .storage(StorageClass.CLOUD)
       .uploadFile()
     resourceUri.push(`arweave:${fileTxId}`);
     return { file, resourceUri };
@@ -259,7 +259,7 @@ class FileService extends Service {
       .data(chunk.processedData)
       .tags(tags.concat(chunk.encryptionTags))
       .public(this.isPublic)
-      .cacheOnly(true)
+      .storage(StorageClass.CLOUD)
       .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
       .cancelHook(options.cancelHook)
       .uploadFile()
@@ -335,7 +335,6 @@ export type Hooks = {
 export type FileUploadOptions = Hooks & {
   public?: boolean,
   storage?: StorageClass,
-  cacheOnly?: boolean,
   arweaveTags?: Tags
 }
 

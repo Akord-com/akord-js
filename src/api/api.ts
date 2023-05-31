@@ -19,7 +19,7 @@ abstract class Api {
   
   abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<string[]>
 
-  abstract uploadData(items: { data: any, tags: Tags }[], options?: FileUploadOptions): Promise<Array<string>>
+  abstract uploadData(items: { data: any, tags: Tags }[], cacheOnly?: boolean): Promise<Array<string>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 

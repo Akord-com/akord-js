@@ -447,9 +447,6 @@ export class ApiClient {
       }
     } as AxiosRequestConfig
 
-    if (this._cacheOnly) {
-      config.headers['x-amz-meta-skipbundle'] = "true";
-    }
     if (this._tags) {
       for (let tag of this._tags) {
         // TODO: move it into the API

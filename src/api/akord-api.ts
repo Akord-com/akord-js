@@ -11,11 +11,11 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions } from "../core/file";
+import { FileDownloadOptions, FileUploadOptions, StorageClass } from "../core/file";
 import { EncryptionMetadata } from "../core";
 
 export const defaultFileUploadOptions = {
-  cacheOnly: false,
+  storage: StorageClass.PERMANENT,
   public: false
 };
 
@@ -28,7 +28,7 @@ export default class AkordApi extends Api {
     this.config = apiConfig(config.env);
   }
 
-  public async uploadData(items: { data: any, tags: Tags }[], options: FileUploadOptions = defaultFileUploadOptions)
+  public async uploadData(items: { data: any, tags: Tags }[], cacheOnly = false)
     : Promise<Array<string>> {
     const resources = [];
 
@@ -36,7 +36,7 @@ export default class AkordApi extends Api {
       const resource = await new ApiClient()
         .env(this.config)
         .data({ data: item.data, tags: item.tags })
-        .cacheOnly(options.cacheOnly)
+        .cacheOnly(cacheOnly)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
@@ -83,7 +83,6 @@ export default class AkordApi extends Api {
       .tags(tags)
       .public(uploadOptions.public)
       .storage(uploadOptions.storage)
-      .cacheOnly(uploadOptions.cacheOnly)
       .progressHook(uploadOptions.progressHook)
       .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
