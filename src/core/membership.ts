@@ -132,7 +132,7 @@ class MembershipService extends Service {
    */
   public async airdrop(
     vaultId: string,
-    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: { email: string, expirationDate: Date } }>,
+    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: { name?: string, expirationDate?: Date } }>,
   ): Promise<{
     transactionId: string,
     members: Array<{ id: string, address: string }>
@@ -154,7 +154,8 @@ class MembershipService extends Service {
         id: membershipId,
         address: memberAddress,
         keys: await this.prepareMemberKeys(member.publicKey),
-        encPublicSigningKey: await this.processWriteString(member.publicSigningKey)
+        encPublicSigningKey: await this.processWriteString(member.publicSigningKey),
+        memberDetails: await this.processMemberDetails({ name: member.options?.name }, this.vault.cacheOnly),
       };
 
       const data = await this.uploadState(state);
@@ -166,7 +167,7 @@ class MembershipService extends Service {
         address: memberAddress,
         publicKey: member.publicKey,
         publicSigningKey: member.publicSigningKey,
-        options: member.options
+        expirationDate: member.options?.expirationDate
       })
       memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
