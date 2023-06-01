@@ -4,8 +4,13 @@ export type ListOptions = {
   limit?: number, // the limit of the number of items in a query (default to 100)
   nextToken?: string,
   parentId?: string,
-  tags?: string[]
+  tags?: {
+    values: string[],
+    searchCriteria?: SearchCriteria // default to CONTAINS_EVERY
+  }
 }
+
+export type SearchCriteria = "CONTAINS_SOME" | "CONTAINS_EVERY";
 
 export type GetOptions = {
   shouldDecrypt?: boolean,

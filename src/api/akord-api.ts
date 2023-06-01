@@ -258,7 +258,7 @@ export default class AkordApi extends Api {
     return await new ApiClient()
       .env(this.config)
       .queryParams({
-        tags: options.tags,
+        tags: JSON.stringify(options.tags ? options.tags : {}),
         filter: JSON.stringify(options.filter ? options.filter : {}),
         limit: options.limit,
         nextToken: options.nextToken
@@ -273,7 +273,7 @@ export default class AkordApi extends Api {
       .queryParams({
         type,
         parentId: options.parentId,
-        tags: options.tags,
+        tags: JSON.stringify(options.tags ? options.tags : {}),
         filter: JSON.stringify(options.filter ? options.filter : {}),
         limit: options.limit,
         nextToken: options.nextToken
