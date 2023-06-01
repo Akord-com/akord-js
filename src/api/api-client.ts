@@ -143,7 +143,7 @@ export class ApiClient {
 
   async existsUser(): Promise<Boolean> {
     try {
-      await this.get(`${this._apiurl}/users/${this._resourceId}`);
+      await this.get(`${this._apiurl}/users`);
     } catch (e) {
       if (!(e instanceof NotFound)) {
         throw e;
@@ -158,7 +158,7 @@ export class ApiClient {
   }
 
   async getUserPublicData(): Promise<UserPublicInfo> {
-    return await this.get(`${this._apiurl}/users/${this._resourceId}`);
+    return await this.get(`${this._apiurl}/users`);
   }
 
   async updateUser(): Promise<any> {

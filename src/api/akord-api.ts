@@ -107,17 +107,17 @@ export default class AkordApi extends Api {
     return { fileData, metadata };
   };
 
-  public async existsUser(email: string): Promise<any> {
+  public async existsUser(email: string): Promise<Boolean> {
     return await new ApiClient()
       .env(this.config)
-      .resourceId(email)
+      .queryParams({ email })
       .existsUser();
   }
 
   public async getUserPublicData(email: string): Promise<UserPublicInfo> {
     return await new ApiClient()
       .env(this.config)
-      .resourceId(email)
+      .queryParams({ email })
       .getUserPublicData();
   };
 
