@@ -4,6 +4,8 @@ import { ProfileDetails } from "./profile-details";
 export type RoleType = "VIEWER" | "CONTRIBUTOR" | "OWNER";
 export type StatusType = "ACCEPTED" | "PENDING" | "REVOKED" | "INVITED";
 
+export const activeStatus = ["ACCEPTED", "PENDING", "INVITED"] as StatusType[];
+
 export class Membership extends Encryptable {
   id: string;
   owner: string;
@@ -53,3 +55,18 @@ export type MembershipKeys = {
   keys: EncryptedKeys[];
   publicKey?: string;
 };
+
+export type MembershipCreateOptions = {
+  message?: string
+}
+
+export type MembershipCreateResult = {
+  membershipId: string,
+  transactionId: string,
+  object: Membership
+}
+
+export type MembershipUpdateResult = {
+  transactionId: string,
+  object: Membership
+}

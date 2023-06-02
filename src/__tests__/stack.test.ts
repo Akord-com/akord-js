@@ -2,8 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
-import { NodeJs } from "../types/file";
-import { StorageType } from "../types/node";
+import { NodeJs, StorageClass } from "../types/file";
 import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
 
@@ -62,7 +61,7 @@ export const stackCreate = async (vaultId: string) => {
   expect(stack.versions.length).toEqual(1);
   expect(stack.versions[0].name).toEqual(firstFileName);
 
-  const binary = await akord.file.get(stack.getUri(StorageType.S3, 0), vaultId);
+  const binary = await akord.file.get(stack.getUri(StorageClass.S3, 0), vaultId);
   expect(binary).toEqual(await file.arrayBuffer());
   return stackId;
 }

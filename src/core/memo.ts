@@ -1,7 +1,8 @@
-import { NodeCreateOptions, NodeService } from "./node";
+import { NodeService } from "./node";
 import { reactionEmoji, actionRefs, functions } from "../constants";
 import lodash from "lodash";
-import { Memo, MemoReaction, MemoVersion, nodeType } from "../types/node";
+import { Memo, MemoCreateResult, MemoReaction, MemoUpdateResult, MemoVersion } from "../types/memo";
+import { nodeType, NodeCreateOptions } from "../types/node";
 import { ListOptions } from "../types/query-options";
 import { NotFound } from "../errors/not-found";
 import { EncryptedKeys } from "@akord/crypto";
@@ -137,17 +138,6 @@ class MemoService extends NodeService<Memo> {
     throw new NotFound("Could not find reaction: " + reaction + " for given user.")
   }
 };
-
-type MemoCreateResult = {
-  memoId: string,
-  transactionId: string,
-  object: Memo
-}
-
-type MemoUpdateResult = {
-  transactionId: string,
-  object: Memo
-}
 
 export {
   MemoService

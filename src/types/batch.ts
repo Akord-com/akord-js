@@ -1,4 +1,10 @@
-import { Stack } from "./node"
+import { Hooks } from "./file";
+import { Stack } from "./stack"
+
+export type BatchStackCreateOptions = Hooks & {
+  processingCountHook?: (count: number) => void,
+  onStackCreated?: (item: Stack) => Promise<void>
+};
 
 export interface BatchStackCreateResponse {
   data: Array<{ stackId: string, transactionId: string, object: Stack }>

@@ -1,6 +1,6 @@
 import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
-import { NodeLike, NodeType } from '../types/node';
+import { NodeCreateOptions, NodeLike, NodeType, NodeUpdateResult } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
 import { ContractInput, Tag, Tags } from '../types/contract';
@@ -229,17 +229,6 @@ class NodeService<T = NodeLike> extends Service {
   private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
     return new this.NodeType(nodeProto, keys);
   }
-}
-
-type NodeUpdateResult = {
-  transactionId: string,
-  object: NodeLike
-}
-
-export type NodeCreateOptions = {
-  parentId?: string,
-  tags?: string[],
-  arweaveTags?: Tags
 }
 
 export {

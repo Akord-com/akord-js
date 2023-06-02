@@ -2,15 +2,13 @@ import { actionRefs, objectType, status, functions, protocolTags } from "../cons
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray } from "@akord/crypto";
 import { Service } from "./service";
-import { Membership, RoleType, StatusType } from "../types/membership";
+import { Membership, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
 import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { UserPublicInfo } from "../types";
-
-export const activeStatus = [status.ACCEPTED, status.PENDING, status.INVITED] as StatusType[];
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
@@ -451,21 +449,6 @@ class MembershipService extends Service {
     }
   }
 };
-
-export type MembershipCreateOptions = {
-  message?: string
-}
-
-type MembershipCreateResult = {
-  membershipId: string,
-  transactionId: string,
-  object: Membership
-}
-
-type MembershipUpdateResult = {
-  transactionId: string,
-  object: Membership
-}
 
 export {
   MembershipService

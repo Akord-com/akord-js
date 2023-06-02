@@ -1,7 +1,7 @@
 import { actionRefs, objectType, status, functions, protocolTags, AKORD_TAG } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
-import { Vault } from "../types/vault";
+import { Vault, VaultCreateOptions, VaultCreateResult, VaultUpdateOptions, VaultUpdateResult } from "../types/vault";
 import { Service } from "./service";
 import { Tag, Tags } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
@@ -352,33 +352,6 @@ class VaultService extends Service {
     return index;
   }
 };
-
-export type VaultCreateOptions = {
-  public?: boolean,
-  termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-  description?: string,
-  tags?: string[],
-  cacheOnly?: boolean,
-  arweaveTags?: Tags
-}
-
-export type VaultUpdateOptions = {
-  name?: string,
-  description?: string,
-  tags?: string[]
-}
-
-type VaultCreateResult = {
-  vaultId: string,
-  membershipId: string,
-  transactionId: string,
-  object: Vault
-}
-
-type VaultUpdateResult = {
-  transactionId: string,
-  object: Vault
-}
 
 export {
   VaultService

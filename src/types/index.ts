@@ -1,4 +1,4 @@
-export * from "./batch-response";
+export * from "./batch";
 export * from "./membership";
 export * from "./node";
 export * from "./transaction";

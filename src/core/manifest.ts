@@ -1,5 +1,6 @@
 import { NodeService } from "./node";
-import { Stack, nodeType } from "../types/node";
+import { nodeType } from "../types/node";
+import { Stack } from "../types/stack";
 import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { createFileLike } from "./file";

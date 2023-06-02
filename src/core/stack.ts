@@ -1,8 +1,9 @@
-import { NodeCreateOptions, NodeService } from "./node";
+import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileService, FileUploadResult, FileUploadOptions, StorageClass } from "./file";
-import { FileLike } from "../types/file";
-import { FileVersion, Stack, nodeType } from "../types/node";
+import { FileService } from "./file";
+import { FileLike, FileUploadOptions, FileVersion, StorageClass } from "../types/file";
+import { nodeType, NodeCreateOptions } from "../types/node";
+import { Stack, StackCreateOptions, StackCreateResult, StackUpdateResult } from "../types/stack";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -152,19 +153,6 @@ class StackService extends NodeService<Stack> {
     this.fileService.setIsPublic(this.isPublic);
   }
 };
-
-export type StackCreateOptions = NodeCreateOptions & FileUploadOptions;
-
-type StackCreateResult = {
-  stackId: string,
-  transactionId: string,
-  object: Stack
-}
-
-type StackUpdateResult = {
-  transactionId: string,
-  object: Stack
-}
 
 export {
   StackService

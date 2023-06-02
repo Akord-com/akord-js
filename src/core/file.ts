@@ -4,7 +4,7 @@ import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
-import { FileLike } from "../types/file";
+import { DownloadOptions, FileDownloadOptions, FileLike, FileUploadOptions, FileUploadResult, Hooks, StorageClass } from "../types/file";
 import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
@@ -318,39 +318,6 @@ class FileService extends Service {
     return tags;
   }
 };
-
-type DownloadOptions = FileDownloadOptions & { name?: string }
-
-export type FileUploadResult = {
-  resourceUri: string[],
-  numberOfChunks?: number,
-  chunkSize?: number,
-}
-
-export type Hooks = {
-  progressHook?: (progress: number, data?: any) => void,
-  cancelHook?: AbortController
-}
-
-export type FileUploadOptions = Hooks & {
-  public?: boolean,
-  storage?: StorageClass,
-  arweaveTags?: Tags
-}
-
-export type FileDownloadOptions = Hooks & {
-  public?: boolean,
-  isChunked?: boolean,
-  numberOfChunks?: number,
-  loadedSize?: number,
-  resourceSize?: number
-}
-
-export enum StorageClass {
-  ARWEAVE = "arweave",
-  IPFS = "ipfs",
-  S3 = "s3"
-}
 
 async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)
   : Promise<FileLike> {

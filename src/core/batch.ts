@@ -1,13 +1,13 @@
 import { Service, ServiceFactory } from "../core";
 import { v4 as uuidv4 } from "uuid";
-import { MembershipCreateOptions, MembershipService, activeStatus } from "./membership";
-import { StackCreateOptions, StackService } from "./stack";
+import { MembershipService } from "./membership";
+import { StackService } from "./stack";
 import { NodeService } from "./node";
-import { Node, NodeType, Stack } from "../types/node";
+import { Node, NodeType } from "../types/node";
+import { StackCreateOptions, Stack } from "../types/stack";
 import { FileLike } from "../types/file";
-import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
-import { RoleType } from "../types/membership";
-import { Hooks } from "./file";
+import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
+import { RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -201,11 +201,6 @@ class BatchService extends Service {
     this.groupRef = items && items.length > 1 ? uuidv4() : null;
   }
 }
-
-export type BatchStackCreateOptions = Hooks & {
-  processingCountHook?: (count: number) => void,
-  onStackCreated?: (item: Stack) => Promise<void>
-};
 
 export {
   BatchService

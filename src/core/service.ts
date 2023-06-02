@@ -26,12 +26,8 @@ import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ProfileDetails } from "../types/profile-details";
 import { ListOptions } from "../types/query-options";
-import { StorageClass } from "./file";
-
-export type EncryptionMetadata = {
-  encryptedKey?: string,
-  iv?: string
-}
+import { StorageClass } from "../types/file";
+import { EncryptionMetadata } from "../types/encryption";
 
 export const STATE_CONTENT_TYPE = "application/json";
 

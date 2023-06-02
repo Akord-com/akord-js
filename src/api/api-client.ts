@@ -11,7 +11,7 @@ import { throwError } from "../errors/error";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
-import { StorageClass } from "../core/file";
+import { StorageClass } from "../types/file";
 
 export class ApiClient {
   private _storageurl: string;

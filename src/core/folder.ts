@@ -1,6 +1,7 @@
-import { NodeCreateOptions, NodeService } from "./node";
+import { NodeService } from "./node";
 import { actionRefs, functions } from "../constants";
-import { Folder, nodeType } from "../types/node";
+import { nodeType, NodeCreateOptions } from "../types/node";
+import { Folder, FolderCreateResult } from "../types/folder";
 
 class FolderService extends NodeService<Folder> {
   objectType = nodeType.FOLDER;
@@ -25,12 +26,6 @@ class FolderService extends NodeService<Folder> {
     return { folderId: nodeId, transactionId, object };
   }
 };
-
-type FolderCreateResult = {
-  folderId: string,
-  transactionId: string,
-  object: Folder
-}
 
 export {
   FolderService
