@@ -132,7 +132,7 @@ class FileService extends Service {
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
-      .storage(StorageClass.CLOUD)
+      .storage(StorageClass.S3)
       .uploadFile()
     resourceUri.push(`arweave:${fileTxId}`);
     return { file, resourceUri };
@@ -259,7 +259,7 @@ class FileService extends Service {
       .data(chunk.processedData)
       .tags(tags.concat(chunk.encryptionTags))
       .public(this.isPublic)
-      .storage(StorageClass.CLOUD)
+      .storage(StorageClass.S3)
       .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
       .cancelHook(options.cancelHook)
       .uploadFile()
@@ -347,9 +347,9 @@ export type FileDownloadOptions = Hooks & {
 }
 
 export enum StorageClass {
-  CLOUD = "cloud",
-  DECENTRALISED = "decentralised",
-  PERMANENT = "permanent"
+  ARWEAVE = "arweave",
+  IPFS = "ipfs",
+  S3 = "s3"
 }
 
 async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)

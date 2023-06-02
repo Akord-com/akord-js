@@ -1,6 +1,7 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { status } from "../constants";
 import { NotFound } from "../errors/not-found";
+import { StorageClass } from "../core/file";
 
 export enum nodeType {
   STACK = "Stack",
@@ -75,7 +76,7 @@ export class Stack extends Node {
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
   }
 
-  getUri(type: StorageType = StorageType.ARWEAVE, index?: number): string {
+  getUri(type: StorageClass = StorageClass.ARWEAVE, index?: number): string {
     const version = this.getVersion(index);
     return version.getUri(type);
   }
@@ -143,10 +144,14 @@ export class FileVersion extends Encryptable implements Version {
     this.status = fileVersionProto.status;
   }
 
-  getUri(type: StorageType): string {
-    return this.resourceUri
+  getUri(type: StorageClass): string {
+    const resourceUri = this.resourceUri
       ?.find(uri => uri.startsWith(type))
-      ?.replace(type, "");
+      ?.replace(type + ":", "");
+    if (!resourceUri) {
+      throw new NotFound("Could not find resource uri for given type: " + type);
+    }
+    return resourceUri;
   }
 }
 
@@ -190,7 +195,3 @@ export class NodeFactory {
   }
 }
 
-export enum StorageType {
-  S3 = "s3:",
-  ARWEAVE = "arweave:"
-}

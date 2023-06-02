@@ -15,7 +15,7 @@ import { FileDownloadOptions, FileUploadOptions, StorageClass } from "../core/fi
 import { EncryptionMetadata } from "../core";
 
 export const defaultFileUploadOptions = {
-  storage: StorageClass.PERMANENT,
+  storage: StorageClass.ARWEAVE,
   public: false
 };
 

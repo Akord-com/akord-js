@@ -255,7 +255,7 @@ class Service {
 
   protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    const storage = cacheOnly ? StorageClass.CLOUD : StorageClass.PERMANENT;
+    const storage = cacheOnly ? StorageClass.S3 : StorageClass.ARWEAVE;
     return this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
   }
 
