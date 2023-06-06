@@ -349,6 +349,7 @@ class Service {
       new Tag(protocolTags.VAULT_ID, this.vaultId),
       new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())),
       new Tag(protocolTags.NODE_TYPE, this.objectType),
+      new Tag(protocolTags.PUBLIC, this.isPublic ? "true" : "false"),
     ]
     if (this.groupRef) {
       tags.push(new Tag(protocolTags.GROUP_REF, this.groupRef));
