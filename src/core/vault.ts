@@ -111,7 +111,6 @@ class VaultService extends Service {
     this.arweaveTags = [
       new Tag(protocolTags.MEMBER_ADDRESS, address),
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
-      new Tag(protocolTags.PUBLIC, createOptions.public ? "true" : "false"),
     ].concat(await this.getTags());
 
     let keys: EncryptedKeys[];
