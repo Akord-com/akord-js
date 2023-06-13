@@ -28,11 +28,7 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    if (id && id.startsWith('public/')) {
-      this.setIsPublic(true);
-    } else {
-      await this.setVaultContext(vaultId);
-    }
+    await this.setVaultContext(vaultId);
     const downloadOptions = options as FileDownloadOptions;
     downloadOptions.public = this.isPublic;
     let fileBinary: ArrayBuffer;
@@ -63,11 +59,7 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
-    if (id && id.startsWith('public/')) {
-      this.setIsPublic(true);
-    } else {
-      await this.setVaultContext(vaultId);
-    }
+    await this.setVaultContext(vaultId);
     const downloadOptions = options as FileDownloadOptions;
     downloadOptions.public = this.isPublic;
     const writer = await this.stream(options.name, options.resourceSize);
