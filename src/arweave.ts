@@ -16,7 +16,9 @@ const getTxData = async (id: string, responseType = DEFAULT_RESPONSE_TYPE) => {
   try {
     const response = await axios(config);
     if (response.status == 200 || response.status == 202) {
-      return responseType === DEFAULT_RESPONSE_TYPE ? bufferToArrayBuffer(response.data) : response.data;
+      return responseType === DEFAULT_RESPONSE_TYPE && typeof window === 'undefined'
+        ? bufferToArrayBuffer(response.data)
+        : response.data;
     } else {
       throwError(response?.status, response?.data?.msg);
     }
