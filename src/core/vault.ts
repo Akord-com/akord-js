@@ -1,4 +1,4 @@
-import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, AKORD_TAG } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
@@ -114,6 +114,9 @@ class VaultService extends Service {
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
     ].concat(await this.getTags());
     createOptions.arweaveTags?.map((tag: Tag) => this.arweaveTags.push(tag));
+    if (this.isPublic) {
+      this.arweaveTags.push(new Tag(AKORD_TAG, name));
+    }
 
     let keys: EncryptedKeys[];
     if (!this.isPublic) {
@@ -165,7 +168,6 @@ class VaultService extends Service {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_UPDATE_METADATA);
     this.setFunction(functions.VAULT_UPDATE);
-    this.arweaveTags = await this.getTags();
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
@@ -180,11 +182,16 @@ class VaultService extends Service {
     if (options.description) {
       newState.description = await this.processWriteString(options.description);
     }
+    this.arweaveTags = await this.getTags();
+    if (options.name && this.isPublic) {
+      this.arweaveTags.push(new Tag(AKORD_TAG, options.name));
+    }
+
     const dataTxId = await this.uploadState(newState);
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data: dataTxId },
-      await this.getTags()
+      this.arweaveTags
     );
     const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
@@ -203,10 +210,14 @@ class VaultService extends Service {
       name: await this.processWriteString(name)
     };
     const data = await this.mergeAndUploadState(state);
+    this.arweaveTags = await this.getTags();
+    if (this.isPublic) {
+      this.arweaveTags.push(new Tag(AKORD_TAG, name));
+    }
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
-      await this.getTags()
+      this.arweaveTags
     );
     const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
