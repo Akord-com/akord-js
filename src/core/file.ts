@@ -1,6 +1,6 @@
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
-import { digestRaw } from "@akord/crypto";
+import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
@@ -101,7 +101,14 @@ class FileService extends Service {
     } else {
       const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
       const resourceHash = await digestRaw(new Uint8Array(processedData));
+      const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
+      const signature = await signHash(
+        base64ToArray(resourceHash),
+        privateKeyRaw
+      );
       tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
+      tags.push(new Tag(protocolTags.SIGNATURE, signature));
+      tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
       options.public = this.isPublic;
       return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options) };
     }

@@ -1,9 +1,9 @@
-import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, AKORD_TAG } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
-import { Tag } from "../types/contract";
+import { Tag, Tags } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
@@ -30,7 +30,8 @@ class VaultService extends Service {
     termsOfAccess: undefined,
     description: undefined,
     tags: [],
-    cacheOnly: false
+    cacheOnly: false,
+    arweaveTags: [],
   } as VaultCreateOptions;
 
   /**
@@ -103,7 +104,7 @@ class VaultService extends Service {
     this.setFunction(functions.VAULT_CREATE);
     this.setVaultId(vaultId);
     this.setObjectId(vaultId);
-    this.setTags(createOptions.tags);
+    this.setAkordTags((this.isPublic ? [name] : []).concat(createOptions.tags));
 
     const address = await this.wallet.getAddress();
     const membershipId = uuidv4();
@@ -111,7 +112,8 @@ class VaultService extends Service {
     this.arweaveTags = [
       new Tag(protocolTags.MEMBER_ADDRESS, address),
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
-    ].concat(await this.getTags());
+    ].concat(await this.getTxTags());
+    createOptions.arweaveTags?.map((tag: Tag) => this.arweaveTags.push(tag));
 
     let keys: EncryptedKeys[];
     if (!this.isPublic) {
@@ -163,7 +165,6 @@ class VaultService extends Service {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_UPDATE_METADATA);
     this.setFunction(functions.VAULT_UPDATE);
-    this.arweaveTags = await this.getTags();
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
@@ -172,17 +173,19 @@ class VaultService extends Service {
       newState.name = await this.processWriteString(options.name);
     }
     if (options.tags) {
-      this.setTags(options.tags);
       newState.tags = options.tags;
     }
     if (options.description) {
       newState.description = await this.processWriteString(options.description);
     }
+    this.setAkordTags((options.name && this.isPublic ? [options.name] : []).concat(options.tags));
+    this.arweaveTags = await this.getTxTags();
+
     const dataTxId = await this.uploadState(newState);
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data: dataTxId },
-      await this.getTags()
+      this.arweaveTags
     );
     const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
@@ -201,10 +204,13 @@ class VaultService extends Service {
       name: await this.processWriteString(name)
     };
     const data = await this.mergeAndUploadState(state);
+    this.setAkordTags(this.isPublic ? [name] : []);
+    this.arweaveTags = await this.getTxTags();
+
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function, data },
-      await this.getTags()
+      this.arweaveTags
     );
     const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
@@ -219,9 +225,9 @@ class VaultService extends Service {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_ADD_TAGS);
     this.setFunction(functions.VAULT_UPDATE);
-    this.arweaveTags = await this.getTags();
 
-    this.setTags(tags);
+    this.setAkordTags(tags);
+    this.arweaveTags = await this.getTxTags();
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
@@ -253,7 +259,7 @@ class VaultService extends Service {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.VAULT_REMOVE_TAGS);
     this.setFunction(functions.VAULT_UPDATE);
-    this.arweaveTags = await this.getTags();
+    this.arweaveTags = await this.getTxTags();
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
@@ -287,7 +293,7 @@ class VaultService extends Service {
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function },
-      await this.getTags()
+      await this.getTxTags()
     );
     const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
@@ -305,7 +311,7 @@ class VaultService extends Service {
     const { id, object } = await this.api.postContractTransaction<Vault>(
       this.vaultId,
       { function: this.function },
-      await this.getTags()
+      await this.getTxTags()
     );
     const vault = await this.processVault(object, true, this.keys);
     return { transactionId: id, object: vault };
@@ -352,7 +358,8 @@ export type VaultCreateOptions = {
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
   description?: string,
   tags?: string[],
-  cacheOnly?: boolean
+  cacheOnly?: boolean,
+  arweaveTags?: Tags
 }
 
 export type VaultUpdateOptions = {

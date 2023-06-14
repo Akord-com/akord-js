@@ -26,7 +26,7 @@ class StackService extends NodeService<Stack> {
     this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
-    this.setTags(createOptions.tags);
+    this.setAkordTags(createOptions.tags);
 
     createOptions.cacheOnly = this.vault.cacheOnly;
 
@@ -35,7 +35,7 @@ class StackService extends NodeService<Stack> {
       versions: [await this.uploadNewFileVersion(file, createOptions)],
       tags: this.tags
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: createOptions.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object };
   }
 
@@ -64,7 +64,7 @@ class StackService extends NodeService<Stack> {
       name: await this.processWriteString(file.name),
       versions: [version]
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object };
   }
 

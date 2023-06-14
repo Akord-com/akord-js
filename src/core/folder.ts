@@ -16,12 +16,12 @@ class FolderService extends NodeService<Folder> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
     this.setFunction(functions.NODE_CREATE);
-    this.setTags(options.tags);
+    this.setAkordTags(options.tags);
     const state = {
       name: await this.processWriteString(name),
       tags: this.tags
     }
-    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId }, options.arweaveTags);
     return { folderId: nodeId, transactionId, object };
   }
 };
