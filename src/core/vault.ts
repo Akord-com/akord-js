@@ -127,7 +127,7 @@ class VaultService extends Service {
       name: await this.processWriteString(name),
       termsOfAccess: createOptions.termsOfAccess,
       description: createOptions.description ? await this.processWriteString(createOptions.description) : undefined,
-      tags: this.tags
+      tags: createOptions.tags
     }
     const vaultStateTx = await this.uploadState(vaultState, createOptions.cacheOnly);
 
