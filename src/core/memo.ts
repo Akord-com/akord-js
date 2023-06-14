@@ -33,7 +33,7 @@ class MemoService extends NodeService<Memo> {
       versions: [await this.memoVersion(message)],
       tags: this.tags
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(state, { parentId: options.parentId }, options.arweaveTags);
     return { memoId: nodeId, transactionId, object };
   }
 

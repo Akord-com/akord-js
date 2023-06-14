@@ -28,7 +28,8 @@ class NodeService<T = NodeLike> extends Service {
 
   defaultCreateOptions = {
     parentId: undefined,
-    tags: []
+    tags: [],
+    arweaveTags: [],
   } as NodeCreateOptions;
 
   /**
@@ -140,7 +141,7 @@ class NodeService<T = NodeLike> extends Service {
     return this.nodeUpdate<NodeLike>();
   }
 
-  protected async nodeCreate<T>(state?: any, clientInput?: any): Promise<{
+  protected async nodeCreate<T>(state?: any, clientInput?: any, clientTags?: Tags): Promise<{
     nodeId: string,
     transactionId: string,
     object: T
@@ -150,6 +151,7 @@ class NodeService<T = NodeLike> extends Service {
     this.setFunction(functions.NODE_CREATE);
 
     this.arweaveTags = await this.getTags();
+    clientTags?.map((tag: Tag) => this.arweaveTags.push(tag));
 
     const input = {
       function: this.function,
@@ -232,7 +234,8 @@ type NodeUpdateResult = {
 
 export type NodeCreateOptions = {
   parentId?: string,
-  tags?: string[]
+  tags?: string[],
+  arweaveTags?: Tags
 }
 
 export {

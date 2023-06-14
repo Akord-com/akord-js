@@ -21,7 +21,7 @@ class FolderService extends NodeService<Folder> {
       name: await this.processWriteString(name),
       tags: this.tags
     }
-    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId }, options.arweaveTags);
     return { folderId: nodeId, transactionId, object };
   }
 };

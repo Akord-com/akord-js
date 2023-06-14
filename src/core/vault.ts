@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
 import { Vault } from "../types/vault";
 import { Service } from "./service";
-import { Tag } from "../types/contract";
+import { Tag, Tags } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
@@ -30,7 +30,8 @@ class VaultService extends Service {
     termsOfAccess: undefined,
     description: undefined,
     tags: [],
-    cacheOnly: false
+    cacheOnly: false,
+    arweaveTags: [],
   } as VaultCreateOptions;
 
   /**
@@ -112,6 +113,7 @@ class VaultService extends Service {
       new Tag(protocolTags.MEMBER_ADDRESS, address),
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
     ].concat(await this.getTags());
+    createOptions.arweaveTags?.map((tag: Tag) => this.arweaveTags.push(tag));
 
     let keys: EncryptedKeys[];
     if (!this.isPublic) {
@@ -352,7 +354,8 @@ export type VaultCreateOptions = {
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
   description?: string,
   tags?: string[],
-  cacheOnly?: boolean
+  cacheOnly?: boolean,
+  arweaveTags?: Tags
 }
 
 export type VaultUpdateOptions = {
