@@ -3,7 +3,7 @@ import { functions, protocolTags, status } from "../constants";
 import { NodeLike, NodeType } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
-import { Tag, Tags } from '../types/contract';
+import { ContractInput, Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
@@ -141,7 +141,7 @@ class NodeService<T = NodeLike> extends Service {
     return this.nodeUpdate<NodeLike>();
   }
 
-  protected async nodeCreate<T>(state?: any, clientInput?: any, clientTags?: Tags): Promise<{
+  protected async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
     nodeId: string,
     transactionId: string,
     object: T
@@ -152,11 +152,12 @@ class NodeService<T = NodeLike> extends Service {
 
     this.arweaveTags = await this.getTags();
     clientTags?.map((tag: Tag) => this.arweaveTags.push(tag));
+    this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
 
     const input = {
       function: this.function,
       ...clientInput
-    };
+    } as ContractInput;
 
     if (state) {
       const id = await this.uploadState(state);
@@ -172,13 +173,16 @@ class NodeService<T = NodeLike> extends Service {
     return { nodeId, transactionId: id, object: node };
   }
 
-  protected async nodeUpdate<T>(stateUpdates?: any, clientInput?: any): Promise<{ transactionId: string, object: T }> {
+  protected async nodeUpdate<T>(stateUpdates?: any, clientInput?: { parentId?: string }): Promise<{ transactionId: string, object: T }> {
     const input = {
       function: this.function,
       ...clientInput
-    };
+    } as ContractInput;
 
     this.arweaveTags = await this.getTags();
+    if (clientInput && this.function === functions.NODE_MOVE) {
+      this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
+    }
 
     if (stateUpdates) {
       const id = await this.mergeAndUploadState(stateUpdates);

@@ -101,7 +101,8 @@ export enum protocolTags {
   GROUP_REF = "Group-Ref",
   SIGNER_ADDRESS = "Signer-Address",
   SIGNATURE = "Signature",
-  MEMBER_ADDRESS = "Member-Address"
+  MEMBER_ADDRESS = "Member-Address",
+  PARENT_ID = "Parent-Id"
 };
 
 export enum dataTags {
