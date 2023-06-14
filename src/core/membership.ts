@@ -103,7 +103,7 @@ class MembershipService extends Service {
     };
 
     this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
-      .concat(await this.getTags());
+      .concat(await this.getTxTags());
 
     const dataTxId = await this.uploadState(state);
 
@@ -174,7 +174,7 @@ class MembershipService extends Service {
       memberTags.push(new Tag(protocolTags.MEMBERSHIP_ID, membershipId));
     }
 
-    this.arweaveTags = memberTags.concat(await super.getTags());
+    this.arweaveTags = memberTags.concat(await super.getTxTags());
 
     const input = {
       function: this.function,
@@ -208,7 +208,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, data },
-      await this.getTags()
+      await this.getTxTags()
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
@@ -230,7 +230,7 @@ class MembershipService extends Service {
     };
 
     this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
-      .concat(await this.getTags());
+      .concat(await this.getTxTags());
 
     const dataTxId = await this.uploadState(state);
 
@@ -262,7 +262,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function },
-      await this.getTags()
+      await this.getTxTags()
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
@@ -280,7 +280,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function },
-      await this.getTags()
+      await this.getTxTags()
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
@@ -295,7 +295,7 @@ class MembershipService extends Service {
     this.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
     this.setFunction(functions.MEMBERSHIP_REVOKE);
 
-    this.arweaveTags = await this.getTags();
+    this.arweaveTags = await this.getTxTags();
 
     let data: { id: string, value: string }[];
     if (!this.isPublic) {
@@ -347,7 +347,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, role },
-      await this.getTags()
+      await this.getTxTags()
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
@@ -401,7 +401,7 @@ class MembershipService extends Service {
     const { id, object } = await this.api.postContractTransaction<Membership>(
       this.vaultId,
       { function: this.function, data },
-      await this.getTags()
+      await this.getTxTags()
     );
     const membership = await this.processMembership(object, !this.isPublic, this.keys);
     return { transactionId: id, object: membership };
@@ -417,8 +417,8 @@ class MembershipService extends Service {
     this.setObjectType(this.objectType);
   }
 
-  protected async getTags(): Promise<Tags> {
-    const tags = await super.getTags();
+  protected async getTxTags(): Promise<Tags> {
+    const tags = await super.getTxTags();
     return tags.concat(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
   }
 

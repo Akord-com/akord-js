@@ -51,7 +51,7 @@ class Service {
   actionRef: string
   groupRef: string
 
-  tags: string[] // akord tags
+  tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
 
   constructor(wallet: Wallet, api: Api, encryptionKeys?: EncryptionKeys) {
@@ -94,7 +94,7 @@ class Service {
     this.dataEncrypter.setRawPublicKey(publicKey);
   }
 
-  setTags(tags: string[]) {
+  setAkordTags(tags: string[]) {
     this.tags = tags;
   }
 
@@ -342,7 +342,7 @@ class Service {
     return newState;
   }
 
-  protected async getTags(): Promise<Tags> {
+  protected async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
@@ -357,8 +357,12 @@ class Service {
     if (this.actionRef) {
       tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
     }
-    this.tags?.map((tag: string) => tags.push(new Tag(AKORD_TAG, tag)));
-    return tags;
+    this.tags?.map((tag: string) =>
+      tag.split(" ").map((value: string) =>
+        tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
+    );
+    // remove duplicates
+    return [...new Map(tags.map(item => [item.value, item])).values()];
   }
 
   protected async handleListErrors<T>(originalItems: Array<T>, promises: Array<Promise<T>>)

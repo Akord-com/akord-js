@@ -28,7 +28,7 @@ class MemoService extends NodeService<Memo> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.MEMO_CREATE);
     this.setFunction(functions.NODE_CREATE);
-    this.setTags(options.tags);
+    this.setAkordTags(options.tags);
     const state = {
       versions: [await this.memoVersion(message)],
       tags: this.tags
@@ -46,7 +46,7 @@ class MemoService extends NodeService<Memo> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_ADD_REACTION);
     this.setFunction(functions.NODE_UPDATE);
-    this.arweaveTags = await this.getTags();
+    this.arweaveTags = await this.getTxTags();
 
     const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
@@ -71,7 +71,7 @@ class MemoService extends NodeService<Memo> {
     await this.setVaultContextFromNodeId(memoId, this.objectType);
     this.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
     this.setFunction(functions.NODE_UPDATE);
-    this.arweaveTags = await this.getTags();
+    this.arweaveTags = await this.getTxTags();
 
     const state = await this.deleteReaction(reaction);
     const dataTxId = await this.uploadState(state);

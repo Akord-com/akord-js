@@ -150,7 +150,7 @@ class NodeService<T = NodeLike> extends Service {
     this.setObjectId(nodeId);
     this.setFunction(functions.NODE_CREATE);
 
-    this.arweaveTags = await this.getTags();
+    this.arweaveTags = await this.getTxTags();
     clientTags?.map((tag: Tag) => this.arweaveTags.push(tag));
     this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
 
@@ -179,7 +179,7 @@ class NodeService<T = NodeLike> extends Service {
       ...clientInput
     } as ContractInput;
 
-    this.arweaveTags = await this.getTags();
+    this.arweaveTags = await this.getTxTags();
     if (clientInput && this.function === functions.NODE_MOVE) {
       this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
     }
@@ -207,8 +207,8 @@ class NodeService<T = NodeLike> extends Service {
     this.setObjectType(type);
   }
 
-  protected async getTags(): Promise<Tags> {
-    const tags = await super.getTags();
+  protected async getTxTags(): Promise<Tags> {
+    const tags = await super.getTxTags();
     return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
   }
 
