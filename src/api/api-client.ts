@@ -359,60 +359,6 @@ export class ApiClient {
    * - resourceId()
    */
   async uploadFile(): Promise<string[]> {
-    this._dir = this._filesDir;
-    const { resourceUri } = await this.upload();
-    if (!this._cacheOnly) {
-      const arweaveTx = await this.fileTransaction();
-      resourceUri.push(`arweave:${arweaveTx}`);
-    }
-    return resourceUri;
-  }
-
-  /**
-   * 
-   * @requires: 
-   * - auth() 
-   * - resourceId()
-   */
-  async downloadFile() {
-    this._dir = this._filesDir;
-    return await this.download();
-  }
-
-  /**
-* 
-* @requires: 
-* - auth() 
-* - resourceId()
-*/
-  async downloadState() {
-    this._dir = this._stateDir;
-    return await this.download();
-  }
-
-  /**
-  * Creates data item from uploaded resource. Schedules bundled transaction
-  * @requires: 
-  * - auth() 
-  * - resourceId() 
-  * @uses:
-  * - tags()
-  */
-  private async fileTransaction() {
-    if (!this._resourceId) {
-      this._resourceId = uuid();
-    }
-
-    this.data({
-      resourceUrl: this._resourceId,
-      tags: this._tags
-    });
-
-    const response = await this.post(`${this._apiurl}/${this._transactionUri}/files`);
-    return response.txId;
-  }
-
-  private async upload() {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
@@ -420,17 +366,16 @@ export class ApiClient {
     if (!this._data) {
       throw new BadRequest('Missing data to upload. Use ApiClient#data() to add it')
     }
-    if (!this._resourceId) {
-      this._resourceId = this._isPublic ? this._publicDataDir + '/' + uuid() : uuid();
-    }
 
-    const me = this
+    const me = this;
     const config = {
-      method: 'put',
-      url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
+      method: 'post',
+      url: `${this._apiurl}/files`,
       data: this._data,
       headers: {
         'Authorization': auth,
+        'x-amz-meta-tags': JSON.stringify(this._tags),
+        'x-amz-meta-storage-class': this._storage,
         'Content-Type': 'application/octet-stream'
       },
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -445,34 +390,46 @@ export class ApiClient {
           me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
         }
       }
-    } as AxiosRequestConfig
-
-    if (this._tags) {
-      for (let tag of this._tags) {
-        // TODO: move it into the API
-        // ensure S3 backward compatibility
-        if (tag.name === "Encrypted-Key") {
-          config.headers['x-amz-meta-encryptedkey'] = tag.value;
-        } else if (tag.name === "Initialization-Vector") {
-          config.headers['x-amz-meta-iv'] = tag.value;
-        } else {
-          config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
-        }
-      }
-      config.headers['x-amz-meta-storage-class'] = this._storage;
-      config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
-    }
+    } as AxiosRequestConfig;
 
     try {
       const response = await axios(config);
-      return { resourceUri: [`s3:${this._resourceId}`] };
-      // return { resourceUri: response.data.resourceUri };
+      return response.data.resourceUri;
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
   }
 
-  private async download() {
+  /**
+  * 
+  * @requires: 
+  * - auth() 
+  * - resourceId()
+  */
+  async downloadState() {
+    this._dir = this._stateDir;
+    return await this.download();
+  }
+
+  /**
+  * 
+  * @requires: 
+  * - auth() 
+  * - resourceId()
+  */
+  async downloadFile() {
+    this._dir = this._filesDir;
+    return await this.download();
+  }
+
+
+  /**
+   * 
+   * @requires: 
+   * - auth() 
+   * - resourceId()
+   */
+  async download() {
     const auth = await Auth.getAuthorization();
     if (!auth && !this._isPublic) {
       throw new Unauthorized("Authentication is required to use Akord API");
