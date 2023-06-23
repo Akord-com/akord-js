@@ -4,3 +4,8 @@ export * from "./node";
 export * from "./transaction";
 export * from "./user";
 export * from "./vault";
+export * from "./stack";
+export * from "./folder";
+export * from "./memo";
+export * from "./contract";
+export * from "./file";
