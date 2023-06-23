@@ -16,12 +16,10 @@ import { StorageClass } from "../types/file";
 export class ApiClient {
   private _storageurl: string;
   private _apiurl: string;
-  private _dir: string = "files";
   private _filesDir: string = "files";
   private _publicDataDir: string = "public";
   private _contractUri: string = "contracts";
   private _transactionUri: string = "transactions";
-  private _stateDir: string = "states";
   private _resourceId: string;
   private _isPublic: boolean;
   private _data: any;
@@ -407,8 +405,7 @@ export class ApiClient {
   * - resourceId()
   */
   async downloadState() {
-    this._dir = this._stateDir;
-    return await this.download();
+    return await this.get(`${this._apiurl}/states/${this._resourceId}`);
   }
 
   /**
@@ -418,18 +415,6 @@ export class ApiClient {
   * - resourceId()
   */
   async downloadFile() {
-    this._dir = this._filesDir;
-    return await this.download();
-  }
-
-
-  /**
-   * 
-   * @requires: 
-   * - auth() 
-   * - resourceId()
-   */
-  async download() {
     const auth = await Auth.getAuthorization();
     if (!auth && !this._isPublic) {
       throw new Unauthorized("Authentication is required to use Akord API");
@@ -441,7 +426,7 @@ export class ApiClient {
     const me = this;
     const config = {
       method: 'get',
-      url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
+      url: `${this._storageurl}/${this._filesDir}/${this._resourceId}`,
       responseType: this._responseType,
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onDownloadProgress(progressEvent) {
