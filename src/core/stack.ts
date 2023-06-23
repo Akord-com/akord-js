@@ -20,6 +20,7 @@ class StackService extends NodeService<Stack> {
    */
   public async create(vaultId: string, file: FileLike, name: string, options: StackCreateOptions = this.defaultCreateOptions):
     Promise<StackCreateResult> {
+    await this.setVaultContext(vaultId);
     const optionsFromVault = {
       storage: this.vault.cacheOnly ? StorageClass.S3 : StorageClass.ARWEAVE
     }
@@ -28,7 +29,6 @@ class StackService extends NodeService<Stack> {
       ...optionsFromVault,
       ...options
     }
-    await this.setVaultContext(vaultId);
     this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
