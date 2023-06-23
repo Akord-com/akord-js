@@ -4,7 +4,8 @@ import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
-import { DownloadOptions, FileDownloadOptions, FileLike, FileUploadOptions, FileUploadResult, Hooks, StorageClass } from "../types/file";
+import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, Hooks, StorageClass } from "../types/file";
+import { FileLike } from "../types/file-like";
 import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
@@ -322,10 +323,10 @@ class FileService extends Service {
 async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)
   : Promise<FileLike> {
   if (typeof window === "undefined") {
-    const node = await import("../types/file")
+    const node = await import("../types/file-like");
     return new node.NodeJs.File(sources, name, mimeType, lastModified);
   } else {
-    return new File(sources, name, { type: mimeType, lastModified })
+    return new File(sources, name, { type: mimeType, lastModified });
   }
 }
 

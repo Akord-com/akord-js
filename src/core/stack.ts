@@ -1,7 +1,8 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
 import { FileService } from "./file";
-import { FileLike, FileUploadOptions, FileVersion, StorageClass } from "../types/file";
+import { FileUploadOptions, FileVersion, StorageClass } from "../types/file";
+import { FileLike } from "../types/file-like";
 import { nodeType, NodeCreateOptions } from "../types/node";
 import { Stack, StackCreateOptions, StackCreateResult, StackUpdateResult } from "../types/stack";
 

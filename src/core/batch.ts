@@ -5,7 +5,7 @@ import { StackService } from "./stack";
 import { NodeService } from "./node";
 import { Node, NodeType } from "../types/node";
 import { StackCreateOptions, Stack } from "../types/stack";
-import { FileLike } from "../types/file";
+import { FileLike } from "../types/file-like";
 import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
 import { RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
 
