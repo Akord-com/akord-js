@@ -16,7 +16,7 @@ class FolderService extends NodeService<Folder> {
     await this.setVaultContext(vaultId);
     this.setActionRef(actionRefs.FOLDER_CREATE);
     this.setFunction(functions.NODE_CREATE);
-    this.setAkordTags(options.tags);
+    this.setAkordTags((this.isPublic ? [name] : []).concat(options.tags));
     const state = {
       name: await this.processWriteString(name),
       tags: this.tags
