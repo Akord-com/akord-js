@@ -259,12 +259,14 @@ class Service {
 
   protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
     const processedMemberDetails = {} as ProfileDetails;
-    if (memberDetails.name) {
-      processedMemberDetails.name = await this.processWriteString(memberDetails.name);
-    }
-    if (memberDetails.avatar) {
-      const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
-      processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
+    if (!this.isPublic) {
+      if (memberDetails.name) {
+        processedMemberDetails.name = await this.processWriteString(memberDetails.name);
+      }
+      if (memberDetails.avatar) {
+        const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
+        processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
+      }
     }
     return new ProfileDetails(processedMemberDetails);
   }
