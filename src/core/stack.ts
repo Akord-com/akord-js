@@ -26,7 +26,7 @@ class StackService extends NodeService<Stack> {
     this.setVaultContextForFile();
     this.setActionRef(actionRefs.STACK_CREATE);
     this.setFunction(functions.NODE_CREATE);
-    this.setAkordTags(createOptions.tags);
+    this.setAkordTags((this.isPublic ? [name] : []).concat(createOptions.tags));
 
     createOptions.cacheOnly = this.vault.cacheOnly;
 
