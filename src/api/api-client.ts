@@ -449,8 +449,6 @@ export class ApiClient {
           config.headers['x-amz-meta-encryptedkey'] = tag.value;
         } else if (tag.name === "Initialization-Vector") {
           config.headers['x-amz-meta-iv'] = tag.value;
-        } else {
-          config.headers['x-amz-meta-' + tag.name.toLowerCase()] = tag.value;
         }
       }
       config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
