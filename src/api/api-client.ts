@@ -1,5 +1,4 @@
 import axios, { AxiosRequestConfig } from "axios";
-import { v4 as uuid } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
@@ -17,7 +16,6 @@ export class ApiClient {
   private _storageurl: string;
   private _apiurl: string;
   private _filesDir: string = "files";
-  private _publicDataDir: string = "public";
   private _contractUri: string = "contracts";
   private _transactionUri: string = "transactions";
   private _resourceId: string;
@@ -368,7 +366,7 @@ export class ApiClient {
     const me = this;
     const config = {
       method: 'post',
-      url: `${this._apiurl}/files`,
+      url: `${this._storageurl}/files`,
       data: this._data,
       headers: {
         'Authorization': auth,
