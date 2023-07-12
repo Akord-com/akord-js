@@ -424,7 +424,7 @@ export class ApiClient {
     const me = this;
     const config = {
       method: 'get',
-      url: `${this._storageurl}/${this._filesDir}/${this._resourceId}`,
+      url: `${this._storageurl}/${this._resourceId}`,
       responseType: this._responseType,
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onDownloadProgress(progressEvent) {
