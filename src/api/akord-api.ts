@@ -103,7 +103,10 @@ export default class AkordApi extends Api {
       .downloadFile();
 
     const fileData = response.data;
-    const metadata = { encryptedKey: response.headers["x-amz-meta-encryptedkey"], iv: response.headers["x-amz-meta-iv"] };
+    const metadata = {
+      encryptedKey: response.headers["x-amz-meta-encrypted-key"] || response.headers["x-amz-meta-encryptedkey"],
+      iv: response.headers["x-amz-meta-initialization-vector"] || response.headers["x-amz-meta-iv"]
+    };
     return { fileData, metadata };
   };
 
