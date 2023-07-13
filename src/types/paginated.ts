@@ -5,7 +5,7 @@ const PAGINATION_HEADER = 'next-page'
 export type Paginated<T> = {
   items: Array<T>
   nextToken: string
-  errors?: Array<{ id: string, error: string }>
+  errors?: Array<{ id: string, error: Error }>
 }
 
 export const isPaginated = (response: AxiosResponse) => {

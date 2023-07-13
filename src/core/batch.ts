@@ -117,7 +117,7 @@ class BatchService extends Service {
     }
 
     const data = [] as { stackId: string, transactionId: string, object: Stack }[];
-    const errors = [] as { name: string, message: string }[];
+    const errors = [] as { name: string, message: string, error: Error }[];
 
     if (options.progressHook) {
       const onProgress = options.progressHook
@@ -150,8 +150,8 @@ class BatchService extends Service {
           if (options.onStackCreated) {
             await options.onStackCreated(stackResponse.object);
           }
-        } catch (e) {
-          errors.push({ name: item.name, message: e.toString() })
+        } catch (error) {
+          errors.push({ name: item.name, message: error.toString(), error })
         };
       }))
       if (options.cancelHook?.signal.aborted) {
