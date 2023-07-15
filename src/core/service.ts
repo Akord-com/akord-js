@@ -359,7 +359,9 @@ class Service {
     if (this.actionRef) {
       tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
     }
-    this.tags?.map((tag: string) =>
+    this.tags
+    ?.filter(tag => tag)
+    ?.map((tag: string) =>
       tag.split(" ").map((value: string) =>
         tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
     );
