@@ -8,7 +8,7 @@ import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 
-class NodeService<T = NodeLike> extends Service {
+class NodeService<T> extends Service {
   objectType: NodeType;
 
   defaultListOptions = {
@@ -51,17 +51,17 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {ListOptions} options
    * @returns Promise with paginated nodes within given vault
    */
-  public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<NodeLike>> {
+  public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<T>> {
     const listOptions = {
       ...this.defaultListOptions,
       ...options
     }
-    const response = await this.api.getNodesByVaultId<NodeLike>(vaultId, this.objectType, listOptions);
+    const response = await this.api.getNodesByVaultId<T>(vaultId, this.objectType, listOptions);
     const promises = response.items
-      .map(async nodeProto => {
+      .map(async (nodeProto: any) => {
         return await this.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
-      }) as Promise<NodeLike>[];
-    const { items, errors } = await this.handleListErrors<NodeLike>(response.items, promises);
+      });
+    const { items, errors } = await this.handleListErrors<T>(response.items, promises);
     return {
       items,
       nextToken: response.nextToken,
@@ -74,11 +74,11 @@ class NodeService<T = NodeLike> extends Service {
    * @param  {ListOptions} options
    * @returns Promise with all nodes within given vault
    */
-  public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<NodeLike>> {
+  public async listAll(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Array<T>> {
     const list = async (options: ListOptions & { vaultId: string }) => {
       return await this.list(options.vaultId, options);
     }
-    return await this.paginate<NodeLike>(list, { ...options, vaultId });
+    return await this.paginate<T>(list, { ...options, vaultId });
   }
 
   /**
@@ -212,7 +212,7 @@ class NodeService<T = NodeLike> extends Service {
     return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
   }
 
-  protected async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<NodeLike> {
+  protected async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
     const node = this.nodeInstance(object, keys);
     if (shouldDecrypt) {
       try {
@@ -221,7 +221,7 @@ class NodeService<T = NodeLike> extends Service {
         throw new IncorrectEncryptionKey(error);
       }
     }
-    return node;
+    return node as T;
   }
 
   protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike

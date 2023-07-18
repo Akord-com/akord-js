@@ -34,7 +34,7 @@ class ProfileService extends Service {
   })
   public async update(name: string, avatar: ArrayBuffer): Promise<{
     transactions: { id: string, transactionId: string }[],
-    errors: { id: string, error: any }[]
+    errors: { id: string, error: Error }[]
   }> {
     // update profile
     const user = await this.api.getUser();

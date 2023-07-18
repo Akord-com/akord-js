@@ -257,12 +257,14 @@ class Service {
 
   protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
     const processedMemberDetails = {} as ProfileDetails;
-    if (memberDetails.name) {
-      processedMemberDetails.name = await this.processWriteString(memberDetails.name);
-    }
-    if (memberDetails.avatar) {
-      const resourceUri = await this.processAvatar(memberDetails.avatar, cacheOnly);
-      processedMemberDetails.avatarUri = resourceUri;
+    if (!this.isPublic) {
+      if (memberDetails.name) {
+        processedMemberDetails.name = await this.processWriteString(memberDetails.name);
+      }
+      if (memberDetails.avatar) {
+        const resourceUri = await this.processAvatar(memberDetails.avatar, cacheOnly);
+        processedMemberDetails.avatarUri = resourceUri;
+      }
     }
     return new ProfileDetails(processedMemberDetails);
   }
@@ -355,22 +357,24 @@ class Service {
     if (this.actionRef) {
       tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
     }
-    this.tags?.map((tag: string) =>
-      tag.split(" ").map((value: string) =>
-        tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
-    );
+    this.tags
+      ?.filter(tag => tag)
+      ?.map((tag: string) =>
+        tag.split(" ").map((value: string) =>
+          tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
+      );
     // remove duplicates
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
 
   protected async handleListErrors<T>(originalItems: Array<T>, promises: Array<Promise<T>>)
-    : Promise<{ items: Array<T>, errors: Array<{ id: string, error: string }> }> {
+    : Promise<{ items: Array<T>, errors: Array<{ id: string, error: Error }> }> {
     const results = await Promise.all(promises.map(p => p.catch(e => e)));
     const items = results.filter(result => !(result instanceof Error));
     const errors = results
       .map((result, index) => ({ result, index }))
       .filter((mapped) => mapped.result instanceof Error)
-      .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result.message }));
+      .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result }));
     return { items, errors };
   }
 
