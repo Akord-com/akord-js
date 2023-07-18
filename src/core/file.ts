@@ -135,7 +135,7 @@ class FileService extends Service {
       .public(this.isPublic)
       .storage(StorageType.S3)
       .uploadFile()
-    resourceUri.push(`arweave:${fileTxId}`);
+    resourceUri.push(`${StorageType.ARWEAVE}:${fileTxId}`);
     return { file, resourceUri };
   }
 
