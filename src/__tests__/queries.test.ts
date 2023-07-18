@@ -1,7 +1,7 @@
 import { Akord, Auth } from "../index";
 import { email, password } from './data/test-credentials';
 import { vaults, fileId, message, publicVaultId, privateVaultId, parentId } from './data/content';
-import { NodeJs } from "../types/file";
+import { NodeJs } from "../types/file-like";
 
 let privateClient: Akord;
 let publicClient: Akord;

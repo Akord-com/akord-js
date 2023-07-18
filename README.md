@@ -674,7 +674,7 @@ do {
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
+import { NodeJs } from "@akord/akord-js/lib/types/file-like";
 const file = await NodeJs.File.fromPath("path to your file");
 
 // create a stack with custom arweave tags
@@ -731,7 +731,7 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
+import { NodeJs } from "@akord/akord-js/lib/types/file-like";
 const file = await NodeJs.File.fromPath("path to your file");
 const { transactionId } = await akord.stack.uploadRevision(stackId, file);
 ```

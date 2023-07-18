@@ -2,7 +2,8 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
-import { NodeJs, StorageClass } from "../types/file";
+import { StorageClass } from "../types/file";
+import { NodeJs } from "../types/file-like";
 import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
 
