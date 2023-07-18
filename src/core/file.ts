@@ -4,7 +4,7 @@ import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
-import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, Hooks, StorageClass } from "../types/file";
+import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, Hooks, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
 import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
@@ -133,7 +133,7 @@ class FileService extends Service {
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
-      .storage(StorageClass.S3)
+      .storage(StorageType.S3)
       .uploadFile()
     resourceUri.push(`arweave:${fileTxId}`);
     return { file, resourceUri };
@@ -260,7 +260,7 @@ class FileService extends Service {
       .data(chunk.processedData)
       .tags(tags.concat(chunk.encryptionTags))
       .public(this.isPublic)
-      .storage(StorageClass.S3)
+      .storage(StorageType.S3)
       .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
       .cancelHook(options.cancelHook)
       .uploadFile()

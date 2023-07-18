@@ -26,7 +26,7 @@ export class FileVersion extends Encryptable implements Version {
     this.status = fileVersionProto.status;
   }
 
-  getUri(type: StorageClass): string {
+  getUri(type: StorageType): string {
     const resourceUri = this.resourceUri
       ?.find(uri => uri.startsWith(type))
       ?.replace(type + ":", "");
@@ -52,7 +52,7 @@ export type Hooks = {
 
 export type FileUploadOptions = Hooks & {
   public?: boolean,
-  storage?: StorageClass,
+  storage?: StorageType,
   arweaveTags?: Tags
 }
 
@@ -64,7 +64,7 @@ export type FileDownloadOptions = Hooks & {
   resourceSize?: number
 }
 
-export enum StorageClass {
+export enum StorageType {
   ARWEAVE = "arweave",
   S3 = "s3"
 }

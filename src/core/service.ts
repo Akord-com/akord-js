@@ -26,7 +26,7 @@ import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ProfileDetails } from "../types/profile-details";
 import { ListOptions } from "../types/query-options";
-import { StorageClass } from "../types/file";
+import { StorageType } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
 
 export const STATE_CONTENT_TYPE = "application/json";
@@ -251,7 +251,7 @@ class Service {
 
   protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    const storage = cacheOnly ? StorageClass.S3 : StorageClass.ARWEAVE;
+    const storage = cacheOnly ? StorageType.S3 : StorageType.ARWEAVE;
     return this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
   }
 

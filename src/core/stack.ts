@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
 import { FileService } from "./file";
-import { FileUploadOptions, FileVersion, StorageClass } from "../types/file";
+import { FileUploadOptions, FileVersion, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
 import { nodeType, NodeCreateOptions } from "../types/node";
 import { Stack, StackCreateOptions, StackCreateResult, StackUpdateResult } from "../types/stack";
@@ -22,7 +22,7 @@ class StackService extends NodeService<Stack> {
     Promise<StackCreateResult> {
     await this.setVaultContext(vaultId);
     const optionsFromVault = {
-      storage: this.vault.cacheOnly ? StorageClass.S3 : StorageClass.ARWEAVE
+      storage: this.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
     }
     const createOptions = {
       ...this.defaultCreateOptions,
@@ -84,7 +84,7 @@ class StackService extends NodeService<Stack> {
     this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
 
     const optionsFromVault = {
-      storage: this.object.__cacheOnly__ ? StorageClass.S3 : StorageClass.ARWEAVE
+      storage: this.object.__cacheOnly__ ? StorageType.S3 : StorageType.ARWEAVE
     }
 
     const uploadOptions = {
@@ -110,7 +110,7 @@ class StackService extends NodeService<Stack> {
     const version = stack.getVersion(index);
     await this.setVaultContext(stack.vaultId);
     this.setVaultContextForFile();
-    const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageClass.S3), { public: this.isPublic });
+    const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: this.isPublic });
     const data = await this.processReadRaw(fileData, metadata);
     const name = await this.processReadString(version.name);
     return { name, data };
@@ -119,11 +119,11 @@ class StackService extends NodeService<Stack> {
   /**
    * Get stack file uri by index, return the latest file uri by default
    * @param  {string} stackId
-   * @param  {StorageClass} [type] storage type, default to arweave
+   * @param  {StorageType} [type] storage type, default to arweave
    * @param  {number} [index] file version index, default to latest
    * @returns Promise with stack file uri
    */
-  public async getUri(stackId: string, type: StorageClass = StorageClass.ARWEAVE, index?: number): Promise<string> {
+  public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
     return stack.getUri(type, index);
   }

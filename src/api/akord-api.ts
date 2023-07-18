@@ -11,11 +11,11 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions, StorageClass } from "../types/file";
+import { FileDownloadOptions, FileUploadOptions, StorageType } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
 
 export const defaultFileUploadOptions = {
-  storage: StorageClass.ARWEAVE,
+  storage: StorageType.ARWEAVE,
   public: false
 };
 

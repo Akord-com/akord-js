@@ -10,7 +10,7 @@ import { throwError } from "../errors/error";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
-import { StorageClass } from "../types/file";
+import { StorageType } from "../types/file";
 
 export class ApiClient {
   private _storageurl: string;
@@ -32,7 +32,7 @@ export class ApiClient {
   private _input: ContractInput;
   private _vaultId: string;
   private _cacheOnly: boolean;
-  private _storage: StorageClass;
+  private _storage: StorageType;
   private _numberOfChunks: number;
 
   constructor() { }
@@ -59,7 +59,7 @@ export class ApiClient {
     return this;
   }
 
-  storage(storage: StorageClass): ApiClient {
+  storage(storage: StorageType): ApiClient {
     this._storage = storage;
     return this;
   }

@@ -1,6 +1,6 @@
 import { encrypted, EncryptedKeys } from "@akord/crypto";
 import { Node, NodeCreateOptions } from "./node";
-import { FileUploadOptions, FileVersion, StorageClass } from "./file";
+import { FileUploadOptions, FileVersion, StorageType } from "./file";
 
 export class Stack extends Node {
   @encrypted() name: string;
@@ -12,7 +12,7 @@ export class Stack extends Node {
     this.versions = (nodeLike.versions || []).map((version: FileVersion) => new FileVersion(version, keys));
   }
 
-  getUri(type: StorageClass = StorageClass.ARWEAVE, index?: number): string {
+  getUri(type: StorageType = StorageType.ARWEAVE, index?: number): string {
     const version = this.getVersion(index);
     return version.getUri(type);
   }
