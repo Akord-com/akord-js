@@ -414,5 +414,6 @@ class Service {
 }
 
 export {
-  Service
+  Service,
+  EncryptionMetadata
 }
