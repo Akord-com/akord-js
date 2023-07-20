@@ -117,7 +117,7 @@ class StackService extends NodeService<Stack> {
     return stack.getUri(type, index);
   }
 
-  private async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
+  public async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
     const {
       resourceTx,
       resourceUrl,
@@ -138,7 +138,7 @@ class StackService extends NodeService<Stack> {
     return version;
   }
 
-  protected setVaultContextForFile(): void {
+  setVaultContextForFile(): void {
     this.fileService.setKeys(this.keys);
     this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
     this.fileService.setVaultId(this.vaultId);

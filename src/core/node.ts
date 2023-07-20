@@ -1,12 +1,13 @@
 import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
-import { NodeLike, NodeType } from '../types/node';
+import { Folder, Memo, NodeLike, NodeType, Stack } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
 import { ContractInput, Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
+import { BadRequest } from '../errors/bad-request';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -207,12 +208,12 @@ class NodeService<T> extends Service {
     this.setObjectType(type);
   }
 
-  protected async getTxTags(): Promise<Tags> {
+  async getTxTags(): Promise<Tags> {
     const tags = await super.getTxTags();
     return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
   }
 
-  protected async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
+  async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
     const node = this.nodeInstance(object, keys);
     if (shouldDecrypt) {
       try {
@@ -227,7 +228,16 @@ class NodeService<T> extends Service {
   protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
 
   private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
-    return new this.NodeType(nodeProto, keys);
+    // TODO: use a generic NodeLike constructor
+    if (this.objectType === "Folder") {
+      return new Folder(nodeProto, keys);
+    } else if (this.objectType === "Stack") {
+      return new Stack(nodeProto, keys);
+    } else if (this.objectType === "Memo") {
+      return new Memo(nodeProto, keys);
+    } else {
+      throw new BadRequest("Given type is not supported: " + this.objectType);
+    }
   }
 }
 

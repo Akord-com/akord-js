@@ -82,6 +82,22 @@ class Service {
     this.groupRef = groupRef;
   }
 
+  setActionRef(actionRef: string) {
+    this.actionRef = actionRef;
+  }
+
+  setObjectType(objectType: ObjectType) {
+    this.objectType = objectType;
+  }
+
+  setFunction(functionName: functions) {
+    this.function = functionName;
+  }
+
+  setObject(object: NodeLike | Membership | Vault) {
+    this.object = object;
+  }
+
   setIsPublic(isPublic: boolean) {
     this.isPublic = isPublic;
   }
@@ -115,7 +131,7 @@ class Service {
     }
   }
 
-  protected async setVaultContext(vaultId: string) {
+  async setVaultContext(vaultId: string) {
     const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
@@ -123,7 +139,7 @@ class Service {
     await this.setMembershipKeys(vault);
   }
 
-  protected async setMembershipKeys(object: Object) {
+  async setMembershipKeys(object: Object) {
     if (!this.isPublic) {
       const keys = object.__keys__.map(((keyPair: any) => {
         return {
@@ -146,23 +162,8 @@ class Service {
     }
   }
 
-  protected setObjectType(objectType: ObjectType) {
-    this.objectType = objectType;
-  }
-
-  protected setFunction(functionName: functions) {
-    this.function = functionName;
-  }
-
-  protected setActionRef(actionRef: string) {
-    this.actionRef = actionRef;
-  }
-
-  protected setObject(object: NodeLike | Membership | Vault) {
-    this.object = object;
-  }
-
   protected async getProfileDetails(): Promise<ProfileDetails> {
+    return <any>{};
     const user = await this.api.getUser();
     if (user) {
       const profileEncrypter = new Encrypter(this.wallet, null, null);
@@ -229,7 +230,7 @@ class Service {
     };
   }
 
-  protected async processWriteString(data: string): Promise<string> {
+  async processWriteString(data: string): Promise<string> {
     if (this.isPublic) return data;
     let encryptedPayload: string;
     try {
@@ -344,7 +345,7 @@ class Service {
     return newState;
   }
 
-  protected async getTxTags(): Promise<Tags> {
+  async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
