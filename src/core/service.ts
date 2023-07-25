@@ -163,7 +163,6 @@ class Service {
   }
 
   protected async getProfileDetails(): Promise<ProfileDetails> {
-    return <any>{};
     const user = await this.api.getUser();
     if (user) {
       const profileEncrypter = new Encrypter(this.wallet, null, null);
