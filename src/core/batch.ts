@@ -12,6 +12,7 @@ import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { NodeService } from "./node";
+import { BadRequest } from "../errors/bad-request";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -256,33 +257,103 @@ class BatchService extends Service {
    * @param  {MembershipCreateOptions} [options] invitation email message, etc.
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], options: MembershipCreateOptions = {}): Promise<BatchMembershipInviteResponse> {
+  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], options: MembershipCreateOptions = {})
+    : Promise<BatchMembershipInviteResponse> {
     this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
-    const data = [] as { membershipId: string, transactionId: string }[];
+    const data = [] as BatchMembershipInviteResponse["data"];
     const errors = [];
 
-    await Promise.all(items.map(async (item) => {
+    const transactions = [] as {
+      input: ContractInput,
+      tags: Tags,
+      item: { email: string, role: RoleType }
+    }[];
+
+    const vault = await this.api.getVault(vaultId);
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.public);
+    await this.setMembershipKeys(vault);
+
+    // upload metadata
+    await Promise.all(items.map(async (item: { email: string, role: RoleType }) => {
       const email = item.email.toLowerCase();
       const role = item.role;
       const member = members.find(item => item.email?.toLowerCase() === email);
       if (member && activeStatus.includes(member.status)) {
-        errors.push({ email: email, message: "Membership already exists for this user." });
+        const message = "Membership already exists for this user.";
+        errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
         const userHasAccount = await this.api.existsUser(email);
         const service = new MembershipService(this.wallet, this.api);
         service.setGroupRef(this.groupRef);
         if (userHasAccount) {
-          data.push(await service.invite(vaultId, email, role, options));
+          service.setVault(vault);
+          service.setVaultId(vaultId);
+          service.setIsPublic(vault.public);
+          await service.setMembershipKeys(this.vault);
+          service.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+          service.setFunction(functions.MEMBERSHIP_INVITE);
+          const membershipId = uuidv4();
+          service.setObjectId(membershipId);
+
+          const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(email);
+          const state = {
+            keys: await service.prepareMemberKeys(publicKey),
+            encPublicSigningKey: await service.processWriteString(publicSigningKey)
+          };
+
+          service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+            .concat(await service.getTxTags());
+
+          const dataTxId = await service.uploadState(state);
+
+          const input = {
+            function: service.function,
+            address,
+            role,
+            data: dataTxId
+          }
+          transactions.push({
+            input: input,
+            tags: service.arweaveTags,
+            item: item
+          });
         } else {
-          data.push({
-            ...(await service.inviteNewUser(vaultId, email, role, options)),
-            transactionId: null
-          })
+          try {
+            const { id } = await this.api.inviteNewUser(vaultId, email, role, options.message);
+            data.push({
+              membershipId: id,
+              transactionId: null
+            })
+          } catch (error: any) {
+            errors.push({
+              email: email,
+              error: error,
+              message: error.message,
+              item: item
+            })
+          }
         }
       }
     }
     ));
+
+    for (let tx of transactions) {
+      try {
+        const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags);
+        const membership = await new MembershipService(this.wallet, this.api).processMembership(object as Membership, !this.isPublic, this.keys);
+        data.push({ membershipId: membership.id, transactionId: id, object: membership });
+      } catch (error: any) {
+        errors.push({
+          email: tx.item.email,
+          error: error,
+          message: error.message,
+          item: tx.item
+        })
+      }
+    }
     return { data: data, errors: errors };
   }
 

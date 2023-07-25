@@ -434,7 +434,7 @@ class MembershipService extends Service {
     return membership;
   }
 
-  private async prepareMemberKeys(publicKey: string): Promise<EncryptedKeys[]> {
+  async prepareMemberKeys(publicKey: string): Promise<EncryptedKeys[]> {
     if (!this.isPublic) {
       const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(publicKey));
       try {
