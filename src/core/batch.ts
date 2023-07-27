@@ -10,7 +10,6 @@ import { Hooks } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
-import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { NodeService } from "./node";
 import { BadRequest } from "../errors/bad-request";
 
@@ -104,7 +103,7 @@ class BatchService extends Service {
    */
   public async stackCreate(
     vaultId: string,
-    items: { file: FileLike, name: string, options?: StackCreateOptions }[],
+    items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
     const size = items.reduce((sum, stack) => {
@@ -113,7 +112,6 @@ class BatchService extends Service {
     let progress = 0;
     let processedStacksCount = 0;
     const perFileProgress = new Map();
-    this.setGroupRef(items);
     if (options.processingCountHook) {
       options.processingCountHook(processedStacksCount);
     }
@@ -132,11 +130,15 @@ class BatchService extends Service {
       options.progressHook = stackProgressHook;
     }
 
+    // set service context
     const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
     await this.setMembershipKeys(vault);
+    this.setGroupRef(items);
+    this.setActionRef(actionRefs.STACK_CREATE);
+    this.setFunction(functions.NODE_CREATE);
 
     const stackCreateOptions = {
       ...options,
@@ -144,24 +146,12 @@ class BatchService extends Service {
     }
 
     for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
-      const transactions = [] as {
-        vaultId: string,
-        input: ContractInput,
-        tags: Tags,
-        item: { file: FileLike, name: string, options?: StackCreateOptions }
-      }[];
+      const transactions = [] as StackCreateTransaction[];
 
       // upload file data & metadata
       await Promise.all(chunk.map(async (item) => {
-        const service = new StackService(this.wallet, this.api);
-        service.setVault(vault);
-        service.setVaultId(vaultId);
-        service.setIsPublic(vault.public);
-        await service.setMembershipKeys(vault);
+        const service = new StackService(this.wallet, this.api, this);
         service.setVaultContextForFile();
-        service.setActionRef(actionRefs.STACK_CREATE);
-        service.setFunction(functions.NODE_CREATE);
-        service.setGroupRef(this.groupRef);
 
         const nodeId = uuidv4();
         service.setObjectId(nodeId);
@@ -171,11 +161,8 @@ class BatchService extends Service {
           ...(item.options || {})
         }
         service.setAkordTags((service.isPublic ? [item.name] : []).concat(createOptions.tags));
+        service.setParentId(createOptions.parentId);
         service.arweaveTags = await service.getTxTags();
-        service.arweaveTags.push(new Tag(
-          protocolTags.PARENT_ID,
-          createOptions.parentId ? createOptions.parentId : "root"
-        ));
 
         const state = {
           name: await service.processWriteString(item.name ? item.name : item.file.name),
@@ -183,27 +170,18 @@ class BatchService extends Service {
           tags: service.tags
         };
         const id = await service.uploadState(state);
-        const input = {
-          function: service.function,
-          data: id,
-          parentId: createOptions.parentId
-        }
+
         // queue the stack transaction for posting
         transactions.push({
           vaultId: service.vaultId,
-          input: input,
+          input: { function: service.function, data: id, parentId: createOptions.parentId },
           tags: service.arweaveTags,
           item
         });
       }
       ));
 
-      let currentTx: {
-        vaultId: string,
-        input: ContractInput,
-        tags: Tags,
-        item: { file: FileLike, name: string, options?: StackCreateOptions }
-      };
+      let currentTx: StackCreateTransaction;
       while (processedStacksCount < items.length) {
         if (options.cancelHook?.signal.aborted) {
           return { data, errors, cancelled: items.length - processedStacksCount };
@@ -227,14 +205,9 @@ class BatchService extends Service {
             if (options.onStackCreated) {
               await options.onStackCreated(object);
             }
-            const stack = new Stack(object, this.keys);
-            if (!this.isPublic) {
-              try {
-                await stack.decrypt();
-              } catch (error) {
-                throw new IncorrectEncryptionKey(error);
-              }
-            }
+
+            const stack = await new StackService(this.wallet, this.api, this)
+              .processNode(object, !this.isPublic, this.keys);
             data.push({ transactionId: id, object: stack, stackId: object.id });
             if (options.cancelHook?.signal.aborted) {
               return { data, errors, cancelled: items.length - processedStacksCount };
@@ -257,27 +230,26 @@ class BatchService extends Service {
    * @param  {MembershipCreateOptions} [options] invitation email message, etc.
    * @returns Promise with new membership ids & their corresponding transaction ids
    */
-  public async membershipInvite(vaultId: string, items: { email: string, role: RoleType }[], options: MembershipCreateOptions = {})
+  public async membershipInvite(vaultId: string, items: MembershipInviteItem[], options: MembershipCreateOptions = {})
     : Promise<BatchMembershipInviteResponse> {
-    this.setGroupRef(items);
     const members = await this.api.getMembers(vaultId);
     const data = [] as BatchMembershipInviteResponse["data"];
     const errors = [];
 
-    const transactions = [] as {
-      input: ContractInput,
-      tags: Tags,
-      item: { email: string, role: RoleType }
-    }[];
+    const transactions = [] as MembershipInviteTransaction[];
 
+    // set service context
+    this.setGroupRef(items);
     const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);
     await this.setMembershipKeys(vault);
+    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
 
     // upload metadata
-    await Promise.all(items.map(async (item: { email: string, role: RoleType }) => {
+    await Promise.all(items.map(async (item: MembershipInviteItem) => {
       const email = item.email.toLowerCase();
       const role = item.role;
       const member = members.find(item => item.email?.toLowerCase() === email);
@@ -286,15 +258,8 @@ class BatchService extends Service {
         errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
         const userHasAccount = await this.api.existsUser(email);
-        const service = new MembershipService(this.wallet, this.api);
-        service.setGroupRef(this.groupRef);
+        const service = new MembershipService(this.wallet, this.api, this);
         if (userHasAccount) {
-          service.setVault(vault);
-          service.setVaultId(vaultId);
-          service.setIsPublic(vault.public);
-          await service.setMembershipKeys(this.vault);
-          service.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-          service.setFunction(functions.MEMBERSHIP_INVITE);
           const membershipId = uuidv4();
           service.setObjectId(membershipId);
 
@@ -309,14 +274,9 @@ class BatchService extends Service {
 
           const dataTxId = await service.uploadState(state);
 
-          const input = {
-            function: service.function,
-            address,
-            role,
-            data: dataTxId
-          }
           transactions.push({
-            input: input,
+            vaultId,
+            input: { function: service.function, address, role, data: dataTxId },
             tags: service.arweaveTags,
             item: item
           });
@@ -343,7 +303,7 @@ class BatchService extends Service {
     for (let tx of transactions) {
       try {
         const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags);
-        const membership = await new MembershipService(this.wallet, this.api).processMembership(object as Membership, !this.isPublic, this.keys);
+        const membership = await new MembershipService(this.wallet, this.api, this).processMembership(object as Membership, !this.isPublic, this.keys);
         data.push({ membershipId: membership.id, transactionId: id, object: membership });
       } catch (error: any) {
         errors.push({
@@ -366,17 +326,15 @@ class BatchService extends Service {
         ? await this.api.getMembership(item.id)
         : await this.api.getNode<NodeLike>(item.id, item.type);
 
-      const service = item.type === objectType.MEMBERSHIP
-        ? new MembershipService(this.wallet, this.api)
-        : new NodeService<T>(this.wallet, this.api);
       if (itemIndex === 0 || this.vaultId !== node.vaultId) {
         this.setVaultId(node.vaultId);
         this.setIsPublic(node.__public__);
         await this.setMembershipKeys(node);
       }
-      service.setVaultId(this.vaultId);
-      service.setIsPublic(this.isPublic);
-      await service.setMembershipKeys(node);
+      const service = item.type === objectType.MEMBERSHIP
+        ? new MembershipService(this.wallet, this.api, this)
+        : new NodeService<T>(this.wallet, this.api, this);
+
       service.setFunction(item.input.function);
       service.setActionRef(item.actionRef);
       service.setObject(node);
@@ -401,6 +359,31 @@ export type BatchStackCreateOptions = Hooks & {
   processingCountHook?: (count: number) => void,
   onStackCreated?: (item: Stack) => Promise<void>
 };
+
+export type TransactionPayload = {
+  vaultId: string,
+  input: ContractInput,
+  tags: Tags
+}
+
+export type StackCreateTransaction = TransactionPayload & {
+  item: StackCreateItem
+}
+
+export type MembershipInviteTransaction = TransactionPayload & {
+  item: MembershipInviteItem
+}
+
+export type StackCreateItem = {
+  file: FileLike,
+  name: string,
+  options?: StackCreateOptions
+}
+
+export type MembershipInviteItem = {
+  email: string,
+  role: RoleType
+}
 
 export {
   BatchService

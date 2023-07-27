@@ -12,6 +12,8 @@ import { BadRequest } from '../errors/bad-request';
 class NodeService<T> extends Service {
   objectType: NodeType;
 
+  parentId?: string;
+
   defaultListOptions = {
     shouldDecrypt: true,
     parentId: undefined,
@@ -150,10 +152,11 @@ class NodeService<T> extends Service {
     const nodeId = uuidv4();
     this.setObjectId(nodeId);
     this.setFunction(functions.NODE_CREATE);
+    this.setFunction(functions.NODE_CREATE);
+    this.setParentId(clientInput.parentId);
 
     this.arweaveTags = await this.getTxTags();
     clientTags?.map((tag: Tag) => this.arweaveTags.push(tag));
-    this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
 
     const input = {
       function: this.function,
@@ -180,10 +183,8 @@ class NodeService<T> extends Service {
       ...clientInput
     } as ContractInput;
 
+    this.setParentId(clientInput?.parentId);
     this.arweaveTags = await this.getTxTags();
-    if (clientInput && this.function === functions.NODE_MOVE) {
-      this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
-    }
 
     if (stateUpdates) {
       const id = await this.mergeAndUploadState(stateUpdates);
@@ -198,6 +199,10 @@ class NodeService<T> extends Service {
     return { transactionId: id, object: node };
   }
 
+  async setParentId(parentId?: string) {
+    this.parentId = parentId;
+  }
+
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
     const object = await this.api.getNode<NodeLike>(nodeId, type, vaultId);
     this.setVaultId(object.vaultId);
@@ -210,7 +215,11 @@ class NodeService<T> extends Service {
 
   async getTxTags(): Promise<Tags> {
     const tags = await super.getTxTags();
-    return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
+    tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
+    if (this.function === functions.NODE_CREATE || this.function === functions.NODE_MOVE) {
+      tags.push(new Tag(protocolTags.PARENT_ID, this.parentId ? this.parentId : "root"));
+    }
+    return tags;
   }
 
   async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {

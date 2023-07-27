@@ -54,7 +54,7 @@ class Service {
   tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
 
-  constructor(wallet: Wallet, api: Api, encryptionKeys?: EncryptionKeys) {
+  constructor(wallet: Wallet, api: Api, service?: Service, encryptionKeys?: EncryptionKeys) {
     this.wallet = wallet
     this.api = api
     // for the data encryption
@@ -63,6 +63,20 @@ class Service {
       encryptionKeys?.keys,
       encryptionKeys?.getPublicKey()
     )
+    // set context from another service
+    if (service) {
+      this.setVault(service.vault);
+      this.setVaultId(service.vaultId);
+      this.setIsPublic(service.isPublic);
+      this.setKeys(service.keys);
+      this.setRawDataEncryptionPublicKey(service.dataEncrypter.publicKey);
+      this.setFunction(service.function);
+      this.setActionRef(service.actionRef);
+      this.setObjectId(service.objectId);
+      this.setObject(service.object);
+      this.setGroupRef(service.groupRef);
+      this.setAkordTags(service.tags);
+    }
   }
 
   setKeys(keys: EncryptedKeys[]) {
@@ -360,11 +374,11 @@ class Service {
       tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
     }
     this.tags
-    ?.filter(tag => tag)
-    ?.map((tag: string) =>
-      tag.split(" ").map((value: string) =>
-        tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
-    );
+      ?.filter(tag => tag)
+      ?.map((tag: string) =>
+        tag?.split(" ").map((value: string) =>
+          tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
+      );
     // remove duplicates
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
