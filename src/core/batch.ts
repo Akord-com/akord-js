@@ -22,6 +22,7 @@ function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
 class BatchService extends Service {
 
   public static BATCH_CHUNK_SIZE = 50;
+  public static TRANSACTION_QUEUE_WAIT_TIME = 1;
 
   /**
    * @param  {{id:string,type:NoteType}[]} items
@@ -149,7 +150,7 @@ class BatchService extends Service {
       const transactions = [] as StackCreateTransaction[];
 
       // upload file data & metadata
-      await Promise.all(chunk.map(async (item) => {
+      Promise.all(chunk.map(async (item) => {
         const service = new StackService(this.wallet, this.api, this);
         service.setVaultContextForFile();
 
@@ -181,6 +182,7 @@ class BatchService extends Service {
       }
       ));
 
+      // post queued stack transactions
       let currentTx: StackCreateTransaction;
       while (processedStacksCount < items.length) {
         if (options.cancelHook?.signal.aborted) {
@@ -188,7 +190,7 @@ class BatchService extends Service {
         }
         if (transactions.length === 0) {
           // wait for a while if the queue is empty before checking again
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, BatchService.TRANSACTION_QUEUE_WAIT_TIME));
         } else {
           try {
             currentTx = transactions.shift();
