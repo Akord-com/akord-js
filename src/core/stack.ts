@@ -33,7 +33,7 @@ class StackService extends NodeService<Stack> {
     const state = {
       name: await this.processWriteString(name ? name : file.name),
       versions: [await this.uploadNewFileVersion(file, createOptions)],
-      tags: this.tags
+      tags: createOptions.tags || []
     };
     const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object };
