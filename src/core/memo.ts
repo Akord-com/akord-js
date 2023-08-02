@@ -31,7 +31,7 @@ class MemoService extends NodeService<Memo> {
     this.setAkordTags(options.tags);
     const state = {
       versions: [await this.memoVersion(message)],
-      tags: this.tags
+      tags: options.tags
     };
     const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(state, { parentId: options.parentId }, options.arweaveTags);
     return { memoId: nodeId, transactionId, object };
