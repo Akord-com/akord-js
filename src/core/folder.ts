@@ -19,7 +19,7 @@ class FolderService extends NodeService<Folder> {
     this.setAkordTags((this.isPublic ? [name] : []).concat(options.tags));
     const state = {
       name: await this.processWriteString(name),
-      tags: options.tags
+      tags: options.tags || []
     }
     const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId }, options.arweaveTags);
     return { folderId: nodeId, transactionId, object };
