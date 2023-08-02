@@ -360,11 +360,11 @@ class Service {
       tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
     }
     this.tags
-    ?.filter(tag => tag)
-    ?.map((tag: string) =>
-      tag.split(" ").map((value: string) =>
-        tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
-    );
+      ?.filter(tag => tag)
+      ?.map((tag: string) =>
+        tag?.split(" ").join(",").split(".").join(",").split(",").map((value: string) =>
+          tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
+      );
     // remove duplicates
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
