@@ -376,7 +376,7 @@ class Service {
     this.tags
       ?.filter(tag => tag)
       ?.map((tag: string) =>
-        tag?.split(" ").map((value: string) =>
+        tag?.split(" ").join(",").split(".").join(",").split(",").map((value: string) =>
           tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
       );
     // remove duplicates
