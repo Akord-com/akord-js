@@ -417,12 +417,12 @@ class MembershipService extends Service {
     this.setObjectType(this.objectType);
   }
 
-  protected async getTxTags(): Promise<Tags> {
+  async getTxTags(): Promise<Tags> {
     const tags = await super.getTxTags();
     return tags.concat(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId));
   }
 
-  protected async processMembership(object: Membership, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Membership> {
+  async processMembership(object: Membership, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<Membership> {
     const membership = new Membership(object, keys);
     if (shouldDecrypt) {
       try {
@@ -434,7 +434,7 @@ class MembershipService extends Service {
     return membership;
   }
 
-  private async prepareMemberKeys(publicKey: string): Promise<EncryptedKeys[]> {
+  async prepareMemberKeys(publicKey: string): Promise<EncryptedKeys[]> {
     if (!this.isPublic) {
       const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(publicKey));
       try {

@@ -1,3 +1,4 @@
+import { Membership } from "./membership"
 import { Stack } from "./node"
 
 export interface BatchStackCreateResponse {
@@ -7,6 +8,6 @@ export interface BatchStackCreateResponse {
 }
 
 export interface BatchMembershipInviteResponse {
-  data: Array<{ membershipId: string, transactionId: string }>
+  data: Array<{ membershipId: string, transactionId: string, object?: Membership }>
   errors: Array<{ email: string, message: string, error: Error }>
 }

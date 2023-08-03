@@ -15,6 +15,7 @@ describe("Testing batch actions", () => {
   let noteId: string;
   let viewerId: string;
   let contributorId: string;
+  let stackIds: string[];
 
   beforeEach(async () => {
     akord = await initInstance(email, password);
@@ -37,7 +38,7 @@ describe("Testing batch actions", () => {
     it("should revoke all items in a batch", async () => {
       await akord.batch.revoke([
         { id: folderId, type: "Folder" },
-        { id: noteId, type: "Note" },
+        { id: noteId, type: "Stack" },
       ])
 
       const folder = await akord.folder.get(folderId);
@@ -50,7 +51,7 @@ describe("Testing batch actions", () => {
     it("should restore all items in a batch", async () => {
       await akord.batch.restore([
         { id: folderId, type: "Folder" },
-        { id: noteId, type: "Note" },
+        { id: noteId, type: "Stack" },
       ])
 
       const folder = await akord.folder.get(folderId);
@@ -72,8 +73,10 @@ describe("Testing batch actions", () => {
         items.push({ file, name });
       }
 
-      const response = (await akord.batch.stackCreate(vaultId, items)).data;
+      const { data: response, errors } = await akord.batch.stackCreate(vaultId, items);
 
+      expect(errors.length).toEqual(0);
+      stackIds = response.map((item) => item.stackId);
       for (let index in items) {
         const stack = await akord.stack.get(response[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
@@ -81,6 +84,10 @@ describe("Testing batch actions", () => {
         expect(stack.versions.length).toEqual(1);
         expect(stack.versions[0].name).toEqual(firstFileName);
       }
+    });
+
+    it("should revoke the previously uploaded batch", async () => {
+      await akord.batch.revoke(stackIds.map(stackId => ({ id: stackId, type: "Stack" })));
     });
   });
 

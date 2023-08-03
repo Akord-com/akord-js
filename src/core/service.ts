@@ -54,7 +54,7 @@ class Service {
   tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
 
-  constructor(wallet: Wallet, api: Api, encryptionKeys?: EncryptionKeys) {
+  constructor(wallet: Wallet, api: Api, service?: Service, encryptionKeys?: EncryptionKeys) {
     this.wallet = wallet
     this.api = api
     // for the data encryption
@@ -63,6 +63,20 @@ class Service {
       encryptionKeys?.keys,
       encryptionKeys?.getPublicKey()
     )
+    // set context from another service
+    if (service) {
+      this.setVault(service.vault);
+      this.setVaultId(service.vaultId);
+      this.setIsPublic(service.isPublic);
+      this.setKeys(service.keys);
+      this.setRawDataEncryptionPublicKey(service.dataEncrypter.publicKey);
+      this.setFunction(service.function);
+      this.setActionRef(service.actionRef);
+      this.setObjectId(service.objectId);
+      this.setObject(service.object);
+      this.setGroupRef(service.groupRef);
+      this.setAkordTags(service.tags);
+    }
   }
 
   setKeys(keys: EncryptedKeys[]) {
@@ -80,6 +94,22 @@ class Service {
 
   setGroupRef(groupRef: string) {
     this.groupRef = groupRef;
+  }
+
+  setActionRef(actionRef: string) {
+    this.actionRef = actionRef;
+  }
+
+  setObjectType(objectType: ObjectType) {
+    this.objectType = objectType;
+  }
+
+  setFunction(functionName: functions) {
+    this.function = functionName;
+  }
+
+  setObject(object: NodeLike | Membership | Vault) {
+    this.object = object;
   }
 
   setIsPublic(isPublic: boolean) {
@@ -115,7 +145,7 @@ class Service {
     }
   }
 
-  protected async setVaultContext(vaultId: string) {
+  async setVaultContext(vaultId: string) {
     const vault = await this.api.getVault(vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
@@ -123,7 +153,7 @@ class Service {
     await this.setMembershipKeys(vault);
   }
 
-  protected async setMembershipKeys(object: Object) {
+  async setMembershipKeys(object: Object) {
     if (!this.isPublic) {
       const keys = object.__keys__.map(((keyPair: any) => {
         return {
@@ -144,22 +174,6 @@ class Service {
         throw new IncorrectEncryptionKey(error);
       }
     }
-  }
-
-  protected setObjectType(objectType: ObjectType) {
-    this.objectType = objectType;
-  }
-
-  protected setFunction(functionName: functions) {
-    this.function = functionName;
-  }
-
-  protected setActionRef(actionRef: string) {
-    this.actionRef = actionRef;
-  }
-
-  protected setObject(object: NodeLike | Membership | Vault) {
-    this.object = object;
   }
 
   protected async getProfileDetails(): Promise<ProfileDetails> {
@@ -229,7 +243,7 @@ class Service {
     };
   }
 
-  protected async processWriteString(data: string): Promise<string> {
+  async processWriteString(data: string): Promise<string> {
     if (this.isPublic) return data;
     let encryptedPayload: string;
     try {
@@ -344,7 +358,7 @@ class Service {
     return newState;
   }
 
-  protected async getTxTags(): Promise<Tags> {
+  async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
