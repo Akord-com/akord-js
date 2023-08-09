@@ -11,6 +11,8 @@ import { MembershipService } from "./membership";
 import lodash from "lodash";
 import { NotFound } from "../errors/not-found";
 import { BadRequest } from "../errors/bad-request";
+import { handleListErrors, paginate } from "./common";
+import { ProfileService } from "./profile";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -61,7 +63,7 @@ class VaultService extends Service {
       .map(async (vaultProto: Vault) => {
         return await this.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
       }) as Promise<Vault>[];
-    const { items, errors } = await this.handleListErrors<Vault>(response.items, promises);
+    const { items, errors } = await handleListErrors<Vault>(response.items, promises);
     return {
       items,
       nextToken: response.nextToken,
@@ -77,7 +79,7 @@ class VaultService extends Service {
     const list = async (listOptions: ListOptions) => {
       return await this.list(listOptions);
     }
-    return await this.paginate<Vault>(list, options);
+    return await paginate<Vault>(list, options);
   }
 
   /**
@@ -98,7 +100,9 @@ class VaultService extends Service {
       vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
     }
 
-    const memberDetails = await this.getProfileDetails();
+    const profileService = new ProfileService(this.wallet, this.api);
+    const memberDetails = await profileService.get();
+
     const service = new VaultService(this.wallet, this.api);
     service.setActionRef(actionRefs.VAULT_CREATE);
     service.setIsPublic(createOptions.public);
@@ -116,12 +120,20 @@ class VaultService extends Service {
     ].concat(await service.getTxTags());
     createOptions.arweaveTags?.map((tag: Tag) => service.arweaveTags.push(tag));
 
+    const memberService = new MembershipService(this.wallet, this.api, service);
+    memberService.setVaultId(service.vaultId);
+    memberService.setObjectId(membershipId);
+
     let keys: EncryptedKeys[];
     if (!service.isPublic) {
-      const { memberKeys, keyPair } = await service.rotateMemberKeys(new Map([[membershipId, this.wallet.publicKey()]]));
+      const { memberKeys, keyPair } = await memberService.rotateMemberKeys(
+        new Map([[membershipId, this.wallet.publicKey()]])
+      );
       keys = memberKeys.get(membershipId);
       service.setRawDataEncryptionPublicKey(keyPair.publicKey);
       service.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
+      memberService.setRawDataEncryptionPublicKey(keyPair.publicKey);
+      memberService.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
     }
 
     const vaultState = {
@@ -134,12 +146,10 @@ class VaultService extends Service {
 
     const memberState = {
       keys,
-      encPublicSigningKey: await service.processWriteString(this.wallet.signingPublicKey()),
-      memberDetails: await service.processMemberDetails(memberDetails, createOptions.cacheOnly)
+      encPublicSigningKey: await memberService.processWriteString(this.wallet.signingPublicKey()),
+      memberDetails: await memberService.processMemberDetails(memberDetails, createOptions.cacheOnly)
     }
-    const memberService = new MembershipService(this.wallet, this.api);
-    memberService.setVaultId(service.vaultId);
-    memberService.setObjectId(membershipId);
+
     const memberStateTx = await memberService.uploadState(memberState, createOptions.cacheOnly);
 
     const data = { vault: vaultStateTx, membership: memberStateTx };

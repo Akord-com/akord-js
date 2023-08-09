@@ -8,6 +8,7 @@ import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 import { BadRequest } from '../errors/bad-request';
+import { handleListErrors, paginate } from './common';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -64,7 +65,7 @@ class NodeService<T> extends Service {
       .map(async (nodeProto: any) => {
         return await this.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
       });
-    const { items, errors } = await this.handleListErrors<T>(response.items, promises);
+    const { items, errors } = await handleListErrors<T>(response.items, promises);
     return {
       items,
       nextToken: response.nextToken,
@@ -81,7 +82,7 @@ class NodeService<T> extends Service {
     const list = async (options: ListOptions & { vaultId: string }) => {
       return await this.list(options.vaultId, options);
     }
-    return await this.paginate<T>(list, { ...options, vaultId });
+    return await paginate<T>(list, { ...options, vaultId });
   }
 
   /**

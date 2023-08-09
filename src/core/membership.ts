@@ -1,6 +1,6 @@
 import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray } from "@akord/crypto";
+import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray, generateKeyPair, Keys } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
@@ -8,6 +8,9 @@ import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
+import { handleListErrors, paginate } from "./common";
+import { ProfileService } from "./profile";
+import { ProfileDetails } from "../types/profile-details";
 
 export const activeStatus = [status.ACCEPTED, status.PENDING, status.INVITED] as StatusType[];
 
@@ -60,7 +63,7 @@ class MembershipService extends Service {
       .map(async (membershipProto: Membership) => {
         return await this.processMembership(membershipProto, !membershipProto.__public__ && listOptions.shouldDecrypt, membershipProto.__keys__);
       }) as Promise<Membership>[];
-    const { items, errors } = await this.handleListErrors<Membership>(response.items, promises);
+    const { items, errors } = await handleListErrors<Membership>(response.items, promises);
     return {
       items,
       nextToken: response.nextToken,
@@ -77,7 +80,7 @@ class MembershipService extends Service {
     const list = async (options: ListOptions & { vaultId: string }) => {
       return await this.list(options.vaultId, options);
     }
-    return await this.paginate<Membership>(list, { ...options, vaultId });
+    return await paginate<Membership>(list, { ...options, vaultId });
   }
 
   /**
@@ -196,7 +199,8 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async accept(membershipId: string): Promise<MembershipUpdateResult> {
-    const memberDetails = await this.getProfileDetails();
+    const profileService = new ProfileService(this.wallet, this.api);
+    const memberDetails = await profileService.get();
     const service = new MembershipService(this.wallet, this.api);
     await service.setVaultContextFromMembershipId(membershipId);
     const state = {
@@ -456,6 +460,48 @@ class MembershipService extends Service {
     } else {
       return null;
     }
+  }
+
+  async rotateMemberKeys(publicKeys: Map<string, string>): Promise<{
+    memberKeys: Map<string, EncryptedKeys[]>,
+    keyPair: Keys
+  }> {
+    const memberKeys = new Map<string, EncryptedKeys[]>();
+    // generate a new vault key pair
+    const keyPair = await generateKeyPair();
+
+    for (let [memberId, publicKey] of publicKeys) {
+      const memberKeysEncrypter = new Encrypter(
+        this.wallet,
+        this.dataEncrypter.keys,
+        base64ToArray(publicKey)
+      );
+      try {
+        memberKeys.set(memberId, [await memberKeysEncrypter.encryptMemberKey(keyPair)]);
+      } catch (error) {
+        throw new IncorrectEncryptionKey(error);
+      }
+    }
+    return { memberKeys, keyPair };
+  }
+
+  async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
+    const processedMemberDetails = {} as ProfileDetails;
+    if (!this.isPublic) {
+      if (memberDetails.name) {
+        processedMemberDetails.name = await this.processWriteString(memberDetails.name);
+      }
+      if (memberDetails.avatar) {
+        const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
+        processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
+      }
+    }
+    return new ProfileDetails(processedMemberDetails);
+  }
+
+  private async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
+    const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
+    return this.api.uploadFile(processedData, encryptionTags, { cacheOnly, public: false });
   }
 };
 
