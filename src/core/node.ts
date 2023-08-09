@@ -90,13 +90,14 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async rename(nodeId: string, name: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType);
-    this.setActionRef(this.objectType.toUpperCase() + "_RENAME");
-    this.setFunction(functions.NODE_UPDATE);
+    const service = new NodeService<T>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType);
+    service.setActionRef(this.objectType.toUpperCase() + "_RENAME");
+    service.setFunction(functions.NODE_UPDATE);
     const state = {
-      name: await this.processWriteString(name)
+      name: await service.processWriteString(name)
     };
-    return this.nodeUpdate<NodeLike>(state);
+    return service.nodeUpdate<T>(state) as Promise<NodeUpdateResult>;
   }
 
   /**
@@ -105,10 +106,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_MOVE");
-    this.setFunction(functions.NODE_MOVE);
-    return this.nodeUpdate<NodeLike>(null, { parentId });
+    const service = new NodeService<T>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_MOVE");
+    service.setFunction(functions.NODE_MOVE);
+    return service.nodeUpdate<NodeLike>(null, { parentId });
   }
 
   /**
@@ -116,10 +118,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
-    this.setFunction(functions.NODE_REVOKE);
-    return this.nodeUpdate<NodeLike>();
+    const service = new NodeService<T>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
+    service.setFunction(functions.NODE_REVOKE);
+    return service.nodeUpdate<T>() as Promise<NodeUpdateResult>;
   }
 
   /**
@@ -127,10 +130,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async restore(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
-    this.setFunction(functions.NODE_RESTORE);
-    return this.nodeUpdate<NodeLike>();
+    const service = new NodeService<NodeLike>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
+    service.setFunction(functions.NODE_RESTORE);
+    return service.nodeUpdate<T>() as Promise<NodeUpdateResult>;
   }
 
   /**
@@ -138,10 +142,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async delete(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_DELETE");
-    this.setFunction(functions.NODE_DELETE);
-    return this.nodeUpdate<NodeLike>();
+    const service = new NodeService<NodeLike>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_DELETE");
+    service.setFunction(functions.NODE_DELETE);
+    return service.nodeUpdate<T>() as Promise<NodeUpdateResult>;
   }
 
   protected async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
