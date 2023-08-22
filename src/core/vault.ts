@@ -11,6 +11,8 @@ import { MembershipService } from "./membership";
 import lodash from "lodash";
 import { NotFound } from "../errors/not-found";
 import { BadRequest } from "../errors/bad-request";
+import { handleListErrors, paginate } from "./common";
+import { ProfileService } from "./profile";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -61,7 +63,7 @@ class VaultService extends Service {
       .map(async (vaultProto: Vault) => {
         return await this.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
       }) as Promise<Vault>[];
-    const { items, errors } = await this.handleListErrors<Vault>(response.items, promises);
+    const { items, errors } = await handleListErrors<Vault>(response.items, promises);
     return {
       items,
       nextToken: response.nextToken,
@@ -77,7 +79,7 @@ class VaultService extends Service {
     const list = async (listOptions: ListOptions) => {
       return await this.list(listOptions);
     }
-    return await this.paginate<Vault>(list, options);
+    return await paginate<Vault>(list, options);
   }
 
   /**
@@ -98,58 +100,67 @@ class VaultService extends Service {
       vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
     }
 
-    const memberDetails = await this.getProfileDetails();
-    this.setActionRef(actionRefs.VAULT_CREATE);
-    this.setIsPublic(createOptions.public);
-    this.setFunction(functions.VAULT_CREATE);
-    this.setVaultId(vaultId);
-    this.setObjectId(vaultId);
-    this.setAkordTags((this.isPublic ? [name] : []).concat(createOptions.tags));
+    const profileService = new ProfileService(this.wallet, this.api);
+    const memberDetails = await profileService.get();
+
+    const service = new VaultService(this.wallet, this.api);
+    service.setActionRef(actionRefs.VAULT_CREATE);
+    service.setIsPublic(createOptions.public);
+    service.setFunction(functions.VAULT_CREATE);
+    service.setVaultId(vaultId);
+    service.setObjectId(vaultId);
+    service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
 
     const address = await this.wallet.getAddress();
     const membershipId = uuidv4();
 
-    this.arweaveTags = [
+    service.arweaveTags = [
       new Tag(protocolTags.MEMBER_ADDRESS, address),
       new Tag(protocolTags.MEMBERSHIP_ID, membershipId),
-    ].concat(await this.getTxTags());
-    createOptions.arweaveTags?.map((tag: Tag) => this.arweaveTags.push(tag));
+    ].concat(await service.getTxTags());
+    createOptions.arweaveTags?.map((tag: Tag) => service.arweaveTags.push(tag));
+
+    const memberService = new MembershipService(this.wallet, this.api, service);
+    memberService.setVaultId(service.vaultId);
+    memberService.setObjectId(membershipId);
 
     let keys: EncryptedKeys[];
-    if (!this.isPublic) {
-      const { memberKeys, keyPair } = await this.rotateMemberKeys(new Map([[membershipId, this.wallet.publicKey()]]));
+    if (!service.isPublic) {
+      const { memberKeys, keyPair } = await memberService.rotateMemberKeys(
+        new Map([[membershipId, this.wallet.publicKey()]])
+      );
       keys = memberKeys.get(membershipId);
-      this.setRawDataEncryptionPublicKey(keyPair.publicKey);
-      this.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
+      service.setRawDataEncryptionPublicKey(keyPair.publicKey);
+      service.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
+      memberService.setRawDataEncryptionPublicKey(keyPair.publicKey);
+      memberService.setKeys([{ encPublicKey: keys[0].encPublicKey, encPrivateKey: keys[0].encPrivateKey }]);
     }
 
     const vaultState = {
-      name: await this.processWriteString(name),
+      name: await service.processWriteString(name),
       termsOfAccess: createOptions.termsOfAccess,
-      description: createOptions.description ? await this.processWriteString(createOptions.description) : undefined,
+      description: createOptions.description ? await service.processWriteString(createOptions.description) : undefined,
       tags: createOptions.tags || []
     }
-    const vaultStateTx = await this.uploadState(vaultState, createOptions.cacheOnly);
+    const vaultStateTx = await service.uploadState(vaultState, createOptions.cacheOnly);
 
     const memberState = {
       keys,
-      encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey()),
-      memberDetails: await this.processMemberDetails(memberDetails, createOptions.cacheOnly)
+      encPublicSigningKey: await memberService.processWriteString(this.wallet.signingPublicKey()),
+      memberDetails: await memberService.processMemberDetails(memberDetails, createOptions.cacheOnly)
     }
-    const memberService = new MembershipService(this.wallet, this.api);
-    memberService.setVaultId(this.vaultId);
-    memberService.setObjectId(membershipId);
+
     const memberStateTx = await memberService.uploadState(memberState, createOptions.cacheOnly);
 
     const data = { vault: vaultStateTx, membership: memberStateTx };
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function, data },
-      this.arweaveTags,
+      service.vaultId,
+      { function: service.function, data },
+      service.arweaveTags,
       { cacheOnly: createOptions.cacheOnly }
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await service.processVault(object, true, service.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
   }
 
@@ -162,32 +173,33 @@ class VaultService extends Service {
     if (!options.name && !options.tags && !options.description) {
       throw new BadRequest("Nothing to update");
     }
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_UPDATE_METADATA);
-    this.setFunction(functions.VAULT_UPDATE);
+    const service = new VaultService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.VAULT_UPDATE_METADATA);
+    service.setFunction(functions.VAULT_UPDATE);
 
-    const currentState = await this.getCurrentState();
+    const currentState = await service.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
 
     if (options.name) {
-      newState.name = await this.processWriteString(options.name);
+      newState.name = await service.processWriteString(options.name);
     }
     if (options.tags) {
       newState.tags = options.tags;
     }
     if (options.description) {
-      newState.description = await this.processWriteString(options.description);
+      newState.description = await service.processWriteString(options.description);
     }
-    this.setAkordTags((options.name && this.isPublic ? [options.name] : []).concat(options.tags));
-    this.arweaveTags = await this.getTxTags();
+    service.setAkordTags((options.name && service.isPublic ? [options.name] : []).concat(options.tags));
+    service.arweaveTags = await service.getTxTags();
 
-    const dataTxId = await this.uploadState(newState);
+    const dataTxId = await service.uploadState(newState);
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function, data: dataTxId },
-      this.arweaveTags
+      service.vaultId,
+      { function: service.function, data: dataTxId },
+      service.arweaveTags
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await this.processVault(object, true, service.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -197,22 +209,23 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async rename(vaultId: string, name: string): Promise<VaultUpdateResult> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_RENAME);
-    this.setFunction(functions.VAULT_UPDATE);
+    const service = new VaultService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.VAULT_RENAME);
+    service.setFunction(functions.VAULT_UPDATE);
     const state = {
-      name: await this.processWriteString(name)
+      name: await service.processWriteString(name)
     };
-    const data = await this.mergeAndUploadState(state);
-    this.setAkordTags(this.isPublic ? [name] : []);
-    this.arweaveTags = await this.getTxTags();
+    const data = await service.mergeAndUploadState(state);
+    service.setAkordTags(service.isPublic ? [name] : []);
+    service.arweaveTags = await service.getTxTags();
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function, data },
-      this.arweaveTags
+      service.vaultId,
+      { function: service.function, data },
+      service.arweaveTags
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await this.processVault(object, true, service.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -222,14 +235,15 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async addTags(vaultId: string, tags: string[]): Promise<VaultUpdateResult> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_ADD_TAGS);
-    this.setFunction(functions.VAULT_UPDATE);
+    const service = new VaultService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.VAULT_ADD_TAGS);
+    service.setFunction(functions.VAULT_UPDATE);
 
-    this.setAkordTags(tags);
-    this.arweaveTags = await this.getTxTags();
+    service.setAkordTags(tags);
+    service.arweaveTags = await service.getTxTags();
 
-    const currentState = await this.getCurrentState();
+    const currentState = await service.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
     if (!newState.tags) {
       newState.tags = [];
@@ -239,14 +253,14 @@ class VaultService extends Service {
         newState.tags.push(tag);
       }
     }
-    const dataTxId = await this.uploadState(newState);
+    const dataTxId = await service.uploadState(newState);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function, data: dataTxId },
-      this.arweaveTags
+      service.vaultId,
+      { function: service.function, data: dataTxId },
+      service.arweaveTags
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await this.processVault(object, true, service.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -256,12 +270,13 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async removeTags(vaultId: string, tags: string[]): Promise<VaultUpdateResult> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_REMOVE_TAGS);
-    this.setFunction(functions.VAULT_UPDATE);
-    this.arweaveTags = await this.getTxTags();
+    const service = new VaultService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.VAULT_REMOVE_TAGS);
+    service.setFunction(functions.VAULT_UPDATE);
+    service.arweaveTags = await service.getTxTags();
 
-    const currentState = await this.getCurrentState();
+    const currentState = await service.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
     if (!newState.tags || newState.tags.length === 0) {
       throw new BadRequest("Tags cannot be removed, vault does not have any");
@@ -270,14 +285,14 @@ class VaultService extends Service {
       const index = this.getTagIndex(newState.tags, tag);
       newState.tags.splice(index, 1);
     }
-    const dataTxId = await this.uploadState(newState);
+    const dataTxId = await service.uploadState(newState);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function, data: dataTxId },
-      this.arweaveTags
+      service.vaultId,
+      { function: service.function, data: dataTxId },
+      service.arweaveTags
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await this.processVault(object, true, service.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -286,16 +301,17 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async archive(vaultId: string): Promise<VaultUpdateResult> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_ARCHIVE);
-    this.setFunction(functions.VAULT_ARCHIVE);
+    const service = new VaultService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.VAULT_ARCHIVE);
+    service.setFunction(functions.VAULT_ARCHIVE);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function },
-      await this.getTxTags()
+      service.vaultId,
+      { function: service.function },
+      await service.getTxTags()
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await this.processVault(object, true, service.keys);
     return { transactionId: id, object: vault };
   }
 
@@ -304,16 +320,17 @@ class VaultService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async restore(vaultId: string): Promise<VaultUpdateResult> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.VAULT_RESTORE);
-    this.setFunction(functions.VAULT_RESTORE);
+    const service = new VaultService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.VAULT_RESTORE);
+    service.setFunction(functions.VAULT_RESTORE);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
-      this.vaultId,
-      { function: this.function },
-      await this.getTxTags()
+      service.vaultId,
+      { function: service.function },
+      await service.getTxTags()
     );
-    const vault = await this.processVault(object, true, this.keys);
+    const vault = await this.processVault(object, true, service.keys);
     return { transactionId: id, object: vault };
   }
 

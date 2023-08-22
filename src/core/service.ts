@@ -11,12 +11,9 @@ import {
   arrayToBase64,
   base64ToJson,
   deriveAddress,
-  EncryptedKeys,
-  generateKeyPair,
-  Keys
+  EncryptedKeys
 } from "@akord/crypto";
 import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags, AKORD_TAG } from '../constants';
-import lodash from "lodash";
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
@@ -24,8 +21,7 @@ import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
-import { ProfileDetails } from "../types/profile-details";
-import { ListOptions } from "../types/query-options";
+import { getEncryptedPayload, mergeState } from "./common";
 
 export type EncryptionMetadata = {
   encryptedKey?: string,
@@ -128,21 +124,18 @@ class Service {
     this.tags = tags;
   }
 
-  async processReadRaw(data: ArrayBuffer | string, metadata: EncryptionMetadata, shouldDecrypt = true): Promise<ArrayBuffer> {
-    if (this.isPublic || !shouldDecrypt) {
-      return data as ArrayBuffer;
-    }
-
-    const encryptedPayload = this.getEncryptedPayload(data, metadata);
+  async processWriteString(data: string): Promise<string> {
+    if (this.isPublic) return data;
+    let encryptedPayload: string;
     try {
-      if (encryptedPayload) {
-        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
-      } else {
-        return this.dataEncrypter.decryptRaw(data as string);
-      }
+      encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
     } catch (error) {
       throw new IncorrectEncryptionKey(error);
     }
+    const decodedPayload = base64ToJson(encryptedPayload) as any;
+    decodedPayload.publicAddress = (await this.getActiveKey()).address;
+    delete decodedPayload.publicKey;
+    return jsonToBase64(decodedPayload);
   }
 
   async setVaultContext(vaultId: string) {
@@ -176,157 +169,7 @@ class Service {
     }
   }
 
-  protected async getProfileDetails(): Promise<ProfileDetails> {
-    const user = await this.api.getUser();
-    if (user) {
-      const profileEncrypter = new Encrypter(this.wallet, null, null);
-      profileEncrypter.decryptedKeys = [
-        {
-          publicKey: this.wallet.publicKeyRaw(),
-          privateKey: this.wallet.privateKeyRaw()
-        }
-      ]
-      let avatar = null;
-      const resourceUri = this.getAvatarUri(new ProfileDetails(user));
-      if (resourceUri) {
-        const { fileData, metadata } = await this.api.downloadFile(resourceUri);
-        const encryptedPayload = this.getEncryptedPayload(fileData, metadata);
-        try {
-          if (encryptedPayload) {
-            avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);
-          } else {
-            const dataString = arrayToString(new Uint8Array(fileData));
-            avatar = await profileEncrypter.decryptRaw(dataString, true);
-          }
-        } catch (error) {
-          throw new IncorrectEncryptionKey(error);
-        }
-      }
-      try {
-        const decryptedProfile = await profileEncrypter.decryptObject(
-          user,
-          ['name'],
-        );
-        return { ...decryptedProfile, avatar }
-      } catch (error) {
-        throw new IncorrectEncryptionKey(error);
-      }
-    }
-    return <any>{};
-  }
-
-  protected async processWriteRaw(data: ArrayBuffer, encryptedKey?: string) {
-    let processedData: ArrayBuffer;
-    const tags = [] as Tags;
-    if (this.isPublic) {
-      processedData = data;
-    } else {
-      let encryptedFile: EncryptedPayload;
-      try {
-        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), false, encryptedKey) as EncryptedPayload;
-      } catch (error) {
-        throw new IncorrectEncryptionKey(error);
-      }
-      processedData = encryptedFile.encryptedData.ciphertext;
-      const { address } = await this.getActiveKey();
-      tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
-      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
-      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
-    }
-    return { processedData, encryptionTags: tags }
-  }
-
-  protected async getActiveKey() {
-    return {
-      address: await deriveAddress(this.dataEncrypter.publicKey),
-      publicKey: arrayToBase64(this.dataEncrypter.publicKey)
-    };
-  }
-
-  async processWriteString(data: string): Promise<string> {
-    if (this.isPublic) return data;
-    let encryptedPayload: string;
-    try {
-      encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
-    } catch (error) {
-      throw new IncorrectEncryptionKey(error);
-    }
-    const decodedPayload = base64ToJson(encryptedPayload) as any;
-    decodedPayload.publicAddress = (await this.getActiveKey()).address;
-    delete decodedPayload.publicKey;
-    return jsonToBase64(decodedPayload);
-  }
-
-  protected getAvatarUri(profileDetails: ProfileDetails) {
-    if (profileDetails.avatarUri && profileDetails.avatarUri.length) {
-      const avatarUri = [...profileDetails.avatarUri].reverse().find(resourceUri => resourceUri.startsWith("s3:"))?.replace("s3:", "");
-      return avatarUri !== "null" && avatarUri;
-    } else {
-      return null;
-    }
-  }
-
-  protected async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
-    const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, { cacheOnly, public: false });
-  }
-
-  protected async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
-    const processedMemberDetails = {} as ProfileDetails;
-    if (!this.isPublic) {
-      if (memberDetails.name) {
-        processedMemberDetails.name = await this.processWriteString(memberDetails.name);
-      }
-      if (memberDetails.avatar) {
-        const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
-        processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
-      }
-    }
-    return new ProfileDetails(processedMemberDetails);
-  }
-
-  protected async processReadString(data: string, shouldDecrypt = true): Promise<string> {
-    if (this.isPublic || !shouldDecrypt) return data;
-    const decryptedDataRaw = await this.processReadRaw(data, {});
-    return arrayToString(decryptedDataRaw);
-  }
-
-  protected getEncryptedPayload(data: ArrayBuffer | string, metadata: EncryptionMetadata): EncryptedPayload {
-    const { encryptedKey, iv } = metadata;
-    if (encryptedKey && iv) {
-      return {
-        encryptedKey,
-        encryptedData: {
-          iv: base64ToArray(iv),
-          ciphertext: data as ArrayBuffer
-        }
-      }
-    }
-    return null;
-  }
-
-  protected async getCurrentState(): Promise<any> {
-    return this.object?.data?.length > 0
-      ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
-      : {};
-  }
-
-  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
-    const currentState = await this.getCurrentState();
-    const mergedState = await this.mergeState(currentState, stateUpdates);
-    return this.uploadState(mergedState);
-  }
-
-  protected async signData(data: any): Promise<string> {
-    const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
-    const signature = await signString(
-      jsonToBase64(data),
-      privateKeyRaw
-    );
-    return signature;
-  }
-
-  public async uploadState(state: any, cacheOnly = false): Promise<string> {
+  async uploadState(state: any, cacheOnly = false): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -343,19 +186,6 @@ class Service {
     }
     const ids = await this.api.uploadData([{ data: state, tags }], { cacheOnly });
     return ids[0];
-  }
-
-  protected async mergeState(currentState: any, stateUpdates: any) {
-    let newState = lodash.cloneDeepWith(currentState);
-    lodash.mergeWith(
-      newState,
-      stateUpdates,
-      function concatArrays(objValue, srcValue) {
-        if (lodash.isArray(objValue)) {
-          return objValue.concat(srcValue);
-        }
-      });
-    return newState;
   }
 
   async getTxTags(): Promise<Tags> {
@@ -383,53 +213,76 @@ class Service {
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
 
-  protected async handleListErrors<T>(originalItems: Array<T>, promises: Array<Promise<T>>)
-    : Promise<{ items: Array<T>, errors: Array<{ id: string, error: Error }> }> {
-    const results = await Promise.all(promises.map(p => p.catch(e => e)));
-    const items = results.filter(result => !(result instanceof Error));
-    const errors = results
-      .map((result, index) => ({ result, index }))
-      .filter((mapped) => mapped.result instanceof Error)
-      .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result }));
-    return { items, errors };
-  }
-
-  protected async paginate<T>(apiCall: any, listOptions: ListOptions & { vaultId?: string }): Promise<Array<T>> {
-    let token = undefined;
-    let results = [] as T[];
-    do {
-      const { items, nextToken } = await apiCall(listOptions);
-      results = results.concat(items);
-      token = nextToken;
-      listOptions.nextToken = nextToken;
-      if (nextToken === "null") {
-        token = undefined;
-      }
-    } while (token);
-    return results;
-  }
-
-  protected async rotateMemberKeys(publicKeys: Map<string, string>): Promise<{
-    memberKeys: Map<string, EncryptedKeys[]>,
-    keyPair: Keys
-  }> {
-    const memberKeys = new Map<string, EncryptedKeys[]>();
-    // generate a new vault key pair
-    const keyPair = await generateKeyPair();
-
-    for (let [memberId, publicKey] of publicKeys) {
-      const memberKeysEncrypter = new Encrypter(
-        this.wallet,
-        this.dataEncrypter.keys,
-        base64ToArray(publicKey)
-      );
+  protected async processWriteRaw(data: ArrayBuffer, encryptedKey?: string) {
+    let processedData: ArrayBuffer;
+    const tags = [] as Tags;
+    if (this.isPublic) {
+      processedData = data;
+    } else {
+      let encryptedFile: EncryptedPayload;
       try {
-        memberKeys.set(memberId, [await memberKeysEncrypter.encryptMemberKey(keyPair)]);
+        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), false, encryptedKey) as EncryptedPayload;
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
+      processedData = encryptedFile.encryptedData.ciphertext;
+      const { address } = await this.getActiveKey();
+      tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
+      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
+      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
     }
-    return { memberKeys, keyPair };
+    return { processedData, encryptionTags: tags }
+  }
+
+  protected async processReadRaw(data: ArrayBuffer | string, metadata: EncryptionMetadata, shouldDecrypt = true): Promise<ArrayBuffer> {
+    if (this.isPublic || !shouldDecrypt) {
+      return data as ArrayBuffer;
+    }
+
+    const encryptedPayload = getEncryptedPayload(data, metadata);
+    try {
+      if (encryptedPayload) {
+        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
+      } else {
+        return this.dataEncrypter.decryptRaw(data as string);
+      }
+    } catch (error) {
+      throw new IncorrectEncryptionKey(error);
+    }
+  }
+
+  protected async processReadString(data: string, shouldDecrypt = true): Promise<string> {
+    if (this.isPublic || !shouldDecrypt) return data;
+    const decryptedDataRaw = await this.processReadRaw(data, {});
+    return arrayToString(decryptedDataRaw);
+  }
+
+  protected async getActiveKey() {
+    return {
+      address: await deriveAddress(this.dataEncrypter.publicKey),
+      publicKey: arrayToBase64(this.dataEncrypter.publicKey)
+    };
+  }
+
+  protected async getCurrentState(): Promise<any> {
+    return this.object?.data?.length > 0
+      ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
+      : {};
+  }
+
+  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
+    const currentState = await this.getCurrentState();
+    const mergedState = mergeState(currentState, stateUpdates);
+    return this.uploadState(mergedState);
+  }
+
+  private async signData(data: any): Promise<string> {
+    const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
+    const signature = await signString(
+      jsonToBase64(data),
+      privateKeyRaw
+    );
+    return signature;
   }
 }
 

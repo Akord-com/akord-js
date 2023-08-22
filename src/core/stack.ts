@@ -1,6 +1,6 @@
 import { NodeCreateOptions, NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileService, FileUploadResult, FileUploadOptions } from "./file";
+import { FileService, FileUploadOptions } from "./file";
 import { FileLike } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
 
@@ -22,20 +22,24 @@ class StackService extends NodeService<Stack> {
       ...this.defaultCreateOptions,
       ...options
     }
-    await this.setVaultContext(vaultId);
-    this.setVaultContextForFile();
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
-    this.setAkordTags((this.isPublic ? [name] : []).concat(createOptions.tags));
+    const service = new StackService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.STACK_CREATE);
+    service.setFunction(functions.NODE_CREATE);
+    service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
 
-    createOptions.cacheOnly = this.vault.cacheOnly;
+    createOptions.cacheOnly = service.vault.cacheOnly;
+
+    const fileService = new FileService(this.wallet, this.api, service);
+    const fileUploadResult = await fileService.create(file, createOptions);
+    const version = await fileService.newVersion(file, fileUploadResult);
 
     const state = {
-      name: await this.processWriteString(name ? name : file.name),
-      versions: [await this.uploadNewFileVersion(file, createOptions)],
+      name: await service.processWriteString(name ? name : file.name),
+      versions: [version],
       tags: createOptions.tags || []
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
+    const { nodeId, transactionId, object } = await service.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object };
   }
 
@@ -46,25 +50,26 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with new stack id & corresponding transaction id
    */
   public async import(vaultId: string, fileTxId: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<StackCreateResult> {
-    await this.setVaultContext(vaultId);
-    this.setVaultContextForFile();
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
+    const service = new StackService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
+    service.setActionRef(actionRefs.STACK_CREATE);
+    service.setFunction(functions.NODE_CREATE);
 
-    const { file, resourceHash, resourceUrl } = await this.fileService.import(fileTxId);
+    const fileService = new FileService(this.wallet, this.api, service);
+    const { file, resourceHash, resourceUrl } = await fileService.import(fileTxId);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
-      name: await this.processWriteString(file.name),
+      name: await service.processWriteString(file.name),
       type: file.type,
       size: file.size,
       resourceUri: [`arweave:${fileTxId}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
     });
     const state = {
-      name: await this.processWriteString(file.name),
+      name: await service.processWriteString(file.name),
       versions: [version]
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
+    const { nodeId, transactionId, object } = await service.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object };
   }
 
@@ -75,17 +80,21 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with corresponding transaction id
    */
   public async uploadRevision(stackId: string, file: FileLike, options: FileUploadOptions = {}): Promise<StackUpdateResult> {
-    await this.setVaultContextFromNodeId(stackId, this.objectType);
-    this.setVaultContextForFile();
-    this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
+    const service = new StackService(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(stackId, this.objectType);
+    service.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
+    service.setFunction(functions.NODE_UPDATE);
 
-    options.cacheOnly = this.object.__cacheOnly__;
+    options.cacheOnly = service.object.__cacheOnly__;
+
+    const fileService = new FileService(this.wallet, this.api, service);
+    const fileUploadResult = await fileService.create(file, options);
+    const version = await fileService.newVersion(file, fileUploadResult);
 
     const state = {
-      versions: [await this.uploadNewFileVersion(file, options)]
+      versions: [version]
     };
-    this.setFunction(functions.NODE_UPDATE);
-    return this.nodeUpdate<Stack>(state);
+    return service.nodeUpdate<Stack>(state);
   }
 
   /**
@@ -95,13 +104,13 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data buffer
    */
   public async getVersion(stackId: string, index?: number): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
+    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK), null);
     const version = stack.getVersion(index);
-    await this.setVaultContext(stack.vaultId);
-    this.setVaultContextForFile();
-    const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: this.isPublic });
-    const data = await this.processReadRaw(fileData, metadata);
-    const name = await this.processReadString(version.name);
+    const service = new StackService(this.wallet, this.api);
+    await service.setVaultContext(stack.vaultId);
+    const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: service.isPublic });
+    const data = await service.processReadRaw(fileData, metadata);
+    const name = await service.processReadString(version.name);
     return { name, data };
   }
 
@@ -113,36 +122,8 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with stack file uri
    */
   public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
-    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK, this.vaultId), null);
+    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK), null);
     return stack.getUri(type, index);
-  }
-
-  public async uploadNewFileVersion(file: FileLike, options: FileUploadOptions): Promise<FileVersion> {
-    const {
-      resourceTx,
-      resourceUrl,
-      resourceHash,
-      numberOfChunks,
-      chunkSize
-    } = await this.fileService.create(file, options);
-    const version = new FileVersion({
-      owner: await this.wallet.getAddress(),
-      createdAt: JSON.stringify(Date.now()),
-      name: await this.processWriteString(file.name),
-      type: file.type,
-      size: file.size,
-      resourceUri: [`arweave:${resourceTx}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
-      numberOfChunks,
-      chunkSize,
-    });
-    return version;
-  }
-
-  setVaultContextForFile(): void {
-    this.fileService.setKeys(this.keys);
-    this.fileService.setRawDataEncryptionPublicKey(this.dataEncrypter.publicKey);
-    this.fileService.setVaultId(this.vaultId);
-    this.fileService.setIsPublic(this.isPublic);
   }
 };
 

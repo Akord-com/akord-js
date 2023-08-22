@@ -6,7 +6,7 @@ import { Node, NodeLike, NodeType, Stack } from "../types/node";
 import { FileLike } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
 import { Membership, RoleType } from "../types/membership";
-import { Hooks } from "./file";
+import { FileService, Hooks } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
@@ -152,7 +152,6 @@ class BatchService extends Service {
       // upload file data & metadata
       Promise.all(chunk.map(async (item) => {
         const service = new StackService(this.wallet, this.api, this);
-        service.setVaultContextForFile();
 
         const nodeId = uuidv4();
         service.setObjectId(nodeId);
@@ -165,9 +164,13 @@ class BatchService extends Service {
         service.setParentId(createOptions.parentId);
         service.arweaveTags = await service.getTxTags();
 
+        const fileService = new FileService(this.wallet, this.api, service);
+        const fileUploadResult = await fileService.create(item.file, createOptions);
+        const version = await fileService.newVersion(item.file, fileUploadResult);
+
         const state = {
           name: await service.processWriteString(item.name ? item.name : item.file.name),
-          versions: [await service.uploadNewFileVersion(item.file, createOptions)],
+          versions: [version],
           tags: service.tags
         };
         const id = await service.uploadState(state);

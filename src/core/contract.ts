@@ -11,7 +11,6 @@ class ContractService extends Service {
    */
   public async getState(id: string): Promise<ContractState> {
     const contract = await this.api.getContractState(id);
-    this.setIsPublic(contract.public);
     if (contract.public) {
       return contract;
     } else {
