@@ -7,9 +7,16 @@ import { ContractInput, Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
 import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
+import { BadRequest } from '../errors/bad-request';
+import { handleListErrors, paginate } from './common';
+import { Folder } from '../types/folder';
+import { Stack } from '../types/stack';
+import { Memo } from '../types/memo';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
+
+  parentId?: string;
 
   defaultListOptions = {
     shouldDecrypt: true,
@@ -61,7 +68,7 @@ class NodeService<T> extends Service {
       .map(async (nodeProto: any) => {
         return await this.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
       });
-    const { items, errors } = await this.handleListErrors<T>(response.items, promises);
+    const { items, errors } = await handleListErrors<T>(response.items, promises);
     return {
       items,
       nextToken: response.nextToken,
@@ -78,7 +85,7 @@ class NodeService<T> extends Service {
     const list = async (options: ListOptions & { vaultId: string }) => {
       return await this.list(options.vaultId, options);
     }
-    return await this.paginate<T>(list, { ...options, vaultId });
+    return await paginate<T>(list, { ...options, vaultId });
   }
 
   /**
@@ -87,13 +94,14 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async rename(nodeId: string, name: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType);
-    this.setActionRef(this.objectType.toUpperCase() + "_RENAME");
-    this.setFunction(functions.NODE_UPDATE);
+    const service = new NodeService<T>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType);
+    service.setActionRef(this.objectType.toUpperCase() + "_RENAME");
+    service.setFunction(functions.NODE_UPDATE);
     const state = {
-      name: await this.processWriteString(name)
+      name: await service.processWriteString(name)
     };
-    return this.nodeUpdate<NodeLike>(state);
+    return service.nodeUpdate<T>(state) as Promise<NodeUpdateResult>;
   }
 
   /**
@@ -102,10 +110,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_MOVE");
-    this.setFunction(functions.NODE_MOVE);
-    return this.nodeUpdate<NodeLike>(null, { parentId });
+    const service = new NodeService<T>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_MOVE");
+    service.setFunction(functions.NODE_MOVE);
+    return service.nodeUpdate<NodeLike>(null, { parentId });
   }
 
   /**
@@ -113,10 +122,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
-    this.setFunction(functions.NODE_REVOKE);
-    return this.nodeUpdate<NodeLike>();
+    const service = new NodeService<T>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
+    service.setFunction(functions.NODE_REVOKE);
+    return service.nodeUpdate<T>() as Promise<NodeUpdateResult>;
   }
 
   /**
@@ -124,10 +134,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async restore(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
-    this.setFunction(functions.NODE_RESTORE);
-    return this.nodeUpdate<NodeLike>();
+    const service = new NodeService<NodeLike>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
+    service.setFunction(functions.NODE_RESTORE);
+    return service.nodeUpdate<T>() as Promise<NodeUpdateResult>;
   }
 
   /**
@@ -135,10 +146,11 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async delete(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_DELETE");
-    this.setFunction(functions.NODE_DELETE);
-    return this.nodeUpdate<NodeLike>();
+    const service = new NodeService<NodeLike>(this.wallet, this.api);
+    await service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    service.setActionRef(this.objectType.toUpperCase() + "_DELETE");
+    service.setFunction(functions.NODE_DELETE);
+    return service.nodeUpdate<T>() as Promise<NodeUpdateResult>;
   }
 
   protected async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
@@ -149,10 +161,11 @@ class NodeService<T> extends Service {
     const nodeId = uuidv4();
     this.setObjectId(nodeId);
     this.setFunction(functions.NODE_CREATE);
+    this.setFunction(functions.NODE_CREATE);
+    this.setParentId(clientInput.parentId);
 
     this.arweaveTags = await this.getTxTags();
     clientTags?.map((tag: Tag) => this.arweaveTags.push(tag));
-    this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
 
     const input = {
       function: this.function,
@@ -179,10 +192,8 @@ class NodeService<T> extends Service {
       ...clientInput
     } as ContractInput;
 
+    this.setParentId(clientInput?.parentId);
     this.arweaveTags = await this.getTxTags();
-    if (clientInput && this.function === functions.NODE_MOVE) {
-      this.arweaveTags.push(new Tag(protocolTags.PARENT_ID, clientInput.parentId ? clientInput.parentId : "root"));
-    }
 
     if (stateUpdates) {
       const id = await this.mergeAndUploadState(stateUpdates);
@@ -197,6 +208,10 @@ class NodeService<T> extends Service {
     return { transactionId: id, object: node };
   }
 
+  async setParentId(parentId?: string) {
+    this.parentId = parentId;
+  }
+
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
     const object = await this.api.getNode<NodeLike>(nodeId, type, vaultId);
     this.setVaultId(object.vaultId);
@@ -207,12 +222,16 @@ class NodeService<T> extends Service {
     this.setObjectType(type);
   }
 
-  protected async getTxTags(): Promise<Tags> {
+  async getTxTags(): Promise<Tags> {
     const tags = await super.getTxTags();
-    return tags.concat(new Tag(protocolTags.NODE_ID, this.objectId));
+    tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
+    if (this.function === functions.NODE_CREATE || this.function === functions.NODE_MOVE) {
+      tags.push(new Tag(protocolTags.PARENT_ID, this.parentId ? this.parentId : "root"));
+    }
+    return tags;
   }
 
-  protected async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
+  async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
     const node = this.nodeInstance(object, keys);
     if (shouldDecrypt) {
       try {
@@ -227,7 +246,16 @@ class NodeService<T> extends Service {
   protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
 
   private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
-    return new this.NodeType(nodeProto, keys);
+    // TODO: use a generic NodeLike constructor
+    if (this.objectType === "Folder") {
+      return new Folder(nodeProto, keys);
+    } else if (this.objectType === "Stack") {
+      return new Stack(nodeProto, keys);
+    } else if (this.objectType === "Memo") {
+      return new Memo(nodeProto, keys);
+    } else {
+      throw new BadRequest("Given type is not supported: " + this.objectType);
+    }
   }
 }
 

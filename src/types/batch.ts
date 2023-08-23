@@ -1,4 +1,5 @@
 import { Hooks } from "./file";
+import { Membership } from "./membership"
 import { Stack } from "./stack"
 
 export type BatchStackCreateOptions = Hooks & {
@@ -13,6 +14,6 @@ export interface BatchStackCreateResponse {
 }
 
 export interface BatchMembershipInviteResponse {
-  data: Array<{ membershipId: string, transactionId: string }>
+  data: Array<{ membershipId: string, transactionId: string, object?: Membership }>
   errors: Array<{ email: string, message: string, error: Error }>
 }

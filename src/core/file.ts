@@ -4,7 +4,7 @@ import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { v4 as uuid } from "uuid";
-import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, Hooks, StorageType } from "../types/file";
+import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, FileVersion, Hooks, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
 import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
@@ -29,26 +29,26 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    await this.setVaultContext(vaultId);
+    const service = new FileService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
     const downloadOptions = options as FileDownloadOptions;
-    downloadOptions.public = this.isPublic;
+    downloadOptions.public = service.isPublic;
     let fileBinary: ArrayBuffer;
     if (options.isChunked) {
       let currentChunk = 0;
       while (currentChunk < options.numberOfChunks) {
         const url = `${id}_${currentChunk}`;
         downloadOptions.loadedSize = currentChunk * this.chunkSize;
-        const chunkBinary = await this.getBinary(url, downloadOptions);
-        fileBinary = this.appendBuffer(fileBinary, chunkBinary);
+        const chunkBinary = await service.getBinary(url, downloadOptions);
+        fileBinary = service.appendBuffer(fileBinary, chunkBinary);
         currentChunk++;
       }
     } else {
       const { fileData, metadata } = await this.api.downloadFile(id, downloadOptions);
-      fileBinary = await this.processReadRaw(fileData, metadata)
+      fileBinary = await service.processReadRaw(fileData, metadata)
     }
     return fileBinary;
   }
-
 
   /**
    * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
@@ -60,17 +60,18 @@ class FileService extends Service {
    * @returns Promise with file buffer
    */
   public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
-    await this.setVaultContext(vaultId);
+    const service = new FileService(this.wallet, this.api);
+    await service.setVaultContext(vaultId);
     const downloadOptions = options as FileDownloadOptions;
-    downloadOptions.public = this.isPublic;
-    const writer = await this.stream(options.name, options.resourceSize);
+    downloadOptions.public = service.isPublic;
+    const writer = await service.stream(options.name, options.resourceSize);
     if (options.isChunked) {
       let currentChunk = 0;
       try {
         while (currentChunk < options.numberOfChunks) {
           const url = `${id}_${currentChunk}`;
-          downloadOptions.loadedSize = currentChunk * this.chunkSize;
-          const fileBinary = await this.getBinary(url, downloadOptions);
+          downloadOptions.loadedSize = currentChunk * service.chunkSize;
+          const fileBinary = await service.getBinary(url, downloadOptions);
           if (writer instanceof WritableStreamDefaultWriter) {
             await writer.ready
           }
@@ -86,7 +87,7 @@ class FileService extends Service {
         await writer.close();
       }
     } else {
-      const fileBinary = await this.getBinary(id, downloadOptions);
+      const fileBinary = await service.getBinary(id, downloadOptions);
       await writer.write(new Uint8Array(fileBinary));
       await writer.close();
     }
@@ -159,6 +160,20 @@ class FileService extends Service {
       const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
       return fileStream.getWriter();
     }
+  }
+
+  public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
+    const version = new FileVersion({
+      owner: await this.wallet.getAddress(),
+      createdAt: JSON.stringify(Date.now()),
+      name: await this.processWriteString(file.name),
+      type: file.type,
+      size: file.size,
+      resourceUri: uploadResult.resourceUri,
+      numberOfChunks: uploadResult.numberOfChunks,
+      chunkSize: uploadResult.chunkSize,
+    });
+    return version;
   }
 
   private retrieveFileMetadata(fileTxId: string, tags: Tags = [])

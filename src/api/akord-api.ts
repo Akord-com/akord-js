@@ -45,10 +45,10 @@ export default class AkordApi extends Api {
     return resources;
   };
 
-  public async postContractTransaction<T>(contractId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
+  public async postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
     const { id, object } = await new ApiClient()
       .env(this.config)
-      .vaultId(contractId)
+      .vaultId(vaultId)
       .metadata(metadata)
       .input(input)
       .tags(tags)
