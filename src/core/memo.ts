@@ -54,7 +54,7 @@ class MemoService extends NodeService<Memo> {
     const currentState = await service.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.push(await service.memoReaction(reaction));
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
 
     const { id, object } = await this.api.postContractTransaction<Memo>(
       service.vaultId,
@@ -78,7 +78,7 @@ class MemoService extends NodeService<Memo> {
     service.arweaveTags = await service.getTxTags();
 
     const state = await service.deleteReaction(reaction);
-    const dataTxId = await service.uploadState(state);
+    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
     const { id, object } = await this.api.postContractTransaction<Memo>(
       service.vaultId,

@@ -174,7 +174,7 @@ class BatchService extends Service {
           versions: [version],
           tags: service.tags
         };
-        const id = await service.uploadState(state);
+        const id = await service.uploadState(state, service.vault.cacheOnly);
 
         // queue the stack transaction for posting
         transactions.push({
@@ -278,7 +278,7 @@ class BatchService extends Service {
           service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
             .concat(await service.getTxTags());
 
-          const dataTxId = await service.uploadState(state);
+          const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
           transactions.push({
             vaultId,

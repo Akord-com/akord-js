@@ -193,7 +193,7 @@ class VaultService extends Service {
     service.setAkordTags((options.name && service.isPublic ? [options.name] : []).concat(options.tags));
     service.arweaveTags = await service.getTxTags();
 
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
       { function: service.function, data: dataTxId },
@@ -216,7 +216,7 @@ class VaultService extends Service {
     const state = {
       name: await service.processWriteString(name)
     };
-    const data = await service.mergeAndUploadState(state);
+    const data = await service.mergeAndUploadState(state, service.vault.cacheOnly);
     service.setAkordTags(service.isPublic ? [name] : []);
     service.arweaveTags = await service.getTxTags();
 
@@ -253,7 +253,7 @@ class VaultService extends Service {
         newState.tags.push(tag);
       }
     }
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
@@ -285,7 +285,7 @@ class VaultService extends Service {
       const index = this.getTagIndex(newState.tags, tag);
       newState.tags.splice(index, 1);
     }
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,

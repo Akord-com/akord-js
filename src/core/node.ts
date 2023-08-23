@@ -173,7 +173,7 @@ class NodeService<T> extends Service {
     } as ContractInput;
 
     if (state) {
-      const id = await this.uploadState(state);
+      const id = await this.uploadState(state, this.vault.cacheOnly);
       input.data = id;
     }
 
@@ -196,7 +196,7 @@ class NodeService<T> extends Service {
     this.arweaveTags = await this.getTxTags();
 
     if (stateUpdates) {
-      const id = await this.mergeAndUploadState(stateUpdates);
+      const id = await this.mergeAndUploadState(stateUpdates, this.vault.cacheOnly);
       input.data = id;
     }
     const { id, object } = await this.api.postContractTransaction<T>(

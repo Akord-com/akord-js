@@ -165,7 +165,7 @@ class Service {
     }
   }
 
-  async uploadState(state: any, cacheOnly = false): Promise<string> {
+  async uploadState(state: any, cacheOnly = true): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -266,10 +266,10 @@ class Service {
       : {};
   }
 
-  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
+  protected async mergeAndUploadState(stateUpdates: any, cacheOnly = true): Promise<string> {
     const currentState = await this.getCurrentState();
     const mergedState = mergeState(currentState, stateUpdates);
-    return this.uploadState(mergedState);
+    return this.uploadState(mergedState, cacheOnly);
   }
 
   private async signData(data: any): Promise<string> {

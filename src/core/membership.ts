@@ -107,7 +107,7 @@ class MembershipService extends Service {
     service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await service.getTxTags());
 
-    const dataTxId = await service.uploadState(state);
+    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
     const input = {
       function: service.function,
@@ -161,7 +161,7 @@ class MembershipService extends Service {
         memberDetails: await service.processMemberDetails({ name: member.options?.name }, service.vault.cacheOnly),
       };
 
-      const data = await service.uploadState(state);
+      const data = await service.uploadState(state, service.vault.cacheOnly);
       dataArray.push({
         id: membershipId,
         data
@@ -209,7 +209,7 @@ class MembershipService extends Service {
     service.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     service.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await service.mergeAndUploadState(state);
+    const data = await service.mergeAndUploadState(state, service.vault.cacheOnly);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       service.vaultId,
       { function: service.function, data },
@@ -238,7 +238,7 @@ class MembershipService extends Service {
     service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await service.getTxTags());
 
-    const dataTxId = await service.uploadState(state);
+    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
     const input = {
       function: service.function,
@@ -329,7 +329,7 @@ class MembershipService extends Service {
         memberService.setVaultId(service.vaultId);
         memberService.setObjectId(member.id);
         memberService.setObject(member);
-        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) });
+        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, service.vault.cacheOnly);
         data.push({ id: member.id, value: dataTx });
       }));
     }
@@ -407,7 +407,7 @@ class MembershipService extends Service {
     service.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     service.setFunction(functions.MEMBERSHIP_UPDATE);
 
-    const data = await service.mergeAndUploadState({ memberDetails });
+    const data = await service.mergeAndUploadState({ memberDetails }, service.vault.cacheOnly);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       service.vaultId,
       { function: service.function, data },
