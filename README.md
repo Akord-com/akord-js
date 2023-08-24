@@ -686,6 +686,39 @@ const { stackId } = await akord.stack.create(vaultId, file, "jam session vol. 1"
    ]
 });
 ```
+
+```js
+import { UDL_LICENSE_TX_ID } from "@akord/akord-js";
+
+// create a file stack with UDL
+
+// first let's define terms of UDL
+const udl = {
+  license: UDL_LICENSE_TX_ID,
+  licenseFee: {
+    type: "Monthly",
+    value: 5
+  },
+  derivations: [
+    {
+      type: "Allowed-With-RevenueShare",
+      value: 30,
+    },
+    {
+      type: "Allowed-With-RevenueShare",
+      value: 10,
+      duration: {
+        type: "After",
+        value: 2
+      }
+    }
+  ],
+  commercialUses: [{ type: "Allowed-With-Credit" }],
+  paymentAddress: "89tR0-C1m3_sCWCoVCChg4gFYKdiH5_ZDyZpdJ2DDRw"
+};
+// then pass it as an option when creating the file stack
+const { stackId } = await akord.stack.create(vaultId, file, name, { udl: udl });
+```
 > [See Next.js file upload showcase here][file-upload-example]
 </details>
 

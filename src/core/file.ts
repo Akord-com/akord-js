@@ -12,6 +12,8 @@ import { getTxData, getTxMetadata } from "../arweave";
 import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 import { FileVersion } from "../types/node";
+import { UDL } from "../types/udl";
+import { udlToTags } from "./udl";
 
 const DEFAULT_FILE_TYPE = "text/plain";
 
@@ -333,6 +335,10 @@ class FileService extends Service {
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
+    if (options.udl) {
+      const udlTags = udlToTags(options.udl);
+      tags.push(...udlTags);
+    }
     return tags;
   }
 };
@@ -355,7 +361,8 @@ export type Hooks = {
 export type FileUploadOptions = Hooks & {
   public?: boolean
   cacheOnly?: boolean,
-  arweaveTags?: Tags
+  arweaveTags?: Tags,
+  udl?: UDL
 }
 
 export type FileDownloadOptions = Hooks & {
