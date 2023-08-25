@@ -40,4 +40,6 @@ export namespace NodeJs {
   }
 }
 
-export type FileLike = NodeJs.File | File
+export type FileLike = NodeJs.File | File;
+
+export type FileSource = FileLike | ArrayBuffer | Buffer | string | Readable | Array<BinaryLike | any>;

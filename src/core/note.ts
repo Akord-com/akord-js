@@ -2,7 +2,6 @@ import { NodeCreateOptions, NodeService } from "./node";
 import { Stack, nodeType } from "../types/node";
 import { StackService } from "./stack";
 import { arrayToString } from "@akord/crypto";
-import { createFileLike } from "./file";
 import { Paginated } from "../types/paginated";
 
 class NoteService extends NodeService<Stack> {
@@ -48,12 +47,11 @@ class NoteService extends NodeService<Stack> {
       ...this.defaultCreateOptions,
       ...options
     }
-    const noteFile = await createFileLike([content], name, createOptions.mimeType);
     const { stackId, transactionId, object } = await this.stackService.create(
       vaultId,
-      noteFile,
+      [content],
       name,
-      createOptions
+      { ...createOptions, name }
     );
     return { noteId: stackId, transactionId, object };
   }
@@ -66,8 +64,7 @@ class NoteService extends NodeService<Stack> {
    * @returns Promise with corresponding transaction id
    */
   public async uploadRevision(noteId: string, content: string, name: string,  options: NoteOptions = this.defaultCreateOptions): Promise<NoteUpdateResult> {
-    const noteFile = await createFileLike([content], name, options.mimeType);
-    return this.stackService.uploadRevision(noteId, noteFile);
+    return this.stackService.uploadRevision(noteId, [content], { name, mimeType: options.mimeType });
   }
 
   private isValidNoteType(type: string) {

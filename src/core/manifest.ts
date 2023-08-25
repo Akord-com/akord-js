@@ -2,7 +2,6 @@ import { NodeService } from "./node";
 import { Stack, nodeType } from "../types/node";
 import { StackService } from "./stack";
 import { FolderService } from "./folder";
-import { createFileLike } from "./file";
 import { arrayToString } from "@akord/crypto";
 import { BadRequest } from "../errors/bad-request";
 
@@ -52,14 +51,13 @@ class ManifestService extends NodeService<Stack> {
     if (!manifest) {
       manifest = await this.renderManifestJSON(vaultId);
     }
-    const file = await createFileLike([JSON.stringify(manifest)], FILE_NAME, FILE_TYPE);
     const manifestNode = await this.get(vaultId);
     if (manifestNode) {
       // update vault manifest
-      return await this.stackService.uploadRevision(manifestNode.id, file);
+      return await this.stackService.uploadRevision(manifestNode.id, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     } else {
       // create new vault manifest
-      return await this.stackService.create(vaultId, file, file.name);
+      return await this.stackService.create(vaultId, [JSON.stringify(manifest)], FILE_NAME, { name: FILE_NAME, mimeType: FILE_TYPE });
     }
   }
 

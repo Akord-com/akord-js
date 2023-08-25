@@ -2,10 +2,10 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
-import { NodeJs } from "../types/file";
 import { StorageType } from "../types/node";
 import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
+import { createFileLike } from "../core/file";
 
 let akord: Akord;
 
@@ -52,9 +52,7 @@ describe("Testing stack functions", () => {
 export const stackCreate = async (vaultId: string) => {
   const name = faker.random.words();
 
-  const file = await NodeJs.File.fromPath(testDataPath + firstFileName);
-
-  const { stackId } = await akord.stack.create(vaultId, file, name);
+  const { stackId } = await akord.stack.create(vaultId, testDataPath + firstFileName, name);
 
   const stack = await akord.stack.get(stackId);
   expect(stack.status).toEqual("ACTIVE");
@@ -63,13 +61,13 @@ export const stackCreate = async (vaultId: string) => {
   expect(stack.versions[0].name).toEqual(firstFileName);
 
   const binary = await akord.file.get(stack.getUri(StorageType.S3, 0), vaultId);
+  const file = await createFileLike(testDataPath + firstFileName);
   expect(binary).toEqual(await file.arrayBuffer());
   return stackId;
 }
 
 export const stackUploadRevision = async (stackId: string) => {
-  const file = await NodeJs.File.fromPath(testDataPath + secondFileName);
-
+  const file = await createFileLike(testDataPath + secondFileName);
   await akord.stack.uploadRevision(stackId, file);
 
   const stack = await akord.stack.get(stackId);
@@ -80,7 +78,7 @@ export const stackUploadRevision = async (stackId: string) => {
   const { data } = await akord.stack.getVersion(stackId);
   expect(data).toEqual(await file.arrayBuffer());
 
-  const firstFile = await NodeJs.File.fromPath(testDataPath + firstFileName);
+  const firstFile = await createFileLike(testDataPath + firstFileName);
   const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
   expect(firstFileData).toEqual(await firstFile.arrayBuffer());
 }
@@ -96,11 +94,11 @@ export const stackRename = async (stackId: string) => {
   expect(stack.versions[0].name).toEqual(firstFileName);
   expect(stack.versions[1].name).toEqual(secondFileName);
 
-  const firstFile = await NodeJs.File.fromPath(testDataPath + firstFileName);
+  const firstFile = await createFileLike(testDataPath + firstFileName);
   const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
   expect(firstFileData).toEqual(await firstFile.arrayBuffer());
 
-  const secondFile = await NodeJs.File.fromPath(testDataPath + secondFileName);
+  const secondFile = await createFileLike(testDataPath + secondFileName);
 
   const { data: secondFileData } = await akord.stack.getVersion(stackId);
   expect(secondFileData).toEqual(await secondFile.arrayBuffer());
