@@ -74,7 +74,7 @@ export default class AkordApi extends Api {
     return contractId;
   };
 
-  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<string[]> {
+  public async uploadFile(file: ArrayBuffer | ReadableStream, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<string[]> {
     const uploadOptions = {
       ...defaultFileUploadOptions,
       ...options

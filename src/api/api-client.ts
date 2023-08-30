@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
+import { fetch } from 'fetch-undici';
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
@@ -490,6 +491,48 @@ export class ApiClient {
    * - cancelHook()
    * @returns {Promise<string[]>}
    */
+  // async uploadFile(): Promise<string[]> {
+  //   const auth = await Auth.getAuthorization();
+  //   if (!auth) {
+  //     throw new Unauthorized("Authentication is required to use Akord API");
+  //   }
+  //   if (!this._data) {
+  //     throw new BadRequest("Missing data to upload. Use ApiClient#data() to add it");
+  //   }
+
+  //   const me = this;
+  //   const config = {
+  //     method: 'post',
+  //     url: `${this._storageurl}/${this._fileUri}`,
+  //     data: this._data,
+  //     headers: {
+  //       'Authorization': auth,
+  //       'x-amz-meta-tags': JSON.stringify(this._tags),
+  //       'x-amz-meta-storage-class': this._storage,
+  //       'Content-Type': 'application/octet-stream'
+  //     },
+  //     signal: this._cancelHook ? this._cancelHook.signal : null,
+  //     onUploadProgress(progressEvent) {
+  //       if (me._progressHook) {
+  //         let progress;
+  //         if (me._total) {
+  //           progress = Math.round((me._processed + progressEvent.loaded) / me._total * 100);
+  //         } else {
+  //           progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
+  //         }
+  //         me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
+  //       }
+  //     }
+  //   } as AxiosRequestConfig;
+
+  //   try {
+  //     const response = await axios(config);
+  //     return response.data.resourceUri;
+  //   } catch (error) {
+  //     throwError(error.response?.status, error.response?.data?.msg, error);
+  //   }
+  // }
+
   async uploadFile(): Promise<string[]> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
@@ -499,34 +542,21 @@ export class ApiClient {
       throw new BadRequest("Missing data to upload. Use ApiClient#data() to add it");
     }
 
-    const me = this;
-    const config = {
-      method: 'post',
-      url: `${this._storageurl}/${this._fileUri}`,
-      data: this._data,
-      headers: {
-        'Authorization': auth,
-        'x-amz-meta-tags': JSON.stringify(this._tags),
-        'x-amz-meta-storage-class': this._storage,
-        'Content-Type': 'application/octet-stream'
-      },
-      signal: this._cancelHook ? this._cancelHook.signal : null,
-      onUploadProgress(progressEvent) {
-        if (me._progressHook) {
-          let progress;
-          if (me._total) {
-            progress = Math.round((me._processed + progressEvent.loaded) / me._total * 100);
-          } else {
-            progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
-          }
-          me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
-        }
-      }
-    } as AxiosRequestConfig;
-
     try {
-      const response = await axios(config);
-      return response.data.resourceUri;
+      const response = await fetch(`${this._storageurl}/${this._fileUri}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': auth,
+          'x-amz-meta-tags': JSON.stringify(this._tags),
+          'x-amz-meta-storage-class': this._storage,
+          'Content-Type': 'application/octet-stream'
+        },
+        body: this._data,
+        duplex: 'half',
+        signal: this._cancelHook ? this._cancelHook.signal : null,
+      });
+
+      return (await response.json()).resourceUri;
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }

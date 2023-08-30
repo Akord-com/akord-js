@@ -3,10 +3,8 @@ import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweave
 import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
-import { v4 as uuid } from "uuid";
 import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, FileVersion, Hooks, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
-import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
 import { getTxData, getTxMetadata } from "../arweave";
@@ -97,25 +95,56 @@ class FileService extends Service {
     file: FileLike,
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
+    let encryptedKey: string;
+    let resourceHash: string;
+    let data: ArrayBuffer;
+    let offset = 0;
+
+    options.public = this.isPublic;
+
     const tags = this.getFileTags(file, options);
-    if (file.size > this.asyncUploadTreshold) {
-      return await this.uploadChunked(file, tags, options);
-    } else {
-      const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      const resourceHash = await digestRaw(new Uint8Array(processedData));
-      const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
-      const signature = await signHash(
-        base64ToArray(resourceHash),
-        privateKeyRaw
-      );
-      tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-      tags.push(new Tag(protocolTags.SIGNATURE, signature));
-      tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
-      options.public = this.isPublic;
-      const resourceUri = await this.api.uploadFile(processedData, tags.concat(encryptionTags), options)
-      resourceUri.push(`hash:${resourceHash}`);
-      return { resourceUri: resourceUri };
-    }
+
+    const me = this;
+    const stream = new ReadableStream({
+      async start(controller) {
+        while (offset < file.size) {
+          const chunk = file.slice(offset, me.chunkSize + offset);
+          const chunkBuffer = await chunk.arrayBuffer()
+          if (offset === 0) {
+            resourceHash = await digestRaw(new Uint8Array(chunkBuffer));
+            const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
+            const signature = await signHash(
+              base64ToArray(resourceHash),
+              privateKeyRaw
+            );
+            tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
+            tags.push(new Tag(protocolTags.SIGNATURE, signature));
+            tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
+          }
+          if (!me.isPublic) {
+            const { encryptedData } = await me.encryptChunk(
+              chunkBuffer,
+              offset,
+              encryptedKey
+            );
+            tags.push(...encryptedData.encryptionTags)
+            if (!encryptedKey) {
+              encryptedKey = encryptedData.encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
+            }
+            data = encryptedData.processedData
+          } else {
+            data = await chunk.arrayBuffer()
+          }
+          controller.enqueue(data);
+        }
+        controller.close();
+      }
+    });
+
+    const resourceUri = await this.api.uploadFile(stream, tags, options)
+    resourceUri.push(`hash:${resourceHash}`);
+    return { resourceUri: resourceUri };
+
   }
 
   public async import(fileTxId: string)
@@ -201,94 +230,12 @@ class FileService extends Service {
     return null;
   }
 
-  private async uploadChunked(
-    file: FileLike,
-    tags: Tags,
-    options: Hooks
-  ): Promise<FileUploadResult> {
-    let resourceUrl = uuid();
-    let encryptionTags: Tags;
-    let encryptedKey: string;
-    let iv: Array<string> = [];
-    let uploadedChunks = 0;
-    let offset = 0;
-
-    while (offset < file.size) {
-      const chunk = file.slice(offset, this.chunkSize + offset);
-      const { encryptedData, chunkNumber } = await this.encryptChunk(
-        chunk,
-        offset,
-        encryptedKey
-      );
-
-      encryptionTags = encryptedData.encryptionTags;
-      if (!this.isPublic) {
-        iv.push(encryptionTags.find((tag) => tag.name === encTags.IV).value);
-        if (!encryptedKey) {
-          encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
-        }
-      }
-
-      await this.uploadChunk(
-        encryptedData,
-        chunkNumber,
-        tags,
-        resourceUrl,
-        file.size,
-        options
-      );
-      offset += this.chunkSize;
-      uploadedChunks += 1;
-      Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
-    }
-    if (!this.isPublic) {
-      const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
-      encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
-    }
-
-    await new ApiClient()
-      .env(this.api.config)
-      .resourceId(resourceUrl)
-      .tags(tags.concat(encryptionTags))
-      .public(this.isPublic)
-      .numberOfChunks(uploadedChunks)
-      .asyncTransaction();
-
-    return {
-      resourceUri: [`hash:${resourceUrl}`, `s3:${resourceUrl}`],
-      numberOfChunks: uploadedChunks,
-      chunkSize: this.chunkSize
-    };
-  }
-
-  private async uploadChunk(
-    chunk: { processedData: ArrayBuffer, encryptionTags: Tags },
-    chunkNumber: number,
-    tags: Tags,
-    resourceUrl: string,
-    resourceSize: number,
-    options: Hooks
-  ) {
-    const resourceUri = await new ApiClient()
-      .env(this.api.config)
-      .resourceId(`${resourceUrl}_${chunkNumber}`)
-      .data(chunk.processedData)
-      .tags(tags.concat(chunk.encryptionTags))
-      .public(this.isPublic)
-      .storage(StorageType.S3)
-      .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
-      .cancelHook(options.cancelHook)
-      .uploadFile()
-    Logger.log("Uploaded file with id: " + JSON.stringify(resourceUri));
-  }
-
-  private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
+  private async encryptChunk(chunk: ArrayBuffer, offset: number, encryptedKey?: string): Promise<{
     encryptedData: { processedData: ArrayBuffer, encryptionTags: Tags },
     chunkNumber: number
   }> {
     const chunkNumber = offset / this.chunkSize;
-    const arrayBuffer = await chunk.arrayBuffer();
-    const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
+    const encryptedData = await this.processWriteRaw(chunk, encryptedKey);
     return { encryptedData, chunkNumber }
   }
 

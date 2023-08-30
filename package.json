@@ -35,6 +35,7 @@
     "@akord/crypto": "0.11.0",
     "@akord/ts-cacheable": "1.0.11",
     "axios": "^0.24.0",
+    "fetch-undici": "^3.0.1",
     "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
     "rxjs": "^7.5.6",
