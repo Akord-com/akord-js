@@ -1,6 +1,7 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { status } from "../constants";
 import { NotFound } from "../errors/not-found";
+import { UDL } from "./udl";
 
 export enum nodeType {
   STACK = "Stack",
@@ -126,6 +127,7 @@ export class FileVersion extends Encryptable implements Version {
   resourceUri: string[];
   size: number;
   numberOfChunks?: number;
+  udl?: UDL;
   chunkSize?: number;
   owner: string;
   createdAt: string;
@@ -141,6 +143,7 @@ export class FileVersion extends Encryptable implements Version {
     this.chunkSize = fileVersionProto.chunkSize;
     this.name = fileVersionProto.name;
     this.status = fileVersionProto.status;
+    this.udl = fileVersionProto.udl;
   }
 
   getUri(type: StorageType): string {

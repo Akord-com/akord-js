@@ -114,7 +114,11 @@ class FileService extends Service {
       tags.push(new Tag(protocolTags.SIGNATURE, signature));
       tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
       options.public = this.isPublic;
-      return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options) };
+      return {
+        resourceHash: resourceHash,
+        udl: options.udl,
+        ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options)
+      };
     }
   }
 
@@ -175,6 +179,7 @@ class FileService extends Service {
       ],
       numberOfChunks: uploadResult.numberOfChunks,
       chunkSize: uploadResult.chunkSize,
+      udl: uploadResult.udl
     });
     return version;
   }
@@ -351,6 +356,7 @@ export type FileUploadResult = {
   resourceHash?: string,
   numberOfChunks?: number,
   chunkSize?: number,
+  udl?: UDL
 }
 
 export type Hooks = {
