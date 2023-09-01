@@ -127,7 +127,7 @@ class MembershipService extends Service {
   }
 
   /**
-   * Airdrop access to the vaul directly through public keys
+   * Airdrop access to the vault directly through public keys
    * @param  {string} vaultId
    * @param  {{publicKey:string,publicSigningKey:string,role:RoleType}[]} members
    * @returns Promise with new memberships & corresponding transaction id
@@ -177,7 +177,7 @@ class MembershipService extends Service {
       memberTags.push(new Tag(protocolTags.MEMBERSHIP_ID, membershipId));
     }
 
-    service.arweaveTags = memberTags.concat(await super.getTxTags());
+    service.arweaveTags = memberTags.concat(await service.getTxTags());
 
     const input = {
       function: service.function,

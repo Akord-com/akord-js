@@ -36,6 +36,7 @@ class StackService extends NodeService<Stack> {
     service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
 
     const fileService = new FileService(this.wallet, this.api, service);
+    fileService.contentType = this.fileService.contentType;
     const fileUploadResult = await fileService.create(file, createOptions);
     const version = await fileService.newVersion(file, fileUploadResult);
 
@@ -99,7 +100,8 @@ class StackService extends NodeService<Stack> {
     }
 
     const fileService = new FileService(this.wallet, this.api, service);
-    const fileUploadResult = await fileService.create(file, uploadOptions);
+    fileService.contentType = this.fileService.contentType;
+    const fileUploadResult = await fileService.create(file, options);
     const version = await fileService.newVersion(file, fileUploadResult);
 
     const state = {
