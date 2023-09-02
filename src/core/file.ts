@@ -18,6 +18,7 @@ const DEFAULT_FILE_TYPE = "text/plain";
 class FileService extends Service {
   asyncUploadTreshold = 209715200;
   chunkSize = 209715200;
+  ivSize = 16;
   contentType = null as string;
 
   /**
@@ -129,13 +130,14 @@ class FileService extends Service {
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-    const resourceUri = await new ApiClient()
+    const resource = await new ApiClient()
       .env(this.api.config)
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
       .storage(StorageType.S3)
-      .uploadFile()
+      .uploadFile();
+    const resourceUri = resource.resourceUri
     resourceUri.push(`${StorageType.ARWEAVE}:${fileTxId}`);
     return { file, resourceUri };
   }
@@ -206,58 +208,48 @@ class FileService extends Service {
     tags: Tags,
     options: Hooks
   ): Promise<FileUploadResult> {
-    let resourceUrl = uuid();
-    let encryptionTags: Tags;
+    let resource: any;
+    let encryptionTags: Tags = [];
     let encryptedKey: string;
     let iv: Array<string> = [];
-    let uploadedChunks = 0;
     let offset = 0;
+    let chunkNumber = 1;
+
+    const totalChunkSize = this.isPublic ? this.chunkSize : this.chunkSize + this.ivSize
+    const numberOfChunks = Math.ceil(file.size / totalChunkSize);
+    const fileSize = this.isPublic ? file.size : numberOfChunks * totalChunkSize;
 
     while (offset < file.size) {
-      const chunk = file.slice(offset, this.chunkSize + offset);
-      const { encryptedData, chunkNumber } = await this.encryptChunk(
-        chunk,
-        offset,
-        encryptedKey
-      );
+      const chunk = file.slice(offset, totalChunkSize);
+      const arrayBuffer = await chunk.arrayBuffer();
+      const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
 
-      encryptionTags = encryptedData.encryptionTags;
       if (!this.isPublic) {
-        iv.push(encryptionTags.find((tag) => tag.name === encTags.IV).value);
+        encryptionTags = encryptedData.encryptionTags;
         if (!encryptedKey) {
           encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
         }
       }
 
-      await this.uploadChunk(
-        encryptedData,
-        chunkNumber,
-        tags,
-        resourceUrl,
-        file.size,
-        options
-      );
-      offset += this.chunkSize;
-      uploadedChunks += 1;
+      resource = await new ApiClient()
+        .env(this.api.config)
+        .public(this.isPublic)
+        .data(encryptedData.processedData)
+        .tags(tags.concat(encryptedData.encryptionTags))
+        .storage(StorageType.S3)
+        .progressHook(options.progressHook, fileSize)
+        .cancelHook(options.cancelHook)        
+        .uploadFile();
+
+      offset += fileSize;
+      chunkNumber += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-    if (!this.isPublic) {
-      const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
-      encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
-    }
-
-    await new ApiClient()
-      .env(this.api.config)
-      .resourceId(resourceUrl)
-      .tags(tags.concat(encryptionTags))
-      .public(this.isPublic)
-      .numberOfChunks(uploadedChunks)
-      .asyncTransaction();
 
     return {
-      resourceUri: [`hash:${resourceUrl}`, `s3:${resourceUrl}`],
-      numberOfChunks: uploadedChunks,
-      chunkSize: this.chunkSize
+      resourceUri: resource.resourceUri,
+      numberOfChunks: numberOfChunks,
+      chunkSize: this.isPublic ? this.chunkSize : this.chunkSize + this.ivSize
     };
   }
 
@@ -269,7 +261,7 @@ class FileService extends Service {
     resourceSize: number,
     options: Hooks
   ) {
-    const resourceUri = await new ApiClient()
+    const resource = await new ApiClient()
       .env(this.api.config)
       .resourceId(`${resourceUrl}_${chunkNumber}`)
       .data(chunk.processedData)
@@ -280,16 +272,6 @@ class FileService extends Service {
       .cancelHook(options.cancelHook)
       .uploadFile()
     Logger.log("Uploaded file with id: " + JSON.stringify(resourceUri));
-  }
-
-  private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
-    encryptedData: { processedData: ArrayBuffer, encryptionTags: Tags },
-    chunkNumber: number
-  }> {
-    const chunkNumber = offset / this.chunkSize;
-    const arrayBuffer = await chunk.arrayBuffer();
-    const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
-    return { encryptedData, chunkNumber }
   }
 
   private appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBufferLike {

@@ -490,7 +490,7 @@ export class ApiClient {
    * - cancelHook()
    * @returns {Promise<string[]>}
    */
-  async uploadFile(): Promise<string[]> {
+  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
@@ -500,16 +500,22 @@ export class ApiClient {
     }
 
     const me = this;
+    const headers = {
+      'Authorization': auth,
+      'x-amz-meta-tags': JSON.stringify(this._tags),
+      'x-amz-meta-storage-class': this._storage,
+      'Content-Type': 'application/octet-stream'
+    } as Record<string, string>
+
+    if () {
+      headers['Content-Range'] = `bytes start-end/${this._total}`
+      headers['Content-Location'] = 'application/octet-stream'
+    }
     const config = {
       method: 'post',
       url: `${this._storageurl}/${this._fileUri}`,
       data: this._data,
-      headers: {
-        'Authorization': auth,
-        'x-amz-meta-tags': JSON.stringify(this._tags),
-        'x-amz-meta-storage-class': this._storage,
-        'Content-Type': 'application/octet-stream'
-      },
+      headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onUploadProgress(progressEvent) {
         if (me._progressHook) {
@@ -524,9 +530,13 @@ export class ApiClient {
       }
     } as AxiosRequestConfig;
 
+
     try {
       const response = await axios(config);
-      return response.data.resourceUri;
+        return { 
+          resourceUri: response.data.resourceUri, 
+          resourceLocation: response.headers['Content-Location'] 
+        };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
