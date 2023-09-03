@@ -192,9 +192,10 @@ class BatchService extends Service {
 
     // post queued stack transactions
     let currentTx: StackCreateTransaction;
-    while (processedStacksCount < items.length) {
+    let stacksCreated = 0;
+    while (stacksCreated < items.length) {
       if (options.cancelHook?.signal.aborted) {
-        return { data, errors, cancelled: items.length - processedStacksCount };
+        return { data, errors, cancelled: items.length - stacksCreated };
       }
       if (transactions.length === 0) {
         // wait for a while if the queue is empty before checking again
@@ -211,12 +212,12 @@ class BatchService extends Service {
           if (options.onStackCreated) {
             await options.onStackCreated(object);
           }
-
           const stack = await new StackService(this.wallet, this.api, this)
             .processNode(object, !this.isPublic, this.keys);
           data.push({ transactionId: id, object: stack, stackId: object.id });
+          stacksCreated += 1;
           if (options.cancelHook?.signal.aborted) {
-            return { data, errors, cancelled: items.length - processedStacksCount };
+            return { data, errors, cancelled: items.length - stacksCreated };
           }
         } catch (error) {
 
@@ -225,7 +226,7 @@ class BatchService extends Service {
       }
     }
     if (options.cancelHook?.signal.aborted) {
-      return { data, errors, cancelled: items.length - processedStacksCount };
+      return { data, errors, cancelled: items.length - stacksCreated };
     }
     return { data, errors, cancelled: 0 };
   }
