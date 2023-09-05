@@ -17,7 +17,7 @@ abstract class Api {
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
   
-  abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<string[]>
+  abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<{ resourceUri: string[], resourceLocation: string }>
 
   abstract uploadData(items: { data: any, tags: Tags }[], cacheOnly?: boolean): Promise<Array<string>>
 

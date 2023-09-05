@@ -46,7 +46,7 @@ export type FileUploadResult = {
 }
 
 export type Hooks = {
-  progressHook?: (progress: number, data?: any) => void,
+  progressHook?: (percentageProgress: number, bytesProgress?: number, id?: string) => void,
   cancelHook?: AbortController
 }
 

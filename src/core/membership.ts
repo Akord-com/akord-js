@@ -501,7 +501,8 @@ class MembershipService extends Service {
   private async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
     const storage = cacheOnly ? StorageType.S3 : StorageType.ARWEAVE;
-    return this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
+    const resource = await this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
+    return resource.resourceUri
   }
 };
 

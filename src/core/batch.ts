@@ -24,7 +24,7 @@ function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
 class BatchService extends Service {
 
   public static BATCH_CHUNK_SIZE = 50;
-  public static TRANSACTION_QUEUE_WAIT_TIME = 1;
+  public static TRANSACTION_QUEUE_WAIT_TIME = 100;
 
   /**
    * @param  {{id:string,type:NoteType}[]} items
@@ -125,10 +125,9 @@ class BatchService extends Service {
 
     if (options.progressHook) {
       const onProgress = options.progressHook
-      const stackProgressHook = (localProgress: number, data: any) => {
-        const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
-        progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
-        perFileProgress.set(data.id, stackBytesUploaded);
+      const stackProgressHook = (percentageProgress: number, binaryProgress: number, progressId: string) => {
+        progress += binaryProgress - (perFileProgress.get(progressId) || 0)
+        perFileProgress.set(progressId, binaryProgress);
         onProgress(Math.min(100, Math.round(progress / size * 100)));
       }
       options.progressHook = stackProgressHook;
@@ -169,6 +168,8 @@ class BatchService extends Service {
 
         const fileService = new FileService(this.wallet, this.api, service);
         const fileUploadResult = await fileService.create(item.file, createOptions);
+        console.log("fileUploadResult")
+        console.log(fileUploadResult)
         const version = await fileService.newVersion(item.file, fileUploadResult);
 
         const state = {
@@ -177,6 +178,8 @@ class BatchService extends Service {
           tags: service.tags
         };
         const id = await service.uploadState(state, service.vault.cacheOnly);
+        console.log("stateId")
+        console.log(id)
         
         processedStacksCount += 1;
         if (options.processingCountHook) {
@@ -197,16 +200,19 @@ class BatchService extends Service {
     // post queued stack transactions
     let currentTx: StackCreateTransaction;
     let stacksCreated = 0;
-    while (stacksCreated < items.length) {
+    let stacksProcessed = 0;
+    while (stacksProcessed < items.length) {
       if (options.cancelHook?.signal.aborted) {
         return { data, errors, cancelled: items.length - stacksCreated };
       }
+      console.log(transactions)
       if (transactions.length === 0) {
         // wait for a while if the queue is empty before checking again
         await new Promise((resolve) => setTimeout(resolve, BatchService.TRANSACTION_QUEUE_WAIT_TIME));
       } else {
         try {
           currentTx = transactions.shift();
+          stacksProcessed += 1;
           // process the dequeued stack transaction
           const { id, object } = await this.api.postContractTransaction<Stack>(
             currentTx.vaultId,
@@ -224,7 +230,6 @@ class BatchService extends Service {
             return { data, errors, cancelled: items.length - stacksCreated };
           }
         } catch (error) {
-
           errors.push({ name: currentTx.item.name, message: error.toString(), error });
         };
       }
@@ -232,6 +237,7 @@ class BatchService extends Service {
     if (options.cancelHook?.signal.aborted) {
       return { data, errors, cancelled: items.length - stacksCreated };
     }
+    console.log({ data, errors, cancelled: 0 })
     return { data, errors, cancelled: 0 };
   }
 

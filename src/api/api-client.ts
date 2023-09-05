@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
+import { v4 as uuidv4 } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
@@ -11,6 +12,9 @@ import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
 import { StorageType } from "../types/file";
+
+const CONTENT_RANGE_HEADER = 'Content-Range';
+const CONTENT_LOCATION_HEADER = 'Content-Location';
 
 export class ApiClient {
   private _storageurl: string;
@@ -41,13 +45,14 @@ export class ApiClient {
   private _data: AxiosRequestConfig["data"];
   private _queryParams: any = {};
   private _responseType: string = "json";
-  private _progressHook: (progress: any, data?: any) => void
+  private _progressId: string
+  private _progressHook: (percentageProgress: number, bytesProgress?: number, id?: string) => void
   private _cancelHook: AbortController
 
   // auxiliar
   private _isPublic: boolean;
-  private _processed: number
-  private _total: number
+  private _totalBytes: number
+  private _uploadedBytes: number
   private _storage: StorageType;
 
   constructor() { }
@@ -120,10 +125,19 @@ export class ApiClient {
     return this;
   }
 
-  progressHook(hook: (progress: any, data?: any) => void, processed?: number, total?: number): ApiClient {
+  totalBytes(totalBytes: number): ApiClient {
+    this._totalBytes = totalBytes;
+    return this;
+  }
+
+  loadedBytes(uploadedBytes: number): ApiClient {
+    this._uploadedBytes = uploadedBytes;
+    return this;
+  }
+
+  progressHook(hook: (percentageProgress: number, bytesProgress?: number, id?: string) => void): ApiClient {
     this._progressHook = hook;
-    this._processed = processed;
-    this._total = total;
+    this._progressId = uuidv4();
     return this;
   }
 
@@ -502,30 +516,36 @@ export class ApiClient {
     const me = this;
     const headers = {
       'Authorization': auth,
-      'x-amz-meta-tags': JSON.stringify(this._tags),
-      'x-amz-meta-storage-class': this._storage,
+      'Tags': JSON.stringify(this._tags),
+      'Storage-Class': this._storage,
       'Content-Type': 'application/octet-stream'
     } as Record<string, string>
 
-    if () {
-      headers['Content-Range'] = `bytes start-end/${this._total}`
-      headers['Content-Location'] = 'application/octet-stream'
+    if (this._numberOfChunks > 1) {
+      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength}/${this._totalBytes}`
     }
+    if (this._resourceId) {
+      headers[CONTENT_LOCATION_HEADER] = this._resourceId
+    }
+
     const config = {
       method: 'post',
-      url: `${this._storageurl}/${this._fileUri}`,
+      url: `http://localhost:3001/${this._fileUri}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onUploadProgress(progressEvent) {
         if (me._progressHook) {
-          let progress;
-          if (me._total) {
-            progress = Math.round((me._processed + progressEvent.loaded) / me._total * 100);
+          let percentageProgress;
+          let bytesProgress;
+          if (me._totalBytes) {
+            bytesProgress = me._uploadedBytes + progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
           } else {
-            progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / progressEvent.total * 100);
           }
-          me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
+          me._progressHook(percentageProgress, bytesProgress, me._progressId);
         }
       }
     } as AxiosRequestConfig;
@@ -533,10 +553,10 @@ export class ApiClient {
 
     try {
       const response = await axios(config);
-        return { 
-          resourceUri: response.data.resourceUri, 
-          resourceLocation: response.headers['Content-Location'] 
-        };
+      return {
+        resourceUri: response.data.resourceUri,
+        resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()]
+      };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
@@ -583,13 +603,13 @@ export class ApiClient {
       onDownloadProgress(progressEvent) {
         if (me._progressHook) {
           let progress;
-          if (me._total) {
-            const chunkSize = me._total / me._numberOfChunks;
-            progress = Math.round(me._processed / me._total * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._total * 100);
+          if (me._totalBytes) {
+            const chunkSize = me._totalBytes / me._numberOfChunks;
+            progress = Math.round(me._uploadedBytes / me._totalBytes * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._totalBytes * 100);
           } else {
             progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
           }
-          me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
+          me._progressHook(progress);
         }
       },
     } as AxiosRequestConfig

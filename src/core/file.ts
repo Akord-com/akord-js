@@ -14,11 +14,14 @@ import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 
 const DEFAULT_FILE_TYPE = "text/plain";
+const DEFAULT_CHUNK_SIZE = 1000000;
+const IV_LENGTH_IN_BYTES = 16;
+const DEFAULT_CHUNK_SIZE_WITH_IV = DEFAULT_CHUNK_SIZE + IV_LENGTH_IN_BYTES;
 
 class FileService extends Service {
-  asyncUploadTreshold = 209715200;
-  chunkSize = 209715200;
-  ivSize = 16;
+  //asyncUploadTreshold = 209715200;
+  asyncUploadTreshold = 2000000;
+  chunkSize = 1000000;
   contentType = null as string;
 
   /**
@@ -113,7 +116,8 @@ class FileService extends Service {
       tags.push(new Tag(protocolTags.SIGNATURE, signature));
       tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
       options.public = this.isPublic;
-      const resourceUri = await this.api.uploadFile(processedData, tags.concat(encryptionTags), options)
+      const resource = await this.api.uploadFile(processedData, tags.concat(encryptionTags), options);
+      const resourceUri = resource.resourceUri;
       resourceUri.push(`hash:${resourceHash}`);
       return { resourceUri: resourceUri };
     }
@@ -206,21 +210,20 @@ class FileService extends Service {
   private async uploadChunked(
     file: FileLike,
     tags: Tags,
-    options: Hooks
+    options: FileUploadOptions
   ): Promise<FileUploadResult> {
     let resource: any;
     let encryptionTags: Tags = [];
     let encryptedKey: string;
-    let iv: Array<string> = [];
     let offset = 0;
+    let offsetWithIv = 0;
     let chunkNumber = 1;
-
-    const totalChunkSize = this.isPublic ? this.chunkSize : this.chunkSize + this.ivSize
-    const numberOfChunks = Math.ceil(file.size / totalChunkSize);
-    const fileSize = this.isPublic ? file.size : numberOfChunks * totalChunkSize;
+    
+    const numberOfChunks = Math.ceil(file.size / DEFAULT_CHUNK_SIZE_WITH_IV);
+    const fileSize = this.isPublic ? file.size : file.size + numberOfChunks * IV_LENGTH_IN_BYTES;
 
     while (offset < file.size) {
-      const chunk = file.slice(offset, totalChunkSize);
+      const chunk = file.slice(offset, offset + this.chunkSize);
       const arrayBuffer = await chunk.arrayBuffer();
       const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
 
@@ -234,14 +237,19 @@ class FileService extends Service {
       resource = await new ApiClient()
         .env(this.api.config)
         .public(this.isPublic)
+        .resourceId(resource?.resourceLocation)
         .data(encryptedData.processedData)
         .tags(tags.concat(encryptedData.encryptionTags))
-        .storage(StorageType.S3)
-        .progressHook(options.progressHook, fileSize)
+        .storage(options.storage)
+        .numberOfChunks(numberOfChunks)
+        .loadedBytes(offsetWithIv)
+        .totalBytes(fileSize)
+        .progressHook(options.progressHook)
         .cancelHook(options.cancelHook)        
         .uploadFile();
 
-      offset += fileSize;
+      offset += DEFAULT_CHUNK_SIZE;
+      offsetWithIv += encryptedData.processedData.byteLength;
       chunkNumber += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
@@ -249,29 +257,8 @@ class FileService extends Service {
     return {
       resourceUri: resource.resourceUri,
       numberOfChunks: numberOfChunks,
-      chunkSize: this.isPublic ? this.chunkSize : this.chunkSize + this.ivSize
+      chunkSize: this.isPublic ? this.chunkSize : this.chunkSize + IV_LENGTH_IN_BYTES
     };
-  }
-
-  private async uploadChunk(
-    chunk: { processedData: ArrayBuffer, encryptionTags: Tags },
-    chunkNumber: number,
-    tags: Tags,
-    resourceUrl: string,
-    resourceSize: number,
-    options: Hooks
-  ) {
-    const resource = await new ApiClient()
-      .env(this.api.config)
-      .resourceId(`${resourceUrl}_${chunkNumber}`)
-      .data(chunk.processedData)
-      .tags(tags.concat(chunk.encryptionTags))
-      .public(this.isPublic)
-      .storage(StorageType.S3)
-      .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
-      .cancelHook(options.cancelHook)
-      .uploadFile()
-    Logger.log("Uploaded file with id: " + JSON.stringify(resourceUri));
   }
 
   private appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBufferLike {
