@@ -1,10 +1,9 @@
-import { Logger } from "../logger";
+import { AkordError } from "./error";
 
-export class Forbidden extends Error {
+export class Forbidden extends AkordError {
   statusCode: number = 403;
 
   constructor(message: string, error?: Error) {
-    super(message);
-    Logger.log(error);
+    super(message, error);
   }
 }
