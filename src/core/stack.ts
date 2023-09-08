@@ -31,7 +31,7 @@ class StackService extends NodeService<Stack> {
     createOptions.cacheOnly = service.vault.cacheOnly;
 
     const fileService = new FileService(this.wallet, this.api, service);
-    const fileLike = await createFileLike(file, options);
+    const fileLike = await createFileLike(file, { name, ...options });
     const fileUploadResult = await fileService.create(fileLike, createOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
