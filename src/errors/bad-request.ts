@@ -1,10 +1,9 @@
-import { Logger } from "../logger";
+import { AkordError } from "./error";
 
-export class BadRequest extends Error {
+export class BadRequest extends AkordError {
   statusCode: number = 400;
 
   constructor(message: string, error?: Error) {
-    super(message);
-    Logger.log(error);
+    super(message, error);
   }
 }
