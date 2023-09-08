@@ -7,7 +7,7 @@ import { nextToken, isPaginated, Paginated } from "../types/paginated";
 import { Vault } from "../types/vault";
 import { Auth } from "@akord/akord-auth";
 import { Unauthorized } from "../errors/unauthorized";
-import { throwError } from "../errors/error";
+import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";

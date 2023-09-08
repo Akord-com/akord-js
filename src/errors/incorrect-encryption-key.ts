@@ -1,10 +1,9 @@
-import { Logger } from "../logger";
+import { AkordError } from "./error";
 
-export class IncorrectEncryptionKey extends Error {
+export class IncorrectEncryptionKey extends AkordError {
   statusCode: number = 409;
 
   constructor(error?: Error) {
-    super("Incorrect encryption key.");
-    Logger.log(error);
+    super("Incorrect encryption key.", error);
   }
 }

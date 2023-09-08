@@ -1,11 +1,11 @@
 {
   "name": "@akord/akord-js",
-  "version": "4.18.1",
+  "version": "4.19.0",
   "description": "A set of core js functions to interact with Akord",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
   "scripts": {
-    "test": "jest --watchAll --verbose false --collectCoverage=false",
+    "test": "jest --verbose --collectCoverage=false --forceExit --detectOpenHandles",
     "build": "rm -r lib || true && tsc -p .",
     "prepublish": "yarn build"
   },

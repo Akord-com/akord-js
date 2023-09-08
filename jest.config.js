@@ -9,6 +9,8 @@ module.exports = {
   testPathIgnorePatterns: [
     "/.yalc/",
     "/data/",
+    "/unit/",
+    "/common",
     "/_helpers",
   ],
 
