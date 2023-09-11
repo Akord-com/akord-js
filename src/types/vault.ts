@@ -26,6 +26,7 @@ export class Vault extends Encryptable {
   constructor(vaultProto: any, keys: Array<EncryptedKeys>) {
     super(keys, null);
     this.id = vaultProto.id;
+    this.owner = vaultProto.owner;
     this.public = vaultProto.public;
     this.createdAt = vaultProto.createdAt;
     this.updatedAt = vaultProto.updatedAt;
