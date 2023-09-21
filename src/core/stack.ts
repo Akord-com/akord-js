@@ -126,15 +126,19 @@ class StackService extends NodeService<Stack> {
     }
     await service.setVaultContext(stack.vaultId);
     const file = await this.api.downloadFile(version.getUri(StorageType.S3), { responseType: 'stream' });
-    let data: ReadableStream<Uint8Array>
+    let stream: ReadableStream<Uint8Array>
     if (service.isPublic) {
-      data = file.fileData as ReadableStream<Uint8Array>
+      stream = file.fileData as ReadableStream<Uint8Array>
     } else {
-      const streamChunkSize = version.chunkSize || version.size;
-      data = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, version.encryptedKey, version.iv, streamChunkSize);
+      const streamChunkSize = version.chunkSize || version.size + IV_LENGTH_IN_BYTES;
+      stream = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, version.encryptedKey, version.iv, streamChunkSize);
     }
-    if (options.responseType === 'arraybuffer') {
 
+    let data: ReadableStream<Uint8Array> | ArrayBuffer;
+    if (options.responseType === 'arraybuffer') {
+      data = await new Response(stream).arrayBuffer();
+    } else {
+      data = stream;
     }
     return { version, data };
   }
@@ -183,7 +187,6 @@ class StackService extends NodeService<Stack> {
           channel.port2.onmessage = (event) => {
             if (event.data.type === 'progress') {
               const progress = Math.min(100, Math.ceil(event.data.progress / version.size * 100));
-              console.log(progress)
               if (options.progressHook) {
                 options.progressHook(progress);
               }

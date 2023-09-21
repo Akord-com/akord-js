@@ -161,7 +161,6 @@ class NodeService<T> extends Service {
     const nodeId = uuidv4();
     this.setObjectId(nodeId);
     this.setFunction(functions.NODE_CREATE);
-    this.setFunction(functions.NODE_CREATE);
     this.setParentId(clientInput.parentId);
 
     this.arweaveTags = await this.getTxTags();

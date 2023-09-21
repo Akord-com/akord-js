@@ -2,7 +2,6 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
-import { StorageType } from "../types/file";
 import { NodeJs } from "../types/file-like";
 import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
@@ -62,8 +61,8 @@ export const stackCreate = async (vaultId: string) => {
   expect(stack.versions.length).toEqual(1);
   expect(stack.versions[0].name).toEqual(firstFileName);
 
-  const binary = await akord.stack.getVersion(stack.id);
-  expect(binary).toEqual(await file.arrayBuffer());
+  const binary = await akord.stack.getVersion(stack.id, { responseType: 'arraybuffer' });
+  expect(binary.data).toEqual(await file.arrayBuffer());
   return stackId;
 }
 
@@ -77,11 +76,11 @@ export const stackUploadRevision = async (stackId: string) => {
   expect(stack.versions[0].name).toEqual(firstFileName);
   expect(stack.versions[1].name).toEqual(secondFileName);
 
-  const { data } = await akord.stack.getVersion(stackId);
+  const { data } = await akord.stack.getVersion(stackId, { responseType: 'arraybuffer' });
   expect(data).toEqual(await file.arrayBuffer());
 
   const firstFile = await NodeJs.File.fromPath(testDataPath + firstFileName);
-  const { data: firstFileData } = await akord.stack.getVersion(stackId, { index: 0 });
+  const { data: firstFileData } = await akord.stack.getVersion(stackId, { index: 0, responseType: 'arraybuffer' });
   expect(firstFileData).toEqual(await firstFile.arrayBuffer());
 }
 
@@ -97,12 +96,12 @@ export const stackRename = async (stackId: string) => {
   expect(stack.versions[1].name).toEqual(secondFileName);
 
   const firstFile = await NodeJs.File.fromPath(testDataPath + firstFileName);
-  const { data: firstFileData } = await akord.stack.getVersion(stackId, { index: 0 });
+  const { data: firstFileData } = await akord.stack.getVersion(stackId, { index: 0, responseType: 'arraybuffer' });
   expect(firstFileData).toEqual(await firstFile.arrayBuffer());
 
   const secondFile = await NodeJs.File.fromPath(testDataPath + secondFileName);
 
-  const { data: secondFileData } = await akord.stack.getVersion(stackId);
+  const { data: secondFileData } = await akord.stack.getVersion(stackId, { responseType: 'arraybuffer' });
   expect(secondFileData).toEqual(await secondFile.arrayBuffer());
 }
 
@@ -127,7 +126,7 @@ export const stackImport = async (vaultId: string) => {
   expect(stack.versions.length).toEqual(1);
   expect(stack.versions[0].name).toEqual(fileName);
 
-  const { data } = await akord.stack.getVersion(stackId);
+  const { data } = await akord.stack.getVersion(stackId, { responseType: 'arraybuffer' });
   expect(data).toEqual(await getTxData(arweaveImportFileTx));
   return stackId;
 }
