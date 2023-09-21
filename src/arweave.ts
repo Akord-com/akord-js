@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
-import { throwError } from "./errors/error";
+import { throwError } from "./errors/error-factory";
 import { NotFound } from "./errors/not-found";
 import { Tags } from "./types/contract";
 

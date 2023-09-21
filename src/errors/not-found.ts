@@ -1,10 +1,9 @@
-import { Logger } from "../logger";
+import { AkordError } from "./error";
 
-export class NotFound extends Error {
+export class NotFound extends AkordError {
   statusCode: number = 404;
 
   constructor(message: string, error?: Error) {
-    super(message);
-    Logger.log(error);
+    super(message, error);
   }
 }
