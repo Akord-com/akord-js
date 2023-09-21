@@ -125,13 +125,16 @@ class StackService extends NodeService<Stack> {
       await version.decrypt();
     }
     await service.setVaultContext(stack.vaultId);
+    
     const file = await this.api.downloadFile(version.getUri(StorageType.S3), { responseType: 'stream' });
     let stream: ReadableStream<Uint8Array>
     if (service.isPublic) {
       stream = file.fileData as ReadableStream<Uint8Array>
     } else {
+      const encryptedKey = version.encryptedKey || file.metadata.encryptedKey;
+      const iv = version.iv || file.metadata.iv?.split(',');
       const streamChunkSize = version.chunkSize || version.size + IV_LENGTH_IN_BYTES;
-      stream = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, version.encryptedKey, version.iv, streamChunkSize);
+      stream = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, iv, streamChunkSize);
     }
 
     let data: ReadableStream<Uint8Array> | ArrayBuffer;
@@ -144,7 +147,7 @@ class StackService extends NodeService<Stack> {
   }
 
   /**
-   * Get stack version by index, return the latest version by default
+   * Download stack version by index, return the latest version by default
    * @param  {string} stackId
    * @param  {number} [index] stack version index
    * @returns Promise with version name & data buffer
@@ -242,7 +245,7 @@ class StackService extends NodeService<Stack> {
     if (typeof window === 'undefined') {
       const fs = (await import("fs")).default;
       return new Promise((resolve, reject) =>
-        (stream as NodeJS.ReadableStream).pipe(fs.createWriteStream(path))
+        stream.pipe(fs.createWriteStream(path))
           .on('error', error => reject(error))
           .on('finish', () => resolve())
       );
