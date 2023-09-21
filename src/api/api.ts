@@ -5,7 +5,7 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions } from "../types/file";
+import { FileGetOptions, FileUploadOptions } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
 
 abstract class Api {
@@ -23,7 +23,7 @@ abstract class Api {
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 
-  abstract downloadFile(id: string, options?: FileDownloadOptions): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }>
+  abstract downloadFile(id: string, options?: FileGetOptions): Promise<{ fileData: ArrayBuffer | ReadableStream, metadata: EncryptionMetadata }>
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 

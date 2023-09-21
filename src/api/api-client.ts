@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
+import fetch from "isomorphic-unfetch";
 import { v4 as uuidv4 } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
@@ -17,7 +18,7 @@ const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
 
 export class ApiClient {
-  private _storageurl: string;
+  private _gatewayurl: string;
   private _apiurl: string;
 
   // API endpoints
@@ -59,7 +60,7 @@ export class ApiClient {
 
   env(config: { apiurl: string, storageurl: string }): ApiClient {
     this._apiurl = config.apiurl;
-    this._storageurl = config.storageurl;
+    this._gatewayurl = config.storageurl;
     return this;
   }
 
@@ -179,7 +180,7 @@ export class ApiClient {
     if (!this._vaultId) {
       throw new BadRequest("Missing vault id to get contract state. Use ApiClient#vaultId() to add it");
     }
-    return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
+    return await this.public(true).get(`${this._gatewayurl}/${this._contractUri}/${this._vaultId}`);
   }
 
   /**
@@ -594,25 +595,11 @@ export class ApiClient {
       throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
     }
 
-    const me = this;
     const config = {
       method: 'get',
-      url: `${this._storageurl}/${this._resourceId}`,
-      responseType: this._responseType,
+      url: `${this._gatewayurl}/${this._resourceId}`,
       signal: this._cancelHook ? this._cancelHook.signal : null,
-      onDownloadProgress(progressEvent) {
-        if (me._progressHook) {
-          let progress;
-          if (me._totalBytes) {
-            const chunkSize = me._totalBytes / me._numberOfChunks;
-            progress = Math.round(me._uploadedBytes / me._totalBytes * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._totalBytes * 100);
-          } else {
-            progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
-          }
-          me._progressHook(progress);
-        }
-      },
-    } as AxiosRequestConfig
+    } as RequestInit
 
     if (!this._isPublic) {
       config.headers = {
@@ -621,7 +608,7 @@ export class ApiClient {
     }
 
     try {
-      const response = await axios(config);
+      const response = await fetch(`${this._gatewayurl}/${this._resourceId}`, config);
       return { resourceUrl: this._resourceId, response: response };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);

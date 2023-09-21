@@ -1,27 +1,25 @@
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
-import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
+import { base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
-import { v4 as uuid } from "uuid";
-import { DownloadOptions, FileDownloadOptions, FileUploadOptions, FileUploadResult, FileVersion, Hooks, StorageType } from "../types/file";
+import { FileUploadOptions, FileUploadResult, FileVersion, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
-import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { BinaryLike } from "crypto";
 import { getTxData, getTxMetadata } from "../arweave";
 import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
+import { InternalError } from "../errors/internal-error";
 
 const DEFAULT_FILE_TYPE = "text/plain";
-const DEFAULT_CHUNK_SIZE = 1000000;
-const IV_LENGTH_IN_BYTES = 16;
-const DEFAULT_CHUNK_SIZE_WITH_IV = DEFAULT_CHUNK_SIZE + IV_LENGTH_IN_BYTES;
+const DEFAULT_CHUNK_SIZE_IN_BYTES = 10000000; //10MB
+export const IV_LENGTH_IN_BYTES = 16;
+const DEFAULT_CHUNK_SIZE_WITH_IV_IN_BYTES = DEFAULT_CHUNK_SIZE_IN_BYTES + IV_LENGTH_IN_BYTES;
 
 class FileService extends Service {
   //asyncUploadTreshold = 209715200;
-  asyncUploadTreshold = 2000000;
-  chunkSize = 1000000;
+  asyncUploadTreshold = 20000000;
   contentType = null as string;
 
   /**
@@ -32,27 +30,28 @@ class FileService extends Service {
    * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
-  public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    const service = new FileService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    const downloadOptions = options as FileDownloadOptions;
-    downloadOptions.public = service.isPublic;
-    let fileBinary: ArrayBuffer;
-    if (options.isChunked) {
-      let currentChunk = 0;
-      while (currentChunk < options.numberOfChunks) {
-        const url = `${id}_${currentChunk}`;
-        downloadOptions.loadedSize = currentChunk * this.chunkSize;
-        const chunkBinary = await service.getBinary(url, downloadOptions);
-        fileBinary = service.appendBuffer(fileBinary, chunkBinary);
-        currentChunk++;
-      }
-    } else {
-      const { fileData, metadata } = await this.api.downloadFile(id, downloadOptions);
-      fileBinary = await service.processReadRaw(fileData, metadata)
-    }
-    return fileBinary;
-  }
+  // public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
+  //   const service = new FileService(this.wallet, this.api);
+  //   await service.setVaultContext(vaultId);
+  //   const downloadOptions = options as FileDownloadOptions;
+  //   downloadOptions.public = service.isPublic;
+  //   let fileBinary: ArrayBuffer;
+  //   if (options.isChunked) {
+  //     const chunkSize: number = options.chunkSize || (downloadOptions.public ? DEFAULT_CHUNK_SIZE_IN_BYTES : DEFAULT_CHUNK_SIZE_WITH_IV_IN_BYTES);
+  //     let currentChunk = 0;
+  //     while (currentChunk < options.numberOfChunks) {
+  //       const url = `${id}_${currentChunk}`;
+  //       downloadOptions.loadedSize = currentChunk * chunkSize
+  //       const chunkBinary = await service.getBinary(url, downloadOptions);
+  //       fileBinary = service.appendBuffer(fileBinary, chunkBinary);
+  //       currentChunk++;
+  //     }
+  //   } else {
+  //     const { fileData, metadata } = await this.api.downloadFile(id, downloadOptions);
+  //     fileBinary = await service.processReadRaw(fileData, metadata)
+  //   }
+  //   return fileBinary;
+  // }
 
   /**
    * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
@@ -63,63 +62,64 @@ class FileService extends Service {
    * @param  {DownloadOptions} [options]
    * @returns Promise with file buffer
    */
-  public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
-    const service = new FileService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    const downloadOptions = options as FileDownloadOptions;
-    downloadOptions.public = service.isPublic;
-    const writer = await service.stream(options.name, options.resourceSize);
-    if (options.isChunked) {
-      let currentChunk = 0;
-      try {
-        while (currentChunk < options.numberOfChunks) {
-          const url = `${id}_${currentChunk}`;
-          downloadOptions.loadedSize = currentChunk * service.chunkSize;
-          const fileBinary = await service.getBinary(url, downloadOptions);
-          if (writer instanceof WritableStreamDefaultWriter) {
-            await writer.ready
-          }
-          await writer.write(new Uint8Array(fileBinary));
-          currentChunk++;
-        }
-      } catch (err) {
-        throw new Error(err);
-      } finally {
-        if (writer instanceof WritableStreamDefaultWriter) {
-          await writer.ready
-        }
-        await writer.close();
-      }
-    } else {
-      const fileBinary = await service.getBinary(id, downloadOptions);
-      await writer.write(new Uint8Array(fileBinary));
-      await writer.close();
-    }
-  }
+  // public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
+  //   const service = new FileService(this.wallet, this.api);
+  //   await service.setVaultContext(vaultId);
+  //   const downloadOptions = options as FileDownloadOptions;
+  //   downloadOptions.public = service.isPublic;
+
+  //   if (typeof window !== 'undefined') {
+  //     if (!service.isPublic) {
+  //       if (!navigator.serviceWorker?.controller) {
+  //         throw new InternalError("Decryption service worker is not running")
+  //       }
+  //       navigator.serviceWorker.controller.postMessage({
+  //         keys: [],
+  //         id: 'test'
+  //       });
+  //     }
+  //   }
+
+    // const writer = await service.stream(options.name, options.resourceSize);
+    // if (options.isChunked) {
+    //   let currentChunk = 0;
+    //   try {
+    //     while (currentChunk < options.numberOfChunks) {
+    //       const url = `${id}_${currentChunk}`;
+    //  //     downloadOptions.loadedSize = currentChunk * service.chunkSize;
+    //       const fileBinary = await service.getBinary(url, downloadOptions);
+    //       if (writer instanceof WritableStreamDefaultWriter) {
+    //         await writer.ready
+    //       }
+    //       await writer.write(new Uint8Array(fileBinary));
+    //       currentChunk++;
+    //     }
+    //   } catch (err) {
+    //     throw new Error(err);
+    //   } finally {
+    //     if (writer instanceof WritableStreamDefaultWriter) {
+    //       await writer.ready
+    //     }
+    //     await writer.close();
+    //   }
+    // } else {
+    //   const fileBinary = await service.getBinary(id, downloadOptions);
+    //   await writer.write(new Uint8Array(fileBinary));
+    //   await writer.close();
+    // }
+  //}
 
   public async create(
     file: FileLike,
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
+    options.public = this.isPublic;
     const tags = this.getFileTags(file, options);
+
     if (file.size > this.asyncUploadTreshold) {
       return await this.uploadChunked(file, tags, options);
     } else {
-      const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      const resourceHash = await digestRaw(new Uint8Array(processedData));
-      const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
-      const signature = await signHash(
-        base64ToArray(resourceHash),
-        privateKeyRaw
-      );
-      tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-      tags.push(new Tag(protocolTags.SIGNATURE, signature));
-      tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
-      options.public = this.isPublic;
-      const resource = await this.api.uploadFile(processedData, tags.concat(encryptionTags), options);
-      const resourceUri = resource.resourceUri;
-      resourceUri.push(`hash:${resourceHash}`);
-      return { resourceUri: resourceUri };
+      return await this.upload(file, tags, options);
     }
   }
 
@@ -146,27 +146,27 @@ class FileService extends Service {
     return { file, resourceUri };
   }
 
-  public async stream(path: string, size?: number): Promise<any | WritableStreamDefaultWriter> {
-    if (typeof window === 'undefined') {
-      const fs = (await import("fs")).default;
-      return fs.createWriteStream(path);
-    }
-    else {
-      const streamSaver = (await import('streamsaver')).default;
-      if (!streamSaver.WritableStream) {
-        const pony = await import('web-streams-polyfill/ponyfill');
-        streamSaver.WritableStream = pony.WritableStream as unknown as typeof streamSaver.WritableStream;
-      }
-      if (window.location.protocol === 'https:'
-        || window.location.protocol === 'chrome-extension:'
-        || window.location.hostname === 'localhost') {
-        streamSaver.mitm = '/streamsaver/mitm.html';
-      }
+  // public async stream(path: string, size?: number): Promise<any | WritableStreamDefaultWriter> {
+  //   if (typeof window === 'undefined') {
+  //     const fs = (await import("fs")).default;
+  //     return fs.createWriteStream(path);
+  //   }
+  //   else {
+  //     const streamSaver = (await import('streamsaver')).default;
+  //     if (!streamSaver.WritableStream) {
+  //       const pony = await import('web-streams-polyfill/ponyfill');
+  //       streamSaver.WritableStream = pony.WritableStream as unknown as typeof streamSaver.WritableStream;
+  //     }
+  //     if (window.location.protocol === 'https:'
+  //       || window.location.protocol === 'chrome-extension:'
+  //       || window.location.hostname === 'localhost') {
+  //       streamSaver.mitm = '/streamsaver/mitm.html';
+  //     }
 
-      const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
-      return fileStream.getWriter();
-    }
-  }
+  //     const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
+  //     return fileStream.getWriter();
+  //   }
+  // }
 
   public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
     const version = new FileVersion({
@@ -178,6 +178,8 @@ class FileService extends Service {
       resourceUri: uploadResult.resourceUri,
       numberOfChunks: uploadResult.numberOfChunks,
       chunkSize: uploadResult.chunkSize,
+      iv: uploadResult.iv,
+      encryptedKey: uploadResult.encryptedKey
     });
     return version;
   }
@@ -207,6 +209,31 @@ class FileService extends Service {
     return null;
   }
 
+  private async upload(
+    file: FileLike,
+    tags: Tags,
+    options: FileUploadOptions
+  ): Promise<FileUploadResult> {
+    const isPublic = options.public || this.isPublic
+    const iv : string[] = []
+    let encryptedKey : string
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
+    const resourceHash = await digestRaw(new Uint8Array(processedData));
+    const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
+    const resource = await this.api.uploadFile(processedData, tags.concat(encryptionTags).concat(fileSignatureTags), options);
+    const resourceUri = resource.resourceUri;
+    resourceUri.push(`hash:${resourceHash}`);
+    if (!isPublic) {
+      const chunkIv = encryptionTags.find((tag) => tag.name === encTags.IV)?.value;
+      if (!chunkIv) {
+        throw new InternalError("Failed to encrypt data");
+      }
+      iv.push(chunkIv);
+      encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
+    }
+    return { resourceUri: resourceUri, iv: iv, encryptedKey: encryptedKey }
+  }
+
   private async uploadChunked(
     file: FileLike,
     tags: Tags,
@@ -218,37 +245,51 @@ class FileService extends Service {
     let offset = 0;
     let offsetWithIv = 0;
     let chunkNumber = 1;
-    
-    const numberOfChunks = Math.ceil(file.size / DEFAULT_CHUNK_SIZE_WITH_IV);
-    const fileSize = this.isPublic ? file.size : file.size + numberOfChunks * IV_LENGTH_IN_BYTES;
+
+    const isPublic = options.public || this.isPublic
+    const chunkSize: number = options.chunkSize || DEFAULT_CHUNK_SIZE_IN_BYTES;
+    const chunkSizeWithAuthTag: number = isPublic ? chunkSize : chunkSize + IV_LENGTH_IN_BYTES;
+    const numberOfChunks = Math.ceil(file.size / chunkSize);
+    const fileSize = isPublic ? file.size : file.size + numberOfChunks * IV_LENGTH_IN_BYTES;
+    const digestObject = initDigest();
+    const iv: Array<string> = [];
+
 
     while (offset < file.size) {
-      const chunk = file.slice(offset, offset + this.chunkSize);
+      const chunk = file.slice(offset, offset + chunkSize);
       const arrayBuffer = await chunk.arrayBuffer();
       const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
+      console.log(encryptedData.processedData.byteLength)
+      digestObject.update(new Uint8Array(encryptedData.processedData));
 
-      if (!this.isPublic) {
+      if (!isPublic) {
         encryptionTags = encryptedData.encryptionTags;
+        const chunkIv = encryptionTags.find((tag) => tag.name === encTags.IV)?.value;
+        if (!chunkIv) {
+          throw new InternalError("Failed to encrypt data");
+        }
+        iv.push(chunkIv);
         if (!encryptedKey) {
           encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
         }
       }
+      const fileSignatureTags = await this.getFileSignatureTags(digestObject.getHash("B64"))
 
       resource = await new ApiClient()
         .env(this.api.config)
         .public(this.isPublic)
         .resourceId(resource?.resourceLocation)
         .data(encryptedData.processedData)
-        .tags(tags.concat(encryptedData.encryptionTags))
+        .tags(tags.concat(encryptedData.encryptionTags).concat(fileSignatureTags))
         .storage(options.storage)
         .numberOfChunks(numberOfChunks)
         .loadedBytes(offsetWithIv)
         .totalBytes(fileSize)
         .progressHook(options.progressHook)
-        .cancelHook(options.cancelHook)        
+        .cancelHook(options.cancelHook)
         .uploadFile();
 
-      offset += DEFAULT_CHUNK_SIZE;
+      offset += DEFAULT_CHUNK_SIZE_IN_BYTES;
       offsetWithIv += encryptedData.processedData.byteLength;
       chunkNumber += 1;
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
@@ -257,7 +298,9 @@ class FileService extends Service {
     return {
       resourceUri: resource.resourceUri,
       numberOfChunks: numberOfChunks,
-      chunkSize: this.isPublic ? this.chunkSize : this.chunkSize + IV_LENGTH_IN_BYTES
+      chunkSize: chunkSizeWithAuthTag,
+      iv: iv,
+      encryptedKey: encryptedKey
     };
   }
 
@@ -271,19 +314,19 @@ class FileService extends Service {
     return tmp.buffer;
   }
 
-  private async getBinary(id: string, options: FileDownloadOptions) {
-    try {
-      options.public = this.isPublic;
-      const { fileData, metadata } = await this.api.downloadFile(id, options);
-      return await this.processReadRaw(fileData, metadata);
-    } catch (e) {
-      Logger.log(e);
-      throw new Error(
-        "Failed to download. Please check your network connection." +
-        " Please upload the file again if problem persists and/or contact Akord support."
-      );
-    }
-  }
+  // private async getBinary(id: string, options: FileDownloadOptions) {
+  //   try {
+  //     options.public = this.isPublic;
+  //     const { fileData, metadata } = await this.api.downloadFile(id, options);
+  //     return await this.processReadRaw(fileData, metadata);
+  //   } catch (e) {
+  //     Logger.log(e);
+  //     throw new Error(
+  //       "Failed to download. Please check your network connection." +
+  //       " Please upload the file again if problem persists and/or contact Akord support."
+  //     );
+  //   }
+  // }
 
   private getFileTags(file: FileLike, options: FileUploadOptions = {}): Tags {
     const tags = [] as Tags;
@@ -302,7 +345,17 @@ class FileService extends Service {
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     return tags;
   }
+
+  private async getFileSignatureTags(resourceHash: string) : Promise<Tags> {
+    const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
+    const signature = await signHash(
+      base64ToArray(resourceHash),
+      privateKeyRaw
+    );
+    return [new Tag(protocolTags.SIGNATURE, signature), new Tag(fileTags.FILE_HASH, resourceHash)];
+  }
 };
+
 
 async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)
   : Promise<FileLike> {

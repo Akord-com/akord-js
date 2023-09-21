@@ -10,6 +10,8 @@ export class FileVersion extends Encryptable implements Version {
   size: number;
   numberOfChunks?: number;
   chunkSize?: number;
+  iv?: [string];
+  encryptedKey?: string;
   owner: string;
   createdAt: string;
 
@@ -24,6 +26,8 @@ export class FileVersion extends Encryptable implements Version {
     this.chunkSize = fileVersionProto.chunkSize;
     this.name = fileVersionProto.name;
     this.status = fileVersionProto.status;
+    this.iv = fileVersionProto.iv;
+    this.encryptedKey = fileVersionProto.encryptedKey;
   }
 
   getUri(type: StorageType): string {
@@ -37,12 +41,23 @@ export class FileVersion extends Encryptable implements Version {
   }
 }
 
-export type DownloadOptions = FileDownloadOptions & { name?: string }
+export type FileDownloadOptions = Hooks & {
+  index?: number,
+  path?: string,
+  skipSave?: boolean,
+}
+
+export type FileGetOptions = FileDownloadOptions & {
+  responseType?: 'arraybuffer' | 'stream',
+}
 
 export type FileUploadResult = {
   resourceUri: string[],
+  resourceHash?: string,
   numberOfChunks?: number,
   chunkSize?: number,
+  iv?: string[]
+  encryptedKey?: string
 }
 
 export type Hooks = {
@@ -53,15 +68,8 @@ export type Hooks = {
 export type FileUploadOptions = Hooks & {
   public?: boolean,
   storage?: StorageType,
-  arweaveTags?: Tags
-}
-
-export type FileDownloadOptions = Hooks & {
-  public?: boolean,
-  isChunked?: boolean,
-  numberOfChunks?: number,
-  loadedSize?: number,
-  resourceSize?: number
+  arweaveTags?: Tags,
+  chunkSize?: number
 }
 
 export enum StorageType {

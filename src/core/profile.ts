@@ -35,8 +35,9 @@ class ProfileService extends Service {
       let avatar = null;
       const resourceUri = getAvatarUri(new ProfileDetails(user));
       if (resourceUri) {
-        const { fileData, metadata } = await this.api.downloadFile(resourceUri);
-        const encryptedPayload = getEncryptedPayload(fileData, metadata);
+        const file = await this.api.downloadFile(resourceUri, { responseType: 'arraybuffer' });
+        const fileData = file.fileData as ArrayBuffer
+        const encryptedPayload = getEncryptedPayload(fileData, file.metadata);
         try {
           if (encryptedPayload) {
             avatar = await profileEncrypter.decryptRaw(encryptedPayload, false);

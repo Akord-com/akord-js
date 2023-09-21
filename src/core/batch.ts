@@ -113,10 +113,11 @@ class BatchService extends Service {
       return sum + stack.file.size;
     }, 0);
     let progress = 0;
+    let uploadedStacksCount = 0;
     let processedStacksCount = 0;
     const perFileProgress = new Map();
     if (options.processingCountHook) {
-      options.processingCountHook(processedStacksCount);
+      options.processingCountHook(uploadedStacksCount);
     }
 
     let data = [] as BatchStackCreateResponse["data"];
@@ -167,32 +168,33 @@ class BatchService extends Service {
         service.arweaveTags = await service.getTxTags();
 
         const fileService = new FileService(this.wallet, this.api, service);
-        const fileUploadResult = await fileService.create(item.file, createOptions);
-        console.log("fileUploadResult")
-        console.log(fileUploadResult)
-        const version = await fileService.newVersion(item.file, fileUploadResult);
+        try {
+          const fileUploadResult = await fileService.create(item.file, createOptions);
+          const version = await fileService.newVersion(item.file, fileUploadResult);
 
-        const state = {
-          name: await service.processWriteString(item.name ? item.name : item.file.name),
-          versions: [version],
-          tags: service.tags
-        };
-        const id = await service.uploadState(state, service.vault.cacheOnly);
-        console.log("stateId")
-        console.log(id)
-        
-        processedStacksCount += 1;
-        if (options.processingCountHook) {
-          options.processingCountHook(processedStacksCount);
+          const state = {
+            name: await service.processWriteString(item.name ? item.name : item.file.name),
+            versions: [version],
+            tags: service.tags
+          };
+          const id = await service.uploadState(state, service.vault.cacheOnly);
+
+          uploadedStacksCount += 1;
+          if (options.processingCountHook) {
+            options.processingCountHook(uploadedStacksCount);
+          }
+
+          // queue the stack transaction for posting
+          transactions.push({
+            vaultId: service.vaultId,
+            input: { function: service.function, data: id, parentId: createOptions.parentId },
+            tags: service.arweaveTags,
+            item
+          });
+        } catch (error) {
+          processedStacksCount +=1;
+          errors.push({ name: item.name || item.file.name, message: error.toString(), error });
         }
-
-        // queue the stack transaction for posting
-        transactions.push({
-          vaultId: service.vaultId,
-          input: { function: service.function, data: id, parentId: createOptions.parentId },
-          tags: service.arweaveTags,
-          item
-        });
       }
       ));
     }
@@ -200,8 +202,7 @@ class BatchService extends Service {
     // post queued stack transactions
     let currentTx: StackCreateTransaction;
     let stacksCreated = 0;
-    let stacksProcessed = 0;
-    while (stacksProcessed < items.length) {
+    while (processedStacksCount < items.length) {
       if (options.cancelHook?.signal.aborted) {
         return { data, errors, cancelled: items.length - stacksCreated };
       }
@@ -212,7 +213,7 @@ class BatchService extends Service {
       } else {
         try {
           currentTx = transactions.shift();
-          stacksProcessed += 1;
+          processedStacksCount += 1;
           // process the dequeued stack transaction
           const { id, object } = await this.api.postContractTransaction<Stack>(
             currentTx.vaultId,
@@ -222,8 +223,8 @@ class BatchService extends Service {
           if (options.onStackCreated) {
             await options.onStackCreated(object);
           }
-          const stack = await new StackService(this.wallet, this.api, this)
-            .processNode(object, !this.isPublic, this.keys);
+          const stack = await new StackService(batchService.wallet, batchService.api, batchService)
+            .processNode(object, !batchService.isPublic, batchService.keys);
           data.push({ transactionId: id, object: stack, stackId: object.id });
           stacksCreated += 1;
           if (options.cancelHook?.signal.aborted) {

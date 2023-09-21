@@ -11,7 +11,7 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions, StorageType } from "../types/file";
+import { FileGetOptions, FileUploadOptions, StorageType } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
 
 export const defaultFileUploadOptions = {
@@ -93,20 +93,15 @@ export default class AkordApi extends Api {
     return resource;
   };
 
-  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }> {
+  public async downloadFile(id: string, options: FileGetOptions = {}): Promise<{ fileData: ArrayBuffer | ReadableStream<Uint8Array>, metadata: EncryptionMetadata }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
-      .public(options.public)
-      .numberOfChunks(options.numberOfChunks)
-      .totalBytes(options.resourceSize)
-      .loadedBytes(options.loadedSize)
       .progressHook(options.progressHook)
       .cancelHook(options.cancelHook)
-      .responseType("arraybuffer")
       .downloadFile();
 
-    const fileData = response.data;
+    const fileData = options.responseType === 'arraybuffer' ? await response.arrayBuffer() : response.body;
     const metadata = {
       encryptedKey: response.headers["x-amz-meta-encrypted-key"] || response.headers["x-amz-meta-encryptedkey"],
       iv: response.headers["x-amz-meta-initialization-vector"] || response.headers["x-amz-meta-iv"]

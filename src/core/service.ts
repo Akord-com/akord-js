@@ -221,7 +221,7 @@ class Service {
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
-      processedData = encryptedFile.encryptedData.ciphertext;
+      processedData = encryptedFile.encryptedData.ciphertext as ArrayBuffer;
       const { address } = await this.getActiveKey();
       tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
       tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))

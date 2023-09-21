@@ -32,7 +32,10 @@ export abstract class Node extends Encryptable {
   __cacheOnly__?: boolean;
 
   constructor(nodeLikeProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
-    super(keys, publicKey);
+    super(
+      keys ? keys : nodeLikeProto.__keys__, 
+      publicKey ? publicKey : nodeLikeProto.__publicKey__
+    );
     this.id = nodeLikeProto.id;
     this.createdAt = nodeLikeProto.createdAt;
     this.updatedAt = nodeLikeProto.updatedAt;

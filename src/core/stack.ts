@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileService } from "./file";
-import { FileUploadOptions, FileVersion, StorageType } from "../types/file";
+import { FileService, IV_LENGTH_IN_BYTES } from "./file";
+import { FileDownloadOptions, FileGetOptions, FileUploadOptions, FileVersion, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
 import { nodeType, NodeCreateOptions } from "../types/node";
 import { Stack, StackCreateOptions, StackCreateResult, StackUpdateResult } from "../types/stack";
@@ -114,17 +114,112 @@ class StackService extends NodeService<Stack> {
    * Get stack version by index, return the latest version by default
    * @param  {string} stackId
    * @param  {number} [index] stack version index
+   * @returns Promise with version name & data stream or buffer
+   */
+  public async getVersion(stackId: string, options: FileGetOptions = { responseType: 'stream', index: 0 }): Promise<{ version: FileVersion, data: ReadableStream<Uint8Array> | ArrayBuffer }> {
+    const service = new StackService(this.wallet, this.api);
+    const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK);
+    const stack = new Stack(stackProto, stackProto.__keys__);
+    const version = stack.getVersion(options.index);
+    if (!service.isPublic) {
+      await version.decrypt();
+    }
+    await service.setVaultContext(stack.vaultId);
+    const file = await this.api.downloadFile(version.getUri(StorageType.S3), { responseType: 'stream' });
+    let data: ReadableStream<Uint8Array>
+    if (service.isPublic) {
+      data = file.fileData as ReadableStream<Uint8Array>
+    } else {
+      const streamChunkSize = version.chunkSize || version.size;
+      data = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, version.encryptedKey, version.iv, streamChunkSize);
+    }
+    if (options.responseType === 'arraybuffer') {
+
+    }
+    return { version, data };
+  }
+
+  /**
+   * Get stack version by index, return the latest version by default
+   * @param  {string} stackId
+   * @param  {number} [index] stack version index
    * @returns Promise with version name & data buffer
    */
-  public async getVersion(stackId: string, index?: number): Promise<{ name: string, data: ArrayBuffer }> {
-    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK), null);
-    const version = stack.getVersion(index);
-    const service = new StackService(this.wallet, this.api);
-    await service.setVaultContext(stack.vaultId);
-    const { fileData, metadata } = await this.api.downloadFile(version.getUri(StorageType.S3), { public: service.isPublic });
-    const data = await service.processReadRaw(fileData, metadata);
-    const name = await service.processReadString(version.name);
-    return { name, data };
+  public async download(stackId: string, options: FileDownloadOptions = { index: 0 }): Promise<void> {
+    let downloadPromise: Promise<void>
+    if (typeof window === 'undefined' || !navigator.serviceWorker?.controller) {
+      const { version, data } = await this.getVersion(stackId, { ...options, responseType: 'stream' });
+      const path = options.path ? options.path : version.name;
+      const contentType = version.type;
+      downloadPromise = this.saveFile(path, contentType, data);
+    } else {
+      const service = new StackService(this.wallet, this.api);
+      const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK)
+      const stack = new Stack(stackProto, stackProto.__keys__);
+      const version = stack.getVersion(options.index);
+      const id = version.getUri(StorageType.S3);
+      if (!service.isPublic) {
+        await version.decrypt();
+      }
+      await service.setVaultContext(stack.vaultId);
+
+      const key = await service.dataEncrypter.decryptKey(version.encryptedKey);
+      navigator.serviceWorker.controller.postMessage({
+        type: 'init',
+        key: key,
+        chunkSize: version.chunkSize || (version.size + IV_LENGTH_IN_BYTES),
+        size: version.size,
+        name: version.name,
+        iv: version.iv,
+        id: id,
+        url: `https://vault.akord.link/${id}`
+      });
+
+      downloadPromise = new Promise((resolve, reject) => {
+
+        const interval = setInterval(() => {
+          const channel = new MessageChannel();
+
+          channel.port2.onmessage = (event) => {
+            if (event.data.type === 'progress') {
+              const progress = Math.min(100, Math.ceil(event.data.progress / version.size * 100));
+              console.log(progress)
+              if (options.progressHook) {
+                options.progressHook(progress);
+              }
+              if (event.data.progress === version.size) {
+                clearInterval(interval);
+                resolve();
+              }
+            } else {
+              reject(event.data);
+            }
+          };
+
+          navigator.serviceWorker.controller.postMessage({
+            type: 'progress',
+            id: id
+          }, [channel.port1]);
+        }, 100);
+      })
+
+      if (options.cancelHook) {
+        options.cancelHook.signal.onabort = () => {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'cancel',
+            id: id
+          });
+        };
+      }
+      if (!options.skipSave) {
+        const anchor = document.createElement('a');
+        anchor.href = `/api/proxy/download/${id}`;
+        document.body.appendChild(anchor);
+        anchor.click();
+      }
+    }
+
+    return downloadPromise
   }
 
   /**
@@ -137,6 +232,33 @@ class StackService extends NodeService<Stack> {
   public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
     const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK), null);
     return stack.getUri(type, index);
+  }
+
+
+  private async saveFile(path: string, type: string, stream: any): Promise<void> {
+    if (typeof window === 'undefined') {
+      const fs = (await import("fs")).default;
+      return new Promise((resolve, reject) =>
+        (stream as NodeJS.ReadableStream).pipe(fs.createWriteStream(path))
+          .on('error', error => reject(error))
+          .on('finish', () => resolve())
+      );
+    } else {
+      const chunks = [];
+      const reader = stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        chunks.push(value);
+      }
+      const blob = new Blob(chunks, { type: type });
+      const a = document.createElement("a");
+      a.download = path;
+      a.href = window.URL.createObjectURL(blob);
+      a.click();
+    }
   }
 };
 
