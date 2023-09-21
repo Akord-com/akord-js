@@ -1,6 +1,6 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, testDataPath, vaultCreate } from './common';
+import { initInstance, testDataPath, testDataOutPath, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
 import { NodeJs } from "../types/file-like";
 import { getTxData } from "../arweave";
@@ -25,6 +25,10 @@ describe("Testing stack functions", () => {
 
   it("should create new stack", async () => {
     stackId = await stackCreate(vaultId);
+  });
+
+  it("should download the stack", async () => {
+    await stackDownload(stackId);
   });
 
   it("should upload new revision", async () => {
@@ -64,6 +68,14 @@ export const stackCreate = async (vaultId: string) => {
   const binary = await akord.stack.getVersion(stack.id, { responseType: 'arraybuffer' });
   expect(binary.data).toEqual(await file.arrayBuffer());
   return stackId;
+}
+
+export const stackDownload = async (stackId: string) => {
+  const { version, data } = await akord.stack.getVersion(stackId, { responseType: 'arraybuffer' });
+  await akord.stack.download(stackId, { path: testDataOutPath });
+  const file = await NodeJs.File.fromPath(`${testDataOutPath}/${version.name}`);
+
+  expect(data).toEqual(await file.arrayBuffer());
 }
 
 export const stackUploadRevision = async (stackId: string) => {

@@ -125,7 +125,7 @@ class StackService extends NodeService<Stack> {
       await version.decrypt();
     }
     await service.setVaultContext(stack.vaultId);
-    
+
     const file = await this.api.downloadFile(version.getUri(StorageType.S3), { responseType: 'stream' });
     let stream: ReadableStream<Uint8Array>
     if (service.isPublic) {
@@ -156,7 +156,7 @@ class StackService extends NodeService<Stack> {
     let downloadPromise: Promise<void>
     if (typeof window === 'undefined' || !navigator.serviceWorker?.controller) {
       const { version, data } = await this.getVersion(stackId, { ...options, responseType: 'stream' });
-      const path = options.path ? options.path : version.name;
+      const path = `${options.path}/${version.name}`;
       const contentType = version.type;
       downloadPromise = this.saveFile(path, contentType, data);
     } else {
@@ -244,8 +244,9 @@ class StackService extends NodeService<Stack> {
   private async saveFile(path: string, type: string, stream: any): Promise<void> {
     if (typeof window === 'undefined') {
       const fs = (await import("fs")).default;
+      const Readable = (await import("stream")).Readable;
       return new Promise((resolve, reject) =>
-        stream.pipe(fs.createWriteStream(path))
+        Readable.from(stream).pipe(fs.createWriteStream(path))
           .on('error', error => reject(error))
           .on('finish', () => resolve())
       );
