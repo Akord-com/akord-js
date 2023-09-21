@@ -44,7 +44,7 @@ describe("Testing manifest functions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = (await vaultCreate(akord, false)).vaultId;
 
     // upload html file
     const htmlSrc = "<html><body><h1>Hello World</h1></body></html>";

@@ -212,12 +212,10 @@ export default class AkordApi extends Api {
   };
 
   public async getNodeState(stateId: string): Promise<any> {
-    const { response } = await new ApiClient()
+    return await new ApiClient()
       .env(this.config)
       .resourceId(stateId)
       .downloadState()
-
-    return response.data
   };
 
   public async getNotifications(): Promise<Paginated<any>> {

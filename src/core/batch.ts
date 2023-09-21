@@ -361,7 +361,7 @@ class BatchService extends Service {
       service.setObjectId(item.id);
       service.setObjectType(item.type);
       service.arweaveTags = await service.getTxTags();
-      const { id, object } = await this.api.postContractTransaction<T>(this.vaultId, item.input, service.arweaveTags);
+      const { id, object } = await this.api.postContractTransaction<T>(service.vaultId, item.input, service.arweaveTags);
       const processedObject = item.type === objectType.MEMBERSHIP
         ? await (<MembershipService>service).processMembership(object as Membership, !batchService.isPublic, batchService.keys)
         : await (<NodeService<T>>service).processNode(object as any, !batchService.isPublic, batchService.keys) as any;

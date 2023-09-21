@@ -8,10 +8,10 @@ export async function initInstance(email: string, password: string): Promise<Ako
   return new Akord(wallet, { debug: true, env: process.env.ENV as any });
 }
 
-export const vaultCreate = async (akord: Akord) => {
+export const vaultCreate = async (akord: Akord, cacheOnly = true) => {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vault.create(name, { termsOfAccess, cacheOnly: true });
+  const { vaultId, membershipId } = await akord.vault.create(name, { termsOfAccess, cacheOnly: cacheOnly });
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");

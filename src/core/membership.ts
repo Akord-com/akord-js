@@ -419,6 +419,8 @@ class MembershipService extends Service {
 
   protected async setVaultContextFromMembershipId(membershipId: string, vaultId?: string) {
     const membership = await this.api.getMembership(membershipId, vaultId);
+    const vault = await this.api.getVault(membership.vaultId);
+    this.setVault(vault);
     this.setVaultId(membership.vaultId);
     this.setIsPublic(membership.__public__);
     await this.setMembershipKeys(membership);

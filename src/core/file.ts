@@ -15,99 +15,12 @@ import { InternalError } from "../errors/internal-error";
 const DEFAULT_FILE_TYPE = "text/plain";
 const DEFAULT_CHUNK_SIZE_IN_BYTES = 10000000; //10MB
 export const IV_LENGTH_IN_BYTES = 16;
-const DEFAULT_CHUNK_SIZE_WITH_IV_IN_BYTES = DEFAULT_CHUNK_SIZE_IN_BYTES + IV_LENGTH_IN_BYTES;
 
 class FileService extends Service {
   //asyncUploadTreshold = 209715200;
   asyncUploadTreshold = 20000000;
   contentType = null as string;
 
-  /**
-   * Returns file as ArrayBuffer. Puts the whole file into memory. 
-   * For downloading without putting whole file to memory use FileService#download()
-   * @param  {string} id file resource url
-   * @param  {string} vaultId
-   * @param  {DownloadOptions} [options]
-   * @returns Promise with file buffer
-   */
-  // public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-  //   const service = new FileService(this.wallet, this.api);
-  //   await service.setVaultContext(vaultId);
-  //   const downloadOptions = options as FileDownloadOptions;
-  //   downloadOptions.public = service.isPublic;
-  //   let fileBinary: ArrayBuffer;
-  //   if (options.isChunked) {
-  //     const chunkSize: number = options.chunkSize || (downloadOptions.public ? DEFAULT_CHUNK_SIZE_IN_BYTES : DEFAULT_CHUNK_SIZE_WITH_IV_IN_BYTES);
-  //     let currentChunk = 0;
-  //     while (currentChunk < options.numberOfChunks) {
-  //       const url = `${id}_${currentChunk}`;
-  //       downloadOptions.loadedSize = currentChunk * chunkSize
-  //       const chunkBinary = await service.getBinary(url, downloadOptions);
-  //       fileBinary = service.appendBuffer(fileBinary, chunkBinary);
-  //       currentChunk++;
-  //     }
-  //   } else {
-  //     const { fileData, metadata } = await this.api.downloadFile(id, downloadOptions);
-  //     fileBinary = await service.processReadRaw(fileData, metadata)
-  //   }
-  //   return fileBinary;
-  // }
-
-  /**
-   * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
-   * In browser, streaming of the binary requires self hosting of mitm.html and sw.js
-   * See: https://github.com/jimmywarting/StreamSaver.js#configuration
-   * @param  {string} id file resource url
-   * @param  {string} vaultId
-   * @param  {DownloadOptions} [options]
-   * @returns Promise with file buffer
-   */
-  // public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
-  //   const service = new FileService(this.wallet, this.api);
-  //   await service.setVaultContext(vaultId);
-  //   const downloadOptions = options as FileDownloadOptions;
-  //   downloadOptions.public = service.isPublic;
-
-  //   if (typeof window !== 'undefined') {
-  //     if (!service.isPublic) {
-  //       if (!navigator.serviceWorker?.controller) {
-  //         throw new InternalError("Decryption service worker is not running")
-  //       }
-  //       navigator.serviceWorker.controller.postMessage({
-  //         keys: [],
-  //         id: 'test'
-  //       });
-  //     }
-  //   }
-
-    // const writer = await service.stream(options.name, options.resourceSize);
-    // if (options.isChunked) {
-    //   let currentChunk = 0;
-    //   try {
-    //     while (currentChunk < options.numberOfChunks) {
-    //       const url = `${id}_${currentChunk}`;
-    //  //     downloadOptions.loadedSize = currentChunk * service.chunkSize;
-    //       const fileBinary = await service.getBinary(url, downloadOptions);
-    //       if (writer instanceof WritableStreamDefaultWriter) {
-    //         await writer.ready
-    //       }
-    //       await writer.write(new Uint8Array(fileBinary));
-    //       currentChunk++;
-    //     }
-    //   } catch (err) {
-    //     throw new Error(err);
-    //   } finally {
-    //     if (writer instanceof WritableStreamDefaultWriter) {
-    //       await writer.ready
-    //     }
-    //     await writer.close();
-    //   }
-    // } else {
-    //   const fileBinary = await service.getBinary(id, downloadOptions);
-    //   await writer.write(new Uint8Array(fileBinary));
-    //   await writer.close();
-    // }
-  //}
 
   public async create(
     file: FileLike,
@@ -145,28 +58,6 @@ class FileService extends Service {
     resourceUri.push(`${StorageType.ARWEAVE}:${fileTxId}`);
     return { file, resourceUri };
   }
-
-  // public async stream(path: string, size?: number): Promise<any | WritableStreamDefaultWriter> {
-  //   if (typeof window === 'undefined') {
-  //     const fs = (await import("fs")).default;
-  //     return fs.createWriteStream(path);
-  //   }
-  //   else {
-  //     const streamSaver = (await import('streamsaver')).default;
-  //     if (!streamSaver.WritableStream) {
-  //       const pony = await import('web-streams-polyfill/ponyfill');
-  //       streamSaver.WritableStream = pony.WritableStream as unknown as typeof streamSaver.WritableStream;
-  //     }
-  //     if (window.location.protocol === 'https:'
-  //       || window.location.protocol === 'chrome-extension:'
-  //       || window.location.hostname === 'localhost') {
-  //       streamSaver.mitm = '/streamsaver/mitm.html';
-  //     }
-
-  //     const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
-  //     return fileStream.getWriter();
-  //   }
-  // }
 
   public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
     const version = new FileVersion({
@@ -303,30 +194,6 @@ class FileService extends Service {
       encryptedKey: encryptedKey
     };
   }
-
-  private appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBufferLike {
-    if (!buffer1 && !buffer2) return;
-    if (!buffer1) return buffer2;
-    if (!buffer2) return buffer1;
-    var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
-    tmp.set(new Uint8Array(buffer1), 0);
-    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
-    return tmp.buffer;
-  }
-
-  // private async getBinary(id: string, options: FileDownloadOptions) {
-  //   try {
-  //     options.public = this.isPublic;
-  //     const { fileData, metadata } = await this.api.downloadFile(id, options);
-  //     return await this.processReadRaw(fileData, metadata);
-  //   } catch (e) {
-  //     Logger.log(e);
-  //     throw new Error(
-  //       "Failed to download. Please check your network connection." +
-  //       " Please upload the file again if problem persists and/or contact Akord support."
-  //     );
-  //   }
-  // }
 
   private getFileTags(file: FileLike, options: FileUploadOptions = {}): Tags {
     const tags = [] as Tags;

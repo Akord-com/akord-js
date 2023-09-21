@@ -213,6 +213,8 @@ class NodeService<T> extends Service {
 
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
     const object = await this.api.getNode<NodeLike>(nodeId, type, vaultId);
+    const vault = await this.api.getVault(object.vaultId);
+    this.setVault(vault);
     this.setVaultId(object.vaultId);
     this.setIsPublic(object.__public__);
     await this.setMembershipKeys(object);
