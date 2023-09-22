@@ -531,7 +531,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `http://localhost:3001/${this._fileUri}`,
+      url: `${this._gatewayurl}/${this._fileUri}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,

@@ -220,11 +220,12 @@ class BatchService extends Service {
             currentTx.input,
             currentTx.tags
           );
-          if (options.onStackCreated) {
-            await options.onStackCreated(object);
-          }
           const stack = await new StackService(batchService.wallet, batchService.api, batchService)
             .processNode(object, !batchService.isPublic, batchService.keys);
+          if (options.onStackCreated) {
+            await options.onStackCreated(stack);
+          }
+
           data.push({ transactionId: id, object: stack, stackId: object.id });
           stacksCreated += 1;
           if (options.cancelHook?.signal.aborted) {

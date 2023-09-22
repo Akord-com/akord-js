@@ -183,30 +183,33 @@ class StackService extends NodeService<Stack> {
       });
 
       downloadPromise = new Promise((resolve, reject) => {
+        if (options.skipSave) {
+          resolve();
+        } else {
+          const interval = setInterval(() => {
+            const channel = new MessageChannel();
 
-        const interval = setInterval(() => {
-          const channel = new MessageChannel();
-
-          channel.port2.onmessage = (event) => {
-            if (event.data.type === 'progress') {
-              const progress = Math.min(100, Math.ceil(event.data.progress / version.size * 100));
-              if (options.progressHook) {
-                options.progressHook(progress);
+            channel.port2.onmessage = (event) => {
+              if (event.data.type === 'progress') {
+                const progress = Math.min(100, Math.ceil(event.data.progress / version.size * 100));
+                if (options.progressHook) {
+                  options.progressHook(progress);
+                }
+                if (event.data.progress === version.size) {
+                  clearInterval(interval);
+                  resolve();
+                }
+              } else {
+                reject(event.data);
               }
-              if (event.data.progress === version.size) {
-                clearInterval(interval);
-                resolve();
-              }
-            } else {
-              reject(event.data);
-            }
-          };
+            };
 
-          navigator.serviceWorker.controller.postMessage({
-            type: 'progress',
-            id: id
-          }, [channel.port1]);
-        }, 100);
+            navigator.serviceWorker.controller.postMessage({
+              type: 'progress',
+              id: id
+            }, [channel.port1]);
+          }, 100);
+        }
       })
 
       if (options.cancelHook) {
