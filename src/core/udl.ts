@@ -1,10 +1,10 @@
-import { CommercialUse, Derivation, LicenseFee, UDL, tagNames } from "../types/udl";
+import { CommercialUse, Derivation, LicenseFee, UDL, UDL_LICENSE_TX_ID, tagNames } from "../types/udl";
 import { Tag, Tags } from "../types/contract";
 import { BadRequest } from "../errors/bad-request";
 
 export const udlToTags = (udl: UDL): Tags => {
   const tags = [] as Tags;
-  tags.push(new Tag(tagNames.LICENSE, udl.license));
+  tags.push(new Tag(tagNames.LICENSE, udl.license || UDL_LICENSE_TX_ID));
   if (udl.licenseFee) {
     tags.push(new Tag(tagNames.LICENSE_FEE, setLicenseFee(udl.licenseFee)));
   }

@@ -79,7 +79,8 @@ export enum actionRefs {
   NOTE_REVOKE = "NOTE_REVOKE",
   NOTE_RESTORE = "NOTE_RESTORE",
   NOTE_DELETE = "NOTE_DELETE",
-  PROFILE_UPDATE = "PROFILE_UPDATE"
+  PROFILE_UPDATE = "PROFILE_UPDATE",
+  NFT_MINT = "NFT_MINT"
 };
 
 export const AKORD_TAG = "Akord-Tag";
@@ -132,6 +133,7 @@ export enum smartweaveTags {
   CONTENT_TYPE = "Content-Type",
   CONTRACT = "Contract",
   CONTRACT_SOURCE = "Contract-Src",
+  INIT_STATE = "Init-State",
   INPUT = "Input",
   INTERACT_WRITE = "Interact-Write",
 };

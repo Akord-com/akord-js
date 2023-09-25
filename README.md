@@ -17,6 +17,7 @@ This package can be used in both browser and Node.js environments.
   - [Folder](#folder)
   - [Note](#note)
   - [Manifest](#manifest)
+  - [NFT](#nft)
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
@@ -1327,6 +1328,54 @@ const manifest = await akord.manifest.getVersion(vaultId);
 const manifestV1 = await akord.manifest.getVersion(vaultId, 0);
 ```
 </details>
+
+### nft
+
+The NFT module enables the creation of atomic NFTs compliant with the [Atomic Asset standard](https://atomic-assets.arweave.dev/).
+
+The atomic asset can be minted with the option to attach the [Unviersal Data Licence](https://arwiki.wiki/#/en/Universal-Data-License-How-to-use-it) (UDL), and is automatically listed on the [Universal Market Place](https://bazar.arweave.dev/) (UCM).
+
+#### `mint(vaultId, asset, metadata, options)`
+
+- `vaultId` (`string`, required)
+- `asset` ([`FileLike`][file-like], required) - asset data
+- `metadata` (`NFTMetadata`, required) - NFT metadata: name, ticker, description, owner, creator, etc.
+- `options` (`FileUploadOptions`, optional) - ex: UDL terms
+- returns `Promise<{ nftId, transactionId }>` - Promise with new nft id & corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+// Mint an atomic NFT with the UDL attached
+
+// First, load your asset content
+import { NodeJs } from "@akord/akord-js/lib/types/file";
+const asset = await NodeJs.File.fromPath("path to your nft data");
+
+// Now, let's define our NFT metadata
+const nftMetadata = {
+  name: "Golden Orchid - Flora Fantasy #1",
+  creator: "xxxx", // should be a valid Arweave address
+  owner: "yyyy", // should be a valid Arweave address
+  collection: "Flora Fantasy",
+  description: "A rare digital representation of the mythical Golden Orchid",
+  type: "image",
+  topics: ["floral", "nature"]
+};
+
+// Then, let's define UDL terms
+const udlTerms = {
+  licenseFee: {
+    type: "One-Time",
+    value: 10
+  },
+  derivations: [{ type: "Allowed-With-Credit" }]
+};
+
+// Finally, let's mint the NFT by passing asset content, NFT metadata, and UDL terms
+const { nftId } = await akord.nft.mint(vaultId, asset, nftMetadata, { udl: udlTerms });
+```
 
 ### contract
 

@@ -4,7 +4,7 @@
 export const UDL_LICENSE_TX_ID = "yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8";
 
 export type UDL = {
-  license: string, // tx id of the UDL
+  license?: string, // tx id of the UDL, default to yRj4a5KMctX_uOmKWCFJIjmY8DeJcusVk6-HzLiM_t8
   derivations?: Derivation[], // grants the rights of licensees to make derivative works
   commercialUses?: CommercialUse[], // grants the rights of licensees to use the content for commercial use
   licenseFee?: LicenseFee, // if not present, there is no fee for the license
