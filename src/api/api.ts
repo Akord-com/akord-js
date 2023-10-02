@@ -5,8 +5,8 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions } from "../core/file";
-import { EncryptionMetadata } from "../core";
+import { FileDownloadOptions, FileUploadOptions } from "../types/file";
+import { EncryptionMetadata } from "../types/encryption";
 
 abstract class Api {
   config: any
@@ -17,9 +17,9 @@ abstract class Api {
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
   
-  abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<{ resourceTx: string, resourceUrl: string }>
+  abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<string[]>
 
-  abstract uploadData(items: { data: any, tags: Tags }[], options?: FileUploadOptions): Promise<Array<string>>
+  abstract uploadData(items: { data: any, tags: Tags }[], cacheOnly?: boolean): Promise<Array<string>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 

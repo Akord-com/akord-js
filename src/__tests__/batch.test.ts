@@ -2,7 +2,7 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, folderCreate, noteCreate, testDataPath, vaultCreate } from './common';
 import { email, email2, email3, password } from './data/test-credentials';
-import { NodeJs } from "../types/file";
+import { NodeJs } from "../types/file-like";
 import { firstFileName } from "./data/content";
 
 let akord: Akord;

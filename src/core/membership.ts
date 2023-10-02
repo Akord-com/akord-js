@@ -2,7 +2,7 @@ import { actionRefs, objectType, status, functions, protocolTags } from "../cons
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray, generateKeyPair, Keys } from "@akord/crypto";
 import { Service } from "./service";
-import { Membership, RoleType, StatusType } from "../types/membership";
+import { Membership, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
 import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
@@ -11,8 +11,7 @@ import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { handleListErrors, paginate } from "./common";
 import { ProfileService } from "./profile";
 import { ProfileDetails } from "../types/profile-details";
-
-export const activeStatus = [status.ACCEPTED, status.PENDING, status.INVITED] as StatusType[];
+import { StorageType } from "../types/file";
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
@@ -108,7 +107,7 @@ class MembershipService extends Service {
     service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await service.getTxTags());
 
-    const dataTxId = await service.uploadState(state);
+    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
     const input = {
       function: service.function,
@@ -162,7 +161,7 @@ class MembershipService extends Service {
         memberDetails: await service.processMemberDetails({ name: member.options?.name }, service.vault.cacheOnly),
       };
 
-      const data = await service.uploadState(state);
+      const data = await service.uploadState(state, service.vault.cacheOnly);
       dataArray.push({
         id: membershipId,
         data
@@ -210,7 +209,7 @@ class MembershipService extends Service {
     service.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     service.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await service.mergeAndUploadState(state);
+    const data = await service.mergeAndUploadState(state, service.vault.cacheOnly);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       service.vaultId,
       { function: service.function, data },
@@ -239,7 +238,7 @@ class MembershipService extends Service {
     service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await service.getTxTags());
 
-    const dataTxId = await service.uploadState(state);
+    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
     const input = {
       function: service.function,
@@ -330,7 +329,7 @@ class MembershipService extends Service {
         memberService.setVaultId(service.vaultId);
         memberService.setObjectId(member.id);
         memberService.setObject(member);
-        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) });
+        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, service.vault.cacheOnly);
         data.push({ id: member.id, value: dataTx });
       }));
     }
@@ -408,7 +407,7 @@ class MembershipService extends Service {
     service.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     service.setFunction(functions.MEMBERSHIP_UPDATE);
 
-    const data = await service.mergeAndUploadState({ memberDetails });
+    const data = await service.mergeAndUploadState({ memberDetails }, service.vault.cacheOnly);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       service.vaultId,
       { function: service.function, data },
@@ -492,33 +491,19 @@ class MembershipService extends Service {
         processedMemberDetails.name = await this.processWriteString(memberDetails.name);
       }
       if (memberDetails.avatar) {
-        const { resourceUrl, resourceTx } = await this.processAvatar(memberDetails.avatar, cacheOnly);
-        processedMemberDetails.avatarUri = [`arweave:${resourceTx}`, `s3:${resourceUrl}`];
+        const resourceUri = await this.processAvatar(memberDetails.avatar, cacheOnly);
+        processedMemberDetails.avatarUri = resourceUri;
       }
     }
     return new ProfileDetails(processedMemberDetails);
   }
 
-  private async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<{ resourceTx: string, resourceUrl: string }> {
+  private async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
-    return this.api.uploadFile(processedData, encryptionTags, { cacheOnly, public: false });
+    const storage = cacheOnly ? StorageType.S3 : StorageType.ARWEAVE;
+    return this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
   }
 };
-
-export type MembershipCreateOptions = {
-  message?: string
-}
-
-type MembershipCreateResult = {
-  membershipId: string,
-  transactionId: string,
-  object: Membership
-}
-
-type MembershipUpdateResult = {
-  transactionId: string,
-  object: Membership
-}
 
 export {
   MembershipService

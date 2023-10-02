@@ -1,6 +1,6 @@
 import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
-import { Folder, Memo, NodeLike, NodeType, Stack } from '../types/node';
+import { NodeCreateOptions, NodeLike, NodeType, NodeUpdateResult } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
 import { ContractInput, Tag, Tags } from '../types/contract';
@@ -10,6 +10,9 @@ import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 import { BadRequest } from '../errors/bad-request';
 import { handleListErrors, paginate } from './common';
 import { NFT } from '../types/nft';
+import { Folder } from '../types/folder';
+import { Stack } from '../types/stack';
+import { Memo } from '../types/memo';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -171,7 +174,7 @@ class NodeService<T> extends Service {
     } as ContractInput;
 
     if (state) {
-      const id = await this.uploadState(state);
+      const id = await this.uploadState(state, this.vault.cacheOnly);
       input.data = id;
     }
 
@@ -194,7 +197,7 @@ class NodeService<T> extends Service {
     this.arweaveTags = await this.getTxTags();
 
     if (stateUpdates) {
-      const id = await this.mergeAndUploadState(stateUpdates);
+      const id = await this.mergeAndUploadState(stateUpdates, this.vault.cacheOnly);
       input.data = id;
     }
     const { id, object } = await this.api.postContractTransaction<T>(
@@ -257,17 +260,6 @@ class NodeService<T> extends Service {
       throw new BadRequest("Given type is not supported: " + this.objectType);
     }
   }
-}
-
-type NodeUpdateResult = {
-  transactionId: string,
-  object: NodeLike
-}
-
-export type NodeCreateOptions = {
-  parentId?: string,
-  tags?: string[],
-  arweaveTags?: Tags
 }
 
 export {

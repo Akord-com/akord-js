@@ -4,12 +4,12 @@ export const apiConfig = (env: string) => {
     default:
       return {
         apiurl: "https://api.akord.com",
-        storageurl: "https://api.v2.prod.permapost-storage.akord.com",
+        storageurl: "https://vault.akord.com",
       };
     case "dev":
       return {
         apiurl: "https://api.akord.link",
-        storageurl: "https://api.dev.permapost-storage.akord.link",
+        storageurl: "https://vault.akord.link",
       };
   }
 };

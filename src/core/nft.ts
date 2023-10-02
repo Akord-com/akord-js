@@ -1,12 +1,13 @@
 import { NodeService } from "./node";
 import { nodeType } from "../types/node";
-import { StackCreateOptions } from "./stack";
-import { FileLike } from "../types/file";
 import { FileService } from "./file";
 import { NFT, NFTMetadata } from "../types/nft";
 import { actionRefs, functions, smartweaveTags } from "../constants";
 import { Tag, Tags } from "../types/contract";
 import { assetTags } from "../types/asset";
+import { StackCreateOptions } from "../types/stack";
+import { FileLike } from "../types/file-like";
+import { StorageType } from "../types/file";
 
 const DEFAULT_TICKER = "ATOMIC";
 const DEFAULT_CONTRACT_SRC = "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"; // Atomic asset contract source
@@ -42,7 +43,7 @@ class NFTService extends NodeService<NFT> {
     service.setAkordTags([]);
 
     createOptions.arweaveTags = (createOptions.arweaveTags || [{ name: 'Content-Type', value: asset.type }]).concat(nftTags);
-    createOptions.cacheOnly = service.vault.cacheOnly;
+    createOptions.storage = service.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE;
 
     const fileService = new FileService(this.wallet, this.api, service);
     const fileUploadResult = await fileService.create(asset, createOptions);

@@ -675,7 +675,7 @@ do {
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
+import { NodeJs } from "@akord/akord-js/lib/types/file-like";
 const file = await NodeJs.File.fromPath("path to your file");
 
 // create a stack with custom arweave tags
@@ -765,7 +765,7 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
+import { NodeJs } from "@akord/akord-js/lib/types/file-like";
 const file = await NodeJs.File.fromPath("path to your file");
 const { transactionId } = await akord.stack.uploadRevision(stackId, file);
 ```
@@ -904,10 +904,10 @@ const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackI
 
 #### `getUri(stackId, type, index)`
 
-Get stack file uri by index, return the latest arweave uri by default
+Get stack file uri by index, return the latest file uri by default
 
 - `stackId` (`string`, required)
-- `type` ([`StorageType`][storage-type], optional) - storage type, default to arweave
+- `type` (`StorageType`, optional) - storage type, default to arweave
 - `index` (`number`, optional) - file version index, default to latest
 - returns `Promise<string>` - Promise with stack file uri
 

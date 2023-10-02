@@ -11,11 +11,11 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions } from "../core/file";
-import { EncryptionMetadata } from "../core";
+import { FileDownloadOptions, FileUploadOptions, StorageType } from "../types/file";
+import { EncryptionMetadata } from "../types/encryption";
 
 export const defaultFileUploadOptions = {
-  cacheOnly: false,
+  storage: StorageType.ARWEAVE,
   public: false
 };
 
@@ -28,15 +28,16 @@ export default class AkordApi extends Api {
     this.config = apiConfig(config.env);
   }
 
-  public async uploadData(items: { data: any, tags: Tags }[], options: FileUploadOptions = defaultFileUploadOptions)
+  public async uploadData(items: { data: any, tags: Tags }[], cacheOnly = false)
     : Promise<Array<string>> {
     const resources = [];
 
     await Promise.all(items.map(async (item, index) => {
       const resource = await new ApiClient()
         .env(this.config)
-        .data({ data: item.data, tags: item.tags })
-        .cacheOnly(options.cacheOnly)
+        .tags(item.tags)
+        .state(item.data)
+        .cacheOnly(cacheOnly)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
@@ -66,13 +67,14 @@ export default class AkordApi extends Api {
   public async initContractId(tags: Tags, state?: any): Promise<string> {
     const contractId = await new ApiClient()
       .env(this.config)
-      .data({ tags, state })
+      .tags(tags)
+      .state(state)
       .contract()
     Logger.log("Created contract with id: " + contractId);
     return contractId;
   };
 
-  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<string[]> {
     const uploadOptions = {
       ...defaultFileUploadOptions,
       ...options
@@ -82,11 +84,11 @@ export default class AkordApi extends Api {
       .data(file)
       .tags(tags)
       .public(uploadOptions.public)
-      .cacheOnly(uploadOptions.cacheOnly)
+      .storage(uploadOptions.storage)
       .progressHook(uploadOptions.progressHook)
       .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
-    Logger.log("Uploaded file with id: " + resource.id);
+    Logger.log("Uploaded file with id: " + resource);
 
     return resource;
   };
@@ -99,11 +101,14 @@ export default class AkordApi extends Api {
       .numberOfChunks(options.numberOfChunks)
       .progressHook(options.progressHook, options.loadedSize, options.resourceSize)
       .cancelHook(options.cancelHook)
-      .asArrayBuffer()
+      .responseType("arraybuffer")
       .downloadFile();
 
     const fileData = response.data;
-    const metadata = { encryptedKey: response.headers["x-amz-meta-encryptedkey"], iv: response.headers["x-amz-meta-iv"] };
+    const metadata = {
+      encryptedKey: response.headers["x-amz-meta-encrypted-key"] || response.headers["x-amz-meta-encryptedkey"],
+      iv: response.headers["x-amz-meta-initialization-vector"] || response.headers["x-amz-meta-iv"]
+    };
     return { fileData, metadata };
   };
 

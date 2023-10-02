@@ -1,8 +1,10 @@
-import { NodeCreateOptions, NodeService } from "./node";
+import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileService, FileUploadOptions } from "./file";
-import { FileLike } from "../types/file";
-import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
+import { FileService } from "./file";
+import { FileUploadOptions, FileVersion, StorageType } from "../types/file";
+import { FileLike } from "../types/file-like";
+import { nodeType, NodeCreateOptions } from "../types/node";
+import { Stack, StackCreateOptions, StackCreateResult, StackUpdateResult } from "../types/stack";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -18,17 +20,20 @@ class StackService extends NodeService<Stack> {
    */
   public async create(vaultId: string, file: FileLike, name: string, options: StackCreateOptions = this.defaultCreateOptions):
     Promise<StackCreateResult> {
-    const createOptions = {
-      ...this.defaultCreateOptions,
-      ...options
-    }
     const service = new StackService(this.wallet, this.api);
     await service.setVaultContext(vaultId);
     service.setActionRef(actionRefs.STACK_CREATE);
     service.setFunction(functions.NODE_CREATE);
-    service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
 
-    createOptions.cacheOnly = service.vault.cacheOnly;
+    const optionsFromVault = {
+      storage: service.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
+    }
+    const createOptions = {
+      ...this.defaultCreateOptions,
+      ...optionsFromVault,
+      ...options
+    }
+    service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
 
     const fileService = new FileService(this.wallet, this.api, service);
     const fileUploadResult = await fileService.create(file, createOptions);
@@ -56,14 +61,14 @@ class StackService extends NodeService<Stack> {
     service.setFunction(functions.NODE_CREATE);
 
     const fileService = new FileService(this.wallet, this.api, service);
-    const { file, resourceHash, resourceUrl } = await fileService.import(fileTxId);
+    const { file, resourceUri } = await fileService.import(fileTxId);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await service.processWriteString(file.name),
       type: file.type,
       size: file.size,
-      resourceUri: [`arweave:${fileTxId}`, `hash:${resourceHash}`, `s3:${resourceUrl}`],
+      resourceUri: resourceUri,
     });
     const state = {
       name: await service.processWriteString(file.name),
@@ -85,10 +90,16 @@ class StackService extends NodeService<Stack> {
     service.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
     service.setFunction(functions.NODE_UPDATE);
 
-    options.cacheOnly = service.object.__cacheOnly__;
+    const optionsFromVault = {
+      storage: service.object.__cacheOnly__ ? StorageType.S3 : StorageType.ARWEAVE
+    }
+    const uploadOptions = {
+      ...optionsFromVault,
+      ...options
+    }
 
     const fileService = new FileService(this.wallet, this.api, service);
-    const fileUploadResult = await fileService.create(file, options);
+    const fileUploadResult = await fileService.create(file, uploadOptions);
     const version = await fileService.newVersion(file, fileUploadResult);
 
     const state = {
@@ -115,7 +126,7 @@ class StackService extends NodeService<Stack> {
   }
 
   /**
-   * Get stack file uri by index, return the latest arweave uri by default
+   * Get stack file uri by index, return the latest file uri by default
    * @param  {string} stackId
    * @param  {StorageType} [type] storage type, default to arweave
    * @param  {number} [index] file version index, default to latest
@@ -126,19 +137,6 @@ class StackService extends NodeService<Stack> {
     return stack.getUri(type, index);
   }
 };
-
-export type StackCreateOptions = NodeCreateOptions & FileUploadOptions;
-
-type StackCreateResult = {
-  stackId: string,
-  transactionId: string,
-  object: Stack
-}
-
-type StackUpdateResult = {
-  transactionId: string,
-  object: Stack
-}
 
 export {
   StackService

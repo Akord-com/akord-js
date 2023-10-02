@@ -1,8 +1,8 @@
 import { ListOptions } from "../types/query-options";
 import lodash from "lodash";
-import { EncryptionMetadata } from "./service";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { base64ToArray } from "@akord/crypto";
+import { EncryptionMetadata } from "../types/encryption";
 
 export const handleListErrors = async <T>(originalItems: Array<T>, promises: Array<Promise<T>>)
   : Promise<{ items: Array<T>, errors: Array<{ id: string, error: Error }> }> => {

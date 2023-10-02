@@ -1,7 +1,7 @@
 import { actionRefs, objectType, status, functions, protocolTags, AKORD_TAG } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
-import { Vault } from "../types/vault";
+import { Vault, VaultCreateOptions, VaultCreateResult, VaultUpdateOptions, VaultUpdateResult } from "../types/vault";
 import { Service } from "./service";
 import { Tag, Tags } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
@@ -193,7 +193,7 @@ class VaultService extends Service {
     service.setAkordTags((options.name && service.isPublic ? [options.name] : []).concat(options.tags));
     service.arweaveTags = await service.getTxTags();
 
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
       { function: service.function, data: dataTxId },
@@ -216,7 +216,7 @@ class VaultService extends Service {
     const state = {
       name: await service.processWriteString(name)
     };
-    const data = await service.mergeAndUploadState(state);
+    const data = await service.mergeAndUploadState(state, service.vault.cacheOnly);
     service.setAkordTags(service.isPublic ? [name] : []);
     service.arweaveTags = await service.getTxTags();
 
@@ -253,7 +253,7 @@ class VaultService extends Service {
         newState.tags.push(tag);
       }
     }
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
@@ -285,7 +285,7 @@ class VaultService extends Service {
       const index = this.getTagIndex(newState.tags, tag);
       newState.tags.splice(index, 1);
     }
-    const dataTxId = await service.uploadState(newState);
+    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
@@ -369,33 +369,6 @@ class VaultService extends Service {
     return index;
   }
 };
-
-export type VaultCreateOptions = {
-  public?: boolean,
-  termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
-  description?: string,
-  tags?: string[],
-  cacheOnly?: boolean,
-  arweaveTags?: Tags
-}
-
-export type VaultUpdateOptions = {
-  name?: string,
-  description?: string,
-  tags?: string[]
-}
-
-type VaultCreateResult = {
-  vaultId: string,
-  membershipId: string,
-  transactionId: string,
-  object: Vault
-}
-
-type VaultUpdateResult = {
-  transactionId: string,
-  object: Vault
-}
 
 export {
   VaultService

@@ -22,11 +22,7 @@ import { Object, ObjectType } from "../types/object";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "./common";
-
-export type EncryptionMetadata = {
-  encryptedKey?: string,
-  iv?: string
-}
+import { EncryptionMetadata } from "../types/encryption";
 
 export const STATE_CONTENT_TYPE = "application/json";
 
@@ -169,7 +165,7 @@ class Service {
     }
   }
 
-  async uploadState(state: any, cacheOnly = false): Promise<string> {
+  async uploadState(state: any, cacheOnly = true): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -184,7 +180,7 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ data: state, tags }], { cacheOnly });
+    const ids = await this.api.uploadData([{ data: state, tags }], cacheOnly);
     return ids[0];
   }
 
@@ -270,10 +266,10 @@ class Service {
       : {};
   }
 
-  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
+  protected async mergeAndUploadState(stateUpdates: any, cacheOnly = true): Promise<string> {
     const currentState = await this.getCurrentState();
     const mergedState = mergeState(currentState, stateUpdates);
-    return this.uploadState(mergedState);
+    return this.uploadState(mergedState, cacheOnly);
   }
 
   private async signData(data: any): Promise<string> {
@@ -286,6 +282,4 @@ class Service {
   }
 }
 
-export {
-  Service
-}
+export { Service };

@@ -1,17 +1,19 @@
 import { Service } from "../core";
 import { v4 as uuidv4 } from "uuid";
-import { MembershipCreateOptions, MembershipService, activeStatus } from "./membership";
-import { StackCreateOptions, StackService } from "./stack";
-import { Node, NodeLike, NodeType, Stack } from "../types/node";
-import { FileLike } from "../types/file";
-import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
-import { Membership, RoleType } from "../types/membership";
-import { FileService, Hooks } from "./file";
+import { MembershipService } from "./membership";
+import { StackService } from "./stack";
+import { NodeService } from "./node";
+import { Node, NodeLike, NodeType } from "../types/node";
+import { StackCreateOptions, Stack } from "../types/stack";
+import { FileLike } from "../types/file-like";
+import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
+import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
+import { FileService } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
-import { NodeService } from "./node";
 import { BadRequest } from "../errors/bad-request";
+import { StorageType } from "../types";
 
 function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
   for (let i = 0; i < arr.length; i += n) {
@@ -133,17 +135,19 @@ class BatchService extends Service {
 
     // set service context
     const vault = await this.api.getVault(vaultId);
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vault);
-    this.setGroupRef(items);
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.setVault(vault);
+    batchService.setVaultId(vaultId);
+    batchService.setIsPublic(vault.public);
+    await batchService.setMembershipKeys(vault);
+    batchService.setGroupRef(items);
+    batchService.setActionRef(actionRefs.STACK_CREATE);
+    batchService.setFunction(functions.NODE_CREATE);
 
     const stackCreateOptions = {
       ...options,
-      cacheOnly: this.vault.cacheOnly
+      cacheOnly: batchService.vault.cacheOnly,
+      storage: batchService.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
     }
 
     for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
@@ -151,7 +155,7 @@ class BatchService extends Service {
 
       // upload file data & metadata
       Promise.all(chunk.map(async (item) => {
-        const service = new StackService(this.wallet, this.api, this);
+        const service = new StackService(this.wallet, this.api, batchService);
 
         const nodeId = uuidv4();
         service.setObjectId(nodeId);
@@ -173,7 +177,7 @@ class BatchService extends Service {
           versions: [version],
           tags: service.tags
         };
-        const id = await service.uploadState(state);
+        const id = await service.uploadState(state, service.vault.cacheOnly);
 
         // queue the stack transaction for posting
         transactions.push({
@@ -211,8 +215,8 @@ class BatchService extends Service {
               await options.onStackCreated(object);
             }
 
-            const stack = await new StackService(this.wallet, this.api, this)
-              .processNode(object, !this.isPublic, this.keys);
+            const stack = await new StackService(this.wallet, this.api, batchService)
+              .processNode(object, !batchService.isPublic, batchService.keys);
             data.push({ transactionId: id, object: stack, stackId: object.id });
             if (options.cancelHook?.signal.aborted) {
               return { data, errors, cancelled: items.length - processedStacksCount };
@@ -244,14 +248,15 @@ class BatchService extends Service {
     const transactions = [] as MembershipInviteTransaction[];
 
     // set service context
-    this.setGroupRef(items);
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.setGroupRef(items);
     const vault = await this.api.getVault(vaultId);
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vault);
-    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    this.setFunction(functions.MEMBERSHIP_INVITE);
+    batchService.setVault(vault);
+    batchService.setVaultId(vaultId);
+    batchService.setIsPublic(vault.public);
+    await batchService.setMembershipKeys(vault);
+    batchService.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+    batchService.setFunction(functions.MEMBERSHIP_INVITE);
 
     // upload metadata
     await Promise.all(items.map(async (item: MembershipInviteItem) => {
@@ -263,7 +268,7 @@ class BatchService extends Service {
         errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
         const userHasAccount = await this.api.existsUser(email);
-        const service = new MembershipService(this.wallet, this.api, this);
+        const service = new MembershipService(this.wallet, this.api, batchService);
         if (userHasAccount) {
           const membershipId = uuidv4();
           service.setObjectId(membershipId);
@@ -277,7 +282,7 @@ class BatchService extends Service {
           service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
             .concat(await service.getTxTags());
 
-          const dataTxId = await service.uploadState(state);
+          const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
 
           transactions.push({
             vaultId,
@@ -308,7 +313,7 @@ class BatchService extends Service {
     for (let tx of transactions) {
       try {
         const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags);
-        const membership = await new MembershipService(this.wallet, this.api, this).processMembership(object as Membership, !this.isPublic, this.keys);
+        const membership = await new MembershipService(this.wallet, this.api, batchService).processMembership(object as Membership, !batchService.isPublic, batchService.keys);
         data.push({ membershipId: membership.id, transactionId: id, object: membership });
       } catch (error: any) {
         errors.push({
@@ -324,21 +329,22 @@ class BatchService extends Service {
 
   private async batchUpdate<T>(items: { id: string, type: ObjectType, input: ContractInput, actionRef: string }[])
     : Promise<{ transactionId: string, object: T }[]> {
-    this.setGroupRef(items);
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.setGroupRef(items);
     const result = [] as { transactionId: string, object: T }[];
     for (const [itemIndex, item] of items.entries()) {
       const node = item.type === objectType.MEMBERSHIP
         ? await this.api.getMembership(item.id)
         : await this.api.getNode<NodeLike>(item.id, item.type);
 
-      if (itemIndex === 0 || this.vaultId !== node.vaultId) {
-        this.setVaultId(node.vaultId);
-        this.setIsPublic(node.__public__);
-        await this.setMembershipKeys(node);
+      if (itemIndex === 0 || batchService.vaultId !== node.vaultId) {
+        batchService.setVaultId(node.vaultId);
+        batchService.setIsPublic(node.__public__);
+        await batchService.setMembershipKeys(node);
       }
       const service = item.type === objectType.MEMBERSHIP
-        ? new MembershipService(this.wallet, this.api, this)
-        : new NodeService<T>(this.wallet, this.api, this);
+        ? new MembershipService(this.wallet, this.api, batchService)
+        : new NodeService<T>(this.wallet, this.api, batchService);
 
       service.setFunction(item.input.function);
       service.setActionRef(item.actionRef);
@@ -348,8 +354,8 @@ class BatchService extends Service {
       service.arweaveTags = await service.getTxTags();
       const { id, object } = await this.api.postContractTransaction<T>(this.vaultId, item.input, service.arweaveTags);
       const processedObject = item.type === objectType.MEMBERSHIP
-        ? await (<MembershipService>service).processMembership(object as Membership, !this.isPublic, this.keys)
-        : await (<NodeService<T>>service).processNode(object as any, !this.isPublic, this.keys) as any;
+        ? await (<MembershipService>service).processMembership(object as Membership, !batchService.isPublic, batchService.keys)
+        : await (<NodeService<T>>service).processNode(object as any, !batchService.isPublic, batchService.keys) as any;
       result.push({ transactionId: id, object: processedObject });
     }
     return result;
@@ -359,11 +365,6 @@ class BatchService extends Service {
     this.groupRef = items && items.length > 1 ? uuidv4() : null;
   }
 }
-
-export type BatchStackCreateOptions = Hooks & {
-  processingCountHook?: (count: number) => void,
-  onStackCreated?: (item: Stack) => Promise<void>
-};
 
 export type TransactionPayload = {
   vaultId: string,

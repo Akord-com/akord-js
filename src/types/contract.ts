@@ -1,7 +1,10 @@
 import { Encryptable, encrypted } from "@akord/crypto";
 import { functions } from "../constants";
 import { Membership } from "./membership";
-import { Folder, Memo, Stack, NodeLike } from "./node";
+import { NodeLike } from "./node";
+import { Folder } from "./folder";
+import { Memo } from "./memo";
+import { Stack } from "./stack";
 
 export interface Contract {
   state: ContractState
