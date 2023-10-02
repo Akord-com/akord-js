@@ -665,7 +665,7 @@ do {
 #### `create(vaultId, file, name)`
 
 - `vaultId` (`string`, required)
-- `file` ([`FileLike`][file-like], required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
+- `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
 - `name` (`string`, required) - stack name
 - `options` (`StackCreateOptions`, optional)
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
@@ -674,11 +674,8 @@ do {
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
-const file = await NodeJs.File.fromPath("path to your file");
-
-// create a stack with custom arweave tags
-const { stackId } = await akord.stack.create(vaultId, file, "jam session vol. 1", {
+// create a stack from file path with custom arweave tags
+const { stackId } = await akord.stack.create(vaultId, "path to your file", "jam session vol. 1", {
    arweaveTags: [
       { name: "Type", value: "music" },
       { name: "Genre", value: "rock" },
@@ -723,7 +720,7 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
 #### `uploadRevision(stackId, file)`
 
 - `stackId` (`string`, required)
-- `file` ([`FileLike`][file-like], required) - file object
+- `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
 - `options` (`FileUploadOptions`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
@@ -731,9 +728,7 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
-const file = await NodeJs.File.fromPath("path to your file");
-const { transactionId } = await akord.stack.uploadRevision(stackId, file);
+const { transactionId } = await akord.stack.uploadRevision(stackId, "path to your file");
 ```
 </details>
 

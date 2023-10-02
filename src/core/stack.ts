@@ -1,7 +1,7 @@
 import { NodeCreateOptions, NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileService, FileUploadOptions } from "./file";
-import { FileLike } from "../types/file";
+import { FileService, FileUploadOptions, createFileLike } from "./file";
+import { FileSource } from "../types/file";
 import { FileVersion, Stack, StorageType, nodeType } from "../types/node";
 
 class StackService extends NodeService<Stack> {
@@ -11,12 +11,12 @@ class StackService extends NodeService<Stack> {
 
   /**
    * @param  {string} vaultId
-   * @param  {FileLike} file file object
+   * @param  {FileSource} file file source: web File object, file path, buffer or stream
    * @param  {string} name stack name
    * @param  {StackCreateOptions} [options] parent id, progress hook, cancel hook, etc.
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async create(vaultId: string, file: FileLike, name: string, options: StackCreateOptions = this.defaultCreateOptions):
+  public async create(vaultId: string, file: FileSource, name: string, options: StackCreateOptions = this.defaultCreateOptions):
     Promise<StackCreateResult> {
     const createOptions = {
       ...this.defaultCreateOptions,
@@ -32,11 +32,12 @@ class StackService extends NodeService<Stack> {
 
     const fileService = new FileService(this.wallet, this.api, service);
     fileService.contentType = this.fileService.contentType;
-    const fileUploadResult = await fileService.create(file, createOptions);
-    const version = await fileService.newVersion(file, fileUploadResult);
+    const fileLike = await createFileLike(file, { name, ...options });
+    const fileUploadResult = await fileService.create(fileLike, createOptions);
+    const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = {
-      name: await service.processWriteString(name ? name : file.name),
+      name: await service.processWriteString(name ? name : fileLike.name),
       versions: [version],
       tags: createOptions.tags || []
     };
@@ -76,11 +77,11 @@ class StackService extends NodeService<Stack> {
 
   /**
    * @param  {string} stackId
-   * @param  {FileLike} file file object
+   * @param  {FileSource} file file source: web File object, file path, buffer or stream
    * @param  {FileUploadOptions} [options] progress hook, cancel hook, etc.
    * @returns Promise with corresponding transaction id
    */
-  public async uploadRevision(stackId: string, file: FileLike, options: FileUploadOptions = {}): Promise<StackUpdateResult> {
+  public async uploadRevision(stackId: string, file: FileSource, options: FileUploadOptions = {}): Promise<StackUpdateResult> {
     const service = new StackService(this.wallet, this.api);
     await service.setVaultContextFromNodeId(stackId, this.objectType);
     service.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
@@ -90,8 +91,9 @@ class StackService extends NodeService<Stack> {
 
     const fileService = new FileService(this.wallet, this.api, service);
     fileService.contentType = this.fileService.contentType;
-    const fileUploadResult = await fileService.create(file, options);
-    const version = await fileService.newVersion(file, fileUploadResult);
+    const fileLike = await createFileLike(file, options);
+    const fileUploadResult = await fileService.create(fileLike, options);
+    const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = {
       versions: [version]
