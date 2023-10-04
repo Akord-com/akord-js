@@ -7,9 +7,10 @@ import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileGetOptions, FileUploadOptions } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
+import { ApiConfig } from "./config";
 
 abstract class Api {
-  config: any
+  config: ApiConfig
 
   constructor() { }
 

@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
 import { FileService, IV_LENGTH_IN_BYTES } from "./file";
-import { FileDownloadOptions, FileGetOptions, FileUploadOptions, FileVersion, StorageType } from "../types/file";
+import { FileDownloadOptions, FileGetOptions, FileUploadOptions, FileVersion, FileVersionData, StorageType } from "../types/file";
 import { FileLike } from "../types/file-like";
 import { nodeType, NodeCreateOptions } from "../types/node";
 import { Stack, StackCreateOptions, StackCreateResult, StackUpdateResult } from "../types/stack";
@@ -116,11 +116,11 @@ class StackService extends NodeService<Stack> {
    * @param  {number} [index] stack version index
    * @returns Promise with version name & data stream or buffer
    */
-  public async getVersion(stackId: string, options: FileGetOptions = { responseType: 'stream', index: 0 }): Promise<{ version: FileVersion, data: ReadableStream<Uint8Array> | ArrayBuffer }> {
+  public async getVersion(stackId: string, index: number = 0, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersionData> {
     const service = new StackService(this.wallet, this.api);
     const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK);
     const stack = new Stack(stackProto, stackProto.__keys__);
-    const version = stack.getVersion(options.index);
+    const version = stack.getVersion(index);
     if (!service.isPublic) {
       await version.decrypt();
     }
@@ -143,7 +143,7 @@ class StackService extends NodeService<Stack> {
     } else {
       data = stream;
     }
-    return { version, data };
+    return { ...version, data };
   }
 
   /**
@@ -152,18 +152,18 @@ class StackService extends NodeService<Stack> {
    * @param  {number} [index] stack version index
    * @returns Promise with version name & data buffer
    */
-  public async download(stackId: string, options: FileDownloadOptions = { index: 0 }): Promise<void> {
+  public async download(stackId: string, index: number = 0, options: FileDownloadOptions = {}): Promise<void> {
     let downloadPromise: Promise<void>
     if (typeof window === 'undefined' || !navigator.serviceWorker?.controller) {
-      const { version, data } = await this.getVersion(stackId, { ...options, responseType: 'stream' });
-      const path = `${options.path}/${version.name}`;
-      const contentType = version.type;
+      const { name, type, data } = await this.getVersion(stackId, index, { ...options, responseType: 'stream' });
+      const path = `${options.path}/${name}`;
+      const contentType = type;
       downloadPromise = this.saveFile(path, contentType, data);
     } else {
       const service = new StackService(this.wallet, this.api);
       const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK)
       const stack = new Stack(stackProto, stackProto.__keys__);
-      const version = stack.getVersion(options.index);
+      const version = stack.getVersion(index);
       const id = version.getUri(StorageType.S3);
       if (!service.isPublic) {
         await version.decrypt();
@@ -179,7 +179,7 @@ class StackService extends NodeService<Stack> {
         name: version.name,
         iv: version.iv,
         id: id,
-        url: `https://vault.akord.link/${id}`
+        url: `${service.api.config.storageurl}/${id}`
       });
 
       downloadPromise = new Promise((resolve, reject) => {

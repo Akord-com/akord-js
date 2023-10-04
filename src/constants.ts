@@ -117,7 +117,8 @@ export enum fileTags {
   FILE_MODIFIED_AT = "File-Modified-At",
   FILE_SIZE = "File-Size",
   FILE_TYPE = "File-Type",
-  FILE_HASH = "File-Hash"
+  FILE_HASH = "File-Hash",
+  FILE_CHUNK_SIZE = "File-Chunk-Size"
 }
 
 export enum encryptionTags {

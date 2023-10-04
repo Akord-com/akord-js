@@ -16,6 +16,7 @@ import { StorageType } from "../types/file";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
+const ETAG_HEADER = 'Etag';
 
 export class ApiClient {
   private _gatewayurl: string;
@@ -41,6 +42,9 @@ export class ApiClient {
   private _input: ContractInput;
   private _metadata: any;
   private _numberOfChunks: number;
+
+  // request headers
+  private _etag: string;
 
   // axios config
   private _data: AxiosRequestConfig["data"];
@@ -104,6 +108,11 @@ export class ApiClient {
 
   state(state: any): ApiClient {
     this._state = state;
+    return this;
+  }
+
+  etag(etag: any): ApiClient {
+    this._etag = etag;
     return this;
   }
 
@@ -505,7 +514,7 @@ export class ApiClient {
    * - cancelHook()
    * @returns {Promise<string[]>}
    */
-  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string }> {
+  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceEtag: string }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
@@ -523,15 +532,18 @@ export class ApiClient {
     } as Record<string, string>
 
     if (this._numberOfChunks > 1) {
-      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength}/${this._totalBytes}`
+      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength}/${this._totalBytes}`;
     }
     if (this._resourceId) {
-      headers[CONTENT_LOCATION_HEADER] = this._resourceId
+      headers[CONTENT_LOCATION_HEADER] = this._resourceId;
+    }
+    if (this._etag) {
+      headers[ETAG_HEADER] = this._etag;
     }
 
     const config = {
       method: 'post',
-      url: `${this._gatewayurl}/${this._fileUri}`,
+      url: `http://localhost:3001/${this._fileUri}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -556,7 +568,8 @@ export class ApiClient {
       const response = await axios(config);
       return {
         resourceUri: response.data.resourceUri,
-        resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()]
+        resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
+        resourceEtag: response.headers[ETAG_HEADER.toLocaleLowerCase()]
       };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);

@@ -43,7 +43,6 @@ export class FileVersion extends Encryptable implements Version {
 }
 
 export type FileDownloadOptions = Hooks & {
-  index?: number,
   path?: string,
   skipSave?: boolean,
 }
@@ -71,6 +70,12 @@ export type FileUploadOptions = Hooks & {
   storage?: StorageType,
   arweaveTags?: Tags,
   chunkSize?: number
+}
+
+export type FileVersionData = {
+  [K in keyof FileVersion]?: FileVersion[K]
+} & {
+  data: ReadableStream<Uint8Array> | ArrayBuffer
 }
 
 export enum StorageType {

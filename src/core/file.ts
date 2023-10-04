@@ -11,14 +11,15 @@ import { getTxData, getTxMetadata } from "../arweave";
 import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 import { InternalError } from "../errors/internal-error";
+import { BadRequest } from "../errors/bad-request";
 
 const DEFAULT_FILE_TYPE = "text/plain";
-const DEFAULT_CHUNK_SIZE_IN_BYTES = 10000000; //10MB
+const BYTES_IN_MB = 1000000; 
+const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB
+const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB
 export const IV_LENGTH_IN_BYTES = 16;
 
 class FileService extends Service {
-  //asyncUploadTreshold = 209715200;
-  asyncUploadTreshold = 20000000;
   contentType = null as string;
 
 
@@ -27,9 +28,12 @@ class FileService extends Service {
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
     options.public = this.isPublic;
+    options.chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE_IN_BYTES;
     const tags = this.getFileTags(file, options);
-
-    if (file.size > this.asyncUploadTreshold) {
+    if (options.chunkSize < MINIMAL_CHUNK_SIZE_IN_BYTES) {
+      throw new BadRequest("Chunk size can not be smaller than: " + MINIMAL_CHUNK_SIZE_IN_BYTES / BYTES_IN_MB)
+    }
+    if (file.size > options.chunkSize) {
       return await this.uploadChunked(file, tags, options);
     } else {
       return await this.upload(file, tags, options);
@@ -138,19 +142,19 @@ class FileService extends Service {
     let chunkNumber = 1;
 
     const isPublic = options.public || this.isPublic
-    const chunkSize: number = options.chunkSize || DEFAULT_CHUNK_SIZE_IN_BYTES;
-    const chunkSizeWithAuthTag: number = isPublic ? chunkSize : chunkSize + IV_LENGTH_IN_BYTES;
+    const chunkSize = options.chunkSize || DEFAULT_CHUNK_SIZE_IN_BYTES;
+    const chunkSizeWithAuthTag = isPublic ? chunkSize : chunkSize + IV_LENGTH_IN_BYTES;
     const numberOfChunks = Math.ceil(file.size / chunkSize);
     const fileSize = isPublic ? file.size : file.size + numberOfChunks * IV_LENGTH_IN_BYTES;
     const digestObject = initDigest();
     const iv: Array<string> = [];
+    const etags: Array<string> = [];
 
 
     while (offset < file.size) {
       const chunk = file.slice(offset, offset + chunkSize);
       const arrayBuffer = await chunk.arrayBuffer();
       const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
-      console.log(encryptedData.processedData.byteLength)
       digestObject.update(new Uint8Array(encryptedData.processedData));
 
       if (!isPublic) {
@@ -172,6 +176,7 @@ class FileService extends Service {
         .resourceId(resource?.resourceLocation)
         .data(encryptedData.processedData)
         .tags(tags.concat(encryptedData.encryptionTags).concat(fileSignatureTags))
+        .etag(etags.join(','))
         .storage(options.storage)
         .numberOfChunks(numberOfChunks)
         .loadedBytes(offsetWithIv)
@@ -183,6 +188,7 @@ class FileService extends Service {
       offset += DEFAULT_CHUNK_SIZE_IN_BYTES;
       offsetWithIv += encryptedData.processedData.byteLength;
       chunkNumber += 1;
+      etags.push(resource.resourceEtag);
       Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
 
@@ -203,12 +209,16 @@ class FileService extends Service {
         tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
     }
-    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type || DEFAULT_FILE_TYPE));
     tags.push(new Tag(fileTags.FILE_SIZE, file.size));
     tags.push(new Tag(fileTags.FILE_TYPE, file.type || DEFAULT_FILE_TYPE));
+    if (options.chunkSize) {
+      tags.push(new Tag(fileTags.FILE_CHUNK_SIZE, options.chunkSize));
+    }
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type || DEFAULT_FILE_TYPE));
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     return tags;
   }
