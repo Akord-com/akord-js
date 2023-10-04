@@ -666,7 +666,7 @@ do {
 #### `create(vaultId, file, name)`
 
 - `vaultId` (`string`, required)
-- `file` ([`FileLike`][file-like], required) - file object - web: File, node: NodeJs.File (Blob implementation; web like File) 
+- `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
 - `name` (`string`, required) - stack name
 - `options` (`StackCreateOptions`, optional)
 - returns `Promise<{ stackId, transactionId }>` - Promise with new stack id & corresponding transaction id
@@ -675,11 +675,8 @@ do {
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
-const file = await NodeJs.File.fromPath("path to your file");
-
-// create a stack with custom arweave tags
-const { stackId } = await akord.stack.create(vaultId, file, "jam session vol. 1", {
+// create a stack from file path with custom arweave tags
+const { stackId } = await akord.stack.create(vaultId, "path to your file", "jam session vol. 1", {
    arweaveTags: [
       { name: "Type", value: "music" },
       { name: "Genre", value: "rock" },
@@ -757,7 +754,7 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
 #### `uploadRevision(stackId, file)`
 
 - `stackId` (`string`, required)
-- `file` ([`FileLike`][file-like], required) - file object
+- `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
 - `options` (`FileUploadOptions`, optional)
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
@@ -765,9 +762,7 @@ const { transactionId } = await akord.stack.rename(stackId, "new name for your s
   <summary>example</summary>
 
 ```js
-import { NodeJs } from "@akord/akord-js/lib/types/file";
-const file = await NodeJs.File.fromPath("path to your file");
-const { transactionId } = await akord.stack.uploadRevision(stackId, file);
+const { transactionId } = await akord.stack.uploadRevision(stackId, "path to your file");
 ```
 </details>
 
@@ -1349,11 +1344,7 @@ The atomic asset can be minted with the option to attach the [Unviersal Data Lic
 ```js
 // Mint an atomic NFT with the UDL attached
 
-// First, load your asset content
-import { NodeJs } from "@akord/akord-js/lib/types/file";
-const asset = await NodeJs.File.fromPath("path to your nft data");
-
-// Now, let's define our NFT metadata
+// First, let's define our NFT metadata
 const nftMetadata = {
   name: "Golden Orchid - Flora Fantasy #1",
   creator: "xxxx", // should be a valid Arweave address
@@ -1373,8 +1364,8 @@ const udlTerms = {
   derivations: [{ type: "Allowed-With-Credit" }]
 };
 
-// Finally, let's mint the NFT by passing asset content, NFT metadata, and UDL terms
-const { nftId } = await akord.nft.mint(vaultId, asset, nftMetadata, { udl: udlTerms });
+// Finally, let's mint the NFT by passing the path to the asset data, NFT metadata, and UDL terms
+const { nftId } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
 ```
 
 ### contract

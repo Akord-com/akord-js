@@ -12,6 +12,12 @@ export namespace NodeJs {
 
     constructor(sources: Array<BinaryLike | Blob>, name: string, mimeType?: string, lastModified?: number) {
       super(sources, { type: mimeType || 'text/plain' });
+      if (!name) {
+        throw new BadRequest("File name is required, please provide it in the file options.");
+      }
+      if (!mimeType) {
+        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
+      }
       this.name = name;
       this.lastModified = lastModified;
     }
@@ -40,4 +46,6 @@ export namespace NodeJs {
   }
 }
 
-export type FileLike = NodeJs.File | File
+export type FileLike = NodeJs.File | File;
+
+export type FileSource = FileLike | ArrayBuffer | Buffer | string | Readable | Array<BinaryLike | any>;
