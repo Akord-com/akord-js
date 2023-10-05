@@ -165,22 +165,24 @@ class StackService extends NodeService<Stack> {
       const stack = new Stack(stackProto, stackProto.__keys__);
       const version = stack.getVersion(index);
       const id = version.getUri(StorageType.S3);
-      if (!service.isPublic) {
-        await version.decrypt();
-      }
       await service.setVaultContext(stack.vaultId);
-
-      const key = await service.dataEncrypter.decryptKey(version.encryptedKey);
-      navigator.serviceWorker.controller.postMessage({
+      
+      const workerMessage = {
         type: 'init',
-        key: key,
-        chunkSize: version.chunkSize || (version.size + IV_LENGTH_IN_BYTES),
+        chunkSize: version.chunkSize,
         size: version.size,
-        name: version.name,
-        iv: version.iv,
         id: id,
         url: `${service.api.config.gatewayurl}/internal/${id}`
-      });
+      } as Record<string, any>;
+
+      if (!service.isPublic) {
+        await version.decrypt();
+        const key = await service.dataEncrypter.decryptKey(version.encryptedKey);
+        workerMessage.key = key;
+        workerMessage.iv = version.iv;
+      }
+      workerMessage.name = version.name,
+      navigator.serviceWorker.controller.postMessage(workerMessage);
 
       downloadPromise = new Promise((resolve, reject) => {
         if (options.skipSave) {
