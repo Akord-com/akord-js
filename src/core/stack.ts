@@ -179,7 +179,7 @@ class StackService extends NodeService<Stack> {
         name: version.name,
         iv: version.iv,
         id: id,
-        url: `${service.api.config.storageurl}/${id}`
+        url: `${service.api.config.gatewayurl}/internal/${id}`
       });
 
       downloadPromise = new Promise((resolve, reject) => {

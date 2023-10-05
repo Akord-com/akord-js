@@ -24,7 +24,7 @@ class NoteService extends NodeService<Stack> {
    * @returns Promise with version name & data string
    */
   public async getVersion(noteId: string, index?: number): Promise<{ name: string, data: string }> {
-    const { version, data } = await this.stackService.getVersion(noteId, { index, responseType: 'arraybuffer' });
+    const { version, data } = await this.stackService.getVersion(noteId, index, { responseType: 'arraybuffer' });
     return { data: arrayToString(data as ArrayBuffer), name: version.name };
   }
 

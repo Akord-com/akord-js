@@ -49,7 +49,6 @@ export class ApiClient {
   // axios config
   private _data: AxiosRequestConfig["data"];
   private _queryParams: any = {};
-  private _responseType: string = "json";
   private _progressId: string
   private _progressHook: (percentageProgress: number, bytesProgress?: number, id?: string) => void
   private _cancelHook: AbortController
@@ -62,9 +61,9 @@ export class ApiClient {
 
   constructor() { }
 
-  env(config: { apiurl: string, storageurl: string }): ApiClient {
+  env(config: { apiurl: string, gatewayurl: string }): ApiClient {
     this._apiurl = config.apiurl;
-    this._gatewayurl = config.storageurl;
+    this._gatewayurl = config.gatewayurl;
     return this;
   }
 
@@ -127,11 +126,6 @@ export class ApiClient {
 
   tags(tags: Tags): ApiClient {
     this._tags = tags;
-    return this;
-  }
-
-  responseType(responseType: string): ApiClient {
-    this._responseType = responseType;
     return this;
   }
 
@@ -543,7 +537,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `http://localhost:3001/${this._fileUri}`,
+      url: `${this._gatewayurl}/${this._fileUri}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -621,7 +615,7 @@ export class ApiClient {
     }
 
     try {
-      const response = await fetch(`${this._gatewayurl}/${this._resourceId}`, config);
+      const response = await fetch(`${this._gatewayurl}/internal/${this._resourceId}`, config);
       return { resourceUrl: this._resourceId, response: response };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);

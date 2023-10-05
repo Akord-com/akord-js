@@ -39,7 +39,7 @@ class ManifestService extends NodeService<Stack> {
     if (!manifest) {
       throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
-    const manifestFile = await this.stackService.getVersion(manifest.id, { index, responseType: 'arraybuffer' });
+    const manifestFile = await this.stackService.getVersion(manifest.id, index, { responseType: 'arraybuffer' });
     return JSON.parse(arrayToString(manifestFile.data as ArrayBuffer));
   }
 
