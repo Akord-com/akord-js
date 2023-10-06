@@ -1,7 +1,7 @@
 import { encrypted, EncryptedKeys } from "@akord/crypto";
 import { Node, NodeCreateOptions } from "./node";
-import { FileVersion } from "./file";
 import { Stack } from "./stack";
+import { FileVersion } from "./file-version";
 
 export class Note extends Node {
   @encrypted() name: string;

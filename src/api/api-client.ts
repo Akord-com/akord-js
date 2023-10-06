@@ -12,7 +12,7 @@ import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
-import { StorageType } from "../types/file";
+import { StorageType } from "../types";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -604,7 +604,6 @@ export class ApiClient {
 
     const config = {
       method: 'get',
-      url: `${this._gatewayurl}/${this._resourceId}`,
       signal: this._cancelHook ? this._cancelHook.signal : null,
     } as RequestInit
 

@@ -1,6 +1,5 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { StorageType, Version } from "./node";
-import { NotFound } from "../errors/not-found";
 
 export class FileVersion extends Encryptable implements Version {
   @encrypted() name: string;
@@ -32,12 +31,8 @@ export class FileVersion extends Encryptable implements Version {
   }
 
   getUri(type: StorageType): string {
-    const resourceUri = this.resourceUri
+    return this.resourceUri
       ?.find(uri => uri.startsWith(type))
-      ?.replace(type + ":", "");
-    if (!resourceUri) {
-      throw new NotFound("Could not find resource uri for given type: " + type);
-    }
-    return resourceUri;
+      ?.replace(type, "");
   }
 }

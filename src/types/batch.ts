@@ -1,4 +1,4 @@
-import { Hooks } from "./file";
+import { Hooks } from "../core/file";
 import { Membership } from "./membership"
 import { Stack } from "./stack"
 

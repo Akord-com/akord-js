@@ -5,9 +5,9 @@ import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileGetOptions, FileUploadOptions } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
 import { ApiConfig } from "./config";
+import { FileGetOptions, FileUploadOptions } from "../core/file";
 
 abstract class Api {
   config: ApiConfig

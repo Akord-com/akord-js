@@ -101,9 +101,9 @@ describe("Testing stack functions", () => {
 
 
   it("should download the stack", async () => {
-    const { version, data } = await akord.stack.getVersion(stackId, 0);
+    const { name, data } = await akord.stack.getVersion(stackId, 0);
     await akord.stack.download(stackId, 0, { path: testDataOutPath });
-    const file = await createFileLike(`${testDataOutPath}/${version.name}`);
+    const file = await createFileLike(`${testDataOutPath}/${name}`);
 
     expect(data).toEqual(await file.arrayBuffer());
   });

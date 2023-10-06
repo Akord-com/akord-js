@@ -5,14 +5,14 @@ import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
 import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
-import { NodeType } from "../types/node";
+import { NodeType, StorageType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileGetOptions, FileUploadOptions, StorageType } from "../types/file";
 import { EncryptionMetadata } from "../types/encryption";
+import { FileUploadOptions, FileGetOptions } from "../core/file";
 
 export const defaultFileUploadOptions = {
   storage: StorageType.ARWEAVE,

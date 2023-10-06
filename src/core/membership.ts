@@ -11,7 +11,7 @@ import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { handleListErrors, paginate } from "./common";
 import { ProfileService } from "./profile";
 import { ProfileDetails } from "../types/profile-details";
-import { StorageType } from "../types/file";
+import { StorageType } from "../types";
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;

@@ -1,6 +1,6 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { Node, Version } from "./node";
-import { FileVersion } from "./file";
+import { FileVersion } from "./file-version";
 
 export class Memo extends Node {
   versions: Array<MemoVersion>;
