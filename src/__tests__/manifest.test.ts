@@ -1,7 +1,6 @@
 import { Akord } from "../index";
 import { initInstance, vaultCreate } from './common';
 import { email, password } from './data/test-credentials';
-import { createFileLike } from "../core/file";
 
 let akord: Akord;
 
@@ -44,13 +43,7 @@ describe("Testing manifest functions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord, false)).vaultId;
-
-    // upload html file
-    const htmlSrc = "<html><body><h1>Hello World</h1></body></html>";
-    const htmlFile = await createFileLike([htmlSrc], "index.html", "text/html");
-    const { stackId } = await akord.stack.create(vaultId, htmlFile, "index.html");
-    console.log("uploaded index.html", stackId);
+    vaultId = (await vaultCreate(akord)).vaultId;
   });
 
   // it("should create new manifest", async () => {
@@ -61,7 +54,28 @@ describe("Testing manifest functions", () => {
   //   console.log("manifest url: http://arweave.net/" + manifestTxId);
   // });
 
+  it("should upload new file to the vault", async () => {
+    // upload html file
+    const { stackId } = await akord.stack.create(
+      vaultId,
+      ["<html><body><h1>Hello World</h1></body></html>"],
+      "index.html",
+      { name: "index.html", mimeType: "text/html" }
+    );
+    console.log("uploaded index.html", stackId);
+  });
+
   it("should create new manifest", async () => {
+    const { transactionId } = await akord.manifest.generate(vaultId);
+    expect(transactionId).not.toBeFalsy();
+    const manifest = await akord.manifest.get(vaultId);
+    const manifestTxId = manifest.getUri();
+    console.log("manifest tx id: " + manifestTxId);
+    const manifestJSON = await akord.manifest.getVersion(vaultId);
+    expect(manifestJSON).not.toBeFalsy();
+  });
+
+  it("should generate new version for the manifest", async () => {
     const { transactionId } = await akord.manifest.generate(vaultId);
     expect(transactionId).not.toBeFalsy();
     const manifest = await akord.manifest.get(vaultId);

@@ -3,15 +3,18 @@ import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweave
 import { base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
-import { FileUploadOptions, FileUploadResult, FileVersion, StorageType } from "../types/file";
-import { FileLike } from "../types/file-like";
+import { v4 as uuid } from "uuid";
+import { FileLike, FileSource } from "../types/file";
+import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
-import { BinaryLike } from "crypto";
 import { getTxData, getTxMetadata } from "../arweave";
 import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
-import { InternalError } from "../errors/internal-error";
+import { FileVersion } from "../types";
+import { Readable } from "stream";
 import { BadRequest } from "../errors/bad-request";
+import { StorageType } from "../types/node";
+import { InternalError } from "../errors/internal-error";
 
 const DEFAULT_FILE_TYPE = "text/plain";
 const BYTES_IN_MB = 1000000; 
@@ -45,7 +48,7 @@ class FileService extends Service {
     const fileData = await getTxData(fileTxId);
     const fileMetadata = await getTxMetadata(fileTxId);
     const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
-    const file = await createFileLike([fileData], name, type, fileMetadata?.block?.timestamp);
+    const file = await createFileLike([fileData], { name, mimeType: type, lastModified: fileMetadata?.block?.timestamp });
     const tags = this.getFileTags(file);
 
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
@@ -233,15 +236,86 @@ class FileService extends Service {
   }
 };
 
-
-async function createFileLike(sources: Array<BinaryLike | any>, name: string, mimeType: string, lastModified?: number)
+async function createFileLike(source: FileSource, options: FileOptions = {})
   : Promise<FileLike> {
-  if (typeof window === "undefined") {
-    const node = await import("../types/file-like");
-    return new node.NodeJs.File(sources, name, mimeType, lastModified);
+  const mimeType = options.mimeType || mime.lookup(options.name) || '';
+  if (typeof window !== "undefined") {
+    if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer || source instanceof Blob) {
+      if (!options.name) {
+        throw new BadRequest("File name is required, please provide it in the file options.");
+      }
+      if (!mimeType) {
+        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
+      }
+      return new File([source as any], options.name, { type: mimeType, lastModified: options.lastModified });
+    } else if (source instanceof File) {
+      return source;
+    } else if (source instanceof Array) {
+      if (!options.name) {
+        throw new BadRequest("File name is required, please provide it in the file options.");
+      }
+      if (!mimeType) {
+        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
+      }
+      return new File(source, options.name, { type: mimeType, lastModified: options.lastModified });
+    }
   } else {
-    return new File(sources, name, { type: mimeType, lastModified });
+    const nodeJsFile = (await import("../types/file")).NodeJs.File;
+    if (source instanceof Readable) {
+      return nodeJsFile.fromReadable(source, options.name, mimeType, options.lastModified);
+    } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
+      return new nodeJsFile([source as any], options.name, mimeType, options.lastModified);
+    } else if (source instanceof nodeJsFile) {
+      return source;
+    } else if (typeof source === "string") {
+      return nodeJsFile.fromPath(source as string);
+    } else if (source instanceof Array) {
+      return new nodeJsFile(source, options.name, mimeType, options.lastModified);
+    }
   }
+  throw new BadRequest("File source is not supported. Please provide a valid source: web File object, file path, buffer or stream.");
+}
+
+export type FileUploadResult = {
+  resourceUri: string[],
+  resourceHash?: string,
+  numberOfChunks?: number,
+  chunkSize?: number,
+  iv?: string[]
+  encryptedKey?: string
+}
+
+export type Hooks = {
+  progressHook?: (percentageProgress: number, bytesProgress?: number, id?: string) => void,
+  cancelHook?: AbortController
+}
+
+export type FileOptions = {
+  name?: string,
+  mimeType?: string,
+  lastModified?: number
+}
+
+export type FileUploadOptions = Hooks & FileOptions & {
+  public?: boolean,
+  storage?: StorageType,
+  arweaveTags?: Tags,
+  chunkSize?: number
+}
+
+export type FileDownloadOptions = Hooks & {
+  path?: string,
+  skipSave?: boolean,
+}
+
+export type FileGetOptions = FileDownloadOptions & {
+  responseType?: 'arraybuffer' | 'stream',
+}
+
+export type FileVersionData = {
+  [K in keyof FileVersion]?: FileVersion[K]
+} & {
+  data: ReadableStream<Uint8Array> | ArrayBuffer
 }
 
 export {

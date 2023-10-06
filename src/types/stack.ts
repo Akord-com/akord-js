@@ -1,6 +1,7 @@
 import { encrypted, EncryptedKeys } from "@akord/crypto";
-import { Node, NodeCreateOptions } from "./node";
-import { FileUploadOptions, FileVersion, StorageType } from "./file";
+import { Node, NodeCreateOptions, StorageType } from "./node";
+import { FileVersion } from "./file-version";
+import { FileUploadOptions } from "../core/file";
 
 export class Stack extends Node {
   @encrypted() name: string;

@@ -2,8 +2,8 @@ import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, folderCreate, noteCreate, testDataPath, vaultCreate } from './common';
 import { email, email2, email3, password } from './data/test-credentials';
-import { NodeJs } from "../types/file-like";
 import { firstFileName } from "./data/content";
+import { createFileLike } from "../core/file";
 
 let akord: Akord;
 
@@ -64,7 +64,7 @@ describe("Testing batch actions", () => {
 
   describe("Batch upload", () => {
     it("should upload a batch of 10 files", async () => {
-      const file = await NodeJs.File.fromPath(testDataPath + firstFileName);
+      const file = await createFileLike(testDataPath + firstFileName);
 
       const items = [] as { file: any, name: string }[];
 

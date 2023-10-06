@@ -9,3 +9,4 @@ export * from "./folder";
 export * from "./memo";
 export * from "./contract";
 export * from "./file";
+export * from "./file-version";

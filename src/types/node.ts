@@ -92,3 +92,7 @@ export type NodeCreateOptions = {
   arweaveTags?: Tags
 }
 
+export enum StorageType {
+  S3 = "s3:",
+  ARWEAVE = "arweave:"
+}
