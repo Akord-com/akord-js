@@ -21,7 +21,7 @@ export class NFT extends Node {
     this.creator = nodeLike.creator;
     this.balances = nodeLike.balances;
     this.claimable = nodeLike.claimable;
-    this.asset = nodeLike.asset;
+    this.asset = new FileVersion(nodeLike.asset);
   }
 }
 
