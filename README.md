@@ -1328,7 +1328,7 @@ const manifestV1 = await akord.manifest.getVersion(vaultId, 0);
 
 The NFT module enables the creation of atomic NFTs compliant with the [Atomic Asset standard](https://atomic-assets.arweave.dev/).
 
-The atomic asset can be minted with the option to attach the [Unviersal Data Licence](https://arwiki.wiki/#/en/Universal-Data-License-How-to-use-it) (UDL), and is automatically listed on the [Universal Market Place](https://bazar.arweave.dev/) (UCM).
+The atomic asset can be minted with the option to attach the [Universal Data License](https://arwiki.wiki/#/en/Universal-Data-License-How-to-use-it) (UDL), and can be listed on the [Universal Content Marketplace](https://bazar.arweave.dev/) (UCM).
 
 #### `mint(vaultId, asset, metadata, options)`
 

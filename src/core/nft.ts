@@ -44,6 +44,10 @@ class NFTService extends NodeService<NFT> {
     createOptions.arweaveTags = (createOptions.arweaveTags || [{ name: 'Content-Type', value: asset.type }]).concat(nftTags);
     createOptions.cacheOnly = service.vault.cacheOnly;
 
+    if (createOptions.ucm) {
+      createOptions.arweaveTags = createOptions.arweaveTags.concat([{ name: 'Indexed-By', value: 'ucm' }]);
+    }
+
     const fileService = new FileService(this.wallet, this.api, service);
     const fileUploadResult = await fileService.create(asset, createOptions);
     const version = await fileService.newVersion(asset, fileUploadResult);
@@ -79,7 +83,6 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     { name: assetTags.TYPE, value: metadata.type },
     { name: 'Creator', value: metadata.creator },
     { name: 'Contract-Manifest', value: '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}' },
-    // { name: 'Indexed-By', value: 'ucm' },
   ];
 
   if (metadata.description) {

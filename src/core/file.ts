@@ -375,7 +375,8 @@ export type FileUploadOptions = FileOptions & Hooks & {
   public?: boolean
   cacheOnly?: boolean,
   arweaveTags?: Tags,
-  udl?: UDL
+  udl?: UDL,
+  ucm?: boolean
 }
 
 export type FileDownloadOptions = Hooks & {
