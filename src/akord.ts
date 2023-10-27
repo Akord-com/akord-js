@@ -16,6 +16,7 @@ import { CacheBusters } from "./types/cacheable";
 import { FileService } from "./core/file";
 import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
+import { WhitelistService } from "./core/whitelist";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -32,6 +33,7 @@ export class Akord {
   public profile: ProfileService;
   public batch: BatchService;
   public contract: ContractService;
+  public whitelist: WhitelistService;
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
@@ -55,5 +57,6 @@ export class Akord {
     this.profile = new ProfileService(wallet, this.api);
     this.batch = new BatchService(wallet, this.api);
     this.contract = new ContractService(wallet, this.api);
+    this.whitelist = new WhitelistService(wallet, this.api);
   }
 }

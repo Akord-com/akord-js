@@ -16,7 +16,8 @@ export enum objectType {
   MEMO = "Memo",
   FOLDER = "Folder",
   NOTE = "Note",
-  PROFILE = "Profile"
+  PROFILE = "Profile",
+  WHITELIST = "Whitelist"
 };
 
 export enum status {

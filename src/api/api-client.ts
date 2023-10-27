@@ -11,6 +11,7 @@ import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
+import { Whitelist } from "../types/whitelist";
 
 export class ApiClient {
   private _storageurl: string;
@@ -185,6 +186,10 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/vaults`);
   }
 
+  async getWhitelists(): Promise<Paginated<Whitelist>> {
+    return await this.get(`${this._apiurl}/whitelists`);
+  }
+
   async getMembershipKeys(): Promise<MembershipKeys> {
     return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
   }
@@ -230,6 +235,20 @@ export class ApiClient {
   async revokeInvite(): Promise<{ id: string }> {
     const response = await this.delete(`${this._apiurl}/vaults/${this._vaultId}/members/${this._resourceId}`);
     return response.id;
+  }
+
+  async createWhitelist(): Promise<{ id: string }> {
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/whitelist`);
+    return { id: response.id };
+  }
+
+  async joinWhitelist(): Promise<boolean> {
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/whitelist/join`);
+    return response?.result ? true : false;
+  }
+
+  async getWhitelist(): Promise<Whitelist> {
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/whitelist`);
   }
 
   async post(url: string): Promise<any> {

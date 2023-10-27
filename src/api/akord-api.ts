@@ -13,6 +13,7 @@ import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
 import { EncryptionMetadata } from "../core";
+import { Whitelist } from "../types/whitelist";
 
 export const defaultFileUploadOptions = {
   cacheOnly: false,
@@ -173,6 +174,29 @@ export default class AkordApi extends Api {
       .inviteResend();
   }
 
+  public async createWhitelist(vaultId: string, type: string, token: string, capacity: number): Promise<{ id: string }> {
+    return await new ApiClient()
+      .env(this.config)
+      .vaultId(vaultId)
+      .queryParams({ type, token, capacity })
+      .createWhitelist();
+  }
+
+  public async joinWhitelist(vaultId: string, externalAddress: string, signature: string): Promise<boolean> {
+    return await new ApiClient()
+      .env(this.config)
+      .vaultId(vaultId)
+      .queryParams({ externalAddress, signature })
+      .joinWhitelist();
+  }
+
+  public async getWhitelist(vaultId: string): Promise<Whitelist> {
+    return await new ApiClient()
+      .env(this.config)
+      .vaultId(vaultId)
+      .getWhitelist();
+  }
+
   public async getNode<T>(id: string, type: NodeType): Promise<T> {
     return await new ApiClient()
       .env(this.config)
@@ -264,6 +288,16 @@ export default class AkordApi extends Api {
         nextToken: options.nextToken
       })
       .getVaults();
+  };
+
+  public async getWhitelists(options: ListOptions = {}): Promise<Paginated<Whitelist>> {
+    return await new ApiClient()
+      .env(this.config)
+      .queryParams({
+        limit: options.limit,
+        nextToken: options.nextToken
+      })
+      .getWhitelists();
   };
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions = {}): Promise<Paginated<T>> {

@@ -7,6 +7,7 @@ import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
 import { EncryptionMetadata } from "../core";
+import { Whitelist } from "../types/whitelist";
 
 abstract class Api {
   config: any
@@ -16,7 +17,7 @@ abstract class Api {
   abstract postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
-  
+
   abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<{ resourceTx: string, resourceUrl: string }>
 
   abstract uploadData(items: { data: any, tags: Tags }[], options?: FileUploadOptions): Promise<Array<string>>
@@ -43,6 +44,8 @@ abstract class Api {
 
   abstract getVaults(options?: ListOptions): Promise<Paginated<Vault>>
 
+  abstract getWhitelists(options?: ListOptions): Promise<Paginated<Whitelist>>
+
   abstract getMemberships(options?: ListOptions): Promise<Paginated<Membership>>
 
   abstract getNodesByVaultId<T>(vaultId: string, type: string, options?: ListOptions): Promise<Paginated<T>>
@@ -58,10 +61,16 @@ abstract class Api {
   abstract deleteVault(vaultId: string): Promise<void>
 
   abstract inviteNewUser(vaultId: string, email: string, role: string, message?: string): Promise<{ id: string }>
-  
+
   abstract revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
+
+  abstract createWhitelist(vaultId: string, type: string, token: string, capacity: number): Promise<{ id: string }>
+
+  abstract joinWhitelist(vaultId: string, externalAddress: string, signature: string): Promise<boolean>
+
+  abstract getWhitelist(vaultId: string): Promise<Whitelist>
 }
 
 export {

@@ -5,4 +5,4 @@ import { Membership } from "./membership";
 
 export type Object = NodeLike | Vault | Membership;
 
-export type ObjectType = NodeType | "Vault" | "Membership" | "Profile";
+export type ObjectType = NodeType | "Vault" | "Membership" | "Profile" | "Whitelist";
