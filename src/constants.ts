@@ -16,7 +16,8 @@ export enum objectType {
   MEMO = "Memo",
   FOLDER = "Folder",
   NOTE = "Note",
-  PROFILE = "Profile"
+  PROFILE = "Profile",
+  NFT = "NFT"
 };
 
 export enum status {
