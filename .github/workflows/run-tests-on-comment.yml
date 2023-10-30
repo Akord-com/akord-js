@@ -1,0 +1,13 @@
+name: Test akord-js methods on comment '/test'
+
+on: 
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/test')
+    steps:
+      - name: Run test on comment
+        uses: ./github/workflows/run-tests
