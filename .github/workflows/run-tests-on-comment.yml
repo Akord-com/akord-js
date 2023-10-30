@@ -1,13 +1,30 @@
 name: Test akord-js methods on comment '/test'
 
-on: 
+on:
+  pull_request:
+    types:
+      - opened
   issue_comment:
     types: [created, edited]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/test')
+    if: contains(github.event.comment.body, '/test')
     steps:
-      - name: Run test on comment
-        uses: ./github/workflows/run-tests
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+      - name: Install dependencies and build 🔧
+        run: yarn install && yarn build
+      - name: Run tests ⚙️
+        env:
+          ENV: "dev"
+          EMAIL: ${{ secrets.AKORD_TEST_USER_EMAIL }}
+          PASSWORD: ${{ secrets.AKORD_TEST_USER_PASSWORD }}
+          EMAIL_2: ${{ secrets.AKORD_TEST_USER_2_EMAIL }}
+          PASSWORD_2: ${{ secrets.AKORD_TEST_USER_PASSWORD }}
+          EMAIL_3: ${{ secrets.AKORD_TEST_USER_3_EMAIL }}
+          PASSWORD_3: ${{ secrets.AKORD_TEST_USER_PASSWORD }}
+        run: yarn test
