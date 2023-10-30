@@ -1,4 +1,4 @@
-name: Test akord-js methods on comment '/test'
+name: Test akord-js methods on comment '/test test'
 
 on: 
   issue_comment:
