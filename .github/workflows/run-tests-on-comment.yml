@@ -6,9 +6,8 @@ on:
 
 jobs:
   test:
-    if: ${{ github.event.issue.pull_request }}
     runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/test')
     steps:
       - name: Run test on comment
-        if: contains(github.event.comment.body, '/test')
         uses: ./github/workflows/run-tests
