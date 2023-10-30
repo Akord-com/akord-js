@@ -1,0 +1,14 @@
+name: Test akord-js methods on comment '/test'
+
+on: 
+  issue_comment:
+    types: [created, edited, deleted]
+
+jobs:
+  test:
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run test on comment
+        if: contains(github.event.comment.body, '/test')  # check the comment if it contains the keywords
+        uses: ./github/workflows/run-tests
