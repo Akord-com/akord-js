@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.28.0":
-  version "0.28.0"
-  resolved "https://registry.npmjs.org/@akord/akord-auth/-/akord-auth-0.28.0.tgz"
-  integrity sha512-tkjZu58GcVz48MEAZNtg8fZwKvI9i1tG6HPr7WvQ/WdJigKHPMhuuO0ub/cYFEk9SX407qN9fDJZOUc39+Yw/A==
+"@akord/akord-auth@0.29.1":
+  version "0.29.1"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.29.1.tgz#d611f0990305690d7650548879ba4ded9eb306c9"
+  integrity sha512-+t2yrTKtj8aJ34sw+QGQ390Irmf5ObfzDhIBDipbkJGKDQVskF2TSJSGik9GjCEEcQwS0thNipzTbaqdEiVkJQ==
   dependencies:
     "@akord/crypto" "0.10.0"
     amazon-cognito-identity-js "6.1.2"
@@ -33,10 +33,10 @@
     reflect-metadata "^0.1.13"
     tweetnacl "^1.0.3"
 
-"@akord/crypto@0.13.3":
-  version "0.13.3"
-  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.13.3.tgz#b9af347b3ea5d962cd0e0ea3c2e2f9d01bf368dd"
-  integrity sha512-otObNPGfpyvRWAN/NByk6hHqzfmWIOWcc6EnRnOGXAW8Sz0BGF1l4ANfL5t5Ob8LG3kVANb5EVib2dVoakWg5w==
+"@akord/crypto@0.14.0":
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.14.0.tgz#5c1d86f278fbaab9cfde648dd6b0f3f55c463718"
+  integrity sha512-rBoqlFzf/jq7hqa3amRtfyZGS8W+cqg7wmUAR36/0Liv2NJiNpIaJafTPHbdYTq095pZgSA9TXacTml1dXtA+w==
   dependencies:
     "@akord/browser-level" "^1.0.2"
     bip39 "^3.1.0"
@@ -46,6 +46,7 @@
     memory-level "^1.0.0"
     reflect-metadata "^0.1.13"
     tweetnacl "^1.0.3"
+    web-streams-polyfill "^3.2.1"
 
 "@akord/ts-cacheable@1.0.11":
   version "1.0.11"
