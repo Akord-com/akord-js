@@ -13,6 +13,7 @@ import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { FileUploadOptions, FileGetOptions } from "../core/file";
+import { StreamConverter } from "../util/stream-converter";
 
 export const defaultFileUploadOptions = {
   storage: StorageType.ARWEAVE,
@@ -101,10 +102,19 @@ export default class AkordApi extends Api {
       .cancelHook(options.cancelHook)
       .downloadFile();
 
-    const fileData = options.responseType === 'arraybuffer' ? await response.arrayBuffer() : response.body;
+    let fileData: ArrayBuffer | ReadableStream<Uint8Array>;
+    if (options.responseType === 'arraybuffer') {
+      fileData = await response.arrayBuffer();
+    } else {
+      if (response.body.getReader) {
+        fileData = response.body;
+      } else {
+        fileData = StreamConverter.fromAsyncIterable(response.body);
+      }
+    }
     const metadata = {
-      encryptedKey: response.headers["x-amz-meta-encrypted-key"] || response.headers["x-amz-meta-encryptedkey"],
-      iv: response.headers["x-amz-meta-initialization-vector"] || response.headers["x-amz-meta-iv"]
+      encryptedKey: response.headers.get("x-amz-meta-encrypted-key") || response.headers.get("x-amz-meta-encryptedkey"),
+      iv: response.headers.get("x-amz-meta-initialization-vector") || response.headers.get("x-amz-meta-iv")
     };
     return { fileData, metadata };
   };

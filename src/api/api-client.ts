@@ -1,5 +1,4 @@
 import axios, { AxiosRequestConfig } from "axios";
-import fetch from "isomorphic-unfetch";
 import { v4 as uuidv4 } from "uuid";
 import { Contract, ContractInput, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
@@ -13,6 +12,7 @@ import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
 import { StorageType } from "../types";
+import { fetch } from 'fetch-undici';
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -537,7 +537,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `${this._gatewayurl}/${this._fileUri}`,
+      url: `${this._gatewayurl}/internal`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,

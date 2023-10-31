@@ -24,7 +24,7 @@ This package can be used in both browser and Node.js environments.
 - [Deployment](#deployment)
 
 ## Usage
-> requires Node.js 18
+> requires Node.js 16
 
 ### Import
 ```js

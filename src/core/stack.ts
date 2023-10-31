@@ -3,6 +3,8 @@ import { actionRefs, functions, objectType } from "../constants";
 import { FileDownloadOptions, FileGetOptions, FileService, FileUploadOptions, FileVersionData, IV_LENGTH_IN_BYTES, createFileLike } from "./file";
 import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
+import { StreamConverter } from "../util/stream-converter";
+import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -139,7 +141,7 @@ class StackService extends NodeService<Stack> {
 
     let data: ReadableStream<Uint8Array> | ArrayBuffer;
     if (options.responseType === 'arraybuffer') {
-      data = await new Response(stream).arrayBuffer();
+      data = await StreamConverter.toArrayBuffer<Uint8Array>(stream);
     } else {
       data = stream;
     }

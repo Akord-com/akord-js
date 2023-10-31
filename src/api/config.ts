@@ -9,7 +9,7 @@ export const apiConfig = (env: string) => {
     case "dev":
       return {
         apiurl: "https://api.akord.link",
-        gatewayurl: "https://akordvault.net", //TODO "https://akordvault.dev"
+        gatewayurl: "https://akordvault.link",
       };
   }
 };
