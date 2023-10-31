@@ -66,6 +66,7 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     name: metadata.name,
     description: metadata.description,
     creator: metadata.creator || metadata.owner,
+    collection: metadata.collection,
     owner: metadata.owner,
     canEvolve: true,
     balances: {
