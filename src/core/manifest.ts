@@ -48,6 +48,12 @@ class ManifestService extends NodeService<Stack> {
    */
   public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string, object: Stack }> {
     this.stackService.fileService.contentType = CONTENT_TYPE;
+
+    const vault = await this.api.getVault(vaultId);
+    if (!vault.public) {
+      throw new BadRequest("Manifest applies only to public vaults.")
+    }
+
     if (!manifest) {
       manifest = await this.renderManifestJSON(vaultId);
     }
