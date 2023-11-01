@@ -40,6 +40,7 @@ jobs:
           PASSWORD_3: ${{ secrets.AKORD_TEST_USER_PASSWORD }}
         run: yarn test
       - uses: actions/github-script@v6
+        if: always()
         with:
           script: |
             github.rest.issues.createComment({
