@@ -15,18 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     # if: contains(github.event.comment.body, '/test')
     steps:
-      - name: Get PR branch
-        uses: xt0rted/pull-request-comment-branch@v1
-        id: comment-branch
       - name: Set latest commit status as pending
         uses: myrotvorets/set-commit-status-action@master
         with:
-          sha: ${{ steps.comment-branch.outputs.head_sha }}
+          sha: ${{ github.head_ref }}
           token: ${{ secrets.PAT_TOKEN }}
           status: pending
       - uses: actions/checkout@v3
         with:
-          ref: ${{ steps.comment-branch.outputs.head_ref }}
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v3
         with:
           node-version: '16.x'
@@ -46,6 +43,6 @@ jobs:
         uses: myrotvorets/set-commit-status-action@master
         if: always()
         with:
-          sha: ${{ steps.comment-branch.outputs.head_sha }}
+          sha: ${{ github.sha }}
           token: ${{ secrets.PAT_TOKEN }}
           status: ${{ job.status }}
