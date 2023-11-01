@@ -39,10 +39,19 @@ jobs:
           EMAIL_3: ${{ secrets.AKORD_TEST_USER_3_EMAIL }}
           PASSWORD_3: ${{ secrets.AKORD_TEST_USER_PASSWORD }}
         run: yarn test
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 Thanks for reporting!'
+            })
       - name: Set latest commit status as ${{ job.status }}
         uses: myrotvorets/set-commit-status-action@master
         if: always()
         with:
-          sha: ${{ github.sha }}
+          sha: ${{ github.head_ref }}
           token: ${{ secrets.PAT_TOKEN }}
           status: ${{ job.status }}
