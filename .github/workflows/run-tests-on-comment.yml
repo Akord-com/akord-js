@@ -15,7 +15,7 @@ jobs:
       - name: Set latest commit status as pending
         uses: myrotvorets/set-commit-status-action@master
         with:
-          sha: ${{ github.sha }}
+          sha: ${{ github.event.pull_request.base.sha }}
           token: ${{ secrets.PAT_TOKEN }}
           status: pending
       - uses: actions/checkout@v3
@@ -55,6 +55,6 @@ jobs:
         uses: myrotvorets/set-commit-status-action@master
         if: always()
         with:
-          sha: ${{ github.sha }}
+          sha: ${{ github.event.pull_request.base.sha }}
           token: ${{ secrets.PAT_TOKEN }}
           status: ${{ job.status }}
