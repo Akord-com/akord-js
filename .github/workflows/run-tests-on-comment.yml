@@ -1,4 +1,4 @@
-name: Test akord-js methods on comment '/test 123'
+name: Test akord-js methods on comment
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
         if: always()
         with:
           script: |
-            const name = '${{ github.workflow   }}';
+            const name = '${{ github.workflow }}';
             const url = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
             const success = '${{ job.status }}' === 'success';
             const body = `${name}: ${success ? 'succeeded ✅' : 'failed ❌'}\n${url}`;
@@ -52,7 +52,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Thanks for reporting!'
+              body: body
             })
       - name: Set latest commit status as ${{ job.status }}
         uses: myrotvorets/set-commit-status-action@master
