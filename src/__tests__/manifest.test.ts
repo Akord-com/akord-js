@@ -1,6 +1,8 @@
 import { Akord } from "../index";
-import { initInstance, vaultCreate } from './common';
+import { initInstance } from './common';
 import { email, password } from './data/test-credentials';
+import faker from '@faker-js/faker';
+import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
 
@@ -43,7 +45,10 @@ describe("Testing manifest functions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = (await akord.vault.create(faker.random.words(), {
+      cacheOnly: true,
+      public: true
+    })).vaultId;
   });
 
   // it("should create new manifest", async () => {
@@ -84,4 +89,15 @@ describe("Testing manifest functions", () => {
     const manifestJSON = await akord.manifest.getVersion(vaultId);
     expect(manifestJSON).not.toBeFalsy();
   });
+
+  it("should fail creating manifest for private vault", async () => {
+    await expect(async () => {
+      const privateVaultId = (await akord.vault.create(faker.random.words(), {
+        cacheOnly: true,
+        public: false
+      })).vaultId;
+      await akord.manifest.generate(privateVaultId);
+    }).rejects.toThrow(BadRequest);
+  });
+
 });
