@@ -26,7 +26,6 @@ export class Akord {
   public membership: MembershipService;
   public vault: VaultService;
   public stack: StackService;
-  public file: FileService;
   public note: NoteService;
   public manifest: ManifestService;
   public profile: ProfileService;
@@ -48,7 +47,6 @@ export class Akord {
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);
     this.stack = new StackService(wallet, this.api);
-    this.file = new FileService(wallet, this.api);
     this.note = new NoteService(wallet, this.api);
     this.manifest = new ManifestService(wallet, this.api);
     this.membership = new MembershipService(wallet, this.api);

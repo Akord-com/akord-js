@@ -1,9 +1,8 @@
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
-import { base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
+import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
-import { v4 as uuid } from "uuid";
 import { FileLike, FileSource } from "../types/file";
 import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
@@ -14,13 +13,12 @@ import { FileVersion } from "../types";
 import { Readable } from "stream";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
-import { InternalError } from "../errors/internal-error";
 
 const DEFAULT_FILE_TYPE = "text/plain";
 const BYTES_IN_MB = 1000000; 
 const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB
 const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB
-export const IV_LENGTH_IN_BYTES = 16;
+
 
 class FileService extends Service {
   contentType = null as string;
@@ -113,8 +111,8 @@ class FileService extends Service {
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
     const isPublic = options.public || this.isPublic
-    const iv : string[] = []
     let encryptedKey : string
+
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
@@ -122,14 +120,9 @@ class FileService extends Service {
     const resourceUri = resource.resourceUri;
     resourceUri.push(`hash:${resourceHash}`);
     if (!isPublic) {
-      const chunkIv = encryptionTags.find((tag) => tag.name === encTags.IV)?.value;
-      if (!chunkIv) {
-        throw new InternalError("Failed to encrypt data");
-      }
-      iv.push(chunkIv);
       encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
     }
-    return { resourceUri: resourceUri, iv: iv, encryptedKey: encryptedKey }
+    return { resourceUri: resourceUri, encryptedKey: encryptedKey }
   }
 
   private async uploadChunked(
@@ -146,11 +139,10 @@ class FileService extends Service {
 
     const isPublic = options.public || this.isPublic
     const chunkSize = options.chunkSize || DEFAULT_CHUNK_SIZE_IN_BYTES;
-    const chunkSizeWithAuthTag = isPublic ? chunkSize : chunkSize + IV_LENGTH_IN_BYTES;
+    const chunkSizeWithNonceAndIv = isPublic ? chunkSize : chunkSize + AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES;
     const numberOfChunks = Math.ceil(file.size / chunkSize);
-    const fileSize = isPublic ? file.size : file.size + numberOfChunks * IV_LENGTH_IN_BYTES;
+    const fileSize = isPublic ? file.size : file.size + numberOfChunks * (AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES);
     const digestObject = initDigest();
-    const iv: Array<string> = [];
     const etags: Array<string> = [];
 
 
@@ -162,11 +154,6 @@ class FileService extends Service {
 
       if (!isPublic) {
         encryptionTags = encryptedData.encryptionTags;
-        const chunkIv = encryptionTags.find((tag) => tag.name === encTags.IV)?.value;
-        if (!chunkIv) {
-          throw new InternalError("Failed to encrypt data");
-        }
-        iv.push(chunkIv);
         if (!encryptedKey) {
           encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
         }
@@ -198,8 +185,7 @@ class FileService extends Service {
     return {
       resourceUri: resource.resourceUri,
       numberOfChunks: numberOfChunks,
-      chunkSize: chunkSizeWithAuthTag,
-      iv: iv,
+      chunkSize: chunkSizeWithNonceAndIv,
       encryptedKey: encryptedKey
     };
   }

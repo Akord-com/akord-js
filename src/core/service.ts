@@ -217,13 +217,12 @@ class Service {
     } else {
       let encryptedFile: EncryptedPayload;
       try {
-        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), false, encryptedKey) as EncryptedPayload;
+        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), { prefixCiphertextWithIv: true, encode: false, encryptedKey: encryptedKey }) as EncryptedPayload;
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
       processedData = encryptedFile.encryptedData.ciphertext as ArrayBuffer;
       const { address } = await this.getActiveKey();
-      tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
       tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
       tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
     }

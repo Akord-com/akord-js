@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@akord/akord-auth": "0.29.1",
-    "@akord/crypto": "0.14.0",
+    "@akord/crypto": "0.15.0-beta.0",
     "@akord/ts-cacheable": "1.0.11",
     "axios": "^0.24.0",
     "fetch-undici": "^3.0.1",

@@ -1,10 +1,11 @@
 import { NodeService } from "./node";
 import { actionRefs, functions, objectType } from "../constants";
-import { FileDownloadOptions, FileGetOptions, FileService, FileUploadOptions, FileVersionData, IV_LENGTH_IN_BYTES, createFileLike } from "./file";
+import { FileDownloadOptions, FileGetOptions, FileService, FileUploadOptions, FileVersionData, createFileLike } from "./file";
 import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
 import { StreamConverter } from "../util/stream-converter";
 import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
+import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, PROXY_DOWNLOAD_URL } from "@akord/crypto";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -133,10 +134,10 @@ class StackService extends NodeService<Stack> {
     if (service.isPublic) {
       stream = file.fileData as ReadableStream<Uint8Array>
     } else {
-      const encryptedKey = version.encryptedKey || file.metadata.encryptedKey;
-      const iv = version.iv || file.metadata.iv?.split(',');
-      const streamChunkSize = version.chunkSize || version.size + IV_LENGTH_IN_BYTES;
-      stream = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, iv, streamChunkSize);
+      const encryptedKey = file.metadata.encryptedKey;
+      const iv = file.metadata.iv?.split(',');
+      const streamChunkSize = version.chunkSize || version.size + AUTH_TAG_LENGTH_IN_BYTES + (iv ? 0 : IV_LENGTH_IN_BYTES);
+      stream = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
     }
 
     let data: ReadableStream<Uint8Array> | ArrayBuffer;
@@ -154,8 +155,8 @@ class StackService extends NodeService<Stack> {
    * @param  {number} [index] stack version index
    * @returns Promise with version name & data buffer
    */
-  public async download(stackId: string, index: number = 0, options: FileDownloadOptions = {}): Promise<void> {
-    let downloadPromise: Promise<void>
+  public async download(stackId: string, index: number = 0, options: FileDownloadOptions = {}): Promise<string | void> {
+    let downloadPromise: Promise<string | void>
     if (typeof window === 'undefined' || !navigator.serviceWorker?.controller) {
       const { name, type, data } = await this.getVersion(stackId, index, { ...options, responseType: 'stream' });
       const path = `${options.path}/${name}`;
@@ -167,6 +168,8 @@ class StackService extends NodeService<Stack> {
       const stack = new Stack(stackProto, stackProto.__keys__);
       const version = stack.getVersion(index);
       const id = version.getUri(StorageType.S3);
+      const url = `${service.api.config.gatewayurl}/internal/${id}`
+      const proxyUrl = `${PROXY_DOWNLOAD_URL}/${id}`
       await service.setVaultContext(stack.vaultId);
       
       const workerMessage = {
@@ -174,7 +177,7 @@ class StackService extends NodeService<Stack> {
         chunkSize: version.chunkSize,
         size: version.size,
         id: id,
-        url: `${service.api.config.gatewayurl}/internal/${id}`
+        url: url
       } as Record<string, any>;
 
       if (!service.isPublic) {
@@ -188,7 +191,7 @@ class StackService extends NodeService<Stack> {
 
       downloadPromise = new Promise((resolve, reject) => {
         if (options.skipSave) {
-          resolve();
+          resolve(proxyUrl);
         } else {
           const interval = setInterval(() => {
             const channel = new MessageChannel();
@@ -226,7 +229,7 @@ class StackService extends NodeService<Stack> {
       }
       if (!options.skipSave) {
         const anchor = document.createElement('a');
-        anchor.href = `/api/proxy/download/${id}`;
+        anchor.href = proxyUrl;
         document.body.appendChild(anchor);
         anchor.click();
       }
