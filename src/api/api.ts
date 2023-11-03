@@ -54,6 +54,8 @@ abstract class Api {
 
   abstract getTransactions(vaultId: string): Promise<Array<Transaction>>
 
+  abstract getTransactionTags(id: string): Promise<Tags>
+
   abstract updateUser(name: string, avatarUri: string[]): Promise<void>
 
   abstract deleteVault(vaultId: string): Promise<void>

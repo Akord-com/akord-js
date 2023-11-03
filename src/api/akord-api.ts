@@ -309,6 +309,13 @@ export default class AkordApi extends Api {
       .vaultId(vaultId)
       .getTransactions();
   }
+
+  public async getTransactionTags(id: string): Promise<Tags> {
+    return await new ApiClient()
+      .env(this.config)
+      .resourceId(id)
+      .getTransactionTags();
+  }
 }
 
 export {

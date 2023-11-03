@@ -351,6 +351,23 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
   }
 
+  async getTransactionTags(): Promise<Tags> {
+    try {
+      const response = await axios({
+        method: 'head',
+        url: `${this._gatewayurl}/internal/${this._resourceId}`
+      });
+      if (!response.headers['x-amz-meta-tags']) {
+        throwError(400, "Transaction tags missing");
+      }
+      const tags = JSON.parse(response.headers['x-amz-meta-tags']);
+      console.log(tags)
+      return tags;
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
+  }
+
   async patchNotifications(): Promise<Paginated<any>> {
     return await this.patch(`${this._apiurl}/${this._notificationUri}`);
   }

@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, functions, objectType } from "../constants";
+import { actionRefs, encryptionTags, functions, objectType } from "../constants";
 import { FileDownloadOptions, FileGetOptions, FileService, FileUploadOptions, FileVersionData, createFileLike } from "./file";
 import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
@@ -168,6 +168,7 @@ class StackService extends NodeService<Stack> {
       const stack = new Stack(stackProto, stackProto.__keys__);
       const version = stack.getVersion(index);
       const id = version.getUri(StorageType.S3);
+
       const url = `${service.api.config.gatewayurl}/internal/${id}`
       const proxyUrl = `${PROXY_DOWNLOAD_URL}/${id}`
       await service.setVaultContext(stack.vaultId);
@@ -182,9 +183,12 @@ class StackService extends NodeService<Stack> {
 
       if (!service.isPublic) {
         await version.decrypt();
-        const key = await service.dataEncrypter.decryptKey(version.encryptedKey);
+        const tags = await this.api.getTransactionTags(id);
+        const encryptedKey = tags.find(tag => tag.name === encryptionTags.ENCRYPTED_KEY)?.value
+        const iv = tags.find(tag => tag.name === encryptionTags.IV)?.value
+        const key = await service.dataEncrypter.decryptKey(encryptedKey);
         workerMessage.key = key;
-        workerMessage.iv = version.iv;
+        workerMessage.iv = iv;
       }
       workerMessage.name = version.name,
       navigator.serviceWorker.controller.postMessage(workerMessage);
