@@ -33,10 +33,10 @@
     reflect-metadata "^0.1.13"
     tweetnacl "^1.0.3"
 
-"@akord/crypto@0.15.0-beta.0":
-  version "0.15.0-beta.0"
-  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.15.0-beta.0.tgz#48575dbe8371fdc2c347a95ea976ddb0a4365a33"
-  integrity sha512-bFwDU8/wh6OZ+fhTztmHZMg8benP6gQbJFKGF6idSJcgMK73Te+x/z1YVqzFMsw9GwiindifG0N98XZM+gZ2ew==
+"@akord/crypto@0.15.0-beta.3":
+  version "0.15.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.15.0-beta.3.tgz#51ae29d76e044bb6bae8e53e8d05ca9824e27532"
+  integrity sha512-1rrFcXwp4aFeI6aIMQzDV29HsJ92IS1eCX1hBgTruPl+pUPhuet31ClLFVxZ3b4MlPFUiheHWDg4Z6uE+j5Ebg==
   dependencies:
     "@akord/browser-level" "^1.0.2"
     bip39 "^3.1.0"
@@ -48,10 +48,10 @@
     tweetnacl "^1.0.3"
     web-streams-polyfill "^3.2.1"
 
-"@akord/ts-cacheable@1.0.11":
-  version "1.0.11"
-  resolved "https://registry.npmjs.org/@akord/ts-cacheable/-/ts-cacheable-1.0.11.tgz"
-  integrity sha512-WKs3Peqh1kzRd4SNaCJcKPRaTv73D+uz3m9p/LPYiD2XqXIiiJG2aiZjTQV4Ik7OldlWYHdTTscNKDxhnXDZFg==
+"@akord/ts-cacheable@1.0.13":
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/@akord/ts-cacheable/-/ts-cacheable-1.0.13.tgz#4bd76049eff2a4647dabf4947255721affbaf551"
+  integrity sha512-ox5LNXxP/1JXDI1CnyNKesWvBg7J2PCoByYwav/MGaAMoiS7Nj2iJ36gar3L4wpskvnXhYmcEi6lN0l2XHUeLw==
   dependencies:
     rxjs "^7.5.6"
 
@@ -427,11 +427,6 @@
   version "6.3.1"
   resolved "https://registry.npmjs.org/@faker-js/faker/-/faker-6.3.1.tgz"
   integrity sha512-8YXBE2ZcU/pImVOHX7MWrSR/X5up7t6rPWZlk34RwZEcdr3ua6X+32pSd6XuOQRN+vbuvYNfA6iey8NbrjuMFQ==
-
-"@fastify/busboy@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@fastify/busboy/-/busboy-2.0.0.tgz#f22824caff3ae506b18207bad4126dbc6ccdb6b8"
-  integrity sha512-JUFJad5lv7jxj926GPgymrWQxxjPYuJNiNjNMzqT+HiuP6Vl3dk5xzG+8sTX96np0ZAluvaMzPsjhHZ5rNuNQQ==
 
 "@istanbuljs/load-nyc-config@^1.0.0":
   version "1.1.0"
@@ -1203,6 +1198,13 @@ convert-source-map@^1.4.0, convert-source-map@^1.6.0, convert-source-map@^1.7.0:
   resolved "https://registry.npmjs.org/convert-source-map/-/convert-source-map-1.9.0.tgz"
   integrity sha512-ASFBup0Mz1uyiIjANan1jzLQami9z1PoYSZCiiYW2FczPbenXc45FZdBZLzOT+r6+iciuEModtmCti+hjaAk0A==
 
+cross-fetch@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-4.0.0.tgz#f037aef1580bb3a1a35164ea2a848ba81b445983"
+  integrity sha512-e4a5N8lVvuLgAWgnCrLr2PP0YyDOTHa9H/Rj54dirp61qXnNq46m82bRhNqIA5VccJtWBvPTFRV3TtvHUKPB1g==
+  dependencies:
+    node-fetch "^2.6.12"
+
 cross-spawn@^7.0.3:
   version "7.0.3"
   resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.3.tgz"
@@ -1359,13 +1361,6 @@ fb-watchman@^2.0.0:
   integrity sha512-p5161BqbuCaSnB8jIbzQHOlpgsPmK5rJVDfDKO91Axs5NC1uu3HRQm6wt9cd9/+GtQQIO53JdGXXoyDpTAsgYA==
   dependencies:
     bser "2.1.1"
-
-fetch-undici@^3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/fetch-undici/-/fetch-undici-3.0.1.tgz#d7ea6b478f99489cc6e51a29c21e8b26304eb1c4"
-  integrity sha512-UHHu1HqW22ZhK6C/1Zmjf7mQpOwPwLYZ+xcsOgpzistONU8QqvCop6Od29p/kw1GUVoq2Ihu6ItpKLtlojx4FQ==
-  dependencies:
-    undici "^5.0.0"
 
 fill-range@^7.0.1:
   version "7.0.1"
@@ -2203,7 +2198,7 @@ natural-compare@^1.4.0:
   resolved "https://registry.npmjs.org/natural-compare/-/natural-compare-1.4.0.tgz"
   integrity sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==
 
-node-fetch@^2.6.1:
+node-fetch@^2.6.1, node-fetch@^2.6.12:
   version "2.7.0"
   resolved "https://registry.npmjs.org/node-fetch/-/node-fetch-2.7.0.tgz"
   integrity sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==
@@ -2637,13 +2632,6 @@ typescript@4.8.4:
   version "4.8.4"
   resolved "https://registry.npmjs.org/typescript/-/typescript-4.8.4.tgz"
   integrity sha512-QCh+85mCy+h0IGff8r5XWzOVSbBO+KfeYrMQh7NJ58QujwcE22u+NUSmUxqF+un70P9GXKxa2HCNiTTMJknyjQ==
-
-undici@^5.0.0:
-  version "5.27.0"
-  resolved "https://registry.yarnpkg.com/undici/-/undici-5.27.0.tgz#789f2e40ce982b5507899abc2c2ddeb2712b4554"
-  integrity sha512-l3ydWhlhOJzMVOYkymLykcRRXqbUaQriERtR70B9LzNkZ4bX52Fc8wbTDneMiwo8T+AemZXvXaTx+9o5ROxrXg==
-  dependencies:
-    "@fastify/busboy" "^2.0.0"
 
 unfetch@^4.2.0:
   version "4.2.0"

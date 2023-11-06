@@ -1,19 +1,18 @@
+import * as mime from "mime-types";
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { FileLike, FileSource } from "../types/file";
-import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { getTxData, getTxMetadata } from "../arweave";
-import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
-import { FileVersion } from "../types";
-import { Readable } from "stream";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
+import { FileVersion } from "../types";
+import { Readable } from "stream";
 
 const DEFAULT_FILE_TYPE = "text/plain";
 const BYTES_IN_MB = 1000000;
