@@ -1,19 +1,18 @@
+import * as mime from "mime-types";
+import { v4 as uuid } from "uuid";
+import { Readable } from "stream";
+import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
-import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
 import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
-import { v4 as uuid } from "uuid";
 import { FileLike, FileSource } from "../types/file";
-import { Blob } from "buffer";
 import { Tag, Tags } from "../types/contract";
 import { getTxData, getTxMetadata } from "../arweave";
-import * as mime from "mime-types";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 import { FileVersion } from "../types/node";
 import { UDL } from "../types/udl";
 import { udlToTags } from "./udl";
-import { Readable } from "stream";
 import { BadRequest } from "../errors/bad-request";
 
 const DEFAULT_FILE_TYPE = "text/plain";
@@ -223,7 +222,7 @@ class FileService extends Service {
     let offset = 0;
 
     while (offset < file.size) {
-      const chunk = file.slice(offset, this.chunkSize + offset);
+      const chunk = file.slice(offset, this.chunkSize + offset) as Blob;
       const { encryptedData, chunkNumber } = await this.encryptChunk(
         chunk,
         offset,
