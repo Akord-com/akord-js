@@ -422,8 +422,13 @@ class MembershipService extends Service {
         if (!membership.__public__) {
           const tags = await this.api.getTransactionTags(uri);
           const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase())?.value
-          workerMessage.iv = tags.find(tag => tag.name === encryptionTags.IV)?.value
-          workerMessage.key = await service.dataEncrypter.decryptKey(encryptedKey);
+          const iv = tags.find(tag => tag.name.toLowerCase() === encryptionTags.IV.toLowerCase())?.value
+          if (encryptedKey) {
+            workerMessage.key = await service.dataEncrypter.decryptKey(encryptedKey);
+          }
+          if (iv) {
+            workerMessage.iv = [iv];
+          }
         }
         navigator.serviceWorker.controller.postMessage(workerMessage);
         const proxyUrl = `${PROXY_DOWNLOAD_URL}/${uri}`
