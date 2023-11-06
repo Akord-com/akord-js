@@ -1,4 +1,5 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
+import { StorageType } from ".";
 
 export class ProfileDetails extends Encryptable {
 
@@ -11,4 +12,10 @@ export class ProfileDetails extends Encryptable {
   @encrypted() name?: string;
   avatarUri?: string[];
   avatar?: ArrayBuffer;
+
+  getAvatarUri(type: StorageType = StorageType.S3): string {
+    return this.avatarUri
+      ?.find(uri => uri.startsWith(type))
+      ?.replace(type, "");
+  }
 }

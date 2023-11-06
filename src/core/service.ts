@@ -19,7 +19,7 @@ import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
 import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
-import { EncryptedPayload } from "@akord/crypto/lib/types";
+import { EncryptOptions, EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "./common";
 import { EncryptionMetadata } from "../types/encryption";
@@ -209,7 +209,7 @@ class Service {
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
 
-  protected async processWriteRaw(data: ArrayBuffer, encryptedKey?: string) {
+  protected async processWriteRaw(data: ArrayBuffer, options?: EncryptOptions) {
     let processedData: ArrayBuffer;
     const tags = [] as Tags;
     if (this.isPublic) {
@@ -217,14 +217,17 @@ class Service {
     } else {
       let encryptedFile: EncryptedPayload;
       try {
-        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), { prefixCiphertextWithIv: true, encode: false, encryptedKey: encryptedKey }) as EncryptedPayload;
+        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), options) as EncryptedPayload;
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
       processedData = encryptedFile.encryptedData.ciphertext as ArrayBuffer;
       const { address } = await this.getActiveKey();
-      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
-      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
+      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address));
+      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey));
+      if (!options?.prefixCiphertextWithIv) {
+        tags.push(new Tag(encryptionTags.IV, arrayToBase64(encryptedFile.encryptedData.iv)))
+      }
     }
     return { processedData, encryptionTags: tags }
   }

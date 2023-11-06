@@ -5,7 +5,9 @@ import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
 import { StreamConverter } from "../util/stream-converter";
 import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
-import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, PROXY_DOWNLOAD_URL } from "@akord/crypto";
+import { PROXY_DOWNLOAD_URL } from "@akord/crypto";
+import { Platform, getPlatform } from "../util/platform";
+import { Logger } from "../logger";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -120,7 +122,7 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data stream or buffer
    */
   public async getVersion(stackId: string, index: number = 0, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersionData> {
-    const service = new StackService(this.wallet, this.api);
+    const service = new FileService(this.wallet, this.api);
     const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK);
     const stack = new Stack(stackProto, stackProto.__keys__);
     const version = stack.getVersion(index);
@@ -128,115 +130,118 @@ class StackService extends NodeService<Stack> {
       await version.decrypt();
     }
     await service.setVaultContext(stack.vaultId);
-
-    const file = await this.api.downloadFile(version.getUri(StorageType.S3), { responseType: 'stream' });
-    let stream: ReadableStream<Uint8Array>
-    if (service.isPublic) {
-      stream = file.fileData as ReadableStream<Uint8Array>
-    } else {
-      const encryptedKey = file.metadata.encryptedKey;
-      const iv = file.metadata.iv?.split(',');
-      const streamChunkSize = version.chunkSize || version.size + AUTH_TAG_LENGTH_IN_BYTES + (iv ? 0 : IV_LENGTH_IN_BYTES);
-      stream = await service.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
-    }
-
-    let data: ReadableStream<Uint8Array> | ArrayBuffer;
-    if (options.responseType === 'arraybuffer') {
-      data = await StreamConverter.toArrayBuffer<Uint8Array>(stream);
-    } else {
-      data = stream;
-    }
+    const data = await service.download(version.getUri(StorageType.S3), { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
     return { ...version, data };
   }
 
   /**
-   * Download stack version by index, return the latest version by default
+   * Download stack version by index, return the latest version by default.
+   * This method can be used for downloading the binary or previewing it in browser (use options.noSave).
+   * 
+   * To download the file in browser / on server:
+   *    akord.stack.download(stackId, index)
+   * 
+   * To preview the file in browser:
+   *    const url = await akord.stack.download(stackId, index, { skipSave: true })
+   *    <video src={url} controls />
+   * 
    * @param  {string} stackId
-   * @param  {number} [index] stack version index
-   * @returns Promise with version name & data buffer
+   * @param  {number} index stack version index
+   * @param  {object} options control download behavior
+   * @returns Url pointing to the downloaded / previewable file 
    */
-  public async download(stackId: string, index: number = 0, options: FileDownloadOptions = {}): Promise<string | void> {
-    let downloadPromise: Promise<string | void>
-    if (typeof window === 'undefined' || !navigator.serviceWorker?.controller) {
-      const { name, type, data } = await this.getVersion(stackId, index, { ...options, responseType: 'stream' });
-      const path = `${options.path}/${name}`;
-      const contentType = type;
-      downloadPromise = this.saveFile(path, contentType, data);
-    } else {
-      const service = new StackService(this.wallet, this.api);
-      const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK)
-      const stack = new Stack(stackProto, stackProto.__keys__);
-      const version = stack.getVersion(index);
-      const id = version.getUri(StorageType.S3);
-
-      const url = `${service.api.config.gatewayurl}/internal/${id}`
-      const proxyUrl = `${PROXY_DOWNLOAD_URL}/${id}`
-      await service.setVaultContext(stack.vaultId);
-      
-      const workerMessage = {
-        type: 'init',
-        chunkSize: version.chunkSize,
-        size: version.size,
-        id: id,
-        url: url
-      } as Record<string, any>;
-
-      if (!service.isPublic) {
-        await version.decrypt();
-        const tags = await this.api.getTransactionTags(id);
-        const encryptedKey = tags.find(tag => tag.name === encryptionTags.ENCRYPTED_KEY)?.value
-        const iv = tags.find(tag => tag.name === encryptionTags.IV)?.value
-        const key = await service.dataEncrypter.decryptKey(encryptedKey);
-        workerMessage.key = key;
-        workerMessage.iv = iv;
-      }
-      workerMessage.name = version.name,
-      navigator.serviceWorker.controller.postMessage(workerMessage);
-
-      downloadPromise = new Promise((resolve, reject) => {
-        if (options.skipSave) {
-          resolve(proxyUrl);
-        } else {
-          const interval = setInterval(() => {
-            const channel = new MessageChannel();
-
-            channel.port2.onmessage = (event) => {
-              if (event.data.type === 'progress') {
-                const progress = Math.min(100, Math.ceil(event.data.progress / version.size * 100));
-                if (options.progressHook) {
-                  options.progressHook(progress);
-                }
-                if (event.data.progress === version.size) {
-                  clearInterval(interval);
-                  resolve();
-                }
-              } else {
-                reject(event.data);
-              }
-            };
-
-            navigator.serviceWorker.controller.postMessage({
-              type: 'progress',
-              id: id
-            }, [channel.port1]);
-          }, 100);
+  public async download(stackId: string, index: number = 0, options: FileDownloadOptions = {}): Promise<string> {
+    let downloadPromise: Promise<string>;
+    switch (getPlatform()) {
+      case Platform.BrowserNoWorker:
+        if (!this.isPublic) {
+          Logger.warn(
+            '@akord/crypto: decryption worker is not registered, falling back to in memory decryption.\n' +
+            'See: https://github.com/Akord-com/akord-crypto#decryption-worker.'
+          );
         }
-      })
+      case Platform.Server:
+        const { name, type, data } = await this.getVersion(stackId, index, { ...options, responseType: 'stream' });
+        const path = options.path ? `${options.path}/${name}` : name;
+        const contentType = type;
+        downloadPromise = this.saveFile(path, contentType, data as ReadableStream, options.skipSave);
+        break;
+      case Platform.Browser:
+        const service = new StackService(this.wallet, this.api);
+        const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK)
+        const stack = new Stack(stackProto, stackProto.__keys__);
+        const version = stack.getVersion(index);
+        const id = version.getUri(StorageType.S3);
 
-      if (options.cancelHook) {
-        options.cancelHook.signal.onabort = () => {
-          navigator.serviceWorker.controller.postMessage({
-            type: 'cancel',
-            id: id
-          });
-        };
-      }
-      if (!options.skipSave) {
-        const anchor = document.createElement('a');
-        anchor.href = proxyUrl;
-        document.body.appendChild(anchor);
-        anchor.click();
-      }
+        const url = `${service.api.config.gatewayurl}/internal/${id}`
+        const proxyUrl = `${PROXY_DOWNLOAD_URL}/${id}`
+        await service.setVaultContext(stack.vaultId);
+
+        const workerMessage = {
+          type: 'init',
+          chunkSize: version.chunkSize,
+          size: version.size,
+          id: id,
+          url: url
+        } as Record<string, any>;
+
+        if (!service.isPublic) {
+          await version.decrypt();
+          const tags = await this.api.getTransactionTags(id);
+          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase())?.value
+          const iv = tags.find(tag => tag.name === encryptionTags.IV)?.value
+          const key = await service.dataEncrypter.decryptKey(encryptedKey);
+          workerMessage.key = key;
+          workerMessage.iv = iv;
+        }
+        workerMessage.name = version.name
+        navigator.serviceWorker.controller.postMessage(workerMessage);
+
+        downloadPromise = new Promise((resolve, reject) => {
+          if (options.skipSave) {
+            resolve(proxyUrl);
+          } else {
+            const interval = setInterval(() => {
+              const channel = new MessageChannel();
+
+              channel.port2.onmessage = (event) => {
+                if (event.data.type === 'progress') {
+                  const progress = Math.min(100, Math.ceil(event.data.progress / version.size * 100));
+                  if (options.progressHook) {
+                    options.progressHook(progress);
+                  }
+                  if (event.data.progress === version.size) {
+                    clearInterval(interval);
+                    resolve(version.name);
+                  }
+                } else {
+                  reject(event.data);
+                }
+              };
+
+              navigator.serviceWorker.controller.postMessage({
+                type: 'progress',
+                id: id
+              }, [channel.port1]);
+            }, 100);
+          }
+        });
+
+        if (options.cancelHook) {
+          options.cancelHook.signal.onabort = () => {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'cancel',
+              id: id
+            });
+          };
+        }
+        if (!options.skipSave) {
+          const anchor = document.createElement('a');
+          anchor.href = proxyUrl;
+          document.body.appendChild(anchor);
+          anchor.click();
+        }
+        break;
     }
 
     return downloadPromise
@@ -255,30 +260,26 @@ class StackService extends NodeService<Stack> {
   }
 
 
-  private async saveFile(path: string, type: string, stream: any): Promise<void> {
+  private async saveFile(path: string, type: string, stream: ReadableStream, skipSave: boolean = false): Promise<string> {
     if (typeof window === 'undefined') {
       const fs = (await import("fs")).default;
       const Readable = (await import("stream")).Readable;
       return new Promise((resolve, reject) =>
         Readable.from(stream).pipe(fs.createWriteStream(path))
           .on('error', error => reject(error))
-          .on('finish', () => resolve())
+          .on('finish', () => resolve(path))
       );
     } else {
-      const chunks = [];
-      const reader = stream.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        chunks.push(value);
+      const buffer = await StreamConverter.toArrayBuffer(stream)
+      const blob = new Blob([buffer], { type: type });
+      const url = window.URL.createObjectURL(blob);
+      if (!skipSave) {
+        const a = document.createElement("a");
+        a.download = path;
+        a.href = url
+        a.click();
       }
-      const blob = new Blob(chunks, { type: type });
-      const a = document.createElement("a");
-      a.download = path;
-      a.href = window.URL.createObjectURL(blob);
-      a.click();
+      return url;
     }
   }
 };

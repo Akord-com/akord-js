@@ -13,9 +13,10 @@ import { FileVersion } from "../types";
 import { Readable } from "stream";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
+import { StreamConverter } from "../util/stream-converter";
 
 const DEFAULT_FILE_TYPE = "text/plain";
-const BYTES_IN_MB = 1000000; 
+const BYTES_IN_MB = 1000000;
 const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB
 const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB
 
@@ -49,7 +50,7 @@ class FileService extends Service {
     const file = await createFileLike([fileData], { name, mimeType: type, lastModified: fileMetadata?.block?.timestamp });
     const tags = this.getFileTags(file);
 
-    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
     const resource = await new ApiClient()
@@ -78,6 +79,24 @@ class FileService extends Service {
       encryptedKey: uploadResult.encryptedKey
     });
     return version;
+  }
+
+  public async download(fileUri: string, options: FileChunkedGetOptions = { responseType: 'arraybuffer' }): Promise<ReadableStream<Uint8Array> | ArrayBuffer> {
+    const file = await this.api.downloadFile(fileUri, { responseType: 'stream' });
+    let stream: ReadableStream<Uint8Array>;
+    if (this.isPublic) {
+      stream = file.fileData as ReadableStream<Uint8Array>;
+    } else {
+      const encryptedKey = file.metadata.encryptedKey;
+      const iv = file.metadata.iv?.split(',');
+      const streamChunkSize = options.chunkSize ? options.chunkSize + AUTH_TAG_LENGTH_IN_BYTES + (iv ? 0 : IV_LENGTH_IN_BYTES) : null;
+      stream = await this.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
+    }
+
+    if (options.responseType === 'arraybuffer') {
+      return await StreamConverter.toArrayBuffer<Uint8Array>(stream as any);
+    }
+    return stream;
   }
 
   private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
@@ -111,9 +130,9 @@ class FileService extends Service {
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
     const isPublic = options.public || this.isPublic
-    let encryptedKey : string
+    let encryptedKey: string
 
-    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
     const resource = await this.api.uploadFile(processedData, tags.concat(encryptionTags).concat(fileSignatureTags), options);
@@ -149,7 +168,7 @@ class FileService extends Service {
     while (offset < file.size) {
       const chunk = file.slice(offset, offset + chunkSize);
       const arrayBuffer = await chunk.arrayBuffer();
-      const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
+      const encryptedData = await this.processWriteRaw(arrayBuffer, { encryptedKey, prefixCiphertextWithIv: true, encode: false });
       digestObject.update(new Uint8Array(encryptedData.processedData));
 
       if (!isPublic) {
@@ -212,7 +231,7 @@ class FileService extends Service {
     return tags;
   }
 
-  private async getFileSignatureTags(resourceHash: string) : Promise<Tags> {
+  private async getFileSignatureTags(resourceHash: string): Promise<Tags> {
     const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
     const signature = await signHash(
       base64ToArray(resourceHash),
@@ -296,6 +315,11 @@ export type FileDownloadOptions = Hooks & {
 
 export type FileGetOptions = FileDownloadOptions & {
   responseType?: 'arraybuffer' | 'stream',
+}
+
+export type FileChunkedGetOptions = {
+  responseType?: 'arraybuffer' | 'stream',
+  chunkSize?: number
 }
 
 export type FileVersionData = {

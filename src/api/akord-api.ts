@@ -109,7 +109,7 @@ export default class AkordApi extends Api {
       if (response.body.getReader) {
         fileData = response.body;
       } else {
-        fileData = StreamConverter.fromAsyncIterable(response.body);
+        fileData = StreamConverter.fromAsyncIterable(response.body as unknown as AsyncIterable<Uint8Array>);
       }
     }
     const metadata = {

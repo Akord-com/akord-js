@@ -1,6 +1,6 @@
-import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, encryptionTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray, generateKeyPair, Keys } from "@akord/crypto";
+import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray, generateKeyPair, Keys, PROXY_DOWNLOAD_URL, arrayToDataUrl } from "@akord/crypto";
 import { Service } from "./service";
 import { Membership, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType, StatusType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
@@ -12,6 +12,8 @@ import { handleListErrors, paginate } from "./common";
 import { ProfileService } from "./profile";
 import { ProfileDetails } from "../types/profile-details";
 import { StorageType } from "../types";
+import { Platform, getPlatform } from "../util/platform";
+import { FileService } from "./file";
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
@@ -400,6 +402,35 @@ class MembershipService extends Service {
     await this.api.inviteResend(membership.vaultId, membershipId);
   }
 
+  public async getAvatarUrl(membershipId: string): Promise<string> {
+    const membership = await this.get(membershipId, { shouldDecrypt: false });
+    const service = new FileService(this.wallet, this.api);
+    service.setMembershipKeys(membership);
+    const uri = membership.memberDetails.getAvatarUri();
+    switch (getPlatform()) {
+      case Platform.Server:
+      case Platform.BrowserNoWorker:
+        const data = await service.download(uri, { responseType: 'arraybuffer' }) as ArrayBuffer;
+        return arrayToDataUrl(data);
+      case Platform.Browser:
+        const url = `${this.api.config.gatewayurl}/internal/${uri}`
+        const workerMessage = {
+          type: 'init',
+          id: uri,
+          url: url
+        }  as Record<string, any>;
+        if (!membership.__public__) {
+          const tags = await this.api.getTransactionTags(uri);
+          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase())?.value
+          workerMessage.iv = tags.find(tag => tag.name === encryptionTags.IV)?.value
+          workerMessage.key = await service.dataEncrypter.decryptKey(encryptedKey);
+        }
+        navigator.serviceWorker.controller.postMessage(workerMessage);
+        const proxyUrl = `${PROXY_DOWNLOAD_URL}/${uri}`
+        return proxyUrl;
+    }
+  }
+
   async profileUpdate(membershipId: string, name: string, avatar: ArrayBuffer): Promise<MembershipUpdateResult> {
     const service = new MembershipService(this.wallet, this.api);
     await service.setVaultContextFromMembershipId(membershipId);
@@ -501,7 +532,7 @@ class MembershipService extends Service {
   }
 
   private async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
-    const { processedData, encryptionTags } = await this.processWriteRaw(avatar);
+    const { processedData, encryptionTags } = await this.processWriteRaw(avatar, { encode: false, prefixCiphertextWithIv: false });
     const storage = cacheOnly ? StorageType.S3 : StorageType.ARWEAVE;
     const resource = await this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
     return resource.resourceUri

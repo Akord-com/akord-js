@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { Contract, ContractInput, Tags } from "../types/contract";
+import { Contract, ContractInput, Tag, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { nextToken, isPaginated, Paginated } from "../types/paginated";
@@ -12,11 +12,12 @@ import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
 import { StorageType } from "../types";
-import { fetch } from 'fetch-undici';
+import fetch from 'cross-fetch';
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
 const ETAG_HEADER = 'Etag';
+const GATEWAY_HEADER_PREFIX = 'x-amz-meta-';
 
 export class ApiClient {
   private _gatewayurl: string;
@@ -357,12 +358,11 @@ export class ApiClient {
         method: 'head',
         url: `${this._gatewayurl}/internal/${this._resourceId}`
       });
-      if (!response.headers['x-amz-meta-tags']) {
-        throwError(400, "Transaction tags missing");
-      }
-      const tags = JSON.parse(response.headers['x-amz-meta-tags']);
-      console.log(tags)
-      return tags;
+      return Object.keys(response.headers)
+        .filter(header => header.startsWith(GATEWAY_HEADER_PREFIX))
+        .map(header => {
+          return new Tag(header.replace(GATEWAY_HEADER_PREFIX, ''), response.headers[header])
+        })
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
