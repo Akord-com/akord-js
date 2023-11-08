@@ -7,6 +7,7 @@ import { NFT, NFTMetadata } from "../types/nft";
 import { actionRefs, functions, smartweaveTags } from "../constants";
 import { Tag, Tags } from "../types/contract";
 import { assetTags } from "../types/asset";
+import { BadRequest } from "../errors/bad-request";
 
 const DEFAULT_TICKER = "ATOMIC";
 const DEFAULT_CONTRACT_SRC = "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"; // Atomic asset contract source
@@ -29,6 +30,11 @@ class NFTService extends NodeService<NFT> {
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<{ nftId: string, transactionId: string, object: NFT }> {
 
+    const vault = await this.api.getVault(vaultId);
+    if (!vault.public || vault.cacheOnly) {
+      throw new BadRequest("NFT module applies only to public permanent vaults.");
+    }
+
     const nftTags = nftMetadataToTags(metadata);
 
     const createOptions = {
@@ -36,7 +42,10 @@ class NFTService extends NodeService<NFT> {
       ...options
     }
     const service = new NFTService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
+    service.setVault(vault);
+    service.setVaultId(vaultId);
+    service.setIsPublic(vault.public);
+    await service.setMembershipKeys(vault);
     service.setActionRef(actionRefs.NFT_MINT);
     service.setFunction(functions.NODE_CREATE);
     service.setAkordTags([]);
