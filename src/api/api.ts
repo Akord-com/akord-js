@@ -7,6 +7,7 @@ import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
 import { EncryptionMetadata } from "../core";
+import { InAppNotifications } from "../types/in-app-notifications";
 
 abstract class Api {
   config: any
@@ -62,6 +63,15 @@ abstract class Api {
   abstract revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
+
+  abstract getNotifications(): Promise<InAppNotifications>
+
+  abstract readNotifications(options: {
+    id?: string,
+    vaultId?: string,
+    readOnly?: Boolean,
+    shouldDelete?: Boolean
+  }): Promise<void>
 }
 
 export {

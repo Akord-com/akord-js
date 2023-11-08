@@ -13,13 +13,14 @@ import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { FileDownloadOptions, FileUploadOptions } from "../core/file";
 import { EncryptionMetadata } from "../core";
+import { InAppNotifications } from "../types/in-app-notifications";
 
 export const defaultFileUploadOptions = {
   cacheOnly: false,
   public: false
 };
 
-export default class AkordApi extends Api {
+class AkordApi extends Api {
 
   public config!: ApiConfig;
 
@@ -218,7 +219,7 @@ export default class AkordApi extends Api {
     return response.data
   };
 
-  public async getNotifications(): Promise<Paginated<any>> {
+  public async getNotifications(): Promise<InAppNotifications> {
     return await new ApiClient()
       .env(this.config)
       .getNotifications()

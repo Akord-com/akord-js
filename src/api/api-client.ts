@@ -11,6 +11,7 @@ import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
+import { InAppNotifications } from "../types/in-app-notifications";
 
 export class ApiClient {
   private _storageurl: string;
@@ -173,7 +174,7 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/vaults/${this._vaultId}/members`);
   }
 
-  async getNotifications(): Promise<Paginated<any>> {
+  async getNotifications(): Promise<InAppNotifications> {
     return await this.get(`${this._apiurl}/notifications`);
   }
 
