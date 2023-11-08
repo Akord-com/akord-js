@@ -242,39 +242,40 @@ class FileService extends Service {
 
 async function createFileLike(source: FileSource, options: FileOptions = {})
   : Promise<FileLike> {
-  const mimeType = options.mimeType || mime.lookup(options.name) || '';
+  const name = options.name || (source as any).name;
+  const mimeType = options.mimeType || mime.lookup(name) || '';
   if (typeof window !== "undefined") {
     if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer || source instanceof Blob) {
-      if (!options.name) {
+      if (!name) {
         throw new BadRequest("File name is required, please provide it in the file options.");
       }
       if (!mimeType) {
         console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
       }
-      return new File([source as any], options.name, { type: mimeType, lastModified: options.lastModified });
+      return new File([source as any], name, { type: mimeType, lastModified: options.lastModified });
     } else if (source instanceof File) {
       return source;
     } else if (source instanceof Array) {
-      if (!options.name) {
+      if (!name) {
         throw new BadRequest("File name is required, please provide it in the file options.");
       }
       if (!mimeType) {
         console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
       }
-      return new File(source, options.name, { type: mimeType, lastModified: options.lastModified });
+      return new File(source, name, { type: mimeType, lastModified: options.lastModified });
     }
   } else {
     const nodeJsFile = (await import("../types/file")).NodeJs.File;
     if (source instanceof Readable) {
-      return nodeJsFile.fromReadable(source, options.name, mimeType, options.lastModified);
+      return nodeJsFile.fromReadable(source, name, mimeType, options.lastModified);
     } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
-      return new nodeJsFile([source as any], options.name, mimeType, options.lastModified);
+      return new nodeJsFile([source as any], name, mimeType, options.lastModified);
     } else if (source instanceof nodeJsFile) {
       return source;
     } else if (typeof source === "string") {
       return nodeJsFile.fromPath(source as string);
     } else if (source instanceof Array) {
-      return new nodeJsFile(source, options.name, mimeType, options.lastModified);
+      return new nodeJsFile(source, name, mimeType, options.lastModified);
     }
   }
   throw new BadRequest("File source is not supported. Please provide a valid source: web File object, file path, buffer or stream.");

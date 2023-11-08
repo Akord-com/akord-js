@@ -538,7 +538,7 @@ export class ApiClient {
     const headers = {
       'Authorization': auth,
       'Tags': JSON.stringify(this._tags),
-      'Storage-Class': this._storage,
+      'Storage-Class': this._storage?.replace(":", ""),
       'Content-Type': 'application/octet-stream'
     } as Record<string, string>
 

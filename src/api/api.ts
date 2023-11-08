@@ -65,6 +65,10 @@ abstract class Api {
   abstract revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
+
+  abstract readNotifications(options: { id?: string, vaultId?: string, readOnly?: Boolean, shouldDelete?: Boolean }): Promise<void>
+
+  abstract getNotifications(): Promise<Paginated<any>>
 }
 
 export {

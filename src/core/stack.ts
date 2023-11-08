@@ -106,7 +106,7 @@ class StackService extends NodeService<Stack> {
     const fileService = new FileService(this.wallet, this.api, service);
     fileService.contentType = this.fileService.contentType;
     const fileLike = await createFileLike(file, options);
-    const fileUploadResult = await fileService.create(fileLike, options);
+    const fileUploadResult = await fileService.create(fileLike, uploadOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = {

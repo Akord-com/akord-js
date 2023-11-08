@@ -206,7 +206,6 @@ class BatchService extends Service {
       if (options.cancelHook?.signal.aborted) {
         return { data, errors, cancelled: items.length - stacksCreated };
       }
-      console.log(transactions)
       if (transactions.length === 0) {
         // wait for a while if the queue is empty before checking again
         await new Promise((resolve) => setTimeout(resolve, BatchService.TRANSACTION_QUEUE_WAIT_TIME));
