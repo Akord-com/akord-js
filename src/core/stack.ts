@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { actionRefs, encryptionTags, functions, objectType } from "../constants";
+import { actionRefs, encryptionTags, encryptionTagsLegacy, functions, objectType } from "../constants";
 import { FileDownloadOptions, FileGetOptions, FileService, FileUploadOptions, FileVersionData, createFileLike } from "./file";
 import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
@@ -188,8 +188,10 @@ class StackService extends NodeService<Stack> {
         if (!service.isPublic) {
           await version.decrypt();
           const tags = await this.api.getTransactionTags(id);
-          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase())?.value
-          const iv = tags.find(tag => tag.name === encryptionTags.IV)?.value
+          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase() 
+            || tag.name.toLowerCase() === encryptionTagsLegacy.ENCRYPTED_KEY.toLowerCase())?.value
+          const iv = tags.find(tag => tag.name === encryptionTags.IV
+            || tag.name.toLowerCase() === encryptionTagsLegacy.IV.toLowerCase())?.value
           const key = await service.dataEncrypter.decryptKey(encryptedKey);
           workerMessage.key = key;
           workerMessage.iv = iv;

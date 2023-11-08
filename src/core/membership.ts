@@ -1,4 +1,4 @@
-import { actionRefs, objectType, status, functions, protocolTags, encryptionTags } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags, encryptionTags, encryptionTagsLegacy } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray, generateKeyPair, Keys, PROXY_DOWNLOAD_URL, arrayToDataUrl } from "@akord/crypto";
 import { Service } from "./service";
@@ -418,11 +418,13 @@ class MembershipService extends Service {
           type: 'init',
           id: uri,
           url: url
-        }  as Record<string, any>;
+        } as Record<string, any>;
         if (!membership.__public__) {
           const tags = await this.api.getTransactionTags(uri);
-          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase())?.value
-          const iv = tags.find(tag => tag.name.toLowerCase() === encryptionTags.IV.toLowerCase())?.value
+          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase()
+            || tag.name.toLowerCase() === encryptionTagsLegacy.ENCRYPTED_KEY.toLowerCase())?.value
+          const iv = tags.find(tag => tag.name === encryptionTags.IV
+            || tag.name.toLowerCase() === encryptionTagsLegacy.IV.toLowerCase())?.value
           if (encryptedKey) {
             workerMessage.key = await service.dataEncrypter.decryptKey(encryptedKey);
           }

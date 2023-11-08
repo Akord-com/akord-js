@@ -127,6 +127,12 @@ export enum encryptionTags {
   PUBLIC_ADDRESS = "Public-Address"
 };
 
+export enum encryptionTagsLegacy {
+  IV = "IV",
+  ENCRYPTED_KEY = "EncryptedKey",
+  PUBLIC_ADDRESS = "Public-Address"
+};
+
 export enum smartweaveTags {
   APP_NAME = "App-Name",
   APP_VERSION = "App-Version",
