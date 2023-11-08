@@ -176,6 +176,11 @@ const { vaultId, membershipId } = await akord.vault.create("Arty podcast", {
     description: "A permanent podcast dedicated to art history",
     tags: ["art", "podcast", "archive"]
   });
+
+// create a cloud storage vault 
+const { vaultId, membershipId } = await akord.vault.create("Non permanent stuff", {
+    cacheOnly: true
+  });
 ```
 </details>
 
