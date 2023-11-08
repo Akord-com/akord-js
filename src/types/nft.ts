@@ -1,10 +1,11 @@
-import { AssetType } from "./asset";
+import { AssetMetadata } from "./asset";
 import { FileVersion, Node } from "./node";
 
 export class NFT extends Node {
   ticker: string;
   name: string;
   description: string;
+  collection: string;
   creator: string;
   owner: string;
   balances: {
@@ -18,6 +19,7 @@ export class NFT extends Node {
     this.ticker = nodeLike.ticker;
     this.name = nodeLike.name;
     this.description = nodeLike.description;
+    this.collection = nodeLike.collection;
     this.creator = nodeLike.creator;
     this.balances = nodeLike.balances;
     this.claimable = nodeLike.claimable;
@@ -34,15 +36,8 @@ export type Claim = {
 
 export type NFTMetadata = {
   owner: string // NFT owner address
-  type: AssetType,
-  name: string, // max 150 characters
-
   creator?: string, // NFT creator address, if not present, default to owner
-
-  description?: string, // optional description, max 300 characters
-  topics?: string[],
   collection?: string // NFT collection code
-
   contractTxId?: string, // default to "foOzRR7kX-zGzD749Lh4_SoBogVefsFfao67Rurc2Tg"
   ticker?: string, // default to "ATOMIC"
-}
+} & AssetMetadata
