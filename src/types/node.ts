@@ -1,15 +1,18 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { status } from "../constants";
 import { NotFound } from "../errors/not-found";
+import { UDL } from "./udl";
+import { NFT } from "./nft";
 
 export enum nodeType {
   STACK = "Stack",
   FOLDER = "Folder",
   MEMO = "Memo",
-  NOTE = "Note"
+  NOTE = "Note",
+  NFT = "NFT"
 }
 
-export type NodeType = "Stack" | "Folder" | "Memo" | "Note";
+export type NodeType = "Stack" | "Folder" | "Memo" | "Note" | "NFT";
 
 export abstract class Node extends Encryptable {
   id: string;
@@ -126,6 +129,7 @@ export class FileVersion extends Encryptable implements Version {
   resourceUri: string[];
   size: number;
   numberOfChunks?: number;
+  udl?: UDL;
   chunkSize?: number;
   owner: string;
   createdAt: string;
@@ -141,6 +145,7 @@ export class FileVersion extends Encryptable implements Version {
     this.chunkSize = fileVersionProto.chunkSize;
     this.name = fileVersionProto.name;
     this.status = fileVersionProto.status;
+    this.udl = fileVersionProto.udl;
   }
 
   getUri(type: StorageType): string {
@@ -182,7 +187,7 @@ export class MemoReaction extends Encryptable {
   }
 }
 
-export type NodeLike = Folder | Stack | Note | Memo
+export type NodeLike = Folder | Stack | Note | Memo | NFT
 
 export class NodeFactory {
   static instance<NodeLike, K extends Node>(nodeLike: { new(raw: K, keys: Array<EncryptedKeys>): NodeLike }, data: K, keys: Array<EncryptedKeys>): any {

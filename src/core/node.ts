@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 import { BadRequest } from '../errors/bad-request';
 import { handleListErrors, paginate } from './common';
+import { NFT } from '../types/nft';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -250,6 +251,8 @@ class NodeService<T> extends Service {
       return new Stack(nodeProto, keys);
     } else if (this.objectType === "Memo") {
       return new Memo(nodeProto, keys);
+    } else if (this.objectType === "NFT") {
+      return new NFT(nodeProto);
     } else {
       throw new BadRequest("Given type is not supported: " + this.objectType);
     }

@@ -11,6 +11,8 @@ import { Tag, Tags } from "../types/contract";
 import { getTxData, getTxMetadata } from "../arweave";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 import { FileVersion } from "../types/node";
+import { UDL } from "../types/udl";
+import { udlToTags } from "./udl";
 import { BadRequest } from "../errors/bad-request";
 
 const DEFAULT_FILE_TYPE = "text/plain";
@@ -112,7 +114,11 @@ class FileService extends Service {
       tags.push(new Tag(protocolTags.SIGNATURE, signature));
       tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
       options.public = this.isPublic;
-      return { resourceHash: resourceHash, ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options) };
+      return {
+        resourceHash: resourceHash,
+        udl: options.udl,
+        ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options)
+      };
     }
   }
 
@@ -173,6 +179,7 @@ class FileService extends Service {
       ],
       numberOfChunks: uploadResult.numberOfChunks,
       chunkSize: uploadResult.chunkSize,
+      udl: uploadResult.udl
     });
     return version;
   }
@@ -333,6 +340,10 @@ class FileService extends Service {
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
+    if (options.udl) {
+      const udlTags = udlToTags(options.udl);
+      tags.push(...udlTags);
+    }
     return tags;
   }
 };
@@ -345,6 +356,7 @@ export type FileUploadResult = {
   resourceHash?: string,
   numberOfChunks?: number,
   chunkSize?: number,
+  udl?: UDL
 }
 
 export type Hooks = {
@@ -361,7 +373,9 @@ export type FileOptions = {
 export type FileUploadOptions = FileOptions & Hooks & {
   public?: boolean
   cacheOnly?: boolean,
-  arweaveTags?: Tags
+  arweaveTags?: Tags,
+  udl?: UDL,
+  ucm?: boolean
 }
 
 export type FileDownloadOptions = Hooks & {

@@ -16,6 +16,7 @@ import { CacheBusters } from "./types/cacheable";
 import { FileService } from "./core/file";
 import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
+import { NFTService } from "./core/nft";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -32,6 +33,7 @@ export class Akord {
   public profile: ProfileService;
   public batch: BatchService;
   public contract: ContractService;
+  public nft: NFTService;
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
@@ -55,5 +57,6 @@ export class Akord {
     this.profile = new ProfileService(wallet, this.api);
     this.batch = new BatchService(wallet, this.api);
     this.contract = new ContractService(wallet, this.api);
+    this.nft = new NFTService(wallet, this.api);
   }
 }
