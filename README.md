@@ -1366,6 +1366,12 @@ const udlTerms = {
 
 // Finally, let's mint the NFT by passing the path to the asset data, NFT metadata, and UDL terms
 const { nftId } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
+
+// Let's retrieve the transaction uri containing the NFT
+import { StorageType } from "@akord/akord-js";
+const nft = await akord.nft.get(nftId);
+const nftUri = nft.asset.getUri(StorageType.ARWEAVE);
+// After few minutes, you should be able to view your NFT on: https://viewblock.io/arweave/tx/{nftUri}
 ```
 
 ### contract
