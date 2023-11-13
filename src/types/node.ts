@@ -133,6 +133,7 @@ export class FileVersion extends Encryptable implements Version {
   chunkSize?: number;
   owner: string;
   createdAt: string;
+  status: string;
 
   constructor(fileVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
