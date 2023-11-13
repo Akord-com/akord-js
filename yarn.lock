@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.29.1":
-  version "0.29.1"
-  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.29.1.tgz#d611f0990305690d7650548879ba4ded9eb306c9"
-  integrity sha512-+t2yrTKtj8aJ34sw+QGQ390Irmf5ObfzDhIBDipbkJGKDQVskF2TSJSGik9GjCEEcQwS0thNipzTbaqdEiVkJQ==
+"@akord/akord-auth@0.29.2":
+  version "0.29.2"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.29.2.tgz#f1ad43b41a9d84c3cccf5ec2344eaab45e243714"
+  integrity sha512-/xc7rO2vlNEzbW0+DN9a+EbbAOMkFXwwjcKI5clkAe15LS2D1Ybgx2RvtkssxXrKkeJtT73Wddk4eFumYSDjQw==
   dependencies:
     "@akord/crypto" "0.10.0"
     amazon-cognito-identity-js "6.1.2"
@@ -1303,6 +1303,11 @@ ethereum-cryptography@^1.2.0:
     "@scure/bip32" "1.1.5"
     "@scure/bip39" "1.1.1"
 
+eventemitter3@^5.0.1:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-5.0.1.tgz#53f5ffd0a492ac800721bb42c66b841de96423c4"
+  integrity sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==
+
 execa@^5.0.0:
   version "5.1.1"
   resolved "https://registry.npmjs.org/execa/-/execa-5.1.1.tgz"
@@ -2261,6 +2266,19 @@ p-locate@^4.1.0:
   integrity sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A==
   dependencies:
     p-limit "^2.2.0"
+
+p-queue@^7.4.1:
+  version "7.4.1"
+  resolved "https://registry.yarnpkg.com/p-queue/-/p-queue-7.4.1.tgz#7f86f853048beca8272abdbb7cec1ed2afc0f265"
+  integrity sha512-vRpMXmIkYF2/1hLBKisKeVYJZ8S2tZ0zEAmIJgdVKP2nq0nh4qCdf8bgw+ZgKrkh71AOCaqzwbJJk1WtdcF3VA==
+  dependencies:
+    eventemitter3 "^5.0.1"
+    p-timeout "^5.0.2"
+
+p-timeout@^5.0.2:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/p-timeout/-/p-timeout-5.1.0.tgz#b3c691cf4415138ce2d9cfe071dba11f0fee085b"
+  integrity sha512-auFDyzzzGZZZdHz3BtET9VEz0SE/uMEAx7uWfGPucfzEwwe/xH0iVeZibQmANYE/hp9T2+UUZT5m+BKyrDp3Ew==
 
 p-try@^2.0.0:
   version "2.2.0"

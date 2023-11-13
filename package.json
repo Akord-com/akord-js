@@ -38,6 +38,7 @@
     "cross-fetch": "^4.0.0",
     "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
+    "p-queue": "^7.4.1",
     "rxjs": "^7.5.6",
     "uuid": "^8.3.2",
     "web-streams-polyfill": "^3.2.1"
