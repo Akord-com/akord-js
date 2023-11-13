@@ -1,5 +1,5 @@
 import { AssetMetadata } from "./asset";
-import { FileVersion, Node } from "./node";
+import { FileVersion, Node, StorageType } from "./node";
 
 export class NFT extends Node {
   ticker: string;
@@ -24,6 +24,10 @@ export class NFT extends Node {
     this.balances = nodeLike.balances;
     this.claimable = nodeLike.claimable;
     this.asset = new FileVersion(nodeLike.asset);
+  }
+
+  getUri(type: StorageType = StorageType.ARWEAVE): string {
+    return this.asset.getUri(type);
   }
 }
 
