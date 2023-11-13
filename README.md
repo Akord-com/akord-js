@@ -1127,7 +1127,7 @@ const { noteId } = await akord.note.create(
 ```
 </details>
 
-#### `uploadRevision(noteId, name, content)`
+#### `uploadRevision(noteId, content, name)`
 
 - `noteId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
