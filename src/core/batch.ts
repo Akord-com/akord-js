@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import PQueue from 'p-queue';
+import PQueue, { AbortError } from 'p-queue/dist';
 import { Service } from "../core";
 import { MembershipService } from "./membership";
 import { StackService } from "./stack";
@@ -109,7 +109,6 @@ class BatchService extends Service {
     }, 0);
     let progress = 0;
     let uploadedStacksCount = 0;
-    let processedStacksCount = 0;
     const perFileProgress = new Map();
     if (options.processingCountHook) {
       options.processingCountHook(uploadedStacksCount);
@@ -120,7 +119,7 @@ class BatchService extends Service {
 
     if (options.progressHook) {
       const onProgress = options.progressHook
-      const stackProgressHook = (percentageProgress: number, binaryProgress: number, progressId: string) => {
+      const stackProgressHook = (_: number, binaryProgress: number, progressId: string) => {
         progress += binaryProgress - (perFileProgress.get(progressId) || 0)
         perFileProgress.set(progressId, binaryProgress);
         onProgress(Math.min(100, Math.round(progress / size * 100)));
@@ -145,10 +144,7 @@ class BatchService extends Service {
       storage: batchService.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
     }
 
-    // post queued stack transactions
-    let currentTx: StackCreateTransaction;
     let stacksCreated = 0;
-
     const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY, });
     const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
@@ -183,16 +179,22 @@ class BatchService extends Service {
           options.processingCountHook(uploadedStacksCount);
         }
 
-        // queue the stack transaction for posting
         postTxQ.add(() => postTx({
           vaultId: service.vaultId,
           input: { function: service.function, data: id, parentId: createOptions.parentId },
           tags: service.arweaveTags,
           item
-        }), { signal: options.cancelHook?.signal });
+        }), { signal: options.cancelHook?.signal })
+          .catch((error) => {
+            if (error instanceof AbortError || !options.cancelHook?.signal?.aborted) {
+              return ({ data, errors, cancelled: items.length - stacksCreated });
+            }
+            errors.push({ name: item.name || item.file.name, message: error.toString(), error });
+          });
       } catch (error) {
-        processedStacksCount += 1;
-        errors.push({ name: item.name || item.file.name, message: error.toString(), error });
+        if (!options.cancelHook?.signal?.aborted) {
+          errors.push({ name: item.name || item.file.name, message: error.toString(), error });
+        }
       }
     }
 
@@ -211,17 +213,19 @@ class BatchService extends Service {
         data.push({ transactionId: id, object: stack, stackId: object.id });
         stacksCreated += 1;
       } catch (error) {
-        errors.push({ name: currentTx.item.name, message: error.toString(), error });
+        errors.push({ name: tx.item.name, message: error.toString(), error });
       };
-      processedStacksCount += 1;
     }
 
-    await uploadQ.addAll(items.map(item => () => uploadItem(item)), { signal: options.cancelHook?.signal });
+    try {
+      await uploadQ.addAll(items.map(item => () => uploadItem(item)), { signal: options.cancelHook?.signal });
+    } catch (error) {
+      if (error instanceof AbortError || !options.cancelHook?.signal?.aborted) {
+        return ({ data, errors, cancelled: items.length - stacksCreated });
+      }
+      errors.push({ message: error.toString(), error });
+    }
     await postTxQ.onIdle();
-
-    if (options.cancelHook?.signal.aborted) {
-      return ({ data, errors, cancelled: items.length - stacksCreated });
-    }
     return { data, errors, cancelled: 0 };
   }
 

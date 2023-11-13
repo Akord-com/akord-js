@@ -189,7 +189,7 @@ class FileService extends Service {
         .numberOfChunks(numberOfChunks)
         .loadedBytes(offsetWithIv)
         .totalBytes(fileSize)
-        .progressHook(options.progressHook)
+        .progressHook(options.progressHook, this.objectId)
         .cancelHook(options.cancelHook)
         .uploadFile();
 

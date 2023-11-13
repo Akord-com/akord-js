@@ -140,9 +140,9 @@ export class ApiClient {
     return this;
   }
 
-  progressHook(hook: (percentageProgress: number, bytesProgress?: number, id?: string) => void): ApiClient {
+  progressHook(hook: (percentageProgress: number, bytesProgress?: number, id?: string) => void, id?: string): ApiClient {
     this._progressHook = hook;
-    this._progressId = uuidv4();
+    this._progressId = id || uuidv4();
     return this;
   }
 

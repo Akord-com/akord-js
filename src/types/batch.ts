@@ -9,7 +9,7 @@ export type BatchStackCreateOptions = Hooks & {
 
 export interface BatchStackCreateResponse {
   data: Array<{ stackId: string, transactionId: string, object: Stack }>
-  errors: Array<{ name: string, message: string, error: Error }>
+  errors: Array<{ name?: string, message: string, error: Error }>
   cancelled: number
 }
 
