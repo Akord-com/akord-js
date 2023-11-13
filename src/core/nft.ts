@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { nodeType } from "../types/node";
+import { FileVersion, StorageType, nodeType } from "../types/node";
 import { StackCreateOptions } from "./stack";
 import { FileLike } from "../types/file";
 import { FileService } from "./file";
@@ -66,6 +66,28 @@ class NFTService extends NodeService<NFT> {
 
     const { nodeId, transactionId, object } = await service.nodeCreate<NFT>(state, { parentId: options.parentId });
     return { nftId: nodeId, transactionId, object };
+  }
+
+  /**
+   * Get NFT asset
+   * @param  {string} nftId
+   * @returns Promise with NFT asset
+   */
+  public async getAsset(nftId: string): Promise<FileVersion & { data: ArrayBuffer }> {
+    const nft = new NFT(await this.api.getNode<NFT>(nftId, this.objectType));
+    const { fileData } = await this.api.downloadFile(nft.getUri(StorageType.S3), { public: true });
+    return { data: fileData, ...nft.asset } as FileVersion & { data: ArrayBuffer };
+  }
+
+  /**
+   * Get NFT asset uri
+   * @param  {string} nftId
+   * @param  {StorageType} [type] storage type, default to arweave
+   * @returns Promise with NFT asset uri
+   */
+  public async getUri(nftId: string, type: StorageType = StorageType.ARWEAVE): Promise<string> {
+    const nft = new NFT(await this.api.getNode<NFT>(nftId, this.objectType));
+    return nft.getUri(type);
   }
 };
 

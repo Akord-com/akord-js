@@ -55,5 +55,15 @@ describe("Testing NFT functions", () => {
     expect(nft.asset.udl?.licenseFee?.type).toEqual(udl.licenseFee?.type);
     expect(nft.asset.udl?.licenseFee?.value).toEqual(udl.licenseFee?.value);
     expect(nft.asset.getUri(StorageType.ARWEAVE)).toBeTruthy();
+
+    const { data } = await akord.nft.getAsset(nftId);
+    expect(data).toEqual(await file.arrayBuffer());
+
+    const fileBuffer = await akord.file.get(nft.asset.getUri(StorageType.S3), nft.vaultId);
+    expect(fileBuffer).toEqual(await file.arrayBuffer());
+
+    const assetUri = await akord.nft.getUri(nftId);
+    expect(assetUri).toBeTruthy();
+    expect(assetUri).toEqual(nft.asset.getUri(StorageType.ARWEAVE));
   });
 });
