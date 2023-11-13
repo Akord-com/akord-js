@@ -1378,6 +1378,86 @@ const nft = await akord.nft.get(nftId);
 const nftUri = nft.asset.getUri(StorageType.ARWEAVE);
 // After few minutes, you should be able to view your NFT on: https://viewblock.io/arweave/tx/{nftUri}
 ```
+</details>
+
+#### `get(nftId, options)`
+
+- `nftId` (`string`, required)
+- `options` ([`GetOptions`][get-options], optional)
+- returns `Promise<NFT>` - Promise with the nft object
+
+<details>
+  <summary>example</summary>
+
+```js
+const nft = await akord.nft.get(nftId);
+```
+</details>
+
+#### `listAll(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<Array<NFT>>` - Promise with all nfts within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+const nfts = await akord.nft.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated nfts within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 nfts for the vault
+const { items } = await akord.nft.list(vaultId);
+
+// retrieve first 20 nfts for the vault
+const { items } = await akord.nft.list(vaultId, { limit: 20 });
+```
+</details>
+
+#### `getAsset(nftId)`
+
+Get nft asset
+
+- `nftId` (`string`, required)
+- returns `Promise<{ data: ArrayBuffer } & FileVersion>` - Promise with nft asset object & data buffer
+
+<details>
+  <summary>example</summary>
+
+```js
+// get nft data buffer
+const { data: fileBuffer } = await akord.nft.getAsset(nftId);
+```
+</details>
+
+#### `getUri(nftId, type)`
+
+Get nft asset uri
+
+- `nftId` (`string`, required)
+- `type` ([`StorageType`][storage-type], optional) - storage type, default to arweave
+- returns `Promise<string>` - Promise with nft asset uri
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the arweave uri for the nft asset
+const arweaveUri = await akord.nft.getUri(nftId);
+```
+</details>
 
 ### contract
 
