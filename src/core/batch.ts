@@ -120,7 +120,7 @@ class BatchService extends Service {
       options.processingCountHook(uploadedStacksCount);
     }
 
-    let data = [] as BatchStackCreateResponse["data"];
+    const data = [] as BatchStackCreateResponse["data"];
     const errors = [] as BatchStackCreateResponse["errors"];
     const transactions = [] as StackCreateTransaction[];
 
@@ -151,9 +151,50 @@ class BatchService extends Service {
       storage: batchService.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
     }
 
+    // post queued stack transactions
+    let currentTx: StackCreateTransaction;
+    let stacksCreated = 0;
+
+    const stacksPromise = new Promise<BatchStackCreateResponse>((resolve, _) => {
+      const stacksTxQueue = setInterval(async () => {
+        if (processedStacksCount >= items.length) {
+          clearInterval(stacksTxQueue);
+          resolve({ data, errors, cancelled: 0 });
+        }
+        if (options.cancelHook?.signal.aborted) {
+          clearInterval(stacksTxQueue);
+          resolve({ data, errors, cancelled: items.length - stacksCreated });
+        }
+        if (transactions.length > 0) {
+          try {
+            currentTx = transactions.shift();
+            // process the dequeued stack transaction
+            const { id, object } = await this.api.postContractTransaction<Stack>(
+              currentTx.vaultId,
+              currentTx.input,
+              currentTx.tags
+            );
+            const stack = await new StackService(batchService.wallet, batchService.api, batchService)
+              .processNode(object, !batchService.isPublic, batchService.keys);
+            if (options.onStackCreated) {
+              await options.onStackCreated(stack);
+            }
+            data.push({ transactionId: id, object: stack, stackId: object.id });
+            stacksCreated += 1;
+            if (options.cancelHook?.signal.aborted) {
+              resolve({ data, errors, cancelled: items.length - stacksCreated });
+            }
+          } catch (error) {
+            errors.push({ name: currentTx.item.name, message: error.toString(), error });
+          };
+          processedStacksCount += 1;
+        }
+      }, BatchService.TRANSACTION_QUEUE_WAIT_TIME);
+    });
+
     for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
       // upload file data & metadata
-      Promise.all(chunk.map(async (item) => {
+      await Promise.all(chunk.map(async (item) => {
         const service = new StackService(this.wallet, this.api, batchService);
 
         const nodeId = uuidv4();
@@ -192,54 +233,18 @@ class BatchService extends Service {
             item
           });
         } catch (error) {
-          processedStacksCount +=1;
+          processedStacksCount += 1;
           errors.push({ name: item.name || item.file.name, message: error.toString(), error });
         }
       }
       ));
     }
 
-    // post queued stack transactions
-    let currentTx: StackCreateTransaction;
-    let stacksCreated = 0;
-    while (processedStacksCount < items.length) {
-      if (options.cancelHook?.signal.aborted) {
-        return { data, errors, cancelled: items.length - stacksCreated };
-      }
-      if (transactions.length === 0) {
-        // wait for a while if the queue is empty before checking again
-        await new Promise((resolve) => setTimeout(resolve, BatchService.TRANSACTION_QUEUE_WAIT_TIME));
-      } else {
-        try {
-          currentTx = transactions.shift();
-          processedStacksCount += 1;
-          // process the dequeued stack transaction
-          const { id, object } = await this.api.postContractTransaction<Stack>(
-            currentTx.vaultId,
-            currentTx.input,
-            currentTx.tags
-          );
-          const stack = await new StackService(batchService.wallet, batchService.api, batchService)
-            .processNode(object, !batchService.isPublic, batchService.keys);
-          if (options.onStackCreated) {
-            await options.onStackCreated(stack);
-          }
-
-          data.push({ transactionId: id, object: stack, stackId: object.id });
-          stacksCreated += 1;
-          if (options.cancelHook?.signal.aborted) {
-            return { data, errors, cancelled: items.length - stacksCreated };
-          }
-        } catch (error) {
-          errors.push({ name: currentTx.item.name, message: error.toString(), error });
-        };
-      }
-    }
     if (options.cancelHook?.signal.aborted) {
       return { data, errors, cancelled: items.length - stacksCreated };
     }
-    console.log({ data, errors, cancelled: 0 })
-    return { data, errors, cancelled: 0 };
+
+    return stacksPromise;
   }
 
   /**
