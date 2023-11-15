@@ -1,8 +1,9 @@
 import * as mime from "mime-types";
+import PQueue, { AbortError } from 'p-queue/dist';
+import { Readable } from "stream";
+import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
-import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
-import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { FileLike, FileSource } from "../types/file";
 import { Tag, Tags } from "../types/contract";
@@ -12,16 +13,17 @@ import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
 import { FileVersion } from "../types";
-import { Readable } from "stream";
 
 const DEFAULT_FILE_TYPE = "text/plain";
 const BYTES_IN_MB = 1000000;
-const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB
-const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB
+const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
+const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
+const CHUNKS_CONCURRENCY = 25;
 
 
 class FileService extends Service {
   contentType = null as string;
+  client: ApiClient;
 
 
   public async create(
@@ -52,13 +54,14 @@ class FileService extends Service {
     const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-    const resource = await new ApiClient()
+    this.client = new ApiClient()
       .env(this.api.config)
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
-      .storage(StorageType.S3)
-      .uploadFile();
+      .storage(StorageType.S3);
+
+    const resource = await this.client.uploadFile();
     const resourceUri = resource.resourceUri
     resourceUri.push(`${StorageType.ARWEAVE}:${fileTxId}`);
     return { file, resourceUri };
@@ -148,57 +151,65 @@ class FileService extends Service {
     tags: Tags,
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
-    let resource: any;
-    let encryptionTags: Tags = [];
-    let encryptedKey: string;
-    let offset = 0;
-    let offsetWithIv = 0;
-    let chunkNumber = 1;
 
     const isPublic = options.public || this.isPublic
     const chunkSize = options.chunkSize || DEFAULT_CHUNK_SIZE_IN_BYTES;
     const chunkSizeWithNonceAndIv = isPublic ? chunkSize : chunkSize + AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES;
     const numberOfChunks = Math.ceil(file.size / chunkSize);
     const fileSize = isPublic ? file.size : file.size + numberOfChunks * (AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES);
-    const digestObject = initDigest();
     const etags: Array<string> = [];
 
+    this.client = new ApiClient()
+      .env(this.api.config)
+      .public(this.isPublic)
+      .tags(tags)
+      .storage(options.storage)
+      .numberOfChunks(numberOfChunks)
+      .totalBytes(fileSize)
+      .progressHook(options.progressHook)
+      .cancelHook(options.cancelHook)
 
-    while (offset < file.size) {
-      const chunk = file.slice(offset, offset + chunkSize);
-      const arrayBuffer = await chunk.arrayBuffer();
-      const encryptedData = await this.processWriteRaw(arrayBuffer, { encryptedKey, prefixCiphertextWithIv: true, encode: false });
-      digestObject.update(new Uint8Array(encryptedData.processedData));
+    const digestObject = initDigest();
 
-      if (!isPublic) {
-        encryptionTags = encryptedData.encryptionTags;
-        if (!encryptedKey) {
-          encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
-        }
-      }
-      const fileSignatureTags = await this.getFileSignatureTags(digestObject.getHash("B64"))
+    // upload the first chunk
+    const chunkedResource = await this.uploadChunk(file, chunkSize, 0, { digestObject, tags: tags });
+    const resourceChunkSize = chunkedResource.resourceSize;
+    const encryptedKey = chunkedResource.tags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
+    etags.push(chunkedResource.resourceEtag);
 
-      resource = await new ApiClient()
-        .env(this.api.config)
-        .public(this.isPublic)
-        .resourceId(resource?.resourceLocation)
-        .data(encryptedData.processedData)
-        .tags(tags.concat(encryptedData.encryptionTags).concat(fileSignatureTags))
-        .etag(etags.join(','))
-        .storage(options.storage)
-        .numberOfChunks(numberOfChunks)
-        .loadedBytes(offsetWithIv)
-        .totalBytes(fileSize)
-        .progressHook(options.progressHook, this.objectId)
-        .cancelHook(options.cancelHook)
-        .uploadFile();
-
-      offset += DEFAULT_CHUNK_SIZE_IN_BYTES;
-      offsetWithIv += encryptedData.processedData.byteLength;
-      chunkNumber += 1;
-      etags.push(resource.resourceEtag);
-      Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
+    // upload the chunks in parallel
+    let sourceOffset = chunkSize;
+    let targetOffset = resourceChunkSize;
+    const chunksQ = new PQueue({ concurrency: CHUNKS_CONCURRENCY });
+    const chunksQTasks = [];
+    while (sourceOffset + chunkSize < file.size) {
+      const task = chunksQ.add(
+        () => this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, targetOffset, location: chunkedResource.resourceLocation }),
+        { signal: options.cancelHook?.signal })
+        .catch((error) => {
+          if (error instanceof AbortError) {
+            return null;
+          }
+          throw error;
+        });
+      chunksQTasks.push(task);
+      sourceOffset += chunkSize;
+      targetOffset += resourceChunkSize;
     }
+    await chunksQ.onIdle();
+    
+    if (options.cancelHook?.signal?.aborted) {
+      return null;
+    }
+
+    chunksQTasks.forEach(async task => {
+      etags.push((await task).resourceEtag); //resolved already, awaiting for type safety
+    });
+
+    // upload the last chunk
+    const fileSignatureTags = await this.getFileSignatureTags(digestObject.getHash("B64"))
+    const fileTags = tags.concat(fileSignatureTags);
+    const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, etags, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
 
     return {
       resourceUri: resource.resourceUri,
@@ -206,6 +217,39 @@ class FileService extends Service {
       chunkSize: chunkSizeWithNonceAndIv,
       encryptedKey: encryptedKey
     };
+  }
+
+  private async uploadChunk(
+    file: FileLike,
+    chunkSize: number = DEFAULT_CHUNK_SIZE_IN_BYTES,
+    offset: number = 0,
+    options: { digestObject?: any, encryptedKey?: string, location?: string, tags?: Tags, etags?: Array<string>, targetOffset?: number } = {}) {
+    const chunk = file.slice(offset, offset + chunkSize);
+    const arrayBuffer = await chunk.arrayBuffer();
+    const data = await this.processWriteRaw(arrayBuffer, { encryptedKey: options.encryptedKey, prefixCiphertextWithIv: true, encode: false });
+    if (options.digestObject) {
+      options.digestObject.update(new Uint8Array(data.processedData));
+    }
+
+    const loadedBytes = options.targetOffset ?? offset;
+    const client = this.client
+      .clone()
+      .data(data.processedData)
+      .loadedBytes(loadedBytes);
+
+    if (options.location) {
+      client.resourceId(options.location);
+    }
+
+    if (options.tags && options.tags.length > 0) {
+      client.tags([...options.tags, ...data.encryptionTags]);
+    }
+
+    if (options.etags && options.etags.length > 0) {
+      client.etag(options.etags.join(","));
+    }
+    const res = await client.uploadFile();
+    return { ...res, tags: data.encryptionTags };
   }
 
   private getFileTags(file: FileLike, options: FileUploadOptions = {}): Tags {

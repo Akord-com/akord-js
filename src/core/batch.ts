@@ -186,7 +186,7 @@ class BatchService extends Service {
           item
         }), { signal: options.cancelHook?.signal })
           .catch((error) => {
-            if (error instanceof AbortError || !options.cancelHook?.signal?.aborted) {
+            if (error instanceof AbortError || options.cancelHook?.signal?.aborted) {
               return ({ data, errors, cancelled: items.length - stacksCreated });
             }
             errors.push({ name: item.name || item.file.name, message: error.toString(), error });

@@ -62,6 +62,30 @@ export class ApiClient {
 
   constructor() { }
 
+  clone(): ApiClient {
+    const clone = new ApiClient();
+    clone._gatewayurl = this._gatewayurl;
+    clone._apiurl = this._apiurl;
+    clone._resourceId = this._resourceId;
+    clone._vaultId = this._vaultId;
+    clone._tags = this._tags;
+    clone._state = this._state;
+    clone._input = this._input;
+    clone._metadata = this._metadata;
+    clone._numberOfChunks = this._numberOfChunks;
+    clone._etag = this._etag;
+    clone._data = this._data;
+    clone._queryParams = this._queryParams;
+    clone._progressId = this._progressId;
+    clone._progressHook = this._progressHook;
+    clone._cancelHook = this._cancelHook;
+    clone._isPublic = this._isPublic;
+    clone._totalBytes = this._totalBytes;
+    clone._uploadedBytes = this._uploadedBytes;
+    clone._storage = this._storage;
+    return clone;
+  }
+
   env(config: { apiurl: string, gatewayurl: string }): ApiClient {
     this._apiurl = config.apiurl;
     this._gatewayurl = config.gatewayurl;
@@ -525,7 +549,7 @@ export class ApiClient {
    * - cancelHook()
    * @returns {Promise<string[]>}
    */
-  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceEtag: string }> {
+  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceEtag: string, resourceSize: number }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
@@ -552,6 +576,8 @@ export class ApiClient {
       headers[ETAG_HEADER] = this._etag;
     }
 
+    this._progressId = uuidv4();
+
     const config = {
       method: 'post',
       url: `${this._gatewayurl}/internal`,
@@ -563,7 +589,7 @@ export class ApiClient {
           let percentageProgress;
           let bytesProgress;
           if (me._totalBytes) {
-            bytesProgress = me._uploadedBytes + progressEvent.loaded
+            bytesProgress = progressEvent.loaded
             percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
           } else {
             bytesProgress = progressEvent.loaded
@@ -580,7 +606,8 @@ export class ApiClient {
       return {
         resourceUri: response.data.resourceUri,
         resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
-        resourceEtag: response.headers[ETAG_HEADER.toLocaleLowerCase()]
+        resourceEtag: response.headers[ETAG_HEADER.toLocaleLowerCase()],
+        resourceSize: this._data.byteLength
       };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
