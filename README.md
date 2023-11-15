@@ -883,6 +883,31 @@ const arweaveUri = await akord.stack.getUri(stackId, 0);
 ```
 </details>
 
+#### `download(stackId, index, options)`
+
+Download stack version by index, return the latest version by default.
+This method can be used for downloading the binary or previewing it in browser (use options.noSave).
+
+- `stackId` (`string`, required)
+- `index` (`number`, optional) - file version index, default to latest
+- `options` (`FileDownloadOptions`], optional) - control download behavior
+- returns `Promise<string>` - Promise with location of downloaded file
+
+<details>
+  <summary>example</summary>
+
+```js
+    
+  // download the file in browser / on server:
+  await akord.stack.download(stackId, index)
+    
+  // preview the file in browser:
+  const url = await akord.stack.download(stackId, index, { skipSave: true })
+       
+  <video src={url} controls />  
+```
+</details>
+
 ### folder
 
 #### `create(vaultId, name)`
