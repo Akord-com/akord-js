@@ -16,6 +16,7 @@ This package can be used in both browser and Node.js environments.
   - [Folder](#folder)
   - [Note](#note)
   - [Manifest](#manifest)
+  - [NFT](#nft)
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
@@ -174,6 +175,11 @@ const { vaultId, membershipId } = await akord.vault.create("Arty podcast", {
     public: true,
     description: "A permanent podcast dedicated to art history",
     tags: ["art", "podcast", "archive"]
+  });
+
+// create a cloud storage vault 
+const { vaultId, membershipId } = await akord.vault.create("Non permanent stuff", {
+    cacheOnly: true
   });
 ```
 </details>
@@ -682,6 +688,39 @@ const { stackId } = await akord.stack.create(vaultId, "path to your file", "jam 
    ]
 });
 ```
+
+```js
+import { UDL_LICENSE_TX_ID } from "@akord/akord-js";
+
+// create a file stack with UDL
+
+// first let's define terms of UDL
+const udl = {
+  license: UDL_LICENSE_TX_ID,
+  licenseFee: {
+    type: "Monthly",
+    value: 5
+  },
+  derivations: [
+    {
+      type: "Allowed-With-RevenueShare",
+      value: 30,
+    },
+    {
+      type: "Allowed-With-RevenueShare",
+      value: 10,
+      duration: {
+        type: "After",
+        value: 2
+      }
+    }
+  ],
+  commercialUses: [{ type: "Allowed-With-Credit" }],
+  paymentAddress: "89tR0-C1m3_sCWCoVCChg4gFYKdiH5_ZDyZpdJ2DDRw"
+};
+// then pass it as an option when creating the file stack
+const { stackId } = await akord.stack.create(vaultId, file, name, { udl: udl });
+```
 > [See Next.js file upload showcase here][file-upload-example]
 </details>
 
@@ -1083,7 +1122,7 @@ const { noteId } = await akord.note.create(
 ```
 </details>
 
-#### `uploadRevision(noteId, name, content)`
+#### `uploadRevision(noteId, content, name)`
 
 - `noteId` (`string`, required)
 - `content` (`string`, required) - note text content, ex: stringified JSON
@@ -1282,6 +1321,136 @@ const manifest = await akord.manifest.getVersion(vaultId);
 
 // get the first version of the vault manifest
 const manifestV1 = await akord.manifest.getVersion(vaultId, 0);
+```
+</details>
+
+### nft
+
+The NFT module enables the creation of atomic NFTs compliant with the [Atomic Asset standard](https://atomic-assets.arweave.dev/).
+
+The atomic asset can be minted with the option to attach the [Universal Data License](https://arwiki.wiki/#/en/Universal-Data-License-How-to-use-it) (UDL), and can be listed on the [Universal Content Marketplace](https://bazar.arweave.dev/) (UCM).
+
+#### `mint(vaultId, asset, metadata, options)`
+
+- `vaultId` (`string`, required)
+- `asset` ([`FileLike`][file-like], required) - asset data
+- `metadata` (`NFTMetadata`, required) - NFT metadata: name, ticker, description, owner, creator, etc.
+- `options` (`FileUploadOptions`, optional) - ex: UDL terms
+- returns `Promise<{ nftId, transactionId }>` - Promise with new nft id & corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+// Mint an atomic NFT with the UDL attached
+
+// First, let's define our NFT metadata
+const nftMetadata = {
+  name: "Golden Orchid - Flora Fantasy #1",
+  creator: "xxxx", // should be a valid Arweave address
+  owner: "yyyy", // should be a valid Arweave address
+  collection: "Flora Fantasy",
+  description: "A rare digital representation of the mythical Golden Orchid",
+  type: "image",
+  topics: ["floral", "nature"]
+};
+
+// Then, let's define UDL terms
+const udlTerms = {
+  licenseFee: {
+    type: "One-Time",
+    value: 10
+  },
+  derivations: [{ type: "Allowed-With-Credit" }]
+};
+
+// Finally, let's mint the NFT by passing the path to the asset data, NFT metadata, and UDL terms
+const { nftId } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
+
+// Let's retrieve the transaction uri containing the NFT
+import { StorageType } from "@akord/akord-js";
+const nft = await akord.nft.get(nftId);
+const nftUri = nft.asset.getUri(StorageType.ARWEAVE);
+// After few minutes, you should be able to view your NFT on: https://viewblock.io/arweave/tx/{nftUri}
+```
+</details>
+
+#### `get(nftId, options)`
+
+- `nftId` (`string`, required)
+- `options` ([`GetOptions`][get-options], optional)
+- returns `Promise<NFT>` - Promise with the nft object
+
+<details>
+  <summary>example</summary>
+
+```js
+const nft = await akord.nft.get(nftId);
+```
+</details>
+
+#### `listAll(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<Array<NFT>>` - Promise with all nfts within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+const nfts = await akord.nft.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated nfts within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 nfts for the vault
+const { items } = await akord.nft.list(vaultId);
+
+// retrieve first 20 nfts for the vault
+const { items } = await akord.nft.list(vaultId, { limit: 20 });
+```
+</details>
+
+#### `getAsset(nftId)`
+
+Get nft asset
+
+- `nftId` (`string`, required)
+- returns `Promise<{ data: ArrayBuffer } & FileVersion>` - Promise with nft asset object & data buffer
+
+<details>
+  <summary>example</summary>
+
+```js
+// get nft data buffer
+const { data: fileBuffer } = await akord.nft.getAsset(nftId);
+```
+</details>
+
+#### `getUri(nftId, type)`
+
+Get nft asset uri
+
+- `nftId` (`string`, required)
+- `type` ([`StorageType`][storage-type], optional) - storage type, default to arweave
+- returns `Promise<string>` - Promise with nft asset uri
+
+<details>
+  <summary>example</summary>
+
+```js
+// get the arweave uri for the nft asset
+const arweaveUri = await akord.nft.getUri(nftId);
 ```
 </details>
 

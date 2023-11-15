@@ -1,5 +1,6 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { StorageType, Version } from "./node";
+import { UDL } from "./udl";
 
 export class FileVersion extends Encryptable implements Version {
   @encrypted() name: string;
@@ -9,11 +10,9 @@ export class FileVersion extends Encryptable implements Version {
   createdAt: string;
   status: string;
   size: number;
+  udl?: UDL;
   numberOfChunks?: number;
   chunkSize?: number;
-  iv?: [string];
-  encryptedKey?: string;
-
 
   constructor(fileVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
@@ -26,8 +25,7 @@ export class FileVersion extends Encryptable implements Version {
     this.chunkSize = fileVersionProto.chunkSize;
     this.name = fileVersionProto.name;
     this.status = fileVersionProto.status;
-    this.iv = fileVersionProto.iv;
-    this.encryptedKey = fileVersionProto.encryptedKey;
+    this.udl = fileVersionProto.udl;
   }
 
   getUri(type: StorageType): string {

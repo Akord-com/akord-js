@@ -9,6 +9,8 @@ import { FileLike, FileSource } from "../types/file";
 import { Tag, Tags } from "../types/contract";
 import { getTxData, getTxMetadata } from "../arweave";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
+import { UDL } from "../types/udl";
+import { udlToTags } from "./udl";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
@@ -77,8 +79,7 @@ class FileService extends Service {
       resourceUri: uploadResult.resourceUri,
       numberOfChunks: uploadResult.numberOfChunks,
       chunkSize: uploadResult.chunkSize,
-      iv: uploadResult.iv,
-      encryptedKey: uploadResult.encryptedKey
+      udl: uploadResult.udl
     });
     return version;
   }
@@ -143,7 +144,7 @@ class FileService extends Service {
     if (!isPublic) {
       encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
     }
-    return { resourceUri: resourceUri, encryptedKey: encryptedKey }
+    return { resourceUri: resourceUri, resourceHash: resourceHash, encryptedKey: encryptedKey, udl: options.udl }
   }
 
   private async uploadChunked(
@@ -207,7 +208,8 @@ class FileService extends Service {
     });
 
     // upload the last chunk
-    const fileSignatureTags = await this.getFileSignatureTags(digestObject.getHash("B64"))
+    const resourceHash = digestObject.getHash("B64")
+    const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
     const fileTags = tags.concat(fileSignatureTags);
     const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, etags, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
 
@@ -215,7 +217,9 @@ class FileService extends Service {
       resourceUri: resource.resourceUri,
       numberOfChunks: numberOfChunks,
       chunkSize: chunkSizeWithNonceAndIv,
-      encryptedKey: encryptedKey
+      encryptedKey: encryptedKey,
+      resourceHash: resourceHash,
+      udl: options.udl
     };
   }
 
@@ -271,6 +275,10 @@ class FileService extends Service {
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
 
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
+    if (options.udl) {
+      const udlTags = udlToTags(options.udl);
+      tags.push(...udlTags);
+    }
     return tags;
   }
 
@@ -331,7 +339,8 @@ export type FileUploadResult = {
   numberOfChunks?: number,
   chunkSize?: number,
   iv?: string[]
-  encryptedKey?: string
+  encryptedKey?: string,
+  udl?: UDL
 }
 
 export type Hooks = {
@@ -350,6 +359,9 @@ export type FileUploadOptions = Hooks & FileOptions & {
   storage?: StorageType,
   arweaveTags?: Tags,
   chunkSize?: number
+  cacheOnly?: boolean,
+  udl?: UDL,
+  ucm?: boolean
 }
 
 export type FileDownloadOptions = Hooks & {
