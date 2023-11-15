@@ -13,7 +13,6 @@ This package can be used in both browser and Node.js environments.
   - [Membership](#membership)
   - [Memo](#memo)
   - [Stack](#stack)
-  - [File](#file)
   - [Folder](#folder)
   - [Note](#note)
   - [Manifest](#manifest)
@@ -883,35 +882,6 @@ const arweaveUri = await akord.stack.getUri(stackId);
 const arweaveUri = await akord.stack.getUri(stackId, 0);
 ```
 </details>
-
-### file
-
-#### `get(id, vaultId, options)`
-
-Returns file as ArrayBuffer. Puts the whole file into memory.
-For downloading without putting whole file to memory use [download()](#download)
-
-- `id` (`string`, required) - file resource url
-- `vaultId` (`string`, required)
-- `options` (`DownloadOptions`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
-
-#### `download(id, vaultId, options)`
-
-Downloads the file keeping memory consumed (RAM) under defined level: options.chunkSize.
-In browser, streaming of the binary requires self hosting of mitm.html and sw.js
-See: https://github.com/jimmywarting/StreamSaver.js#configuration
-
-- `id` (`string`, required) - file resource url
-- `vaultId` (`string`, required)
-- `options` (`DownloadOptions`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
-
-#### `getPublic(id, options)`
-
-- `id` (`string`, required) - file resource url
-- `options` (`DownloadOptions`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
 
 ### folder
 
