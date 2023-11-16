@@ -21,9 +21,10 @@ jobs:
           sha: ${{ steps.comment-branch.outputs.head_sha }}
           token: ${{ secrets.PAT_TOKEN }}
           status: pending
-      - uses: actions/checkout@v3
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ steps.comment-branch.outputs.head_sha }}
       - uses: actions/setup-node@v3
         with:
           node-version: '16.x'
