@@ -34,11 +34,11 @@
     "@akord/akord-auth": "0.29.2",
     "@akord/crypto": "0.16.0",
     "@akord/ts-cacheable": "1.0.13",
+    "@esm2cjs/p-queue": "^7.3.0",
     "axios": "^1.6.2",
     "cross-fetch": "^4.0.0",
     "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
-    "p-queue": "^7.4.1",
     "rxjs": "^7.5.6",
     "uuid": "^8.3.2",
     "web-streams-polyfill": "^3.2.1"

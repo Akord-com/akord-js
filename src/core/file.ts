@@ -1,5 +1,5 @@
 import * as mime from "mime-types";
-import PQueue, { AbortError } from 'p-queue/dist';
+import PQueue, { AbortError } from '@esm2cjs/p-queue';
 import { Readable } from "stream";
 import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Service } from "./service";

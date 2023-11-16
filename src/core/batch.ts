@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import PQueue, { AbortError } from 'p-queue/dist';
+import PQueue, { AbortError } from "@esm2cjs/p-queue";
 import { Service } from "../core";
 import { MembershipService } from "./membership";
 import { StackService } from "./stack";
