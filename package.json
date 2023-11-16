@@ -34,7 +34,7 @@
     "@akord/akord-auth": "0.29.1",
     "@akord/crypto": "0.11.0",
     "@akord/ts-cacheable": "1.0.13",
-    "axios": "^0.24.0",
+    "axios": "^1.6.2",
     "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
     "rxjs": "^7.5.6",
