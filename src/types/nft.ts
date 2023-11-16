@@ -1,5 +1,6 @@
 import { AssetMetadata } from "./asset";
-import { FileVersion, Node, StorageType } from "./node";
+import { Node, StorageType } from "./node";
+import { FileVersion } from "../types";
 
 export class NFT extends Node {
   ticker: string;

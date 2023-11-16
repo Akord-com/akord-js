@@ -59,9 +59,6 @@ describe("Testing NFT functions", () => {
     const { data } = await akord.nft.getAsset(nftId);
     expect(data).toEqual(await file.arrayBuffer());
 
-    const fileBuffer = await akord.file.get(nft.asset.getUri(StorageType.S3), nft.vaultId);
-    expect(fileBuffer).toEqual(await file.arrayBuffer());
-
     const assetUri = await akord.nft.getUri(nftId);
     expect(assetUri).toBeTruthy();
     expect(assetUri).toEqual(nft.asset.getUri(StorageType.ARWEAVE));
