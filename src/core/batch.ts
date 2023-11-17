@@ -185,15 +185,9 @@ class BatchService extends Service {
           tags: service.arweaveTags,
           item
         }), { signal: options.cancelHook?.signal })
-          .catch((error) => {
-            if (error instanceof AbortError || options.cancelHook?.signal?.aborted) {
-              return ({ data, errors, cancelled: items.length - stacksCreated });
-            }
-            errors.push({ name: item.name || item.file.name, message: error.toString(), error });
-          });
       } catch (error) {
-        if (!options.cancelHook?.signal?.aborted) {
-          errors.push({ name: item.name || item.file.name, message: error.toString(), error });
+        if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
+          errors.push({ name: item.name ,message: error.toString(), error });
         }
       }
     }
@@ -220,12 +214,14 @@ class BatchService extends Service {
     try {
       await uploadQ.addAll(items.map(item => () => uploadItem(item)), { signal: options.cancelHook?.signal });
     } catch (error) {
-      if (error instanceof AbortError || !options.cancelHook?.signal?.aborted) {
-        return ({ data, errors, cancelled: items.length - stacksCreated });
+      if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
+        errors.push({ message: error.toString(), error });
       }
-      errors.push({ message: error.toString(), error });
     }
     await postTxQ.onIdle();
+    if (options.cancelHook?.signal?.aborted) {
+      return ({ data, errors, cancelled: items.length - stacksCreated });
+    }
     return { data, errors, cancelled: 0 };
   }
 
