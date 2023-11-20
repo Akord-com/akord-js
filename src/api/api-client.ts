@@ -13,6 +13,7 @@ import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
 import { StorageType } from "../types";
 import fetch from 'cross-fetch';
+import { jsonToBase64 } from "@akord/crypto";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -561,7 +562,7 @@ export class ApiClient {
     const me = this;
     const headers = {
       'Authorization': auth,
-      'Tags': JSON.stringify(this._tags),
+      'Tags': jsonToBase64(this._tags),
       'Storage-Class': this._storage?.replace(":", ""),
       'Content-Type': 'application/octet-stream'
     } as Record<string, string>
