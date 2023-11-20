@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { FileVersion, StackCreateOptions, StorageType, nodeType } from "../types";
 import { FileLike } from "../types/file";
-import { FileService } from "./file";
+import { FileGetOptions, FileService } from "./file";
 import { NFT, NFTMetadata } from "../types/nft";
 import { actionRefs, functions, smartweaveTags } from "../constants";
 import { Tag, Tags } from "../types/contract";
@@ -72,9 +72,9 @@ class NFTService extends NodeService<NFT> {
    * @param  {string} nftId
    * @returns Promise with NFT asset
    */
-  public async getAsset(nftId: string): Promise<FileVersion & { data: ArrayBuffer }> {
+  public async getAsset(nftId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
     const nft = new NFT(await this.api.getNode<NFT>(nftId, this.objectType));
-    const { fileData } = await this.api.downloadFile(nft.getUri(StorageType.S3));
+    const { fileData } = await this.api.downloadFile(nft.getUri(StorageType.S3), options);
     return { data: fileData, ...nft.asset } as FileVersion & { data: ArrayBuffer };
   }
 
