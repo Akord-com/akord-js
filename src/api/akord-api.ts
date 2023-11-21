@@ -89,7 +89,7 @@ export default class AkordApi extends Api {
       .progressHook(uploadOptions.progressHook)
       .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
-    Logger.log("Uploaded file with id: " + resource);
+    Logger.log("Uploaded file with uri: " + resource.resourceUri);
 
     return resource;
   };
