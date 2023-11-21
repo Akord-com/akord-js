@@ -6,7 +6,6 @@ import { Stack } from "./stack";
 import { Note } from "./note";
 import { Memo } from "./memo";
 import { Tags } from "./contract";
-import { UDL } from "./udl";
 import { NFT } from "./nft";
 
 export enum nodeType {

@@ -79,7 +79,8 @@ class FileService extends Service {
       resourceUri: uploadResult.resourceUri,
       numberOfChunks: uploadResult.numberOfChunks,
       chunkSize: uploadResult.chunkSize,
-      udl: uploadResult.udl
+      udl: uploadResult.udl,
+      ucm: uploadResult.ucm
     });
     return version;
   }
@@ -144,7 +145,13 @@ class FileService extends Service {
     if (!isPublic) {
       encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
     }
-    return { resourceUri: resourceUri, resourceHash: resourceHash, encryptedKey: encryptedKey, udl: options.udl }
+    return {
+      resourceUri: resourceUri,
+      resourceHash: resourceHash,
+      encryptedKey: encryptedKey,
+      udl: options.udl,
+      ucm: options.ucm
+    }
   }
 
   private async uploadChunked(
@@ -198,7 +205,7 @@ class FileService extends Service {
       targetOffset += resourceChunkSize;
     }
     await chunksQ.onIdle();
-    
+
     if (options.cancelHook?.signal?.aborted) {
       return null;
     }
@@ -219,7 +226,8 @@ class FileService extends Service {
       chunkSize: chunkSizeWithNonceAndIv,
       encryptedKey: encryptedKey,
       resourceHash: resourceHash,
-      udl: options.udl
+      udl: options.udl,
+      ucm: options.ucm
     };
   }
 
@@ -340,7 +348,8 @@ export type FileUploadResult = {
   chunkSize?: number,
   iv?: string[]
   encryptedKey?: string,
-  udl?: UDL
+  udl?: UDL,
+  ucm?: boolean
 }
 
 export type Hooks = {

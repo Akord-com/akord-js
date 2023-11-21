@@ -11,6 +11,7 @@ export class FileVersion extends Encryptable implements Version {
   status: string;
   size: number;
   udl?: UDL;
+  ucm?: boolean;
   numberOfChunks?: number;
   chunkSize?: number;
 
@@ -26,6 +27,7 @@ export class FileVersion extends Encryptable implements Version {
     this.name = fileVersionProto.name;
     this.status = fileVersionProto.status;
     this.udl = fileVersionProto.udl;
+    this.ucm = fileVersionProto.ucm;
   }
 
   getUri(type: StorageType): string {
