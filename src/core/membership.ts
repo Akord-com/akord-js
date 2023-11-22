@@ -423,7 +423,7 @@ class MembershipService extends Service {
           const tags = await this.api.getTransactionTags(uri);
           const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase()
             || tag.name.toLowerCase() === encryptionTagsLegacy.ENCRYPTED_KEY.toLowerCase())?.value
-          const iv = tags.find(tag => tag.name === encryptionTags.IV
+          const iv = tags.find(tag => tag.name.toLowerCase() === encryptionTags.IV.toLowerCase()
             || tag.name.toLowerCase() === encryptionTagsLegacy.IV.toLowerCase())?.value
           if (encryptedKey) {
             workerMessage.key = await service.dataEncrypter.decryptKey(encryptedKey);
