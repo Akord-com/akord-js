@@ -104,12 +104,15 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
+    
     const size = items.reduce((sum, stack) => {
       return sum + stack.file.size;
     }, 0);
     let progress = 0;
     let uploadedStacksCount = 0;
     const perFileProgress = new Map();
+    const uploadedFiles = new Set();
+
     if (options.processingCountHook) {
       options.processingCountHook(uploadedStacksCount);
     }
@@ -119,10 +122,17 @@ class BatchService extends Service {
 
     if (options.progressHook) {
       const onProgress = options.progressHook
-      const stackProgressHook = (_: number, binaryProgress: number, progressId: string) => {
+      const stackProgressHook = (percentageProgress: number, binaryProgress: number, progressId: string) => {
         progress += binaryProgress - (perFileProgress.get(progressId) || 0)
         perFileProgress.set(progressId, binaryProgress);
         onProgress(Math.min(100, Math.round(progress / size * 100)));
+        if (percentageProgress === 100 && !uploadedFiles.has(progressId)) {
+          uploadedFiles.add(progressId);
+          uploadedStacksCount += 1;
+          if (options.processingCountHook) {
+            options.processingCountHook(uploadedStacksCount);
+          }
+        }
       }
       options.progressHook = stackProgressHook;
     }
@@ -173,11 +183,6 @@ class BatchService extends Service {
           tags: service.tags
         };
         const id = await service.uploadState(state, service.vault.cacheOnly);
-
-        uploadedStacksCount += 1;
-        if (options.processingCountHook) {
-          options.processingCountHook(uploadedStacksCount);
-        }
 
         postTxQ.add(() => postTx({
           vaultId: service.vaultId,
