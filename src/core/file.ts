@@ -191,8 +191,10 @@ class FileService extends Service {
     const chunksQ = new PQueue({ concurrency: CHUNKS_CONCURRENCY });
     const chunksQTasks = [];
     while (sourceOffset + chunkSize < file.size) {
+      const localSourceOffset = sourceOffset;
+      const localTargetOffset = targetOffset;
       const task = chunksQ.add(
-        () => this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, targetOffset, location: chunkedResource.resourceLocation }),
+        () => this.uploadChunk(file, chunkSize, localSourceOffset, { digestObject, encryptedKey, targetOffset: localTargetOffset, location: chunkedResource.resourceLocation }),
         { signal: options.cancelHook?.signal })
         .catch((error) => {
           if (error instanceof AbortError) {
