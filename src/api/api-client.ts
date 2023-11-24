@@ -445,9 +445,6 @@ export class ApiClient {
     if (this._data) {
       config.data = this._data;
     }
-    if (this._tags) {
-      config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
-    }
     try {
       const response = await axios(config);
       if (isPaginated(response)) {
