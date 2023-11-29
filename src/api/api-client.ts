@@ -17,7 +17,6 @@ import { jsonToBase64 } from "@akord/crypto";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
-const ETAG_HEADER = 'Etag';
 const GATEWAY_HEADER_PREFIX = 'x-amz-meta-';
 
 export class ApiClient {
@@ -45,9 +44,6 @@ export class ApiClient {
   private _metadata: any;
   private _numberOfChunks: number;
 
-  // request headers
-  private _etag: string;
-
   // axios config
   private _data: AxiosRequestConfig["data"];
   private _queryParams: any = {};
@@ -74,7 +70,6 @@ export class ApiClient {
     clone._input = this._input;
     clone._metadata = this._metadata;
     clone._numberOfChunks = this._numberOfChunks;
-    clone._etag = this._etag;
     clone._data = this._data;
     clone._queryParams = this._queryParams;
     clone._progressId = this._progressId;
@@ -133,11 +128,6 @@ export class ApiClient {
 
   state(state: any): ApiClient {
     this._state = state;
-    return this;
-  }
-
-  etag(etag: any): ApiClient {
-    this._etag = etag;
     return this;
   }
 
@@ -547,7 +537,7 @@ export class ApiClient {
    * - cancelHook()
    * @returns {Promise<string[]>}
    */
-  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceEtag: string, resourceSize: number }> {
+  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceSize: number }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
@@ -569,9 +559,6 @@ export class ApiClient {
     }
     if (this._resourceId) {
       headers[CONTENT_LOCATION_HEADER] = this._resourceId;
-    }
-    if (this._etag) {
-      headers[ETAG_HEADER] = this._etag;
     }
 
     this._progressId = uuidv4();
@@ -604,7 +591,6 @@ export class ApiClient {
       return {
         resourceUri: response.data.resourceUri,
         resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
-        resourceEtag: response.headers[ETAG_HEADER.toLocaleLowerCase()],
         resourceSize: this._data.byteLength
       };
     } catch (error) {

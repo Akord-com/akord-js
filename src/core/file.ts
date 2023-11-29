@@ -165,7 +165,6 @@ class FileService extends Service {
     const chunkSizeWithNonceAndIv = isPublic ? chunkSize : chunkSize + AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES;
     const numberOfChunks = Math.ceil(file.size / chunkSize);
     const fileSize = isPublic ? file.size : file.size + numberOfChunks * (AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES);
-    const etags: Array<string> = [];
 
     this.client = new ApiClient()
       .env(this.api.config)
@@ -182,14 +181,12 @@ class FileService extends Service {
     // upload the first chunk
     const chunkedResource = await this.uploadChunk(file, chunkSize, 0, { digestObject, tags: tags });
     const resourceChunkSize = chunkedResource.resourceSize;
-    const encryptedKey = chunkedResource.tags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
-    etags.push(chunkedResource.resourceEtag);
+    const encryptedKey = chunkedResource.tags.find((tag) => tag.name === encTags.ENCRYPTED_KEY)?.value;
 
     // upload the chunks in parallel
     let sourceOffset = chunkSize;
     let targetOffset = resourceChunkSize;
     const chunksQ = new PQueue({ concurrency: CHUNKS_CONCURRENCY });
-    const chunksQTasks = [];
     while (sourceOffset + chunkSize < file.size) {
       const localSourceOffset = sourceOffset;
       const localTargetOffset = targetOffset;
@@ -202,7 +199,6 @@ class FileService extends Service {
           }
           throw error;
         });
-      chunksQTasks.push(task);
       sourceOffset += chunkSize;
       targetOffset += resourceChunkSize;
     }
@@ -212,15 +208,11 @@ class FileService extends Service {
       return null;
     }
 
-    chunksQTasks.forEach(async task => {
-      etags.push((await task).resourceEtag); //resolved already, awaiting for type safety
-    });
-
     // upload the last chunk
     const resourceHash = digestObject.getHash("B64")
     const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
     const fileTags = tags.concat(fileSignatureTags);
-    const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, etags, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
+    const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
 
     return {
       resourceUri: resource.resourceUri,
@@ -237,7 +229,7 @@ class FileService extends Service {
     file: FileLike,
     chunkSize: number = DEFAULT_CHUNK_SIZE_IN_BYTES,
     offset: number = 0,
-    options: { digestObject?: any, encryptedKey?: string, location?: string, tags?: Tags, etags?: Array<string>, targetOffset?: number } = {}) {
+    options: { digestObject?: any, encryptedKey?: string, location?: string, tags?: Tags, targetOffset?: number } = {}) {
     const chunk = file.slice(offset, offset + chunkSize);
     const arrayBuffer = await chunk.arrayBuffer();
     const data = await this.processWriteRaw(arrayBuffer, { encryptedKey: options.encryptedKey, prefixCiphertextWithIv: true, encode: false });
@@ -259,9 +251,6 @@ class FileService extends Service {
       client.tags([...options.tags, ...data.encryptionTags]);
     }
 
-    if (options.etags && options.etags.length > 0) {
-      client.etag(options.etags.join(","));
-    }
     const res = await client.uploadFile();
     return { ...res, tags: data.encryptionTags };
   }
