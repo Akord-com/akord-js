@@ -33,12 +33,13 @@ class FileService extends Service {
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
     options.public = this.isPublic;
-    options.chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE_IN_BYTES;
+    const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE_IN_BYTES;
     const tags = this.getFileTags(file, options);
     if (options.chunkSize < MINIMAL_CHUNK_SIZE_IN_BYTES) {
       throw new BadRequest("Chunk size can not be smaller than: " + MINIMAL_CHUNK_SIZE_IN_BYTES / BYTES_IN_MB)
     }
     if (file.size > options.chunkSize) {
+      options.chunkSize = chunkSize;
       return await this.uploadChunked(file, tags, options);
     } else {
       return await this.upload(file, tags, options);
@@ -190,7 +191,7 @@ class FileService extends Service {
     while (sourceOffset + chunkSize < file.size) {
       const localSourceOffset = sourceOffset;
       const localTargetOffset = targetOffset;
-      const task = chunksQ.add(
+      chunksQ.add(
         () => this.uploadChunk(file, chunkSize, localSourceOffset, { digestObject, encryptedKey, targetOffset: localTargetOffset, location: chunkedResource.resourceLocation }),
         { signal: options.cancelHook?.signal })
         .catch((error) => {
