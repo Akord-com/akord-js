@@ -52,7 +52,7 @@ export abstract class Node extends Encryptable {
   }
 
   getVersion(index?: number): Version {
-    if (index) {
+    if (index >= 0) {
       if (this.versions && this.versions[index]) {
         return this.versions[index];
       } else {
