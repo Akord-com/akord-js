@@ -34,14 +34,15 @@ class FileService extends Service {
   ): Promise<FileUploadResult> {
     options.public = this.isPublic;
     const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE_IN_BYTES;
-    const tags = this.getFileTags(file, options);
-    if (options.chunkSize < MINIMAL_CHUNK_SIZE_IN_BYTES) {
+    if (chunkSize < MINIMAL_CHUNK_SIZE_IN_BYTES) {
       throw new BadRequest("Chunk size can not be smaller than: " + MINIMAL_CHUNK_SIZE_IN_BYTES / BYTES_IN_MB)
     }
-    if (file.size > options.chunkSize) {
+    if (file.size > chunkSize) {
       options.chunkSize = chunkSize;
+      const tags = this.getFileTags(file, options);
       return await this.uploadChunked(file, tags, options);
     } else {
+      const tags = this.getFileTags(file, options);
       return await this.upload(file, tags, options);
     }
   }
