@@ -1,7 +1,7 @@
 import { NodeService } from "./node";
 import { FileVersion, StackCreateOptions, StorageType, nodeType } from "../types";
-import { FileLike } from "../types/file";
-import { FileGetOptions, FileService } from "./file";
+import { FileSource } from "../types/file";
+import { FileGetOptions, FileService, createFileLike } from "./file";
 import { NFT, NFTMetadata } from "../types/nft";
 import { actionRefs, functions, smartweaveTags } from "../constants";
 import { Tag, Tags } from "../types/contract";
@@ -17,14 +17,14 @@ class NFTService extends NodeService<NFT> {
 
   /**
    * @param  {string} vaultId
-   * @param  {FileLike} asset
+   * @param  {FileSource} asset file source: web File object, file path, buffer or stream
    * @param  {NFTMetadata} metadata
    * @param  {StackCreateOptions} options
    * @returns Promise with corresponding transaction id
    */
   public async mint(
     vaultId: string,
-    asset: FileLike,
+    asset: FileSource,
     metadata: NFTMetadata,
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<{ nftId: string, transactionId: string, object: NFT }> {
@@ -49,16 +49,21 @@ class NFTService extends NodeService<NFT> {
     service.setFunction(functions.NODE_CREATE);
     service.setAkordTags([]);
 
-    createOptions.arweaveTags = (createOptions.arweaveTags || [{ name: 'Content-Type', value: asset.type }]).concat(nftTags);
+    createOptions.arweaveTags = (createOptions.arweaveTags || []).concat(nftTags);
+
     createOptions.cacheOnly = service.vault.cacheOnly;
 
     if (createOptions.ucm) {
       createOptions.arweaveTags = createOptions.arweaveTags.concat([{ name: 'Indexed-By', value: 'ucm' }]);
     }
 
+    const fileLike = await createFileLike(asset, createOptions);
+    if (fileLike.type) {
+      createOptions.arweaveTags.push({ name: 'Content-Type', value: fileLike.type });
+    }
     const fileService = new FileService(this.wallet, this.api, service);
-    const fileUploadResult = await fileService.create(asset, createOptions);
-    const version = await fileService.newVersion(asset, fileUploadResult);
+    const fileUploadResult = await fileService.create(fileLike, createOptions);
+    const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = JSON.parse(nftTags.find((tag: Tag) => tag.name === "Init-State").value);
     state.asset = version;
