@@ -189,25 +189,25 @@ class FileService extends Service {
     let sourceOffset = chunkSize;
     let targetOffset = resourceChunkSize;
     const chunksQ = new PQueue({ concurrency: CHUNKS_CONCURRENCY });
+    const chunks = [];
     while (sourceOffset + chunkSize < file.size) {
       const localSourceOffset = sourceOffset;
       const localTargetOffset = targetOffset;
-      chunksQ.add(
+      chunks.push(
         () => this.uploadChunk(file, chunkSize, localSourceOffset, { digestObject, encryptedKey, targetOffset: localTargetOffset, location: chunkedResource.resourceLocation }),
-        { signal: options.cancelHook?.signal })
-        .catch((error) => {
-          if (error instanceof AbortError) {
-            return null;
-          }
-          throw error;
-        });
+      )
       sourceOffset += chunkSize;
       targetOffset += resourceChunkSize;
     }
-    await chunksQ.onIdle();
-
+    try {
+      await chunksQ.addAll(chunks, { signal: options.cancelHook?.signal });
+    } catch (error) {
+      if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
+        throw error;
+      }
+    }
     if (options.cancelHook?.signal?.aborted) {
-      return null;
+      throw new AbortError();
     }
 
     // upload the last chunk
