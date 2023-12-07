@@ -1,4 +1,4 @@
-import { Akord, NFTMetadata, StorageType, UDL } from "../index";
+import { Akord, CollectionMetadata, NFTMetadata, StorageType, UDL } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath } from './common';
 import { email, password } from './data/test-credentials';
@@ -62,5 +62,52 @@ describe("Testing NFT functions", () => {
     const assetUri = await akord.nft.getUri(nftId);
     expect(assetUri).toBeTruthy();
     expect(assetUri).toEqual(nft.asset.getUri(StorageType.ARWEAVE));
+  });
+
+  it.skip("should mint a collection", async () => {
+
+    const { vaultId } = await akord.vault.create(faker.random.words(), {
+      public: true,
+      cacheOnly: false
+    });
+
+    const nftName = "IMG_7476.jpeg";
+    const file = await NodeJs.File.fromPath(testDataPath + nftName);
+
+    const collectionMetadata = {
+      name: "Flora Fantasy Test",
+      creator: "xxxx",
+      owner: "yyyy",
+      collection: "Flora Fantasy Test",
+      description: "A rare digital representation of the mythical Golden Orchid",
+      type: "image",
+      topics: ["floral", "nature"],
+      banner: file,
+    } as CollectionMetadata;
+
+    const udl = {
+      licenseFee: { type: "One-Time", value: 10 }
+    } as UDL;
+
+    const { data } = await akord.nft.mintCollection(
+      vaultId,
+      [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
+      collectionMetadata,
+      { udl: udl }
+    );
+
+    console.log("Collection id: " + data.collectionId);
+    console.log("Collection object: " + data.object);
+    console.log("Minted NFTs: " + data.items);
+  });
+
+  it.skip("should list all nfts & collections for given vault", async () => {
+
+    const vaultId = "SlhbTDRGVztlusw-p0adsqbRcss605OB64EczSEdSzE";
+
+    const nfts = await akord.nft.listAll(vaultId);
+    console.log(nfts);
+    const collections = await akord.nft.listAllCollections(vaultId);
+    console.log(collections);
   });
 });

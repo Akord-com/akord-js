@@ -40,9 +40,9 @@ export type Claim = {
 }
 
 export type NFTMetadata = {
-  owner: string // NFT owner address
+  owner?: string // NFT owner address
   creator?: string, // NFT creator address, if not present, default to owner
   collection?: string // NFT collection code
-  contractTxId?: string, // default to "foOzRR7kX-zGzD749Lh4_SoBogVefsFfao67Rurc2Tg"
+  contractTxId?: string, // default to "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"
   ticker?: string, // default to "ATOMIC"
 } & AssetMetadata

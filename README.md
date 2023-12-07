@@ -1333,7 +1333,7 @@ The atomic asset can be minted with the option to attach the [Universal Data Lic
 #### `mint(vaultId, asset, metadata, options)`
 
 - `vaultId` (`string`, required)
-- `asset` ([`FileLike`][file-like], required) - asset data
+- `asset` ([`FileSource`][file-source], required) - asset data
 - `metadata` (`NFTMetadata`, required) - NFT metadata: name, ticker, description, owner, creator, etc.
 - `options` (`FileUploadOptions`, optional) - ex: UDL terms
 - returns `Promise<{ nftId, transactionId }>` - Promise with new nft id & corresponding transaction id
