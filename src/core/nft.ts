@@ -114,6 +114,10 @@ class NFTService extends NodeService<NFT> {
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<MintCollectionResponse> {
 
+    if (!items || items.length === 0) {
+      throw new BadRequest("No items provided for minting.");
+    }
+
     const vault = await this.api.getVault(vaultId);
     if (!vault.public || vault.cacheOnly) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
@@ -144,7 +148,7 @@ class NFTService extends NodeService<NFT> {
       ucm: options.ucm,
     } as any;
 
-    const { nodeId: collectionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
+    const { nodeId: collectionId, transactionId, object: collectionCreation } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
     for (let nft of items) {
       try {
@@ -160,6 +164,18 @@ class NFTService extends NodeService<NFT> {
         nfts.push({ nftId, transactionId, object });
       } catch (error) {
         errors.push({ name: nft.metadata.name, message: error.message, error: error });
+      }
+    }
+
+    if (mintedItems.length === 0) {
+      return {
+        data: {
+          items: [],
+          collectionId: collectionId,
+          transactionId: transactionId,
+          object: collectionCreation
+        },
+        errors,
       }
     }
 
