@@ -10,6 +10,7 @@ import { assetTags } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
 
 const DEFAULT_TICKER = "ATOMIC";
+const DEFAULT_TYPE = "image";
 const DEFAULT_CONTRACT_SRC = "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"; // Atomic asset contract source
 
 class NFTService extends NodeService<NFT> {
@@ -112,11 +113,13 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     { name: smartweaveTags.CONTRACT_SOURCE, value: metadata.contractTxId || DEFAULT_CONTRACT_SRC },
     { name: smartweaveTags.INIT_STATE, value: JSON.stringify(initState) },
     { name: assetTags.TITLE, value: metadata.name },
-    { name: assetTags.TYPE, value: metadata.type },
-    { name: 'Creator', value: metadata.creator },
+    { name: assetTags.TYPE, value: metadata.type || DEFAULT_TYPE },
     { name: 'Contract-Manifest', value: '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}' },
   ];
 
+  if (metadata.creator) {
+    nftTags.push({ name: 'Creator', value: metadata.creator });
+  }
   if (metadata.description) {
     nftTags.push({ name: assetTags.DESCRIPTION, value: metadata.description });
   }

@@ -9,8 +9,8 @@ export enum assetTags {
 };
 
 export type AssetMetadata = {
-  type: AssetType,
   name: string, // max 150 characters
+  type?: AssetType, // default to "image"
   description?: string, // optional description, max 300 characters
   topics?: string[],
 }
