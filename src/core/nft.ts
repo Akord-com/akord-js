@@ -13,10 +13,12 @@ import { ListOptions } from "../types/query-options";
 import { mergeState, paginate } from "./common";
 import { v4 as uuidv4 } from "uuid";
 import { StackService } from "./stack";
+import { Logger } from "../logger";
 
 const DEFAULT_TICKER = "ATOMIC";
 const DEFAULT_TYPE = "image";
 const DEFAULT_CONTRACT_SRC = "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"; // Atomic asset contract source
+const WARP_MANIFEST = '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}';
 
 class NFTService extends NodeService<NFT> {
   objectType = nodeType.NFT;
@@ -60,12 +62,12 @@ class NFTService extends NodeService<NFT> {
     createOptions.cacheOnly = service.vault.cacheOnly;
 
     if (createOptions.ucm) {
-      createOptions.arweaveTags = createOptions.arweaveTags.concat([{ name: 'Indexed-By', value: 'ucm' }]);
+      createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Indexed-By', 'ucm')]);
     }
 
     const fileLike = await createFileLike(asset, createOptions);
     if (fileLike.type) {
-      createOptions.arweaveTags.push({ name: 'Content-Type', value: fileLike.type });
+      createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
     }
     const fileService = new FileService(this.wallet, this.api, service);
     const fileUploadResult = await fileService.create(fileLike, createOptions);
@@ -119,6 +121,10 @@ class NFTService extends NodeService<NFT> {
       throw new BadRequest("No items provided for minting.");
     }
 
+    if (!metadata.name) {
+      throw new BadRequest("Missing collection name.");
+    }
+
     const vault = await this.api.getVault(vaultId);
     if (!vault.public || vault.cacheOnly) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
@@ -149,7 +155,7 @@ class NFTService extends NodeService<NFT> {
       ucm: options.ucm,
     } as any;
 
-    const { nodeId: collectionId, transactionId, object: collectionCreation } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
+    const { nodeId: collectionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
     for (let nft of items) {
       try {
@@ -164,18 +170,15 @@ class NFTService extends NodeService<NFT> {
         mintedItems.push(object.getUri(StorageType.ARWEAVE));
         nfts.push({ nftId, transactionId, object });
       } catch (error) {
+        Logger.log("Minting the atomic asset failed.");
+        Logger.log(error);
         errors.push({ name: nft.metadata.name, message: error.message, error: error });
       }
     }
 
     if (mintedItems.length === 0) {
       return {
-        data: {
-          items: [],
-          collectionId: collectionId,
-          transactionId: transactionId,
-          object: collectionCreation
-        },
+        data: { items: [], collectionId: undefined, transactionId: undefined, object: undefined },
         errors,
       }
     }
@@ -186,26 +189,29 @@ class NFTService extends NodeService<NFT> {
     } as any;
 
     const collectionTags = [
-      { name: 'Data-Protocol', value: "Collection" },
-      { name: 'Content-Type', value: "application/json" },
-      { name: smartweaveTags.APP_NAME, value: 'SmartWeaveContract' },
-      { name: smartweaveTags.APP_VERSION, value: '0.3.0' },
-      { name: smartweaveTags.CONTRACT_SOURCE, value: metadata.contractTxId || DEFAULT_CONTRACT_SRC },
-      { name: smartweaveTags.INIT_STATE, value: JSON.stringify(collectionMintedState) },
-      { name: assetTags.TITLE, value: metadata.name },
-      { name: 'Name', value: metadata.name },
-      { name: assetTags.DESCRIPTION, value: metadata.description },
-      { name: assetTags.TYPE, value: "Document" },
-      { name: 'Contract-Manifest', value: '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}' },
-      { name: 'Vault-Id', value: vaultId },
+      new Tag('Data-Protocol', "Collection"),
+      new Tag('Content-Type', "application/json"),
+      new Tag(smartweaveTags.APP_NAME, 'SmartWeaveContract'),
+      new Tag(smartweaveTags.APP_VERSION, '0.3.0'),
+      new Tag(smartweaveTags.CONTRACT_SOURCE, metadata.contractTxId || DEFAULT_CONTRACT_SRC),
+      new Tag(smartweaveTags.INIT_STATE, JSON.stringify(collectionMintedState)),
+      new Tag(assetTags.TITLE, metadata.name),
+      new Tag('Name', metadata.name),
+      new Tag(assetTags.TYPE, "Document"),
+      new Tag('Contract-Manifest', WARP_MANIFEST),
+      new Tag('Vault-Id', vaultId),
     ];
 
+    if (metadata.description) {
+      collectionTags.push(new Tag(assetTags.DESCRIPTION, metadata.description));
+    }
+
     if (metadata.creator) {
-      collectionTags.push({ name: 'Creator', value: metadata.creator });
+      collectionTags.push(new Tag('Creator', metadata.creator));
     }
 
     if (metadata.code) {
-      collectionTags.push({ name: 'Collection-Code', value: metadata.code });
+      collectionTags.push(new Tag('Collection-Code', metadata.code));
     }
 
     if (metadata.banner) {
@@ -216,11 +222,11 @@ class NFTService extends NodeService<NFT> {
         (<any>metadata.banner).name ? (<any>metadata.banner).name : "Collection banner",
         { parentId: collectionId }
       );
-      collectionTags.push({ name: 'Banner', value: banner.getUri(StorageType.ARWEAVE) });
+      collectionTags.push(new Tag('Banner', banner.getUri(StorageType.ARWEAVE)));
       collectionMintedState.bannerUri = banner.versions[0].resourceUri;
     } else {
       // if not provided, set the first NFT as a collection banner
-      collectionTags.push({ name: 'Banner', value: nfts[0].object.asset.getUri(StorageType.ARWEAVE) });
+      collectionTags.push(new Tag('Banner', nfts[0].object.asset.getUri(StorageType.ARWEAVE)));
       collectionMintedState.bannerUri = nfts[0].object.asset.resourceUri;
     }
 
@@ -232,7 +238,7 @@ class NFTService extends NodeService<NFT> {
         (<any>metadata.thumbnail).name ? (<any>metadata.thumbnail).name : "Collection thumbnail",
         { parentId: collectionId }
       );
-      collectionTags.push({ name: 'Thumbnail', value: thumbnail.getUri(StorageType.ARWEAVE) });
+      collectionTags.push(new Tag('Thumbnail', thumbnail.getUri(StorageType.ARWEAVE)));
       collectionMintedState.thumbnailUri = thumbnail.versions[0].resourceUri;
     }
 
@@ -311,27 +317,27 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
   } as any;
 
   const nftTags = [
-    { name: smartweaveTags.APP_NAME, value: 'SmartWeaveContract' },
-    { name: smartweaveTags.APP_VERSION, value: '0.3.0' },
-    { name: smartweaveTags.CONTRACT_SOURCE, value: metadata.contractTxId || DEFAULT_CONTRACT_SRC },
-    { name: smartweaveTags.INIT_STATE, value: JSON.stringify(initState) },
-    { name: assetTags.TITLE, value: metadata.name },
-    { name: assetTags.TYPE, value: metadata.type || DEFAULT_TYPE },
-    { name: 'Contract-Manifest', value: '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}' },
+    new Tag(smartweaveTags.APP_NAME, 'SmartWeaveContract'),
+    new Tag(smartweaveTags.APP_VERSION, '0.3.0'),
+    new Tag(smartweaveTags.CONTRACT_SOURCE, metadata.contractTxId || DEFAULT_CONTRACT_SRC),
+    new Tag(smartweaveTags.INIT_STATE, JSON.stringify(initState)),
+    new Tag(assetTags.TITLE, metadata.name),
+    new Tag(assetTags.TYPE, metadata.type || DEFAULT_TYPE),
+    new Tag('Contract-Manifest', WARP_MANIFEST),
   ];
 
   if (metadata.creator) {
-    nftTags.push({ name: 'Creator', value: metadata.creator });
+    nftTags.push(new Tag('Creator', metadata.creator));
   }
   if (metadata.description) {
-    nftTags.push({ name: assetTags.DESCRIPTION, value: metadata.description });
+    nftTags.push(new Tag(assetTags.DESCRIPTION, metadata.description));
   }
   if (metadata.collection) {
-    nftTags.push({ name: 'Collection-Code', value: metadata.collection });
+    nftTags.push(new Tag('Collection-Code', metadata.collection));
   }
   if (metadata.topics) {
     for (let topic of metadata.topics) {
-      nftTags.push({ name: assetTags.TOPIC + ":" + topic, value: topic });
+      nftTags.push(new Tag(assetTags.TOPIC + ":" + topic, topic));
     }
   }
   return nftTags;

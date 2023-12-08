@@ -1,4 +1,4 @@
-import { Akord, CollectionMetadata, NFTMetadata, StorageType, UDL } from "../index";
+import { Akord, NFTMetadata, StorageType, UDL } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath } from './common';
 import { email, password } from './data/test-credentials';
@@ -78,27 +78,28 @@ describe("Testing NFT functions", () => {
       name: "Flora Fantasy Test",
       creator: "xxxx",
       owner: "yyyy",
-      collection: "Flora Fantasy Test",
       description: "A rare digital representation of the mythical Golden Orchid",
-      type: "image",
       topics: ["floral", "nature"],
       banner: file,
-    } as CollectionMetadata;
+    };
 
     const udl = {
       licenseFee: { type: "One-Time", value: 10 }
     } as UDL;
 
-    const { data } = await akord.nft.mintCollection(
+    const { data, errors } = await akord.nft.mintCollection(
       vaultId,
       [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
       collectionMetadata,
       { udl: udl }
     );
 
+    console.log(errors);
     console.log("Collection id: " + data.collectionId);
-    console.log("Collection object: " + data.object);
-    console.log("Minted NFTs: " + data.items);
+    console.log("Collection object: ");
+    console.log(data.object);
+    console.log("Minted NFTs: ");
+    console.log(data.items);
   });
 
   it.skip("should list all nfts & collections for given vault", async () => {
