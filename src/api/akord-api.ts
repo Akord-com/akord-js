@@ -94,6 +94,19 @@ export default class AkordApi extends Api {
     return resource;
   };
 
+  public async getUploadState(id: string): Promise<{ resourceUri: string[] }> {
+    try {
+      const resource = await new ApiClient()
+        .env(this.config)
+        .resourceId(id)
+        .getUploadState()
+
+      return resource;
+    } catch (error) {
+      return null; // upload state not saved yet
+    }
+  };
+
   public async downloadFile(id: string, options: FileGetOptions = {}): Promise<{ fileData: ArrayBuffer | ReadableStream<Uint8Array>, metadata: EncryptionMetadata }> {
     const { response } = await new ApiClient()
       .env(this.config)

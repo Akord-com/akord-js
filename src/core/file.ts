@@ -21,6 +21,7 @@ const BYTES_IN_MB = 1000000;
 const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
 const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
 const CHUNKS_CONCURRENCY = 25;
+const UPLOADER_POLLING_RATE_IN_MILLISECONDS = 2500;
 
 
 class FileService extends Service {
@@ -215,6 +216,18 @@ class FileService extends Service {
     const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
     const fileTags = tags.concat(fileSignatureTags);
     const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
+
+    // polling loop
+    if (!options.cacheOnly) {
+      const uri = chunkedResource.resourceLocation.split(":")[0];
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, UPLOADER_POLLING_RATE_IN_MILLISECONDS));        const state = await this.api.getUploadState(uri);
+        if (state && state.resourceUri) {
+          resource.resourceUri = state.resourceUri;
+          break;
+        }
+      }
+    }
 
     return {
       resourceUri: resource.resourceUri,

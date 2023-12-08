@@ -598,6 +598,16 @@ export class ApiClient {
     }
   }
 
+  async getUploadState(): Promise<{ resourceUri: string[] }> {
+    if (!this._resourceId) {
+      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
+    }
+    const data = await this.get(`${this._gatewayurl}/internal/uploader/${this._resourceId}`);
+    return {
+      resourceUri: data.resourceUri
+    }
+  }
+
   /**
    *
    * @requires:
