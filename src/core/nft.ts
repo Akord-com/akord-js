@@ -1,5 +1,5 @@
 import { NodeService } from "./node";
-import { FileVersion, StackCreateOptions, StorageType, nodeType } from "../types";
+import { FileVersion, StackCreateOptions, StorageType, UDL_LICENSE_TX_ID, nodeType, tagNames } from "../types";
 import { FileSource } from "../types/file";
 import { FileGetOptions, FileService, createFileLike } from "./file";
 import { NFT, NFTMetadata } from "../types/nft";
@@ -207,7 +207,8 @@ class NFTService extends NodeService<NFT> {
       new Tag(assetTags.TYPE, "Document"),
       new Tag('Contract-Manifest', WARP_MANIFEST),
       new Tag('Vault-Id', vaultId),
-      new Tag('Collection-Code', collectionCode)
+      new Tag('Collection-Code', collectionCode),
+      new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID)
     ];
 
     if (metadata.description) {
