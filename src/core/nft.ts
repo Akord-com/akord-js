@@ -16,7 +16,7 @@ import { StackService } from "./stack";
 import { Logger } from "../logger";
 
 const DEFAULT_TICKER = "ATOMIC";
-const DEFAULT_TYPE = "image";
+const DEFAULT_ASSET_TYPE = "image";
 const DEFAULT_CONTRACT_SRC = "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"; // Atomic asset contract source
 const WARP_MANIFEST = '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}';
 
@@ -371,9 +371,16 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     new Tag(smartweaveTags.CONTRACT_SOURCE, metadata.contractTxId || DEFAULT_CONTRACT_SRC),
     new Tag(smartweaveTags.INIT_STATE, JSON.stringify(initState)),
     new Tag(assetTags.TITLE, metadata.name),
-    new Tag(assetTags.TYPE, metadata.type || DEFAULT_TYPE),
     new Tag('Contract-Manifest', WARP_MANIFEST),
   ];
+
+  if (metadata.types && metadata.types.length > 0) {
+    for (let type of metadata.types) {
+      nftTags.push(new Tag(assetTags.TYPE, type));
+    }
+  } else {
+    nftTags.push(new Tag(assetTags.TYPE, DEFAULT_ASSET_TYPE));
+  }
 
   if (metadata.creator) {
     nftTags.push(new Tag('Creator', metadata.creator));
