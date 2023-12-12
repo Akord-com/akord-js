@@ -157,23 +157,25 @@ class NFTService extends NodeService<NFT> {
 
     const { nodeId: collectionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
-    for (let nft of items) {
-      try {
-        const nftService = new NFTService(this.wallet, this.api, service);
-        service.setObjectType("NFT");
-        const { nftId, transactionId, object } = await nftService.mint(
-          vaultId,
-          nft.asset,
-          { ...metadata, ...nft.metadata },
-          { parentId: collectionId, ...options, ...nft.options }
-        );
-        mintedItems.push(object.getUri(StorageType.ARWEAVE));
-        nfts.push({ nftId, transactionId, object });
-      } catch (error) {
-        Logger.log("Minting the atomic asset failed.");
-        Logger.log(error);
-        errors.push({ name: nft.metadata.name, message: error.message, error: error });
-      }
+    for (const chunk of [...chunks(items, BATCH_CHUNK_SIZE)]) {
+      await Promise.all(chunk.map(async (nft) => {
+        try {
+          const nftService = new NFTService(this.wallet, this.api, service);
+          service.setObjectType("NFT");
+          const { nftId, transactionId, object } = await nftService.mint(
+            vaultId,
+            nft.asset,
+            { ...metadata, ...nft.metadata },
+            { parentId: collectionId, ...options, ...nft.options }
+          );
+          mintedItems.push(object.getUri(StorageType.ARWEAVE));
+          nfts.push({ nftId, transactionId, object });
+        } catch (error) {
+          Logger.log("Minting the atomic asset failed.");
+          Logger.log(error);
+          errors.push({ name: nft.metadata?.name, message: error.message, error: error });
+        }
+      }))
     }
 
     if (mintedItems.length === 0) {
@@ -336,6 +338,14 @@ class NFTService extends NodeService<NFT> {
     return await paginate<Collection>(list, { ...options, vaultId });
   }
 };
+
+const BATCH_CHUNK_SIZE = 50;
+
+function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
+  for (let i = 0; i < arr.length; i += n) {
+    yield arr.slice(i, i + n);
+  }
+}
 
 export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
   const initState = {
