@@ -223,11 +223,11 @@ class NFTService extends NodeService<NFT> {
         { parentId: collectionId }
       );
       collectionTags.push(new Tag('Banner', banner.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.bannerUri = banner.versions[0].resourceUri;
+      collectionMintedState.banner = banner.versions[0];
     } else {
       // if not provided, set the first NFT as a collection banner
       collectionTags.push(new Tag('Banner', nfts[0].object.asset.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.bannerUri = nfts[0].object.asset.resourceUri;
+      collectionMintedState.banner = nfts[0].object.asset;
     }
 
     if (metadata.thumbnail) {
@@ -239,7 +239,7 @@ class NFTService extends NodeService<NFT> {
         { parentId: collectionId }
       );
       collectionTags.push(new Tag('Thumbnail', thumbnail.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.thumbnailUri = thumbnail.versions[0].resourceUri;
+      collectionMintedState.thumbnail = thumbnail.versions[0];
     }
 
     service.setObjectType("Collection");
@@ -270,6 +270,42 @@ class NFTService extends NodeService<NFT> {
   }
 
   /**
+   * @param  {string} collectionId
+   * @returns Promise with the collection with given id
+   */
+  public async getCollection(collectionId: string): Promise<Collection> {
+    return new Collection(await this.api.getNode<Collection>(collectionId, "Collection"));
+  }
+
+  /**
+   * @param  {string} collectionId
+   * @returns Promise with the collection banner
+   */
+  public async getCollectionBanner(collectionId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
+    const collection = new Collection(await this.api.getNode<Collection>(collectionId, "Collection"));
+    if (collection.banner) {
+      const { fileData } = await this.api.downloadFile(collection.banner.getUri(StorageType.S3), options);
+      return { data: fileData, ...collection.banner } as FileVersion & { data: ArrayBuffer };
+    } else {
+      return { data: undefined } as any;
+    }
+  }
+
+  /**
+   * @param  {string} collectionId
+   * @returns Promise with the collection thumbnail
+   */
+  public async getCollectionThumbnail(collectionId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
+    const collection = new Collection(await this.api.getNode<Collection>(collectionId, "Collection"));
+    if (collection.thumbnail) {
+      const { fileData } = await this.api.downloadFile(collection.thumbnail.getUri(StorageType.S3), options);
+      return { data: fileData, ...collection.thumbnail } as FileVersion & { data: ArrayBuffer };
+    } else {
+      return { data: undefined } as any;
+    }
+  }
+
+  /**
    * @param  {string} vaultId
    * @param  {ListOptions} options
    * @returns Promise with paginated collections within given vault
@@ -279,11 +315,11 @@ class NFTService extends NodeService<NFT> {
       ...this.defaultListOptions,
       ...options
     }
-    const response = await this.api.getNodesByVaultId<Collection>(vaultId, "Collection", listOptions);
+    const { items, nextToken } = await this.api.getNodesByVaultId<Collection>(vaultId, "Collection", listOptions);
 
     return {
-      items: response.items,
-      nextToken: response.nextToken,
+      items: items.map((collectionProto: Collection) => new Collection(collectionProto)),
+      nextToken: nextToken,
       errors: []
     }
   }

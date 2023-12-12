@@ -1,6 +1,6 @@
 import { AssetMetadata } from "./asset";
 import { Node } from "./node";
-import { UDL } from "../types";
+import { FileVersion, UDL } from "../types";
 import { FileSource } from "./file";
 
 export class Collection extends Node {
@@ -9,11 +9,12 @@ export class Collection extends Node {
   code: string;
   creator: string;
   owner: string;
-  bannerUri: string[];
-  thumbnailUri: string[];
+  banner: FileVersion;
+  thumbnail?: FileVersion;
   udl?: UDL;
   ucm?: boolean;
   items: string[];
+  type: string;
 
   constructor(collectionProto: any) {
     super(collectionProto, null);
@@ -22,11 +23,12 @@ export class Collection extends Node {
     this.code = collectionProto.code;
     this.creator = collectionProto.creator;
     this.owner = collectionProto.owner;
-    this.bannerUri = collectionProto.bannerUri;
-    this.thumbnailUri = collectionProto.thumbnailUri;
+    this.banner = new FileVersion(collectionProto.banner);
+    this.thumbnail = collectionProto.thumbnail ? new FileVersion(collectionProto.thumbnail) : undefined;
     this.udl = collectionProto.udl;
     this.ucm = collectionProto.ucm;
     this.items = collectionProto.items;
+    this.type = collectionProto.type;
   }
 }
 
