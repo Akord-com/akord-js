@@ -204,7 +204,7 @@ class NFTService extends NodeService<NFT> {
       new Tag(smartweaveTags.INIT_STATE, JSON.stringify(collectionMintedState)),
       new Tag(assetTags.TITLE, metadata.name),
       new Tag('Name', metadata.name),
-      new Tag(assetTags.TYPE, "Document"),
+      new Tag(assetTags.TYPE, "document"),
       new Tag('Contract-Manifest', WARP_MANIFEST),
       new Tag('Vault-Id', vaultId),
       new Tag('Collection-Code', collectionCode),
