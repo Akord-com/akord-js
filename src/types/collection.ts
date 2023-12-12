@@ -9,7 +9,7 @@ export class Collection extends Node {
   code: string;
   creator: string;
   owner: string;
-  banner: FileVersion;
+  banner?: FileVersion;
   thumbnail?: FileVersion;
   udl?: UDL;
   ucm?: boolean;
@@ -23,7 +23,7 @@ export class Collection extends Node {
     this.code = collectionProto.code;
     this.creator = collectionProto.creator;
     this.owner = collectionProto.owner;
-    this.banner = new FileVersion(collectionProto.banner);
+    this.banner = collectionProto.banner ? new FileVersion(collectionProto.banner): undefined;
     this.thumbnail = collectionProto.thumbnail ? new FileVersion(collectionProto.thumbnail) : undefined;
     this.udl = collectionProto.udl;
     this.ucm = collectionProto.ucm;
