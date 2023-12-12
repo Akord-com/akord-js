@@ -145,12 +145,17 @@ class NFTService extends NodeService<NFT> {
 
     service.setGroupRef(uuidv4());
 
+    // if no collection code provided, derive one from collection name
+    const collectionCode = metadata.code
+      ? metadata.code
+      : metadata.name.split(' ').join('-') + "-" + JSON.stringify(Date.now());
+
     const collectionState = {
       owner: metadata.owner,
       creator: metadata.creator,
       name: metadata.name,
       description: metadata.description,
-      code: metadata.code,
+      code: collectionCode,
       udl: options.udl,
       ucm: options.ucm,
     } as any;
@@ -165,7 +170,7 @@ class NFTService extends NodeService<NFT> {
           const { nftId, transactionId, object } = await nftService.mint(
             vaultId,
             nft.asset,
-            { ...metadata, ...nft.metadata },
+            { ...metadata, collection: collectionCode, ...nft.metadata },
             { parentId: collectionId, ...options, ...nft.options }
           );
           mintedItems.push(object.getUri(StorageType.ARWEAVE));
@@ -202,6 +207,7 @@ class NFTService extends NodeService<NFT> {
       new Tag(assetTags.TYPE, "Document"),
       new Tag('Contract-Manifest', WARP_MANIFEST),
       new Tag('Vault-Id', vaultId),
+      new Tag('Collection-Code', collectionCode)
     ];
 
     if (metadata.description) {
@@ -210,10 +216,6 @@ class NFTService extends NodeService<NFT> {
 
     if (metadata.creator) {
       collectionTags.push(new Tag('Creator', metadata.creator));
-    }
-
-    if (metadata.code) {
-      collectionTags.push(new Tag('Collection-Code', metadata.code));
     }
 
     if (metadata.banner) {
