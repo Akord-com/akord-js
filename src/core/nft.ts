@@ -65,6 +65,16 @@ class NFTService extends NodeService<NFT> {
       createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Indexed-By', 'ucm')]);
     }
 
+    if (metadata.thumbnail && !metadata.collection) {
+      const thumbnailService = new StackService(this.wallet, this.api, service);
+      const { object: thumbnail } = await thumbnailService.create(
+        vaultId,
+        metadata.thumbnail,
+        (<any>metadata.thumbnail).name ? (<any>metadata.thumbnail).name : "Thumbnail"
+      );
+      createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Thumbnail', thumbnail.getUri(StorageType.ARWEAVE))]);
+    }
+
     const fileLike = await createFileLike(asset, createOptions);
     if (fileLike.type) {
       createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));

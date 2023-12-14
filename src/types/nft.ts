@@ -1,6 +1,7 @@
 import { AssetMetadata } from "./asset";
 import { Node, StorageType } from "./node";
 import { FileVersion } from "../types";
+import { FileSource } from "./file";
 
 export class NFT extends Node {
   ticker: string;
@@ -45,4 +46,5 @@ export type NFTMetadata = {
   collection?: string // NFT collection code
   contractTxId?: string, // default to "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"
   ticker?: string, // default to "ATOMIC"
+  thumbnail?: FileSource,
 } & AssetMetadata
