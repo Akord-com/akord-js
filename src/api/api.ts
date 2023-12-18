@@ -66,7 +66,7 @@ abstract class Api {
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
 
-  abstract createWhitelist(vaultId: string, type: string, token: string, capacity: number): Promise<{ id: string }>
+  abstract createWhitelist(vaultId: string, type: string, token: string, capacity: number, access: string): Promise<{ id: string }>
 
   abstract joinWhitelist(vaultId: string, externalAddress: string, signature: string): Promise<boolean>
 

@@ -5,8 +5,10 @@ export type Whitelist = {
   type: NFTType,
   token: string, // address of NFT token
   capacity: number,
+  access: AccessType,
   members: {
     address: string,
+    email: string,
     externalAddress: string
   }[]
 }
@@ -18,8 +20,11 @@ export type NFTTypes = {
   ERC721: "erc721"
 }
 
+export type AccessType = "VIEWER" | "CONTRIBUTOR"
+
 export type WhitelistConfig = {
   type: NFTType,
   token: string,
-  capacity: number
+  capacity: number,
+  access: AccessType
 }

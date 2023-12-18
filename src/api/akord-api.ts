@@ -174,11 +174,11 @@ export default class AkordApi extends Api {
       .inviteResend();
   }
 
-  public async createWhitelist(vaultId: string, type: string, token: string, capacity: number): Promise<{ id: string }> {
+  public async createWhitelist(vaultId: string, type: string, token: string, capacity: number, access: string): Promise<{ id: string }> {
     return await new ApiClient()
       .env(this.config)
       .vaultId(vaultId)
-      .queryParams({ type, token, capacity })
+      .queryParams({ type, token, capacity, access })
       .createWhitelist();
   }
 

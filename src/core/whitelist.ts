@@ -17,7 +17,7 @@ class WhitelistService extends Service {
     vaultId: string,
     config: WhitelistConfig,
   ): Promise<{ transactionId: string }> {
-    const { id } = await this.api.createWhitelist(vaultId, config.type, config.token, config.capacity);
+    const { id } = await this.api.createWhitelist(vaultId, config.type, config.token, config.capacity, config.access);
     return { transactionId: id };
   }
 
