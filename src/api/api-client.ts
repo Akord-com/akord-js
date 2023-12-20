@@ -238,17 +238,17 @@ export class ApiClient {
   }
 
   async createWhitelist(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/whitelist`);
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/whitelists`);
     return { id: response.id };
   }
 
   async joinWhitelist(): Promise<boolean> {
-    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/whitelist/join`);
+    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/whitelists/join`);
     return response?.result ? true : false;
   }
 
   async getWhitelist(): Promise<Whitelist> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/whitelist`);
+    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/whitelists`);
   }
 
   async post(url: string): Promise<any> {
