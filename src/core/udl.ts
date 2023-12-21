@@ -19,7 +19,7 @@ export const udlToTags = (udl: UDL): Tags => {
     }
   }
   if (udl.expires) {
-    tags.push(new Tag(tagNames.EXPIRES, udl.expires));
+    tags.push(new Tag(tagNames.EXPIRY, udl.expires));
   }
   if (udl.currency) {
     tags.push(new Tag(tagNames.CURRENCY, udl.currency));

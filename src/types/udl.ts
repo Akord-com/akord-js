@@ -44,6 +44,6 @@ export enum tagNames {
   COMMERCIAL_USE = "Commercial-Use",
   PAYMENT_MODE = "Payment-Mode",
   PAYMENT_ADDRESS = "Payment-Address",
-  EXPIRES = "Expires",
+  EXPIRY = "Expiry",
   CURRENCY = "Currency",
 };
