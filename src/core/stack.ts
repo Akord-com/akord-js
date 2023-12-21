@@ -188,7 +188,7 @@ class StackService extends NodeService<Stack> {
         if (!service.isPublic) {
           await version.decrypt();
           const tags = await this.api.getTransactionTags(id);
-          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase() 
+          const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase()
             || tag.name.toLowerCase() === encryptionTagsLegacy.ENCRYPTED_KEY.toLowerCase())?.value
           const iv = tags.find(tag => tag.name === encryptionTags.IV
             || tag.name.toLowerCase() === encryptionTagsLegacy.IV.toLowerCase())?.value

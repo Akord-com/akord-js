@@ -4,7 +4,7 @@ export const apiConfig = (env: string) => {
     default:
       return {
         apiurl: "https://api.akord.com",
-        gatewayurl: "https://akordvault.net",
+        gatewayurl: "https://d23dlkqtpwjhff.cloudfront.net",
       };
     case "dev":
       return {
