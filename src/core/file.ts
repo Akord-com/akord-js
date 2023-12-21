@@ -89,7 +89,7 @@ class FileService extends Service {
   }
 
   public async download(fileUri: string, options: FileChunkedGetOptions = { responseType: 'arraybuffer' }): Promise<ReadableStream<Uint8Array> | ArrayBuffer> {
-    const file = await this.api.downloadFile(fileUri, { responseType: 'stream' });
+    const file = await this.api.downloadFile(fileUri, { responseType: 'stream', public: this.isPublic });
     let stream: ReadableStream<Uint8Array>;
     if (this.isPublic) {
       stream = file.fileData as ReadableStream<Uint8Array>;
@@ -221,7 +221,8 @@ class FileService extends Service {
     if (!options.cacheOnly) {
       const uri = chunkedResource.resourceLocation.split(":")[0];
       while (true) {
-        await new Promise(resolve => setTimeout(resolve, UPLOADER_POLLING_RATE_IN_MILLISECONDS));        const state = await this.api.getUploadState(uri);
+        await new Promise(resolve => setTimeout(resolve, UPLOADER_POLLING_RATE_IN_MILLISECONDS));
+        const state = await this.api.getUploadState(uri);
         if (state && state.resourceUri) {
           resource.resourceUri = state.resourceUri;
           break;
@@ -382,6 +383,7 @@ export type FileUploadOptions = Hooks & FileOptions & {
 export type FileDownloadOptions = Hooks & {
   path?: string,
   skipSave?: boolean,
+  public?: boolean,
 }
 
 export type FileGetOptions = FileDownloadOptions & {

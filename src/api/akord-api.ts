@@ -111,6 +111,7 @@ export default class AkordApi extends Api {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
+      .public(options.public)
       .progressHook(options.progressHook)
       .cancelHook(options.cancelHook)
       .downloadFile();
