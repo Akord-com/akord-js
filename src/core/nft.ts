@@ -65,14 +65,16 @@ class NFTService extends NodeService<NFT> {
       createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Indexed-By', 'ucm')]);
     }
 
+    let thumbnail = undefined;
     if (metadata.thumbnail && !metadata.collection) {
       const thumbnailService = new StackService(this.wallet, this.api, service);
-      const { object: thumbnail } = await thumbnailService.create(
+      const { object } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail,
         (<any>metadata.thumbnail).name ? (<any>metadata.thumbnail).name : "Thumbnail"
       );
-      createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Thumbnail', thumbnail.getUri(StorageType.ARWEAVE))]);
+      createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Thumbnail', object.getUri(StorageType.ARWEAVE))]);
+      thumbnail = object.versions[0];
     }
 
     const fileLike = await createFileLike(asset, createOptions);
@@ -85,6 +87,7 @@ class NFTService extends NodeService<NFT> {
 
     const state = JSON.parse(nftTags.find((tag: Tag) => tag.name === "Init-State").value);
     state.asset = version;
+    state.thumbnail = thumbnail;
 
     const { nodeId, transactionId, object } = await service.nodeCreate<NFT>(state, { parentId: options.parentId });
     return { nftId: nodeId, transactionId, object };
@@ -96,9 +99,24 @@ class NFTService extends NodeService<NFT> {
    * @returns Promise with NFT asset
    */
   public async getAsset(nftId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
-    const nft = new NFT(await this.api.getNode<NFT>(nftId, this.objectType));
+    const nft = new NFT(await this.api.getNode<NFT>(nftId, "NFT"));
     const { fileData } = await this.api.downloadFile(nft.getUri(StorageType.S3), options);
     return { data: fileData, ...nft.asset } as FileVersion & { data: ArrayBuffer };
+  }
+
+  /**
+   * Get NFT thumbnail
+   * @param  {string} nftId
+   * @returns Promise with the collection thumbnail
+   */
+  public async getThumbnail(nftId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
+    const nft = new NFT(await this.api.getNode<NFT>(nftId, "NFT"));
+    if (nft.thumbnail) {
+      const { fileData } = await this.api.downloadFile(nft.thumbnail.getUri(StorageType.S3), options);
+      return { data: fileData, ...nft.thumbnail } as FileVersion & { data: ArrayBuffer };
+    } else {
+      return { data: undefined } as any;
+    }
   }
 
   /**
