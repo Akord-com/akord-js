@@ -33,27 +33,18 @@ jobs:
         echo "$release_notes" >> "${GITHUB_OUTPUT}"
         echo "${delimiter}" >> "${GITHUB_OUTPUT}"
     
-    - name: "cat package.json"
-      run: cat ./package.json
-    - name: Automated Version Bump
-      id: version-bump
-      uses: phips28/gh-action-bump-version@v9.0.27
-      with:
-        tag-prefix: "v"
+    - name: Bump version and push tag
+      id: versioning
+      uses: anothrNick/github-tag-action@1.64.0
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-    - name: "cat package.json"
-      run: cat ./package.json
-    - name: "Output Step"
-      env:
-        NEW_TAG: ${{ steps.version-bump.outputs.newTag }}
-      run: echo "new tag $NEW_TAG"
-      
+        WITH_V: true
+
     - name: Create GitHub Release
       uses: actions/create-release@v1
       with:
-        tag_name: ${{ steps.version-bump.outputs.newTag }}
-        release_name: Release ${{ steps.version-bump.outputs.newTag }}
+        tag_name: ${{ steps.versioning.outputs.new_tag }}
+        release_name: Release ${{ steps.versioning.outputs.new_tag }}
         body: |
           **Changelog:**
           ${{ steps.release-notes.outputs.release_notes }}
@@ -77,7 +68,7 @@ jobs:
         avatar_url: https://github.com/github.png?size=40
         message: |
           Release on: ${{ github.event.repository.name }}
-          Release version: ${{ steps.version-bump.outputs.newTag }}
+          Release version: ${{ steps.versioning.outputs.new_tag }}
 
           **Changelog:**
           ${{ steps.release-notes.outputs.release_notes }}
