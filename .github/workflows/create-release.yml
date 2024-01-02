@@ -1,33 +1,74 @@
-name: "Create Release And Publish"
+name: Release
 
 on:
   push:
-    tags:
-      - "v*"
-
+    branches:
+      - main
+env:
+    GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 jobs:
-  build:
-    name: Create Release
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Changelog
-        uses: scottbrenner/generate-changelog-action@v1.3.3
-        id: Changelog
-        env:
-          REPO: ${{ github.repository }}
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            ${{ steps.Changelog.outputs.changelog }}
-          draft: false
-          prerelease: false
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+
+    - name: Install Conventional Changelog
+      run: npm install -g conventional-changelog-cli
+
+    - name: Generate Release Notes
+      id: release-notes
+      run: |
+        conventional-changelog -p angular -i CHANGELOG.md -s -r 1
+        cat CHANGELOG.md
+        sed -i '1,2D' CHANGELOG.md
+
+        delimiter="$(openssl rand -hex 8)"
+        release_notes=$(cat CHANGELOG.md)
+        echo "release_notes<<${delimiter}" >> "${GITHUB_OUTPUT}"
+        echo "$release_notes" >> "${GITHUB_OUTPUT}"
+        echo "${delimiter}" >> "${GITHUB_OUTPUT}"
+    
+    - name: Bump version and push tag
+      id: versioning
+      uses: anothrNick/github-tag-action@1.64.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        WITH_V: true
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ steps.versioning.outputs.new_tag }}
+        release_name: Release ${{ steps.versioning.outputs.new_tag }}
+        body: |
+          **Changelog:**
+          ${{ steps.release-notes.outputs.release_notes }}
+        draft: false
+        prerelease: false
+
+    - name: Merge to dev branch
+      uses: devmasx/merge-branch@master
+      with:
+        type: now
+        from_branch: main
+        target_branch: dev
+        github_token: ${{ secrets.PAT_TOKEN }}
+
+    - name: Notify Discord
+      uses: appleboy/discord-action@master
+      with:
+        webhook_id: ${{ secrets.DISCORD_RELEASE_WEBHOOK_ID }}
+        webhook_token: ${{ secrets.DISCORD_RELEASE_WEBHOOK_TOKEN }}
+        username: GitHub
+        avatar_url: https://github.com/github.png?size=40
+        message: |
+          Release on: ${{ github.event.repository.name }}
+          Release version: ${{ steps.versioning.outputs.new_tag }}
+
+          **Changelog:**
+          ${{ steps.release-notes.outputs.release_notes }}
