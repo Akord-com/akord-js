@@ -26,7 +26,7 @@ export namespace NodeJs {
       const chunks = []
       for await (const chunk of stream) chunks.push(chunk);
       // maybe move it to constructor
-      return new File(chunks, name, mimeType || mime.lookup(name) || '', lastModified);
+      return new File(chunks, name, mimeType, lastModified);
     }
 
     static async fromPath(filePath: string) {
