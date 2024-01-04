@@ -11,7 +11,7 @@ export namespace NodeJs {
     lastModified: number;
 
     constructor(sources: Array<BinaryLike | Blob>, name: string, mimeType?: string, lastModified?: number) {
-      super(sources, { type: mimeType || 'text/plain' });
+      super(sources, { type: mimeType || mime.lookup(name) || 'text/plain' });
       if (!name) {
         throw new BadRequest("File name is required, please provide it in the file options.");
       }
@@ -26,7 +26,7 @@ export namespace NodeJs {
       const chunks = []
       for await (const chunk of stream) chunks.push(chunk);
       // maybe move it to constructor
-      return new File(chunks, name, mimeType || mime.lookup(name) || '', lastModified);
+      return new File(chunks, name, mimeType, lastModified);
     }
 
     static async fromPath(filePath: string) {
