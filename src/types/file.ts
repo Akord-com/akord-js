@@ -25,7 +25,6 @@ export namespace NodeJs {
     static async fromReadable(stream: Readable, name: string, mimeType?: string, lastModified?: number) {
       const chunks = []
       for await (const chunk of stream) chunks.push(chunk);
-      // maybe move it to constructor
       return new File(chunks, name, mimeType, lastModified);
     }
 
