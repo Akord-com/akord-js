@@ -43,6 +43,14 @@ class NFTService extends NodeService<NFT> {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
 
+    if (!metadata?.name || metadata.name.length > 150) {
+      throw new BadRequest("metadata.name is mandatory and cannot exceed 150 characters.");
+    }
+
+    if (metadata?.description?.length > 300) {
+      throw new BadRequest("metadata.description cannot exceed 300 characters.");
+    }
+
     const nftTags = nftMetadataToTags(metadata);
 
     const createOptions = {
@@ -156,6 +164,16 @@ class NFTService extends NodeService<NFT> {
     const vault = await this.api.getVault(vaultId);
     if (!vault.public || vault.cacheOnly) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
+    }
+
+    for (let nft of items) {
+      if (!nft.metadata?.name || nft.metadata.name.length > 150) {
+        throw new BadRequest("metadata.name is mandatory and cannot exceed 150 characters.");
+      }
+
+      if (nft.metadata?.description?.length > 300) {
+        throw new BadRequest("metadata.description cannot exceed 300 characters.");
+      }
     }
 
     const mintedItems = [] as string[];
