@@ -148,7 +148,7 @@ class NFTService extends NodeService<NFT> {
    */
   public async mintCollection(
     vaultId: string,
-    items: { asset: FileSource, metadata?: NFTMetadata, options?: StackCreateOptions }[],
+    items: { asset: FileSource, metadata: NFTMetadata, options?: StackCreateOptions }[],
     metadata: CollectionMetadata,
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<MintCollectionResponse> {
@@ -157,8 +157,12 @@ class NFTService extends NodeService<NFT> {
       throw new BadRequest("No items provided for minting.");
     }
 
-    if (!metadata.name) {
-      throw new BadRequest("Missing collection name.");
+    if (!metadata?.name || metadata.name.length > 150) {
+      throw new BadRequest("metadata.name is mandatory and cannot exceed 150 characters.");
+    }
+
+    if (metadata?.description?.length > 300) {
+      throw new BadRequest("metadata.description cannot exceed 300 characters.");
     }
 
     const vault = await this.api.getVault(vaultId);
