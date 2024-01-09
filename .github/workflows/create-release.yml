@@ -1,13 +1,16 @@
 name: Release
 
 on:
-  push:
+  pull_request:
+    types:
+      - closed
     branches:
-      - main
+      - 'main'
 env:
     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 jobs:
   release:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
     - name: "Checkout source code"
@@ -59,14 +62,6 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Merge to dev branch
-      uses: devmasx/merge-branch@master
-      with:
-        type: now
-        from_branch: main
-        target_branch: dev
-        github_token: ${{ secrets.PAT_TOKEN }}
-
     - name: Notify Discord
       uses: appleboy/discord-action@master
       with:
@@ -80,3 +75,11 @@ jobs:
 
           **Changelog:**
           ${{ steps.release-notes.outputs.release_notes }}
+    
+    - name: Merge to dev branch
+      uses: devmasx/merge-branch@master
+      with:
+        type: now
+        from_branch: main
+        target_branch: dev
+        github_token: ${{ secrets.PAT_TOKEN }}
