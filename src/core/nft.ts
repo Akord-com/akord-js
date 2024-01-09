@@ -14,6 +14,7 @@ import { mergeState, paginate } from "./common";
 import { v4 as uuidv4 } from "uuid";
 import { StackService } from "./stack";
 import { Logger } from "../logger";
+import { batchProgressCount } from "./batch";
 
 const DEFAULT_TICKER = "ATOMIC";
 const DEFAULT_ASSET_TYPE = "image";
@@ -148,7 +149,7 @@ class NFTService extends NodeService<NFT> {
    */
   public async mintCollection(
     vaultId: string,
-    items: { asset: FileSource, metadata: NFTMetadata, options?: StackCreateOptions }[],
+    items: NFTMintItem[],
     metadata: CollectionMetadata,
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<MintCollectionResponse> {
@@ -170,15 +171,22 @@ class NFTService extends NodeService<NFT> {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
 
-    for (let nft of items) {
+    // validate items to mint
+    const itemsToMint = await Promise.all(items.map(async (nft: NFTMintItem) => {
       if (!nft.metadata?.name || nft.metadata.name.length > 150) {
         throw new BadRequest("metadata.name is mandatory and cannot exceed 150 characters.");
       }
-
       if (nft.metadata?.description?.length > 300) {
         throw new BadRequest("metadata.description cannot exceed 300 characters.");
       }
-    }
+      const fileLike = await createFileLike(nft.asset, { ...options, ...nft.options });
+      return { asset: fileLike, metadata: nft.metadata, options: nft.options };
+    }));
+
+    const batchSize = itemsToMint.reduce((sum, nft) => {
+      return sum + nft.asset.size;
+    }, 0);
+    batchProgressCount(batchSize, options);
 
     const mintedItems = [] as string[];
     const nfts = [] as MintCollectionResponse["data"]["items"];
@@ -212,7 +220,7 @@ class NFTService extends NodeService<NFT> {
 
     const { nodeId: collectionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
-    for (const chunk of [...chunks(items, BATCH_CHUNK_SIZE)]) {
+    for (const chunk of [...chunks(itemsToMint, BATCH_CHUNK_SIZE)]) {
       await Promise.all(chunk.map(async (nft) => {
         try {
           const nftService = new NFTService(this.wallet, this.api, service);
@@ -447,6 +455,12 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     }
   }
   return nftTags;
+}
+
+export type NFTMintItem = {
+  asset: FileSource,
+  metadata: NFTMetadata,
+  options?: StackCreateOptions
 }
 
 export interface MintCollectionResponse {

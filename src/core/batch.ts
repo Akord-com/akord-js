@@ -9,7 +9,7 @@ import { StackCreateOptions, Stack } from "../types/stack";
 import { FileLike } from "../types/file-like";
 import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
 import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
-import { FileService } from "./file";
+import { FileService, Hooks } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
@@ -104,38 +104,13 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
-    
-    const size = items.reduce((sum, stack) => {
+    const batchSize = items.reduce((sum, stack) => {
       return sum + stack.file.size;
     }, 0);
-    let progress = 0;
-    let uploadedStacksCount = 0;
-    const perFileProgress = new Map();
-    const uploadedFiles = new Set();
-
-    if (options.processingCountHook) {
-      options.processingCountHook(uploadedStacksCount);
-    }
+    batchProgressCount(batchSize, options);
 
     const data = [] as BatchStackCreateResponse["data"];
     const errors = [] as BatchStackCreateResponse["errors"];
-
-    if (options.progressHook) {
-      const onProgress = options.progressHook
-      const stackProgressHook = (percentageProgress: number, binaryProgress: number, progressId: string) => {
-        progress += binaryProgress - (perFileProgress.get(progressId) || 0)
-        perFileProgress.set(progressId, binaryProgress);
-        onProgress(Math.min(100, Math.round(progress / size * 100)));
-        if (percentageProgress === 100 && !uploadedFiles.has(progressId)) {
-          uploadedFiles.add(progressId);
-          uploadedStacksCount += 1;
-          if (options.processingCountHook) {
-            options.processingCountHook(uploadedStacksCount);
-          }
-        }
-      }
-      options.progressHook = stackProgressHook;
-    }
 
     // set service context
     const vault = await this.api.getVault(vaultId);
@@ -192,7 +167,7 @@ class BatchService extends Service {
         }), { signal: options.cancelHook?.signal })
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
-          errors.push({ name: item.name ,message: error.toString(), error });
+          errors.push({ name: item.name, message: error.toString(), error });
         }
       }
     }
@@ -360,6 +335,32 @@ class BatchService extends Service {
 
   public setGroupRef(items: any) {
     this.groupRef = items && items.length > 1 ? uuidv4() : null;
+  }
+}
+
+export const batchProgressCount = (batchSize: number, options: BatchStackCreateOptions) => {
+  let progress = 0;
+  let uploadedItemsCount = 0;
+  if (options.processingCountHook) {
+    options.processingCountHook(uploadedItemsCount);
+  }
+  const perFileProgress = new Map();
+  const uploadedFiles = new Set();
+  if (options.progressHook) {
+    const onProgress = options.progressHook
+    const itemProgressHook = (percentageProgress: number, binaryProgress: number, progressId: string) => {
+      progress += binaryProgress - (perFileProgress.get(progressId) || 0)
+      perFileProgress.set(progressId, binaryProgress);
+      onProgress(Math.min(100, Math.round(progress / batchSize * 100)));
+      if (percentageProgress === 100 && !uploadedFiles.has(progressId)) {
+        uploadedFiles.add(progressId);
+        uploadedItemsCount += 1;
+        if (options.processingCountHook) {
+          options.processingCountHook(uploadedItemsCount);
+        }
+      }
+    }
+    options.progressHook = itemProgressHook;
   }
 }
 
