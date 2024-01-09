@@ -229,9 +229,9 @@ class NFTService extends NodeService<NFT> {
       }))
     }
 
-    if (mintedItems.length === 0) {
+    if (mintedItems.length !== items.length) {
       return {
-        data: { items: [], collectionId: undefined, transactionId: undefined, object: undefined },
+        data: { items: nfts, collectionId: undefined, transactionId: undefined, object: undefined },
         errors,
       }
     }
