@@ -179,7 +179,7 @@ const { vaultId, membershipId } = await akord.vault.create("Arty podcast", {
 
 // create a cloud storage vault 
 const { vaultId, membershipId } = await akord.vault.create("Non permanent stuff", {
-    cacheOnly: true
+    cloud: true
   });
 ```
 </details>
