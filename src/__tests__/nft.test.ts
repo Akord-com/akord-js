@@ -87,7 +87,7 @@ describe("Testing NFT functions", () => {
       licenseFee: { type: "One-Time", value: 10 }
     } as UDL;
 
-    const { data, errors } = await akord.nft.mintCollection(
+    const { data, errors } = await akord.collection.mint(
       vaultId,
       [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
       collectionMetadata,
@@ -108,7 +108,7 @@ describe("Testing NFT functions", () => {
 
     const nfts = await akord.nft.listAll(vaultId);
     console.log(nfts);
-    const collections = await akord.nft.listAllCollections(vaultId);
+    const collections = await akord.collection.listAll(vaultId);
     console.log(collections);
   });
 });
