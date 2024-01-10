@@ -131,10 +131,8 @@ class MemoService extends NodeService<Memo> {
 
   private async getReactionIndex(reactions: MemoReaction[], reaction: string) {
     const address = await this.wallet.getAddress();
-    const publicSigningKey = this.wallet.signingPublicKey();
     for (const [key, value] of Object.entries(reactions)) {
-      if ((value.owner === address || value.address === address || value.publicSigningKey === publicSigningKey)
-        && reaction === await this.processReadString(value.reaction)) {
+      if (value.owner === address && reaction === await this.processReadString(value.reaction)) {
         return key;
       }
     }
