@@ -18,7 +18,6 @@ export class Membership extends Encryptable {
   data?: string[];
   encPublicSigningKey: string;
   email: string;
-  memberPublicSigningKey: string;
   memberDetails: ProfileDetails;
 
   vaultId: string;
@@ -41,7 +40,6 @@ export class Membership extends Encryptable {
     this.role = membershipProto.role;
     this.encPublicSigningKey = membershipProto.encPublicSigningKey;
     this.email = membershipProto.email;
-    this.memberPublicSigningKey = membershipProto.memberPublicSigningKey;
     this.vaultId = membershipProto.vaultId;
     this.keys = membershipProto.keys;
     this.memberDetails = new ProfileDetails(membershipProto.memberDetails, keys);
