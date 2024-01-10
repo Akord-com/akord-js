@@ -105,7 +105,7 @@ class CollectionService extends NodeService<Collection> {
       await Promise.all(chunk.map(async (nft) => {
         try {
           const nftService = new NFTService(this.wallet, this.api, service);
-          service.setObjectType("NFT");
+          nftService.setObjectType("NFT");
           const { nftId, transactionId, object } = await nftService.mint(
             vaultId,
             nft.asset,
