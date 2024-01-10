@@ -98,8 +98,8 @@ export class ApiClient {
     return this;
   }
 
-  cacheOnly(cacheOnly: boolean): ApiClient {
-    this.queryParams({ cacheOnly: cacheOnly })
+  cloud(cloud: boolean): ApiClient {
+    this.queryParams({ cloud: cloud })
     return this;
   }
 
@@ -120,8 +120,8 @@ export class ApiClient {
 
   metadata(metadata: any): ApiClient {
     this._metadata = metadata;
-    if (metadata?.cacheOnly) {
-      this.cacheOnly(metadata.cacheOnly)
+    if (metadata?.cloud) {
+      this.cloud(metadata.cloud)
     }
     return this;
   }
@@ -511,7 +511,7 @@ export class ApiClient {
    * - state()
    * @uses:
    * - tags()
-   * - cacheOnly()
+   * - cloud()
    * @returns {Promise<string>}
    */
   async uploadState(): Promise<string> {

@@ -22,7 +22,7 @@ abstract class Api {
 
   abstract getUploadState(id: string): Promise<{ resourceUri: string[] }>
 
-  abstract uploadData(items: { data: any, tags: Tags }[], cacheOnly?: boolean): Promise<Array<string>>
+  abstract uploadData(items: { data: any, tags: Tags }[], cloud?: boolean): Promise<Array<string>>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 

@@ -150,8 +150,8 @@ class BatchService extends Service {
 
     const stackCreateOptions = {
       ...options,
-      cacheOnly: batchService.vault.cacheOnly,
-      storage: batchService.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
+      cloud: batchService.vault.cloud,
+      storage: batchService.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
 
     let stacksCreated = 0;
@@ -182,7 +182,7 @@ class BatchService extends Service {
           versions: [version],
           tags: service.tags
         };
-        const id = await service.uploadState(state, service.vault.cacheOnly);
+        const id = await service.uploadState(state, service.vault.cloud);
 
         postTxQ.add(() => postTx({
           vaultId: service.vaultId,
@@ -279,7 +279,7 @@ class BatchService extends Service {
           service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
             .concat(await service.getTxTags());
 
-          const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
+          const dataTxId = await service.uploadState(state, service.vault.cloud);
 
           transactions.push({
             vaultId,
