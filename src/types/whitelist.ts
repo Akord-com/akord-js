@@ -13,11 +13,12 @@ export type Whitelist = {
   }[]
 }
 
-export type NFTType = "erc20" | "erc721"
+export type NFTType = "erc20" | "erc721" | "erc1155"
 
 export type NFTTypes = {
   ERC20: "erc20",
-  ERC721: "erc721"
+  ERC721: "erc721",
+  ERC1155: "erc1155"
 }
 
 export type AccessType = "VIEWER" | "CONTRIBUTOR"
