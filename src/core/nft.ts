@@ -3,16 +3,13 @@ import { FileVersion, StackCreateOptions, StorageType, nodeType } from "../types
 import { FileSource } from "../types/file";
 import { FileGetOptions, FileService, createFileLike } from "./file";
 import { NFT, NFTMetadata } from "../types/nft";
-import { actionRefs, functions, smartweaveTags } from "../constants";
+import { actionRefs, functions } from "../constants";
 import { Tag, Tags } from "../types/contract";
-import { assetTags } from "../types/asset";
+import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
 import { StackService } from "./stack";
 
 const DEFAULT_TICKER = "ATOMIC";
-const DEFAULT_ASSET_TYPE = "image";
-export const DEFAULT_CONTRACT_SRC = "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"; // Atomic asset contract source
-export const WARP_MANIFEST = '{"evaluationOptions":{"sourceType":"redstone-sequencer","allowBigInt":true,"internalWrites":true,"unsafeClient":"skip","useConstructor":true}}';
 
 class NFTService extends NodeService<NFT> {
   objectType = nodeType.NFT;
@@ -37,13 +34,7 @@ class NFTService extends NodeService<NFT> {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
 
-    if (!metadata?.name || metadata.name.length > 150) {
-      throw new BadRequest("metadata.name is mandatory and cannot exceed 150 characters.");
-    }
-
-    if (metadata?.description?.length > 300) {
-      throw new BadRequest("metadata.description cannot exceed 300 characters.");
-    }
+    validateAssetMetadata(metadata);
 
     const nftTags = nftMetadataToTags(metadata);
 
@@ -117,7 +108,7 @@ class NFTService extends NodeService<NFT> {
       const { fileData } = await this.api.downloadFile(nft.thumbnail.getUri(StorageType.S3), options);
       return { data: fileData, ...nft.thumbnail } as FileVersion & { data: ArrayBuffer };
     } else {
-      return { data: undefined } as any;
+      return undefined;
     }
   }
 
@@ -148,36 +139,16 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     claimable: []
   } as any;
 
-  const nftTags = [
-    new Tag(smartweaveTags.APP_NAME, 'SmartWeaveContract'),
-    new Tag(smartweaveTags.APP_VERSION, '0.3.0'),
-    new Tag(smartweaveTags.CONTRACT_SOURCE, metadata.contractTxId || DEFAULT_CONTRACT_SRC),
-    new Tag(smartweaveTags.INIT_STATE, JSON.stringify(initState)),
-    new Tag(assetTags.TITLE, metadata.name),
-    new Tag('Contract-Manifest', WARP_MANIFEST),
-  ];
+  const nftTags = atomicContractTags(initState, metadata.contractTxId)
 
-  if (metadata.types && metadata.types.length > 0) {
-    for (let type of metadata.types) {
-      nftTags.push(new Tag(assetTags.TYPE, type));
-    }
-  } else {
-    nftTags.push(new Tag(assetTags.TYPE, DEFAULT_ASSET_TYPE));
-  }
+  const assetTags = assetMetadataToTags(metadata);
+  nftTags.push(...assetTags);
 
   if (metadata.creator) {
-    nftTags.push(new Tag('Creator', metadata.creator));
-  }
-  if (metadata.description) {
-    nftTags.push(new Tag(assetTags.DESCRIPTION, metadata.description));
+    nftTags.push(new Tag("Creator", metadata.creator));
   }
   if (metadata.collection) {
-    nftTags.push(new Tag('Collection-Code', metadata.collection));
-  }
-  if (metadata.topics) {
-    for (let topic of metadata.topics) {
-      nftTags.push(new Tag(assetTags.TOPIC + ":" + topic, topic));
-    }
+    nftTags.push(new Tag("Collection-Code", metadata.collection));
   }
   return nftTags;
 }
