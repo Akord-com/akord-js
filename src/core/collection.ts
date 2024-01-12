@@ -63,8 +63,8 @@ class CollectionService extends NodeService<Collection> {
     }
 
     if (mintedItems.length !== items.length) {
-      const nodeService = new NodeService<Collection>(this.wallet, this.api);
-      await nodeService.revoke(collectionId, vaultId);
+      const service = new CollectionService(this.wallet, this.api);
+      await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
 
@@ -77,8 +77,8 @@ class CollectionService extends NodeService<Collection> {
         items: nfts
       }
     } catch (error) {
-      const nodeService = new NodeService<Collection>(this.wallet, this.api);
-      await nodeService.revoke(collectionId, vaultId);
+      const service = new CollectionService(this.wallet, this.api);
+      await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
   }
