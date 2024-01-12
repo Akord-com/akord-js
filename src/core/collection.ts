@@ -125,7 +125,7 @@ class CollectionService extends NodeService<Collection> {
     service.setVault(vault);
     service.setVaultId(vaultId);
     service.setIsPublic(vault.public);
-    service.setActionRef(actionRefs.NFT_MINT_COLLECTION);
+    service.setActionRef(actionRefs.COLLECTION_INIT);
     service.setFunction(functions.NODE_CREATE);
     service.setAkordTags([]);
     service.setObjectType("Collection");
@@ -177,7 +177,7 @@ class CollectionService extends NodeService<Collection> {
     service.setObjectId(collection.id);
     service.setVaultId(initService.vaultId);
     service.setIsPublic(true);
-    service.setActionRef(actionRefs.NFT_MINT_COLLECTION);
+    service.setActionRef(actionRefs.COLLECTION_MINT);
     service.setFunction(functions.NODE_UPDATE);
 
     const collectionTags = [
