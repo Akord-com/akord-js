@@ -109,7 +109,7 @@ class MembershipService extends Service {
     service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await service.getTxTags());
 
-    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
+    const dataTxId = await service.uploadState(state, service.vault.cloud);
 
     const input = {
       function: service.function,
@@ -160,10 +160,10 @@ class MembershipService extends Service {
         address: memberAddress,
         keys: await service.prepareMemberKeys(member.publicKey),
         encPublicSigningKey: await service.processWriteString(member.publicSigningKey),
-        memberDetails: await service.processMemberDetails({ name: member.options?.name }, service.vault.cacheOnly),
+        memberDetails: await service.processMemberDetails({ name: member.options?.name }, service.vault.cloud),
       };
 
-      const data = await service.uploadState(state, service.vault.cacheOnly);
+      const data = await service.uploadState(state, service.vault.cloud);
       dataArray.push({
         id: membershipId,
         data
@@ -205,13 +205,13 @@ class MembershipService extends Service {
     const service = new MembershipService(this.wallet, this.api);
     await service.setVaultContextFromMembershipId(membershipId);
     const state = {
-      memberDetails: await service.processMemberDetails(memberDetails, service.object.__cacheOnly__),
+      memberDetails: await service.processMemberDetails(memberDetails, service.object.__cloud__),
       encPublicSigningKey: await service.processWriteString(this.wallet.signingPublicKey())
     }
     service.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     service.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await service.mergeAndUploadState(state, service.vault.cacheOnly);
+    const data = await service.mergeAndUploadState(state, service.vault.cloud);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       service.vaultId,
       { function: service.function, data },
@@ -240,7 +240,7 @@ class MembershipService extends Service {
     service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await service.getTxTags());
 
-    const dataTxId = await service.uploadState(state, service.vault.cacheOnly);
+    const dataTxId = await service.uploadState(state, service.vault.cloud);
 
     const input = {
       function: service.function,
@@ -331,7 +331,7 @@ class MembershipService extends Service {
         memberService.setVaultId(service.vaultId);
         memberService.setObjectId(member.id);
         memberService.setObject(member);
-        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, service.vault.cacheOnly);
+        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, service.vault.cloud);
         data.push({ id: member.id, value: dataTx });
       }));
     }
@@ -441,11 +441,11 @@ class MembershipService extends Service {
   async profileUpdate(membershipId: string, name: string, avatar: ArrayBuffer): Promise<MembershipUpdateResult> {
     const service = new MembershipService(this.wallet, this.api);
     await service.setVaultContextFromMembershipId(membershipId);
-    const memberDetails = await service.processMemberDetails({ name, avatar }, service.object.__cacheOnly__);
+    const memberDetails = await service.processMemberDetails({ name, avatar }, service.object.__cloud__);
     service.setActionRef(actionRefs.MEMBERSHIP_PROFILE_UPDATE);
     service.setFunction(functions.MEMBERSHIP_UPDATE);
 
-    const data = await service.mergeAndUploadState({ memberDetails }, service.vault.cacheOnly);
+    const data = await service.mergeAndUploadState({ memberDetails }, service.vault.cloud);
     const { id, object } = await this.api.postContractTransaction<Membership>(
       service.vaultId,
       { function: service.function, data },
@@ -524,23 +524,23 @@ class MembershipService extends Service {
     return { memberKeys, keyPair };
   }
 
-  async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cacheOnly?: boolean) {
+  async processMemberDetails(memberDetails: { name?: string, avatar?: ArrayBuffer }, cloud?: boolean) {
     const processedMemberDetails = {} as ProfileDetails;
     if (!this.isPublic) {
       if (memberDetails.name) {
         processedMemberDetails.name = await this.processWriteString(memberDetails.name);
       }
       if (memberDetails.avatar) {
-        const resourceUri = await this.processAvatar(memberDetails.avatar, cacheOnly);
+        const resourceUri = await this.processAvatar(memberDetails.avatar, cloud);
         processedMemberDetails.avatarUri = resourceUri;
       }
     }
     return new ProfileDetails(processedMemberDetails);
   }
 
-  private async processAvatar(avatar: ArrayBuffer, cacheOnly?: boolean): Promise<string[]> {
+  private async processAvatar(avatar: ArrayBuffer, cloud?: boolean): Promise<string[]> {
     const { processedData, encryptionTags } = await this.processWriteRaw(avatar, { encode: false, prefixCiphertextWithIv: false });
-    const storage = cacheOnly ? StorageType.S3 : StorageType.ARWEAVE;
+    const storage = cloud ? StorageType.S3 : StorageType.ARWEAVE;
     const resource = await this.api.uploadFile(processedData, encryptionTags, { storage, public: false });
     return resource.resourceUri
   }

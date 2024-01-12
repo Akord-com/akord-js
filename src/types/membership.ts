@@ -18,7 +18,6 @@ export class Membership extends Encryptable {
   data?: string[];
   encPublicSigningKey: string;
   email: string;
-  memberPublicSigningKey: string;
   memberDetails: ProfileDetails;
 
   vaultId: string;
@@ -26,7 +25,7 @@ export class Membership extends Encryptable {
 
   // vault context
   __public__?: boolean;
-  __cacheOnly__?: boolean;
+  __cloud__?: boolean;
 
   constructor(membershipProto: any, keys?: Array<EncryptedKeys>) {
     super(keys, null)
@@ -41,12 +40,11 @@ export class Membership extends Encryptable {
     this.role = membershipProto.role;
     this.encPublicSigningKey = membershipProto.encPublicSigningKey;
     this.email = membershipProto.email;
-    this.memberPublicSigningKey = membershipProto.memberPublicSigningKey;
     this.vaultId = membershipProto.vaultId;
     this.keys = membershipProto.keys;
     this.memberDetails = new ProfileDetails(membershipProto.memberDetails, keys);
     this.__public__ = membershipProto.__public__;
-    this.__cacheOnly__ = membershipProto.__cacheOnly__;
+    this.__cloud__ = membershipProto.__cloud__;
   }
 }
 

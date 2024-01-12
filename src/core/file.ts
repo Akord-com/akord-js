@@ -218,7 +218,7 @@ class FileService extends Service {
     const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
 
     // polling loop
-    if (!options.cacheOnly) {
+    if (!options.cloud) {
       const uri = chunkedResource.resourceLocation.split(":")[0];
       while (true) {
         await new Promise(resolve => setTimeout(resolve, UPLOADER_POLLING_RATE_IN_MILLISECONDS));
@@ -375,7 +375,7 @@ export type FileUploadOptions = Hooks & FileOptions & {
   storage?: StorageType,
   arweaveTags?: Tags,
   chunkSize?: number
-  cacheOnly?: boolean,
+  cloud?: boolean,
   udl?: UDL,
   ucm?: boolean
 }

@@ -29,7 +29,7 @@ class StackService extends NodeService<Stack> {
     service.setFunction(functions.NODE_CREATE);
 
     const optionsFromVault = {
-      storage: service.vault.cacheOnly ? StorageType.S3 : StorageType.ARWEAVE
+      storage: service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
     const createOptions = {
       ...this.defaultCreateOptions,
@@ -96,7 +96,7 @@ class StackService extends NodeService<Stack> {
     service.setFunction(functions.NODE_UPDATE);
 
     const optionsFromVault = {
-      storage: service.object.__cacheOnly__ ? StorageType.S3 : StorageType.ARWEAVE
+      storage: service.object.__cloud__ ? StorageType.S3 : StorageType.ARWEAVE
     }
     const uploadOptions = {
       ...optionsFromVault,

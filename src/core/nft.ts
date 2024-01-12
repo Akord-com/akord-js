@@ -31,7 +31,7 @@ class NFTService extends NodeService<NFT> {
   ): Promise<{ nftId: string, transactionId: string, object: NFT }> {
 
     const vault = await this.api.getVault(vaultId);
-    if (!vault.public || vault.cacheOnly) {
+    if (!vault.public || vault.cloud) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
 
@@ -52,7 +52,7 @@ class NFTService extends NodeService<NFT> {
 
     createOptions.arweaveTags = (createOptions.arweaveTags || []).concat(nftTags);
 
-    createOptions.cacheOnly = service.vault.cacheOnly;
+    createOptions.cloud = service.vault.cloud;
 
     if (createOptions.ucm) {
       createOptions.arweaveTags = createOptions.arweaveTags.concat([{ name: 'Indexed-By', value: 'ucm' }]);

@@ -15,7 +15,7 @@ export class Vault extends Encryptable {
   owner: string;
   data: Array<string>;
   size?: number;
-  cacheOnly?: boolean;
+  cloud?: boolean;
   tags?: string[];
   termsOfAccess?: string;
   @encrypted() name: string;
@@ -41,7 +41,7 @@ export class Vault extends Encryptable {
     this.tags = vaultProto.tags;
     this.status = vaultProto.status;
     this.data = vaultProto.data;
-    this.cacheOnly = vaultProto.cacheOnly;
+    this.cloud = vaultProto.cloud;
     this.tags = vaultProto.tags;
     this.memberships = vaultProto?.memberships?.map((membership: Membership) => new Membership(membership, keys));
     this.memos = vaultProto?.memos?.map((memo: Memo) => new Memo(memo, keys));
@@ -55,7 +55,7 @@ export type VaultCreateOptions = {
   termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
   description?: string,
   tags?: string[],
-  cacheOnly?: boolean,
+  cloud?: boolean,
   arweaveTags?: Tags
 }
 

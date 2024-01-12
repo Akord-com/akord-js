@@ -12,6 +12,7 @@ jest.setTimeout(3000000);
 type Member = {
   publicSigningKey: string,
   address: string,
+  email: string,
   name?: string,
   membershipId: string,
   membership?: Membership
@@ -28,6 +29,7 @@ describe("Testing membership functions", () => {
     invitee = {
       publicSigningKey: inviteeAkordInstance.vault.wallet.signingPublicKey(),
       address: await inviteeAkordInstance.vault.wallet.getAddress(),
+      email: email2,
       name: inviteeProfileDetails.name,
       membershipId: ""
     };
@@ -36,6 +38,7 @@ describe("Testing membership functions", () => {
     owner = {
       publicSigningKey: ownerAkordInstance.vault.wallet.signingPublicKey(),
       address: await ownerAkordInstance.vault.wallet.getAddress(),
+      email: email,
       name: ownerProfileDetails.name,
       membershipId: ""
     };
@@ -53,7 +56,7 @@ describe("Testing membership functions", () => {
     expect(invitee.membership.status).toEqual("PENDING");
     expect(invitee.membership.role).toEqual("CONTRIBUTOR");
     expect(invitee.membership.memberDetails.name).toBeFalsy();
-    expect(invitee.membership.memberPublicSigningKey).toEqual(invitee.publicSigningKey);
+    expect(invitee.membership.email).toEqual(invitee.email);
     expect(invitee.membership.address).toEqual(invitee.address);
     expect(invitee.membership.owner).toEqual(owner.address);
 
@@ -61,7 +64,7 @@ describe("Testing membership functions", () => {
     expect(owner.membership.status).toEqual("ACCEPTED");
     expect(owner.membership.role).toEqual("OWNER");
     expect(owner.membership.memberDetails.name).toEqual(owner.name);
-    expect(owner.membership.memberPublicSigningKey).toEqual(owner.publicSigningKey);
+    expect(owner.membership.email).toEqual(owner.email);
     expect(owner.membership.address).toEqual(owner.address);
     expect(owner.membership.owner).toEqual(owner.address);
   });
@@ -73,7 +76,7 @@ describe("Testing membership functions", () => {
     invitee.membership = await inviteeAkordInstance.membership.get(invitee.membershipId);
     expect(invitee.membership.status).toEqual("ACCEPTED");
     expect(invitee.membership.memberDetails.name).toEqual(invitee.name);
-    expect(invitee.membership.memberPublicSigningKey).toEqual(invitee.publicSigningKey);
+    expect(invitee.membership.email).toEqual(invitee.email);
     expect(invitee.membership.address).toEqual(invitee.address);
     expect(invitee.membership.owner).toEqual(owner.address);
 
@@ -94,6 +97,11 @@ describe("Testing membership functions", () => {
 
     const membership = await ownerAkordInstance.membership.get(invitee.membershipId);
     expect(membership.role).toEqual("VIEWER");
+    expect(membership.status).toEqual("ACCEPTED");
+    expect(membership.memberDetails.name).toEqual(invitee.name);
+    expect(membership.email).toEqual(invitee.email);
+    expect(membership.address).toEqual(invitee.address);
+    expect(membership.owner).toEqual(owner.address);
   });
 
   it("should revoke the invite", async () => {

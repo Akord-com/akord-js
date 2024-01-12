@@ -165,7 +165,7 @@ class Service {
     }
   }
 
-  async uploadState(state: any, cacheOnly = true): Promise<string> {
+  async uploadState(state: any, cloud = true): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -180,7 +180,7 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ data: state, tags }], cacheOnly);
+    const ids = await this.api.uploadData([{ data: state, tags }], cloud);
     return ids[0];
   }
 
@@ -268,10 +268,10 @@ class Service {
       : {};
   }
 
-  protected async mergeAndUploadState(stateUpdates: any, cacheOnly = true): Promise<string> {
+  protected async mergeAndUploadState(stateUpdates: any, cloud = true): Promise<string> {
     const currentState = await this.getCurrentState();
     const mergedState = mergeState(currentState, stateUpdates);
-    return this.uploadState(mergedState, cacheOnly);
+    return this.uploadState(mergedState, cloud);
   }
 
   private async signData(data: any): Promise<string> {

@@ -32,7 +32,7 @@ class VaultService extends Service {
     termsOfAccess: undefined,
     description: undefined,
     tags: [],
-    cacheOnly: false,
+    cloud: false,
     arweaveTags: [],
   } as VaultCreateOptions;
 
@@ -94,7 +94,7 @@ class VaultService extends Service {
     }
 
     let vaultId: string
-    if (createOptions.cacheOnly) {
+    if (createOptions.cloud) {
       vaultId = uuidv4();
     } else {
       vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
@@ -142,15 +142,15 @@ class VaultService extends Service {
       description: createOptions.description ? await service.processWriteString(createOptions.description) : undefined,
       tags: createOptions.tags || []
     }
-    const vaultStateTx = await service.uploadState(vaultState, createOptions.cacheOnly);
+    const vaultStateTx = await service.uploadState(vaultState, createOptions.cloud);
 
     const memberState = {
       keys,
       encPublicSigningKey: await memberService.processWriteString(this.wallet.signingPublicKey()),
-      memberDetails: await memberService.processMemberDetails(memberDetails, createOptions.cacheOnly)
+      memberDetails: await memberService.processMemberDetails(memberDetails, createOptions.cloud)
     }
 
-    const memberStateTx = await memberService.uploadState(memberState, createOptions.cacheOnly);
+    const memberStateTx = await memberService.uploadState(memberState, createOptions.cloud);
 
     const data = { vault: vaultStateTx, membership: memberStateTx };
 
@@ -158,7 +158,7 @@ class VaultService extends Service {
       service.vaultId,
       { function: service.function, data },
       service.arweaveTags,
-      { cacheOnly: createOptions.cacheOnly }
+      { cloud: createOptions.cloud }
     );
     const vault = await service.processVault(object, true, service.keys);
     return { vaultId, membershipId, transactionId: id, object: vault };
@@ -193,7 +193,7 @@ class VaultService extends Service {
     service.setAkordTags((options.name && service.isPublic ? [options.name] : []).concat(options.tags));
     service.arweaveTags = await service.getTxTags();
 
-    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
+    const dataTxId = await service.uploadState(newState, service.vault.cloud);
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
       { function: service.function, data: dataTxId },
@@ -216,7 +216,7 @@ class VaultService extends Service {
     const state = {
       name: await service.processWriteString(name)
     };
-    const data = await service.mergeAndUploadState(state, service.vault.cacheOnly);
+    const data = await service.mergeAndUploadState(state, service.vault.cloud);
     service.setAkordTags(service.isPublic ? [name] : []);
     service.arweaveTags = await service.getTxTags();
 
@@ -253,7 +253,7 @@ class VaultService extends Service {
         newState.tags.push(tag);
       }
     }
-    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
+    const dataTxId = await service.uploadState(newState, service.vault.cloud);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
@@ -285,7 +285,7 @@ class VaultService extends Service {
       const index = this.getTagIndex(newState.tags, tag);
       newState.tags.splice(index, 1);
     }
-    const dataTxId = await service.uploadState(newState, service.vault.cacheOnly);
+    const dataTxId = await service.uploadState(newState, service.vault.cloud);
 
     const { id, object } = await this.api.postContractTransaction<Vault>(
       service.vaultId,
