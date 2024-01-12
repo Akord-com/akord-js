@@ -35,7 +35,7 @@ class CollectionService extends NodeService<Collection> {
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<MintCollectionResponse> {
 
-    const { collectionId, object: collection } = await this.init(vaultId, items, metadata, options);
+    const { collectionId, object: collection, service } = await this.init(vaultId, items, metadata, options);
 
     const mintedItems = [] as string[];
     const nfts = [] as NFTResponseItem[];
@@ -45,6 +45,7 @@ class CollectionService extends NodeService<Collection> {
       await Promise.all(chunk.map(async (nft) => {
         try {
           const nftService = new NFTService(this.wallet, this.api);
+          nftService.setGroupRef(service.groupRef);
           const { nftId, transactionId, object } = await nftService.mint(
             vaultId,
             nft.asset,
@@ -63,30 +64,22 @@ class CollectionService extends NodeService<Collection> {
 
     if (mintedItems.length !== items.length) {
       const nodeService = new NodeService<Collection>(this.wallet, this.api);
-      try {
-        await nodeService.revoke(collectionId, vaultId);
-        throw new InternalError("Something went wrong, please try again later or contact Akord support.");
-      } catch (error) {
-        throw new InternalError("Something went wrong, please try again later or contact Akord support.");
-      }
+      await nodeService.revoke(collectionId, vaultId);
+      throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
 
     try {
-      const { transactionId, object } = await this.finalize(collection, metadata, nfts.map((item) => item.object));
+      const { transactionId, object } = await this.finalize(service, collection, metadata, nfts.map((item) => item.object));
       return {
-        object,
+        object: new Collection(object),
         collectionId: collection.id,
         transactionId: transactionId,
         items: nfts
       }
     } catch (error) {
       const nodeService = new NodeService<Collection>(this.wallet, this.api);
-      try {
-        await nodeService.revoke(collectionId, vaultId);
-        throw new InternalError("Something went wrong, please try again later or contact Akord support.");
-      } catch (error) {
-        throw new InternalError("Something went wrong, please try again later or contact Akord support.");
-      }
+      await nodeService.revoke(collectionId, vaultId);
+      throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
   }
 
@@ -103,7 +96,7 @@ class CollectionService extends NodeService<Collection> {
     items: NFTMintItem[],
     metadata: CollectionMetadata,
     options: StackCreateOptions = this.defaultCreateOptions
-  ): Promise<{ collectionId: string, transactionId: string, object: Collection }> {
+  ): Promise<{ collectionId: string, transactionId: string, object: Collection, service: CollectionService }> {
 
     if (!items || items.length === 0) {
       throw new BadRequest("No items provided for minting.");
@@ -156,7 +149,7 @@ class CollectionService extends NodeService<Collection> {
 
     const { nodeId: collectionId, object, transactionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
-    return { collectionId, object, transactionId };
+    return { collectionId, object, transactionId, service };
   }
 
   /**
@@ -167,6 +160,7 @@ class CollectionService extends NodeService<Collection> {
    * @returns Promise with corresponding transaction id & collection object
    */
   public async finalize(
+    initService: CollectionService,
     collection: Collection,
     metadata: CollectionMetadata,
     nfts: NFT[]
@@ -177,11 +171,11 @@ class CollectionService extends NodeService<Collection> {
       items: mintedItems
     } as any;
 
-    const service = new CollectionService(this.wallet, this.api);
+    const service = new CollectionService(this.wallet, this.api, initService);
     service.setObject(collection);
     service.setObjectType("Collection");
     service.setObjectId(collection.id);
-    service.setVaultId(collection.vaultId);
+    service.setVaultId(initService.vaultId);
     service.setIsPublic(true);
     service.setActionRef(actionRefs.NFT_MINT_COLLECTION);
     service.setFunction(functions.NODE_UPDATE);
@@ -191,7 +185,7 @@ class CollectionService extends NodeService<Collection> {
       new Tag("Content-Type", "application/json"),
       new Tag("Name", metadata.name),
       new Tag("Type", "document"),
-      new Tag("Vault-Id", collection.vaultId),
+      new Tag("Vault-Id", initService.vaultId),
       new Tag("Collection-Code", collection.code),
       new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID)
     ];
@@ -209,7 +203,7 @@ class CollectionService extends NodeService<Collection> {
     if (metadata.banner) {
       const bannerService = new StackService(this.wallet, this.api, service);
       const { object: banner } = await bannerService.create(
-        collection.vaultId,
+        initService.vaultId,
         metadata.banner,
         (<any>metadata.banner).name ? (<any>metadata.banner).name : "Collection banner",
         { parentId: collection.id }
@@ -225,7 +219,7 @@ class CollectionService extends NodeService<Collection> {
     if (metadata.thumbnail) {
       const thumbnailService = new StackService(this.wallet, this.api, service);
       const { object: thumbnail } = await thumbnailService.create(
-        collection.vaultId,
+        initService.vaultId,
         metadata.thumbnail,
         (<any>metadata.thumbnail).name ? (<any>metadata.thumbnail).name : "Collection thumbnail",
         { parentId: collection.id }
