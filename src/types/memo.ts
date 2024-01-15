@@ -1,6 +1,5 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { Node, Version } from "./node";
-import { FileVersion } from "./file-version";
 
 export class Memo extends Node {
   versions: Array<MemoVersion>;
@@ -18,7 +17,6 @@ export class Memo extends Node {
 export class MemoVersion extends Encryptable implements Version {
   @encrypted() message: string;
   reactions?: Array<MemoReaction>;
-  attachments?: Array<FileVersion>;
   owner: string;
   createdAt: string;
 
@@ -30,7 +28,6 @@ export class MemoVersion extends Encryptable implements Version {
     this.reactions = (memoVersionProto.reactions || []).map((reaction: MemoReaction) =>
       new MemoReaction(reaction, keys, publicKey)
     );
-    this.attachments = (memoVersionProto.attachments || []).map((attachment: FileVersion) => new FileVersion(attachment, keys));
   }
 }
 
