@@ -106,8 +106,7 @@ class MemoService extends NodeService<Memo> {
       owner: await this.wallet.getAddress(),
       message: await this.processWriteString(message),
       createdAt: JSON.stringify(Date.now()),
-      reactions: [],
-      attachments: []
+      reactions: []
     };
     return new MemoVersion(version);
   }
