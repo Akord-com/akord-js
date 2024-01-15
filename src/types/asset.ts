@@ -76,7 +76,7 @@ export const assetMetadataToTags = (metadata: AssetMetadata): Tags => {
   }
 
   if (metadata.description) {
-    tags.push(new Tag(assetTags.DESCRIPTION, metadata.description));
+    tags.push(new Tag(assetTags.DESCRIPTION, metadata.description.trim()));
   }
 
   if (metadata.topics && metadata.topics.length > 0) {
