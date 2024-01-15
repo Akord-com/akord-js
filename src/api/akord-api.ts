@@ -20,6 +20,9 @@ export const defaultFileUploadOptions = {
   public: false
 };
 
+const RETRY_MAX = 3;
+const RETRY_AFTER = 1000;
+
 export default class AkordApi extends Api {
 
   public config!: ApiConfig;
@@ -47,15 +50,31 @@ export default class AkordApi extends Api {
   };
 
   public async postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
-    const { id, object } = await new ApiClient()
-      .env(this.config)
-      .vaultId(vaultId)
-      .metadata(metadata)
-      .input(input)
-      .tags(tags)
-      .transaction<T>()
-    Logger.log("Uploaded contract interaction with id: " + id);
-    return { id, object };
+    let retryCount = 0;
+    let lastError: Error;
+    while (retryCount < RETRY_MAX) {
+      try {
+        const { id, object } = await new ApiClient()
+          .env(this.config)
+          .vaultId(vaultId)
+          .metadata(metadata)
+          .input(input)
+          .tags(tags)
+          .transaction<T>()
+        Logger.log("Uploaded contract interaction with id: " + id);
+        return { id, object };
+      } catch (error: any) {
+        lastError = error;
+        Logger.log(error);
+        Logger.log(error.message);
+        await new Promise(r => setTimeout(r, RETRY_AFTER));
+        Logger.log("Retrying...");
+        retryCount++;
+        Logger.log("Retry count: " + retryCount);
+      }
+    }
+    Logger.log(`Request failed after ${RETRY_MAX} attempts.`);
+    throw lastError;
   };
 
   public async getMembers(vaultId: string): Promise<Array<Membership>> {
