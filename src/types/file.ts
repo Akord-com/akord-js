@@ -15,9 +15,6 @@ export namespace NodeJs {
       if (!name) {
         throw new BadRequest("File name is required, please provide it in the file options.");
       }
-      if (!mimeType) {
-        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
-      }
       this.name = name;
       this.lastModified = lastModified;
     }
