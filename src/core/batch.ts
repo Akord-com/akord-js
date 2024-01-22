@@ -104,7 +104,7 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
-    
+
     const size = items.reduce((sum, stack) => {
       return sum + stack.file.size;
     }, 0);
@@ -192,7 +192,7 @@ class BatchService extends Service {
         }), { signal: options.cancelHook?.signal })
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
-          errors.push({ name: item.name ,message: error.toString(), error });
+          errors.push({ name: item.name, message: error.toString(), error });
         }
       }
     }
@@ -310,8 +310,7 @@ class BatchService extends Service {
     for (let tx of transactions) {
       try {
         const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags);
-        const membership = await new MembershipService(this.wallet, this.api, batchService).processMembership(object as Membership, !batchService.isPublic, batchService.keys);
-        data.push({ membershipId: membership.id, transactionId: id, object: membership });
+        data.push({ membershipId: object.id, transactionId: id, object: new Membership(object) });
       } catch (error: any) {
         errors.push({
           email: tx.item.email,
@@ -351,7 +350,7 @@ class BatchService extends Service {
       service.arweaveTags = await service.getTxTags();
       const { id, object } = await this.api.postContractTransaction<T>(service.vaultId, item.input, service.arweaveTags);
       const processedObject = item.type === objectType.MEMBERSHIP
-        ? await (<MembershipService>service).processMembership(object as Membership, !batchService.isPublic, batchService.keys)
+        ? new Membership(object)
         : await (<NodeService<T>>service).processNode(object as any, !batchService.isPublic, batchService.keys) as any;
       result.push({ transactionId: id, object: processedObject });
     }

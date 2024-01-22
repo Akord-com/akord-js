@@ -1,5 +1,5 @@
 import { Encryptable, EncryptedKeys } from "@akord/crypto";
-import { ProfileDetails } from "./profile-details";
+import { User } from "./user";
 
 export type RoleType = "VIEWER" | "CONTRIBUTOR" | "OWNER";
 export type StatusType = "ACCEPTED" | "PENDING" | "REVOKED" | "INVITED";
@@ -9,8 +9,8 @@ export const activeStatus = ["ACCEPTED", "PENDING", "INVITED"] as StatusType[];
 export class Membership extends Encryptable {
   id: string;
   owner: string;
-  createdAt: string; // number
-  updatedAt: string; // number
+  createdAt: string;
+  updatedAt: string;
   expiresAt: string;
   status: StatusType;
   address: string;
@@ -18,8 +18,7 @@ export class Membership extends Encryptable {
   data?: string[];
   encPublicSigningKey: string;
   email: string;
-  memberDetails: ProfileDetails;
-
+  memberDetails: User;
   vaultId: string;
   keys: EncryptedKeys[];
 
@@ -42,7 +41,7 @@ export class Membership extends Encryptable {
     this.email = membershipProto.email;
     this.vaultId = membershipProto.vaultId;
     this.keys = membershipProto.keys;
-    this.memberDetails = new ProfileDetails(membershipProto.memberDetails, keys);
+    this.memberDetails = membershipProto.memberDetails;
     this.__public__ = membershipProto.__public__;
     this.__cloud__ = membershipProto.__cloud__;
   }

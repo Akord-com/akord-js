@@ -1,9 +1,9 @@
-import { actionRefs, objectType, status, functions, protocolTags, AKORD_TAG } from "../constants";
+import { actionRefs, objectType, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys } from "@akord/crypto";
 import { Vault, VaultCreateOptions, VaultCreateResult, VaultUpdateOptions, VaultUpdateResult } from "../types/vault";
 import { Service } from "./service";
-import { Tag, Tags } from "../types/contract";
+import { Tag } from "../types/contract";
 import { ListOptions, VaultGetOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
@@ -146,8 +146,7 @@ class VaultService extends Service {
 
     const memberState = {
       keys,
-      encPublicSigningKey: await memberService.processWriteString(this.wallet.signingPublicKey()),
-      memberDetails: await memberService.processMemberDetails(memberDetails, createOptions.cloud)
+      encPublicSigningKey: await memberService.processWriteString(this.wallet.signingPublicKey())
     }
 
     const memberStateTx = await memberService.uploadState(memberState, createOptions.cloud);
