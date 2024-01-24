@@ -12,7 +12,6 @@ import lodash from "lodash";
 import { NotFound } from "../errors/not-found";
 import { BadRequest } from "../errors/bad-request";
 import { handleListErrors, paginate } from "./common";
-import { ProfileService } from "./profile";
 
 class VaultService extends Service {
   objectType = objectType.VAULT;
@@ -99,9 +98,6 @@ class VaultService extends Service {
     } else {
       vaultId = await this.api.initContractId([new Tag(protocolTags.NODE_TYPE, objectType.VAULT)]);
     }
-
-    const profileService = new ProfileService(this.wallet, this.api);
-    const memberDetails = await profileService.get();
 
     const service = new VaultService(this.wallet, this.api);
     service.setActionRef(actionRefs.VAULT_CREATE);
