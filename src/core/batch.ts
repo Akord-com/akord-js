@@ -130,19 +130,18 @@ class BatchService extends Service {
 
     // set service context
     const vault = await this.api.getVault(vaultId);
-    const batchService = new BatchService(this.wallet, this.api);
-    batchService.setVault(vault);
-    batchService.setVaultId(vaultId);
-    batchService.setIsPublic(vault.public);
-    await batchService.setMembershipKeys(vault);
-    batchService.setGroupRef(items);
-    batchService.setActionRef(actionRefs.STACK_CREATE);
-    batchService.setFunction(functions.NODE_CREATE);
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.public);
+    await this.setMembershipKeys(vault);
+    this.setGroupRef(items);
+    this.setActionRef(actionRefs.STACK_CREATE);
+    this.setFunction(functions.NODE_CREATE);
 
     const stackCreateOptions = {
       ...options,
-      cloud: batchService.vault.cloud,
-      storage: batchService.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
+      cloud: this.vault.cloud,
+      storage: this.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
 
     let stacksCreated = 0;
@@ -150,7 +149,7 @@ class BatchService extends Service {
     const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
     const uploadItem = async (item: { file: FileLike, options?: StackCreateOptions }) => {
-      const service = new StackService(this.wallet, this.api, batchService);
+      const service = new StackService(this.wallet, this.api, this);
 
       const nodeId = uuidv4();
       service.setObjectId(nodeId);
@@ -195,8 +194,8 @@ class BatchService extends Service {
           tx.input,
           tx.tags
         );
-        const stack = await new StackService(batchService.wallet, batchService.api, batchService)
-          .processNode(object, !batchService.isPublic, batchService.keys);
+        const stack = await new StackService(this.wallet, this.api, this)
+          .processNode(object, !this.isPublic, this.keys);
         if (options.onStackCreated) {
           await options.onStackCreated(stack);
         }
@@ -236,15 +235,14 @@ class BatchService extends Service {
     const transactions = [] as MembershipInviteTransaction[];
 
     // set service context
-    const batchService = new BatchService(this.wallet, this.api);
-    batchService.setGroupRef(items);
+    this.setGroupRef(items);
     const vault = await this.api.getVault(vaultId);
-    batchService.setVault(vault);
-    batchService.setVaultId(vaultId);
-    batchService.setIsPublic(vault.public);
-    await batchService.setMembershipKeys(vault);
-    batchService.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    batchService.setFunction(functions.MEMBERSHIP_INVITE);
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.public);
+    await this.setMembershipKeys(vault);
+    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
 
     // upload metadata
     await Promise.all(items.map(async (item: MembershipInviteItem) => {
@@ -256,7 +254,7 @@ class BatchService extends Service {
         errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
         const userHasAccount = await this.api.existsUser(email);
-        const service = new MembershipService(this.wallet, this.api, batchService);
+        const service = new MembershipService(this.wallet, this.api, this);
         if (userHasAccount) {
           const membershipId = uuidv4();
           service.setObjectId(membershipId);
@@ -316,22 +314,21 @@ class BatchService extends Service {
 
   private async batchUpdate<T>(items: { id: string, type: ObjectType, input: ContractInput, actionRef: string }[])
     : Promise<{ transactionId: string, object: T }[]> {
-    const batchService = new BatchService(this.wallet, this.api);
-    batchService.setGroupRef(items);
+    this.setGroupRef(items);
     const result = [] as { transactionId: string, object: T }[];
     for (const [itemIndex, item] of items.entries()) {
       const node = item.type === objectType.MEMBERSHIP
         ? await this.api.getMembership(item.id)
         : await this.api.getNode<NodeLike>(item.id, item.type);
 
-      if (itemIndex === 0 || batchService.vaultId !== node.vaultId) {
-        batchService.setVaultId(node.vaultId);
-        batchService.setIsPublic(node.__public__);
-        await batchService.setMembershipKeys(node);
+      if (itemIndex === 0 || this.vaultId !== node.vaultId) {
+        this.setVaultId(node.vaultId);
+        this.setIsPublic(node.__public__);
+        await this.setMembershipKeys(node);
       }
       const service = item.type === objectType.MEMBERSHIP
-        ? new MembershipService(this.wallet, this.api, batchService)
-        : new NodeService<T>(this.wallet, this.api, batchService);
+        ? new MembershipService(this.wallet, this.api, this)
+        : new NodeService<T>(this.wallet, this.api, this);
 
       service.setFunction(item.input.function);
       service.setActionRef(item.actionRef);
@@ -342,7 +339,7 @@ class BatchService extends Service {
       const { id, object } = await this.api.postContractTransaction<T>(service.vaultId, item.input, service.arweaveTags);
       const processedObject = item.type === objectType.MEMBERSHIP
         ? new Membership(object)
-        : await (<NodeService<T>>service).processNode(object as any, !batchService.isPublic, batchService.keys) as any;
+        : await (<NodeService<T>>service).processNode(object as any, !this.isPublic, this.keys) as any;
       result.push({ transactionId: id, object: processedObject });
     }
     return result;

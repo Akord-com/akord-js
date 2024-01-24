@@ -35,7 +35,7 @@ class CollectionService extends NodeService<Collection> {
     options: StackCreateOptions = this.defaultCreateOptions
   ): Promise<MintCollectionResponse> {
 
-    const { collectionId, object: collection, service } = await this.init(vaultId, items, metadata, options);
+    const { collectionId, object: collection, groupRef } = await this.init(vaultId, items, metadata, options);
 
     const mintedItems = [] as string[];
     const nfts = [] as NFTResponseItem[];
@@ -45,7 +45,7 @@ class CollectionService extends NodeService<Collection> {
       await Promise.all(chunk.map(async (nft) => {
         try {
           const nftService = new NFTService(this.wallet, this.api);
-          nftService.setGroupRef(service.groupRef);
+          nftService.setGroupRef(groupRef);
           const { nftId, transactionId, object } = await nftService.mint(
             vaultId,
             nft.asset,
@@ -69,7 +69,7 @@ class CollectionService extends NodeService<Collection> {
     }
 
     try {
-      const { transactionId, object } = await this.finalize(service, collection, metadata, nfts.map((item) => item.object));
+      const { transactionId, object } = await this.finalize(collection, metadata, nfts.map((item) => item.object), vaultId, groupRef);
       return {
         object: new Collection(object),
         collectionId: collection.id,
@@ -96,7 +96,7 @@ class CollectionService extends NodeService<Collection> {
     items: NFTMintItem[],
     metadata: CollectionMetadata,
     options: StackCreateOptions = this.defaultCreateOptions
-  ): Promise<{ collectionId: string, transactionId: string, object: Collection, service: CollectionService }> {
+  ): Promise<{ collectionId: string, transactionId: string, object: Collection, groupRef: string }> {
 
     if (!items || items.length === 0) {
       throw new BadRequest("No items provided for minting.");
@@ -130,7 +130,8 @@ class CollectionService extends NodeService<Collection> {
     service.setAkordTags([]);
     service.setObjectType("Collection");
 
-    service.setGroupRef(uuidv4());
+    const groupRef = uuidv4();
+    service.setGroupRef(groupRef);
 
     // if no collection code provided, derive one from collection name
     const collectionCode = metadata.code
@@ -149,7 +150,7 @@ class CollectionService extends NodeService<Collection> {
 
     const { nodeId: collectionId, object, transactionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
-    return { collectionId, object, transactionId, service };
+    return { collectionId, object, transactionId, groupRef };
   }
 
   /**
@@ -160,32 +161,33 @@ class CollectionService extends NodeService<Collection> {
    * @returns Promise with corresponding transaction id & collection object
    */
   public async finalize(
-    initService: CollectionService,
     collection: Collection,
     metadata: CollectionMetadata,
-    nfts: NFT[]
-  ): Promise<{ transactionId: string, object: Collection, uri: string }> {
+    nfts: NFT[],
+    vaultId: string,
+    groupRef: string
+    ): Promise<{ transactionId: string, object: Collection, uri: string }> {
     const mintedItems = nfts.map((nft: NFT) => nft.asset.getUri(StorageType.ARWEAVE));
     const collectionMintedState = {
       type: "Collection",
       items: mintedItems
     } as any;
 
-    const service = new CollectionService(this.wallet, this.api, initService);
-    service.setObject(collection);
-    service.setObjectType("Collection");
-    service.setObjectId(collection.id);
-    service.setVaultId(initService.vaultId);
-    service.setIsPublic(true);
-    service.setActionRef(actionRefs.COLLECTION_MINT);
-    service.setFunction(functions.NODE_UPDATE);
+    this.setObject(collection);
+    this.setObjectType("Collection");
+    this.setObjectId(collection.id);
+    this.setVaultId(vaultId);
+    this.setIsPublic(true);
+    this.setActionRef(actionRefs.COLLECTION_MINT);
+    this.setFunction(functions.NODE_UPDATE);
+    this.setGroupRef(groupRef);
 
     const collectionTags = [
       new Tag("Data-Protocol", "Collection"),
       new Tag("Content-Type", "application/json"),
       new Tag("Name", metadata.name),
       new Tag("Type", "document"),
-      new Tag("Vault-Id", initService.vaultId),
+      new Tag("Vault-Id", vaultId),
       new Tag("Collection-Code", collection.code),
       new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID)
     ];
@@ -201,9 +203,9 @@ class CollectionService extends NodeService<Collection> {
     }
 
     if (metadata.banner) {
-      const bannerService = new StackService(this.wallet, this.api, service);
+      const bannerService = new StackService(this.wallet, this.api, this);
       const { object: banner } = await bannerService.create(
-        initService.vaultId,
+        vaultId,
         metadata.banner,
         { parentId: collection.id }
       );
@@ -216,9 +218,9 @@ class CollectionService extends NodeService<Collection> {
     }
 
     if (metadata.thumbnail) {
-      const thumbnailService = new StackService(this.wallet, this.api, service);
+      const thumbnailService = new StackService(this.wallet, this.api, this);
       const { object: thumbnail } = await thumbnailService.create(
-        initService.vaultId,
+        vaultId,
         metadata.thumbnail,
         { parentId: collection.id }
       );
@@ -226,7 +228,7 @@ class CollectionService extends NodeService<Collection> {
       collectionMintedState.thumbnail = thumbnail.versions[0];
     }
 
-    service.arweaveTags = await service.getTxTags();
+    this.arweaveTags = await this.getTxTags();
 
     const mergedState = mergeState({
       owner: metadata.owner,
@@ -238,12 +240,12 @@ class CollectionService extends NodeService<Collection> {
       ucm: collection.ucm,
     }, collectionMintedState);
 
-    const ids = await service.api.uploadData([{ data: mergedState, tags: collectionTags }]);
+    const ids = await this.api.uploadData([{ data: mergedState, tags: collectionTags }]);
 
-    const { id, object } = await service.api.postContractTransaction<Collection>(
-      service.vaultId,
-      { function: service.function, data: ids[0] },
-      service.arweaveTags
+    const { id, object } = await this.api.postContractTransaction<Collection>(
+      this.vaultId,
+      { function: this.function, data: ids[0] },
+      this.arweaveTags
     );
     const collectionInstance = new Collection(object);
     return {
