@@ -12,3 +12,4 @@ export * from "./file-version";
 export * from "./udl";
 export * from "./nft";
 export * from "./asset";
+export * from "./collection";

@@ -17,7 +17,8 @@ export enum objectType {
   FOLDER = "Folder",
   NOTE = "Note",
   PROFILE = "Profile",
-  NFT = "NFT"
+  NFT = "NFT",
+  COLLECTION = "Collection"
 };
 
 export enum status {
@@ -81,7 +82,10 @@ export enum actionRefs {
   NOTE_RESTORE = "NOTE_RESTORE",
   NOTE_DELETE = "NOTE_DELETE",
   PROFILE_UPDATE = "PROFILE_UPDATE",
-  NFT_MINT = "NFT_MINT"
+  NFT_MINT = "NFT_MINT",
+  COLLECTION_INIT = "COLLECTION_INIT",
+  COLLECTION_MINT = "COLLECTION_MINT",
+  COLLECTION_REVOKE = "COLLECTION_REVOKE"
 };
 
 export const AKORD_TAG = "Akord-Tag";

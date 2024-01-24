@@ -17,6 +17,7 @@ This package can be used in both browser and Node.js environments.
   - [Note](#note)
   - [Manifest](#manifest)
   - [NFT](#nft)
+  - [Collection](#collection)
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
@@ -1333,7 +1334,7 @@ The atomic asset can be minted with the option to attach the [Universal Data Lic
 #### `mint(vaultId, asset, metadata, options)`
 
 - `vaultId` (`string`, required)
-- `asset` ([`FileLike`][file-like], required) - asset data
+- `asset` ([`FileSource`][file-source], required) - asset data
 - `metadata` (`NFTMetadata`, required) - NFT metadata: name, ticker, description, owner, creator, etc.
 - `options` (`FileUploadOptions`, optional) - ex: UDL terms
 - returns `Promise<{ nftId, transactionId }>` - Promise with new nft id & corresponding transaction id
@@ -1451,6 +1452,132 @@ Get nft asset uri
 ```js
 // get the arweave uri for the nft asset
 const arweaveUri = await akord.nft.getUri(nftId);
+```
+</details>
+
+### collection
+
+The collection module enables the creation of a collection of [NFTs](#nft) compliant with the [Collection protocol](https://specs.g8way.io/?tx=4zqtz8-U4LNKjFU4gZ28oKkV6bTlfzJiguqjbMl9R4Q).
+
+#### `mint(vaultId, asset, metadata, options)`
+
+NOTE: each NFT will inherit collection metadata setup
+
+- `vaultId` (`string`, required)
+- `items` (`{asset:FileSource,metadata:NFTMetadata,options:StackCreateOptions}[]`, required) - items to mint
+- `metadata` (`CollectionMetadata`, required) - Collection metadata: name, ticker, description, owner, creator, etc.
+- `options` (`StackCreateOptions`, optional) - ex: UDL terms
+- returns `Promise<{ collectionId, transactionId, items }>` - Promise with new collection id, minted NFTs & corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+// First, let's define our Collection metadata
+const collectionMetadata = {
+  name: "Golden Orchid - Flora Fantasy #1",
+  creator: "xxxx", // should be a valid Arweave address
+  owner: "yyyy", // should be a valid Arweave address
+  collection: "Flora Fantasy",
+  description: "A rare digital representation of the mythical Golden Orchid",
+  type: "image",
+  topics: ["floral", "nature"]
+};
+
+// Then, let's define UDL terms for the whole collection
+const udlTerms = {
+  licenseFee: {
+    type: "One-Time",
+    value: 10
+  },
+  derivations: [{ type: "Allowed-With-Credit" }]
+};
+
+// Finally, let's mint the collection & list it on UCM
+const { collectionId } = await akord.collection.mint(
+  vaultId,
+  [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
+  collectionMetadata,
+  { udl: udl, ucm: true }
+);
+```
+</details>
+
+#### `get(collectionId, options)`
+
+- `collectionId` (`string`, required)
+- `options` ([`GetOptions`][get-options], optional)
+- returns `Promise<Collection>` - Promise with the collection object
+
+<details>
+  <summary>example</summary>
+
+```js
+const collection = await akord.collection.get(collectionId);
+```
+</details>
+
+#### `listAll(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<Array<Collection>>` - Promise with all collections within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+const collections = await akord.collection.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated collections within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 collections for the vault
+const { items } = await akord.collection.list(vaultId);
+
+// retrieve first 20 collections for the vault
+const { items } = await akord.collection.list(vaultId, { limit: 20 });
+```
+</details>
+
+#### `getBanner(collectionId)`
+
+Get collection banner
+
+- `collectionId` (`string`, required)
+- returns `Promise<{ data: ArrayBuffer } & FileVersion>` - Promise with collection banner
+
+<details>
+  <summary>example</summary>
+
+```js
+// get collection banner buffer
+const { data: fileBuffer } = await akord.collection.getBanner(collectionId);
+```
+</details>
+
+#### `getThumbnail(collectionId)`
+
+Get collection thumbnail
+
+- `collectionId` (`string`, required)
+- returns `Promise<{ data: ArrayBuffer } & FileVersion>` - Promise with collection thumbnail
+
+<details>
+  <summary>example</summary>
+
+```js
+// get collection thumbnail buffer
+const { data: fileBuffer } = await akord.collection.getThumbnail(collectionId);
 ```
 </details>
 

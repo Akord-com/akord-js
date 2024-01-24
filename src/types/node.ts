@@ -7,16 +7,18 @@ import { Note } from "./note";
 import { Memo } from "./memo";
 import { Tags } from "./contract";
 import { NFT } from "./nft";
+import { Collection } from "./collection";
 
 export enum nodeType {
   STACK = "Stack",
   FOLDER = "Folder",
   MEMO = "Memo",
   NOTE = "Note",
-  NFT = "NFT"
+  NFT = "NFT",
+  COLLECTION = "Collection"
 }
 
-export type NodeType = "Stack" | "Folder" | "Memo" | "Note" | "NFT";
+export type NodeType = "Stack" | "Folder" | "Memo" | "Note" | "NFT" | "Collection";
 
 export abstract class Node extends Encryptable {
   id: string;
@@ -75,7 +77,7 @@ export abstract class Version extends Encryptable {
   }
 }
 
-export type NodeLike = Folder | Stack | Note | Memo | NFT
+export type NodeLike = Folder | Stack | Note | Memo | NFT | Collection
 
 export class NodeFactory {
   static instance<NodeLike, K extends Node>(nodeLike: { new(raw: K, keys: Array<EncryptedKeys>): NodeLike }, data: K, keys: Array<EncryptedKeys>): any {
