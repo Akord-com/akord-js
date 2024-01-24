@@ -75,6 +75,7 @@ class NFTService extends NodeService<NFT> {
       createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
     }
     const fileService = new FileService(this.wallet, this.api, service);
+    createOptions.storage = StorageType.ARWEAVE;
     const fileUploadResult = await fileService.create(fileLike, createOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
