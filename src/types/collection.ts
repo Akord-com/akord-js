@@ -15,6 +15,7 @@ export class Collection extends Node {
   ucm?: boolean;
   items: string[];
   type: string;
+  uri: string; // collection arweave uri
 
   constructor(collectionProto: any) {
     super(collectionProto, null);
@@ -29,6 +30,11 @@ export class Collection extends Node {
     this.ucm = collectionProto.ucm;
     this.items = collectionProto.items;
     this.type = collectionProto.type;
+    this.uri = this.getUri();
+  }
+
+  getUri(): string {
+    return this.data?.[1];
   }
 }
 

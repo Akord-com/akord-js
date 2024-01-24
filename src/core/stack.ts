@@ -50,7 +50,7 @@ class StackService extends NodeService<Stack> {
       tags: createOptions.tags || []
     };
     const { nodeId, transactionId, object } = await service.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
-    return { stackId: nodeId, transactionId, object };
+    return { stackId: nodeId, transactionId, object, uri: object.uri };
   }
 
   /**
@@ -80,7 +80,7 @@ class StackService extends NodeService<Stack> {
       versions: [version]
     };
     const { nodeId, transactionId, object } = await service.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
-    return { stackId: nodeId, transactionId, object };
+    return { stackId: nodeId, transactionId, object, uri: object.uri };
   }
 
   /**
@@ -112,7 +112,8 @@ class StackService extends NodeService<Stack> {
     const state = {
       versions: [version]
     };
-    return service.nodeUpdate<Stack>(state);
+    const { transactionId, object } = await service.nodeUpdate<Stack>(state);
+    return { transactionId, object, uri: object.uri };
   }
 
   /**

@@ -16,6 +16,7 @@ export class NFT extends Node {
   claimable: Claim[];
   asset: FileVersion;
   thumbnail?: FileVersion;
+  uri: string; // asset arweave uri
 
   constructor(nodeLike: any) {
     super(nodeLike, null);
@@ -28,6 +29,7 @@ export class NFT extends Node {
     this.claimable = nodeLike.claimable;
     this.asset = new FileVersion(nodeLike.asset);
     this.thumbnail = nodeLike.thumbnail ? new FileVersion(nodeLike.thumbnail) : undefined;
+    this.uri = this.getUri();
   }
 
   getUri(type: StorageType = StorageType.ARWEAVE): string {
