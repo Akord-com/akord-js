@@ -11,7 +11,7 @@ export namespace NodeJs {
     lastModified: number;
 
     constructor(sources: Array<BinaryLike | Blob>, name: string, mimeType?: string, lastModified?: number) {
-      super(sources, { type: mimeType || 'text/plain' });
+      super(sources, { type: mimeType || mime.lookup(name) || 'text/plain' });
       if (!name) {
         throw new BadRequest("File name is required, please provide it in the file options.");
       }

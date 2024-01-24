@@ -32,7 +32,7 @@ export default class AkordApi extends Api {
     this.config = apiConfig(config.env);
   }
 
-  public async uploadData(items: { data: any, tags: Tags }[], cacheOnly = false)
+  public async uploadData(items: { data: any, tags: Tags }[], cloud = false)
     : Promise<Array<string>> {
     const resources = [];
 
@@ -41,7 +41,7 @@ export default class AkordApi extends Api {
         .env(this.config)
         .tags(item.tags)
         .state(item.data)
-        .cacheOnly(cacheOnly)
+        .cloud(cloud)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;

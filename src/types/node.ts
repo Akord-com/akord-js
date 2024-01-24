@@ -33,7 +33,7 @@ export abstract class Node extends Encryptable {
 
   // vault context
   __public__?: boolean;
-  __cacheOnly__?: boolean;
+  __cloud__?: boolean;
 
   constructor(nodeLikeProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(
@@ -50,7 +50,7 @@ export abstract class Node extends Encryptable {
     this.parentId = nodeLikeProto.parentId;
     this.tags = nodeLikeProto.tags;
     this.__public__ = nodeLikeProto.__public__;
-    this.__cacheOnly__ = nodeLikeProto.__cacheOnly__;
+    this.__cloud__ = nodeLikeProto.__cloud__;
   }
 
   getVersion(index?: number): Version {

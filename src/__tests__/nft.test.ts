@@ -22,7 +22,7 @@ describe("Testing NFT functions", () => {
 
     const { vaultId } = await akord.vault.create(faker.random.words(), {
       public: true,
-      cacheOnly: false
+      cloud: false
     });
 
     const nftName = "IMG_7476.jpeg";
