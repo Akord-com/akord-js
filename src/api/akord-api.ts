@@ -261,24 +261,6 @@ export default class AkordApi extends Api {
       .downloadState()
   };
 
-  public async getNotifications(): Promise<Paginated<any>> {
-    return await new ApiClient()
-      .env(this.config)
-      .getNotifications()
-  };
-
-  public async readNotifications(options: {
-    id?: string,
-    vaultId?: string,
-    readOnly?: Boolean,
-    shouldDelete?: Boolean
-  }): Promise<void> {
-    await new ApiClient()
-      .env(this.config)
-      .queryParams(options)
-      .patchNotifications()
-  };
-
   public async getContractState(objectId: string): Promise<ContractState> {
     const contract = await new ApiClient()
       .env(this.config)

@@ -17,7 +17,7 @@ abstract class Api {
   abstract postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
-  
+
   abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<{ resourceUri: string[], resourceLocation: string }>
 
   abstract getUploadState(id: string): Promise<{ resourceUri: string[] }>
@@ -63,14 +63,10 @@ abstract class Api {
   abstract deleteVault(vaultId: string): Promise<void>
 
   abstract inviteNewUser(vaultId: string, email: string, role: string, message?: string): Promise<{ id: string }>
-  
+
   abstract revokeInvite(vaultId: string, membershipId: string): Promise<{ id: string }>
 
   abstract inviteResend(vaultId: string, membershipId: string): Promise<{ id: string }>
-
-  abstract readNotifications(options: { id?: string, vaultId?: string, readOnly?: Boolean, shouldDelete?: Boolean }): Promise<void>
-
-  abstract getNotifications(): Promise<Paginated<any>>
 }
 
 export {

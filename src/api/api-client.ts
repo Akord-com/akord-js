@@ -31,7 +31,6 @@ export class ApiClient {
   private _nodeUri: string = "nodes";
   private _membershipUri: string = "memberships";
   private _userUri: string = "users";
-  private _notificationUri: string = "notifications";
 
   // path params
   private _resourceId: string;
@@ -267,13 +266,6 @@ export class ApiClient {
   }
 
   /**
-   * Get notifications for currently authenticated user
-   */
-  async getNotifications(): Promise<Paginated<any>> {
-    return await this.get(`${this._apiurl}/${this._notificationUri}`);
-  }
-
-  /**
    * Get memberships for currently authenticated user
    * @uses:
    * - queryParams() - limit, nextToken
@@ -381,10 +373,6 @@ export class ApiClient {
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
-  }
-
-  async patchNotifications(): Promise<Paginated<any>> {
-    return await this.patch(`${this._apiurl}/${this._notificationUri}`);
   }
 
   async invite(): Promise<{ id: string }> {
