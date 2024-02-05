@@ -158,7 +158,7 @@ class MembershipService extends Service {
         address: memberAddress,
         publicKey: member.publicKey,
         publicSigningKey: member.publicSigningKey,
-        expirationDate: member.options?.expirationDate
+        ...member.options
       })
       memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
