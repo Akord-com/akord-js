@@ -96,7 +96,7 @@ class StackService extends NodeService<Stack> {
     service.setFunction(functions.NODE_UPDATE);
 
     const optionsFromVault = {
-      storage: service.object.__cloud__ ? StorageType.S3 : StorageType.ARWEAVE
+      storage: service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
     const uploadOptions = {
       ...optionsFromVault,
