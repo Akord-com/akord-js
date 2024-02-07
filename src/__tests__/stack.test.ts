@@ -27,9 +27,12 @@ describe("Testing stack functions", () => {
   it("should create stack from path", async () => {
     const name = faker.random.words();
 
-    stackId = (await akord.stack.create(vaultId, testDataPath + firstFileName, name)).stackId;
+    const { stackId, uri } = await akord.stack.create(vaultId, testDataPath + firstFileName, name);
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
     expect(stack.name).toEqual(name);
     expect(stack.versions.length).toEqual(1);
@@ -47,9 +50,12 @@ describe("Testing stack functions", () => {
     const fileBuffer = fs.readFileSync(testDataPath + firstFileName);
     const type = "image/png";
 
-    stackId = (await akord.stack.create(vaultId, fileBuffer, name, { name: firstFileName, mimeType: type })).stackId;
+    const { stackId, uri } = await akord.stack.create(vaultId, fileBuffer, name, { name: firstFileName, mimeType: type });
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
     expect(stack.name).toEqual(name);
     expect(stack.versions.length).toEqual(1);
@@ -67,9 +73,12 @@ describe("Testing stack functions", () => {
     const fileStream = fs.createReadStream(testDataPath + firstFileName);
     const type = "image/png";
 
-    stackId = (await akord.stack.create(vaultId, fileStream, name, { name: firstFileName, mimeType: type })).stackId;
+    const { stackId, uri } = await akord.stack.create(vaultId, fileStream, name, { name: firstFileName, mimeType: type });
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
     expect(stack.name).toEqual(name);
     expect(stack.versions.length).toEqual(1);
@@ -89,6 +98,7 @@ describe("Testing stack functions", () => {
     stackId = (await akord.stack.create(vaultId, file, name)).stackId;
 
     const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
     expect(stack.name).toEqual(name);
     expect(stack.versions.length).toEqual(1);
@@ -109,9 +119,11 @@ describe("Testing stack functions", () => {
   });
 
   it("should upload new revision", async () => {
-    await akord.stack.uploadRevision(stackId, testDataPath + secondFileName);
+    const { uri } = await akord.stack.uploadRevision(stackId, testDataPath + secondFileName);
+    expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
     expect(stack.versions.length).toEqual(2);
     expect(stack.versions[0].name).toEqual(firstFileName);
     expect(stack.versions[1].name).toEqual(secondFileName);
@@ -132,6 +144,7 @@ describe("Testing stack functions", () => {
     await akord.stack.rename(stackId, name);
 
     const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
     expect(stack.name).toEqual(name);
     expect(stack.versions.length).toEqual(2);
     expect(stack.versions[0].name).toEqual(firstFileName);

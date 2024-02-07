@@ -68,7 +68,7 @@ class FileService extends Service {
 
     const resource = await this.client.uploadFile();
     const resourceUri = resource.resourceUri
-    resourceUri.push(`${StorageType.ARWEAVE}:${fileTxId}`);
+    resourceUri.push(`${StorageType.ARWEAVE}${fileTxId}`);
     return { file, resourceUri };
   }
 

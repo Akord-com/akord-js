@@ -164,7 +164,7 @@ class CollectionService extends NodeService<Collection> {
     collection: Collection,
     metadata: CollectionMetadata,
     nfts: NFT[]
-  ): Promise<{ transactionId: string, object: Collection }> {
+  ): Promise<{ transactionId: string, object: Collection, uri: string }> {
     const mintedItems = nfts.map((nft: NFT) => nft.asset.getUri(StorageType.ARWEAVE));
     const collectionMintedState = {
       type: "Collection",
@@ -247,9 +247,11 @@ class CollectionService extends NodeService<Collection> {
       { function: service.function, data: ids[0] },
       service.arweaveTags
     );
+    const collectionInstance = new Collection(object);
     return {
       transactionId: id,
-      object: object
+      object: collectionInstance,
+      uri: collectionInstance.uri
     }
   }
 

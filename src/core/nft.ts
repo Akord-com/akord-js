@@ -27,7 +27,7 @@ class NFTService extends NodeService<NFT> {
     asset: FileSource,
     metadata: NFTMetadata,
     options: StackCreateOptions = this.defaultCreateOptions
-  ): Promise<{ nftId: string, transactionId: string, object: NFT }> {
+  ): Promise<{ nftId: string, transactionId: string, object: NFT, uri: string }> {
 
     const vault = await this.api.getVault(vaultId);
     if (!vault.public || vault.cloud) {
@@ -84,7 +84,7 @@ class NFTService extends NodeService<NFT> {
     state.thumbnail = thumbnail;
 
     const { nodeId, transactionId, object } = await service.nodeCreate<NFT>(state, { parentId: options.parentId });
-    return { nftId: nodeId, transactionId, object };
+    return { nftId: nodeId, transactionId, object, uri: object.uri };
   }
 
   /**

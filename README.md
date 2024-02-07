@@ -52,7 +52,9 @@ const { vaultId } = await akord.vault.create("my first vault");
 
 #### Upload file to the vault by creating new stack
 ```js
-const { stackId } = await akord.stack.create(vaultId, file, "my first file stack");
+const { stackId, uri } = await akord.stack.create(vaultId, file, "my first file stack");
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can access your file on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
 
 #### Download latest file version of the stack
@@ -681,13 +683,15 @@ do {
 
 ```js
 // create a stack from file path with custom arweave tags
-const { stackId } = await akord.stack.create(vaultId, "path to your file", "jam session vol. 1", {
+const { stackId, uri } = await akord.stack.create(vaultId, "path to your file", "jam session vol. 1", {
    arweaveTags: [
       { name: "Type", value: "music" },
       { name: "Genre", value: "rock" },
       { name: "Genre", value: "new wave" }
    ]
 });
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can access your file on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
 
 ```js
@@ -1366,13 +1370,10 @@ const udlTerms = {
 };
 
 // Finally, let's mint the NFT by passing the path to the asset data, NFT metadata, and UDL terms
-const { nftId } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
+const { uri } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
 
-// Let's retrieve the transaction uri containing the NFT
-import { StorageType } from "@akord/akord-js";
-const nft = await akord.nft.get(nftId);
-const nftUri = nft.asset.getUri(StorageType.ARWEAVE);
-// After few minutes, you should be able to view your NFT on: https://viewblock.io/arweave/tx/{nftUri}
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can access your NFT on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
 </details>
 
@@ -1494,12 +1495,14 @@ const udlTerms = {
 };
 
 // Finally, let's mint the collection & list it on UCM
-const { collectionId } = await akord.collection.mint(
+const { uri } = await akord.collection.mint(
   vaultId,
   [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
   collectionMetadata,
   { udl: udl, ucm: true }
 );
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can view your collection on BazAR by visiting the following URL: https://bazar.arweave.dev/#/collection/{uri}
 ```
 </details>
 
