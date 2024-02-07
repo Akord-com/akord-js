@@ -33,10 +33,10 @@
     reflect-metadata "^0.1.13"
     tweetnacl "^1.0.3"
 
-"@akord/crypto@0.20.2":
-  version "0.20.2"
-  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.20.2.tgz#537821b7ce9d40945dd5b618429f7608b994d280"
-  integrity sha512-RLtQH437PieOt8jY+OMgMVhH18kLqVnSAHnutcJxKgLK1QcnHIJD2RQjJpjVEdlt5Ibzs80gE5HdzjkxylB37w==
+"@akord/crypto@0.20.3":
+  version "0.20.3"
+  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.20.3.tgz#566268ce961113ce9c722fa24cd23a6b787ab310"
+  integrity sha512-4CQOU4A8sk/jP4m+jZnWArKZzITt8yhWfOm0Liv5Alvth1LetURQGH2N36lT9dja5koim3HxvBWKQ+7iq+KlFg==
   dependencies:
     "@akord/browser-level" "^1.0.2"
     bip39 "^3.1.0"
