@@ -17,7 +17,8 @@ export class Stack extends Node {
 
   getUri(type: StorageType = StorageType.ARWEAVE, index?: number): string {
     const version = this.getVersion(index);
-    return version.getUri(type);
+    const uri = version.getUri(type);
+    return uri ? uri : version.getUri(StorageType.S3);
   }
 
   getVersion(index?: number): FileVersion {

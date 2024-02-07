@@ -33,7 +33,8 @@ export class NFT extends Node {
   }
 
   getUri(type: StorageType = StorageType.ARWEAVE): string {
-    return this.asset.getUri(type);
+    const uri = this.asset.getUri(type);
+    return uri ? uri : this.asset.getUri(StorageType.S3);
   }
 }
 
