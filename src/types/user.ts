@@ -3,9 +3,8 @@ export type User = {
   publicSigningKey: string,
   publicKey: string,
   email: string,
-  name?: string,
-  avatarUri?: string[],
-  avatar?: ArrayBuffer
+  profileName?: string,
+  avatar?: string[]
 }
 
 export type UserPublicInfo = {
