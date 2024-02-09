@@ -122,7 +122,7 @@ class StackService extends NodeService<Stack> {
    * @param  {number} [index] stack version index
    * @returns Promise with version name & data stream or buffer
    */
-  public async getVersion(stackId: string, index: number = 0, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersionData> {
+  public async getVersion(stackId: string, index?: number, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersionData> {
     const service = new FileService(this.wallet, this.api);
     const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK);
     const stack = new Stack(stackProto, stackProto.__keys__);
