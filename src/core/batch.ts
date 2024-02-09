@@ -284,7 +284,7 @@ class BatchService extends Service {
 
     for (let tx of transactions) {
       try {
-        const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags);
+        const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags, { message: options.message });
         data.push({ membershipId: object.id, transactionId: id, object: new Membership(object) });
       } catch (error: any) {
         errors.push({
