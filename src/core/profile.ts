@@ -29,13 +29,13 @@ class ProfileService extends Service {
   @PCacheBuster({
     cacheBusterNotifier: CacheBusters.profile
   })
-  public async update(name?: string, avatar?: ArrayBuffer): Promise<void> {
+  public async update(profileName?: string, avatar?: ArrayBuffer): Promise<void> {
     const user = await this.api.getUser();
     if (avatar) {
       const resource = await this.api.uploadFile(avatar, [], { cloud: true, public: true, storage: StorageType.S3 });
-      user.avatarUri = resource.resourceUri;
+      user.avatar = resource.resourceUri;
     }
-    return await this.api.updateUser(name, user.avatarUri);
+    return await this.api.updateUser(profileName, user.avatar);
   }
 };
 
