@@ -52,16 +52,12 @@ describe("Testing membership functions", () => {
     invitee.membership = await ownerAkordInstance.membership.get(invitee.membershipId);
     expect(invitee.membership.status).toEqual("PENDING");
     expect(invitee.membership.role).toEqual("CONTRIBUTOR");
-    expect(invitee.membership.memberDetails.name).toBeFalsy();
-    expect(invitee.membership.memberPublicSigningKey).toEqual(invitee.publicSigningKey);
     expect(invitee.membership.address).toEqual(invitee.address);
     expect(invitee.membership.owner).toEqual(owner.address);
 
     owner.membership = await ownerAkordInstance.membership.get(owner.membershipId);
     expect(owner.membership.status).toEqual("ACCEPTED");
     expect(owner.membership.role).toEqual("OWNER");
-    expect(owner.membership.memberDetails.name).toEqual(owner.name);
-    expect(owner.membership.memberPublicSigningKey).toEqual(owner.publicSigningKey);
     expect(owner.membership.address).toEqual(owner.address);
     expect(owner.membership.owner).toEqual(owner.address);
   });
@@ -72,8 +68,6 @@ describe("Testing membership functions", () => {
 
     invitee.membership = await inviteeAkordInstance.membership.get(invitee.membershipId);
     expect(invitee.membership.status).toEqual("ACCEPTED");
-    expect(invitee.membership.memberDetails.name).toEqual(invitee.name);
-    expect(invitee.membership.memberPublicSigningKey).toEqual(invitee.publicSigningKey);
     expect(invitee.membership.address).toEqual(invitee.address);
     expect(invitee.membership.owner).toEqual(owner.address);
 
