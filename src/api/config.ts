@@ -4,12 +4,12 @@ export const apiConfig = (env: string) => {
     default:
       return {
         apiurl: "https://api.akord.com",
-        gatewayurl: "https://d23dlkqtpwjhff.cloudfront.net",
+        gatewayurl: "https://akrd.net",
       };
     case "dev":
       return {
         apiurl: "https://api.akord.link",
-        gatewayurl: "https://akrd.net",
+        gatewayurl: "https://akrd.io",
       };
   }
 };
