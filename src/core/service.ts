@@ -13,7 +13,7 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags, AKORD_TAG } from '../constants';
+import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../constants';
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
@@ -23,6 +23,7 @@ import { EncryptOptions, EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "./common";
 import { EncryptionMetadata } from "../types/encryption";
+import { assetTags } from "../types";
 
 export const STATE_CONTENT_TYPE = "application/json";
 
@@ -207,7 +208,7 @@ class Service {
         .filter((tag: string) => tag)
         .map(
           (value: string) =>
-          tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
+          tags.push(new Tag(assetTags.TOPIC + ":" + value.toLowerCase(), value.toLowerCase())))
       );
     // remove duplicates
     return [...new Map(tags.map(item => [item.value, item])).values()];

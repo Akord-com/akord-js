@@ -88,8 +88,6 @@ export enum actionRefs {
   COLLECTION_REVOKE = "COLLECTION_REVOKE"
 };
 
-export const AKORD_TAG = "Akord-Tag";
-
 export enum protocolTags {
   CLIENT_NAME = "Client-Name",
   PROTOCOL_NAME = "Protocol-Name",
