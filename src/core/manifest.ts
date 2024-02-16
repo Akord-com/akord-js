@@ -108,7 +108,7 @@ class ManifestService extends NodeService<Stack> {
       tree.forEach((folder) => {
         folder['stacks'].forEach((stack: Stack) => {
           // construct the path name
-          const pathName = [path, folder['name'], stack.name]
+          const pathName = [path, this.encode(folder['name']), this.encode(stack.name)]
             .filter((p) => p != null)
             .join("/");
           const arweaveId = stack.getUri();
@@ -121,7 +121,7 @@ class ManifestService extends NodeService<Stack> {
         // process the children
         if (folder['children']) {
           let pathName = folder['name'];
-          if (path) pathName = [path, folder['name']].join("/");
+          if (path) pathName = [path, this.encode(folder['name'])].join("/");
           const children = computePaths(folder['children'], pathName);
           paths.push(...children);
         }
@@ -159,6 +159,13 @@ class ManifestService extends NodeService<Stack> {
       },
       paths: manifest,
     };
+  };
+
+  private encode (str?: string) {
+    if (str) {
+      return encodeURIComponent(str);
+    }
+    return null;
   };
 };
 
