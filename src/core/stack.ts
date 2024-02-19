@@ -174,7 +174,7 @@ class StackService extends NodeService<Stack> {
         const version = stack.getVersion(index);
         const id = version.getUri(StorageType.S3);
 
-        const url = `${service.api.config.gatewayurl}/internal/${id}`
+        const url = `${service.api.config.apiurl}/files/${id}`
         const proxyUrl = `${PROXY_DOWNLOAD_URL}/${id}`
         await service.setVaultContext(stack.vaultId);
 

@@ -363,7 +363,7 @@ export class ApiClient {
     try {
       const response = await axios({
         method: 'head',
-        url: `${this._gatewayurl}/internal/${this._resourceId}`
+        url: `${this._apiurl}/files/${this._resourceId}`
       });
       return Object.keys(response.headers)
         .filter(header => header.startsWith(GATEWAY_HEADER_PREFIX))
@@ -553,7 +553,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `${this._gatewayurl}/internal`,
+      url: `${this._apiurl}/files`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -590,7 +590,7 @@ export class ApiClient {
     if (!this._resourceId) {
       throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
     }
-    const data = await this.get(`${this._gatewayurl}/internal/uploader/${this._resourceId}`);
+    const data = await this.get(`${this._apiurl}/files/uploader/${this._resourceId}`);
     return {
       resourceUri: data.resourceUri
     }
@@ -640,7 +640,7 @@ export class ApiClient {
     }
 
     try {
-      const response = await fetch(`${this._gatewayurl}/internal/${this._resourceId}`, config);
+      const response = await fetch(`${this._apiurl}/files/${this._resourceId}`, config);
       return { resourceUrl: this._resourceId, response: response };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
