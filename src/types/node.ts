@@ -61,7 +61,7 @@ export abstract class Node extends Encryptable {
         throw new NotFound("A version with given index: " + index + " does not exist for node: " + this.id);
       }
     } else {
-      return this.versions && this.versions.length && this.versions[this.versions.length - 1];
+      return this.versions && this.versions.length > 0 && this.versions[this.versions.length - 1] || undefined;
     }
   }
 }
