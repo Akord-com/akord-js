@@ -1646,7 +1646,7 @@ Update user profile along with all active memberships
 #### `stackCreate(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, options: StackCreateOptions>`, required)
+- `items` (`Array<{ file: `[`FileSource`][file-source]`, name: string, options: StackCreateOptions>`, required)
 - `options` (`BatchStackCreateOptions`, optional)
 - returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
@@ -1688,7 +1688,7 @@ node --inspect node_modules/.bin/jest ./src/__tests__/folder.test.ts
 [list-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L1
 [get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L9
 [vault-get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L14
-[file-like]: https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8
+[file-source]: https://github.com/Akord-com/akord-js/blob/ccdfd3cd41b8e6fd38ce22cde96529273365e4f6/src/types/file.ts#L48
 [storage-type]: https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149
 [role-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/membership.ts#L4
 [node-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/node.ts#L11

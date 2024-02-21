@@ -6,10 +6,10 @@ import { StackService } from "./stack";
 import { NodeService } from "./node";
 import { Node, NodeLike, NodeType } from "../types/node";
 import { StackCreateOptions, Stack } from "../types/stack";
-import { FileLike } from "../types/file-like";
+import { FileLike, FileSource } from "../types/file";
 import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
 import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
-import { FileService, Hooks } from "./file";
+import { FileService, Hooks, createFileLike } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
@@ -95,7 +95,7 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{file:FileLike,name:string,options:StackCreateOptions}[]} items
+   * @param  {{file:FileSource,name:string,options:StackCreateOptions}[]} items
    * @param  {BatchStackCreateOptions} [options]
    * @returns Promise with new stack ids & their corresponding transaction ids
    */
@@ -104,8 +104,18 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
-    const batchSize = items.reduce((sum, stack) => {
-      return sum + stack.file.size;
+    // prepare items to upload
+    const itemsToUpload = await Promise.all(items.map(async (item: StackCreateItem) => {
+      const fileLike = await createFileLike(item.file, item.options || {});
+      return {
+        file: fileLike,
+        name: item.name,
+        options: item.options
+      }
+    })) as { file: FileLike, name: string, options?: StackCreateOptions }[];
+
+    const batchSize = itemsToUpload.reduce((sum, item) => {
+      return sum + item.file.size;
     }, 0);
     batchProgressCount(batchSize, options);
 
@@ -133,7 +143,7 @@ class BatchService extends Service {
     const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY, });
     const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
-    const uploadItem = async (item: StackCreateItem) => {
+    const uploadItem = async (item: { file: FileLike, name: string, options?: StackCreateOptions }) => {
       const service = new StackService(this.wallet, this.api, batchService);
 
       const nodeId = uuidv4();
@@ -192,7 +202,7 @@ class BatchService extends Service {
     }
 
     try {
-      await uploadQ.addAll(items.map(item => () => uploadItem(item)), { signal: options.cancelHook?.signal });
+      await uploadQ.addAll(itemsToUpload.map(item => () => uploadItem(item)), { signal: options.cancelHook?.signal });
     } catch (error) {
       if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
         errors.push({ message: error.toString(), error });
@@ -200,7 +210,7 @@ class BatchService extends Service {
     }
     await postTxQ.onIdle();
     if (options.cancelHook?.signal?.aborted) {
-      return ({ data, errors, cancelled: items.length - stacksCreated });
+      return ({ data, errors, cancelled: itemsToUpload.length - stacksCreated });
     }
     return { data, errors, cancelled: 0 };
   }
@@ -378,7 +388,7 @@ export type MembershipInviteTransaction = TransactionPayload & {
 }
 
 export type StackCreateItem = {
-  file: FileLike,
+  file: FileSource,
   name: string,
   options?: StackCreateOptions
 }
