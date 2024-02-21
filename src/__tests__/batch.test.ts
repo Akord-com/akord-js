@@ -68,7 +68,7 @@ describe("Testing batch actions", () => {
 
       const items = [] as { file: any, name: string }[];
 
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 10; i++) {
         const name = faker.random.words();
         items.push({ file, name });
       }
