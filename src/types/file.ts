@@ -25,7 +25,7 @@ export namespace NodeJs {
       return new File(chunks, name, mimeType, lastModified);
     }
 
-    static async fromPath(filePath: string) {
+    static async fromPath(filePath: string, name?: string, mimeType?: string, lastModified?: number) {
       if (typeof window === 'undefined') {
         const fs = (await import("fs")).default;
         const path = (await import("path")).default;
@@ -33,8 +33,12 @@ export namespace NodeJs {
           throw new NotFound("Could not find a file in your filesystem: " + filePath);
         }
         const stats = fs.statSync(filePath);
-        const name = path.basename(filePath);
-        const file = new File([fs.readFileSync(filePath)], name, mime.lookup(name) || '', stats.ctime.getTime()) as NodeJs.File;
+
+        const fileName = name || path.basename(filePath);
+        const fileType = mimeType || mime.lookup(name) || '';
+        const fileLastModified = lastModified || stats.ctime.getTime();
+
+        const file = new File([fs.readFileSync(filePath)], fileName, fileType, fileLastModified) as NodeJs.File;
         return file;
       } else {
         throw new BadRequest("Method not valid for browsers.");

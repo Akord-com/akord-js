@@ -340,7 +340,7 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
     } else if (source instanceof nodeJsFile) {
       return source;
     } else if (typeof source === "string") {
-      return nodeJsFile.fromPath(source as string);
+      return nodeJsFile.fromPath(source, name, mimeType, options.lastModified);
     } else if (source instanceof Array) {
       return new nodeJsFile(source, name, mimeType, options.lastModified);
     }
