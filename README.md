@@ -68,7 +68,7 @@ const vaults = await akord.vault.listAll();
 ```
 
 ### Examples
-- See our [demo app tutorial](https://akord-js-tutorial.akord.com) and learn how to create,
+- See our [demo app tutorial](https://js.akord.com) and learn how to create,
 contribute and access an Akord Vault from.
 
 - See example flows in our [tests repo](src/__tests__).
