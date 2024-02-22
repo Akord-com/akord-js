@@ -205,7 +205,6 @@ class CollectionService extends NodeService<Collection> {
       const { object: banner } = await bannerService.create(
         initService.vaultId,
         metadata.banner,
-        (<any>metadata.banner).name ? (<any>metadata.banner).name : "Collection banner",
         { parentId: collection.id }
       );
       collectionTags.push(new Tag("Banner", banner.getUri(StorageType.ARWEAVE)));
@@ -221,7 +220,6 @@ class CollectionService extends NodeService<Collection> {
       const { object: thumbnail } = await thumbnailService.create(
         initService.vaultId,
         metadata.thumbnail,
-        (<any>metadata.thumbnail).name ? (<any>metadata.thumbnail).name : "Collection thumbnail",
         { parentId: collection.id }
       );
       collectionTags.push(new Tag("Thumbnail", thumbnail.getUri(StorageType.ARWEAVE)));

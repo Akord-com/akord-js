@@ -14,14 +14,18 @@ class StackService extends NodeService<Stack> {
   objectType = nodeType.STACK;
   NodeType = Stack;
 
+  stackCreateDefaultOptions = {
+    ...this.defaultCreateOptions,
+    overrideFileName: true
+  }
+
   /**
    * @param  {string} vaultId
    * @param  {FileSource} file file source: web File object, file path, buffer or stream
-   * @param  {string} name stack name
    * @param  {StackCreateOptions} [options] parent id, progress hook, cancel hook, etc.
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async create(vaultId: string, file: FileSource, name: string, options: StackCreateOptions = this.defaultCreateOptions):
+  public async create(vaultId: string, file: FileSource, options: StackCreateOptions = this.stackCreateDefaultOptions):
     Promise<StackCreateResult> {
     const service = new StackService(this.wallet, this.api);
     await service.setVaultContext(vaultId);
@@ -32,20 +36,25 @@ class StackService extends NodeService<Stack> {
       storage: service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
     const createOptions = {
-      ...this.defaultCreateOptions,
+      ...this.stackCreateDefaultOptions,
       ...optionsFromVault,
       ...options
     }
-    service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
 
     const fileService = new FileService(this.wallet, this.api, service);
     fileService.contentType = this.fileService.contentType;
-    const fileLike = await createFileLike(file, options);
+
+    const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name: undefined });
+
+    const stackName = options.name || fileLike.name;
+
+    service.setAkordTags((service.isPublic ? [stackName] : []).concat(createOptions.tags));
+
     const fileUploadResult = await fileService.create(fileLike, createOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = {
-      name: await service.processWriteString(name ? name : fileLike.name),
+      name: await service.processWriteString(stackName),
       versions: [version],
       tags: createOptions.tags || []
     };

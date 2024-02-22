@@ -26,7 +26,7 @@ export class Stack extends Node {
   }
 }
 
-export type StackCreateOptions = NodeCreateOptions & FileUploadOptions;
+export type StackCreateOptions = NodeCreateOptions & FileUploadOptions & { overrideFileName?: boolean };
 
 export type StackCreateResult = {
   stackId: string,

@@ -64,7 +64,6 @@ describe("Testing manifest functions", () => {
     const { stackId } = await akord.stack.create(
       vaultId,
       ["<html><body><h1>Hello World</h1></body></html>"],
-      "index.html",
       { name: "index.html", mimeType: "text/html" }
     );
     console.log("uploaded index.html", stackId);
