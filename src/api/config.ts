@@ -4,17 +4,17 @@ export const apiConfig = (env: string) => {
     default:
       return {
         apiurl: "https://api.akord.com",
-        storageurl: "https://api.v2.prod.permapost-storage.akord.com",
+        gatewayurl: "https://akrd.net",
       };
     case "dev":
       return {
         apiurl: "https://api.akord.link",
-        storageurl: "https://api.dev.permapost-storage.akord.link",
+        gatewayurl: "https://akrd.io",
       };
   }
 };
 
 export interface ApiConfig {
   apiurl: string,
-  storageurl: string,
+  gatewayurl: string,
 }

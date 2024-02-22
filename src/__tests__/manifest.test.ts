@@ -46,7 +46,7 @@ describe("Testing manifest functions", () => {
   beforeAll(async () => {
     akord = await initInstance(email, password);
     vaultId = (await akord.vault.create(faker.random.words(), {
-      cacheOnly: true,
+      cloud: true,
       public: true
     })).vaultId;
   });
@@ -64,7 +64,6 @@ describe("Testing manifest functions", () => {
     const { stackId } = await akord.stack.create(
       vaultId,
       ["<html><body><h1>Hello World</h1></body></html>"],
-      "index.html",
       { name: "index.html", mimeType: "text/html" }
     );
     console.log("uploaded index.html", stackId);
@@ -93,7 +92,7 @@ describe("Testing manifest functions", () => {
   it("should fail creating manifest for private vault", async () => {
     await expect(async () => {
       const privateVaultId = (await akord.vault.create(faker.random.words(), {
-        cacheOnly: true,
+        cloud: true,
         public: false
       })).vaultId;
       await akord.manifest.generate(privateVaultId);

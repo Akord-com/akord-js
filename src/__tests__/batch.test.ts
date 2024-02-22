@@ -4,6 +4,7 @@ import { initInstance, folderCreate, noteCreate, testDataPath, vaultCreate } fro
 import { email, email2, email3, password } from './data/test-credentials';
 import { firstFileName } from "./data/content";
 import { createFileLike } from "../core/file";
+import { StackCreateItem } from "../core/batch";
 
 let akord: Akord;
 
@@ -66,11 +67,10 @@ describe("Testing batch actions", () => {
     it("should upload a batch of 10 files", async () => {
       const file = await createFileLike(testDataPath + firstFileName);
 
-      const items = [] as { file: any, name: string }[];
+      const items = [] as StackCreateItem[];
 
-      for (let i = 0; i < 2; i++) {
-        const name = faker.random.words();
-        items.push({ file, name });
+      for (let i = 0; i < 10; i++) {
+        items.push({ file });
       }
 
       const { data: response, errors } = await akord.batch.stackCreate(vaultId, items);

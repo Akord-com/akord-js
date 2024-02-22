@@ -1,8 +1,10 @@
-import { NodeCreateOptions, NodeService } from "./node";
-import { Stack, nodeType } from "../types/node";
+import { NodeService } from "./node";
+import { nodeType } from "../types/node";
+import { Stack } from "../types/stack";
 import { StackService } from "./stack";
 import { arrayToString } from "@akord/crypto";
 import { Paginated } from "../types/paginated";
+import { NoteCreateOptions, NoteCreateResult, NoteOptions, NoteTypes, NoteUpdateResult } from "../types/note";
 
 class NoteService extends NodeService<Stack> {
   public stackService = new StackService(this.wallet, this.api);
@@ -21,8 +23,8 @@ class NoteService extends NodeService<Stack> {
    * @returns Promise with version name & data string
    */
   public async getVersion(noteId: string, index?: number): Promise<{ name: string, data: string }> {
-    const version = await this.stackService.getVersion(noteId, index);
-    return { data: arrayToString(version.data), name: version.name };
+    const { name, data } = await this.stackService.getVersion(noteId, index, { responseType: 'arraybuffer' });
+    return { data: arrayToString(data as ArrayBuffer), name: name };
   }
 
   /**
@@ -50,7 +52,6 @@ class NoteService extends NodeService<Stack> {
     const { stackId, transactionId, object } = await this.stackService.create(
       vaultId,
       [content],
-      name,
       { ...createOptions, name }
     );
     return { noteId: stackId, transactionId, object };
@@ -71,30 +72,6 @@ class NoteService extends NodeService<Stack> {
     return Object.values(NoteTypes).includes(<any>type);
   }
 };
-
-enum NoteTypes {
-  MD = "text/markdown",
-  JSON = "application/json"
-}
-
-type NoteCreateResult = {
-  noteId: string,
-  transactionId: string,
-  object: Stack
-}
-
-type NoteUpdateResult = {
-  transactionId: string,
-  object: Stack
-}
-
-type NoteType = "text/markdown" | "application/json";
-
-export type NoteOptions = {
-  mimeType?: string
-}
-
-export type NoteCreateOptions = NodeCreateOptions & NoteOptions
 
 export {
   NoteService

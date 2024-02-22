@@ -1,28 +1,25 @@
-import { Service } from "../core";
 import { v4 as uuidv4 } from "uuid";
-import { MembershipCreateOptions, MembershipService, activeStatus } from "./membership";
-import { StackCreateOptions, StackService } from "./stack";
-import { Node, NodeLike, NodeType, Stack } from "../types/node";
-import { FileLike } from "../types/file";
-import { BatchMembershipInviteResponse, BatchStackCreateResponse } from "../types/batch-response";
-import { Membership, RoleType } from "../types/membership";
-import { FileService, Hooks } from "./file";
+import PQueue, { AbortError } from "@esm2cjs/p-queue";
+import { Service } from "../core";
+import { MembershipService } from "./membership";
+import { StackService } from "./stack";
+import { NodeService } from "./node";
+import { Node, NodeLike, NodeType } from "../types/node";
+import { StackCreateOptions, Stack } from "../types/stack";
+import { FileLike, FileSource } from "../types/file";
+import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
+import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
+import { FileService, Hooks, createFileLike } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
-import { NodeService } from "./node";
 import { BadRequest } from "../errors/bad-request";
+import { StorageType } from "../types";
 
-function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
-  for (let i = 0; i < arr.length; i += n) {
-    yield arr.slice(i, i + n);
-  }
-}
 
 class BatchService extends Service {
 
-  public static BATCH_CHUNK_SIZE = 50;
-  public static TRANSACTION_QUEUE_WAIT_TIME = 1;
+  public static BATCH_CONCURRENCY = 50;
 
   /**
    * @param  {{id:string,type:NoteType}[]} items
@@ -98,7 +95,7 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{file:FileLike,name:string,options:StackCreateOptions}[]} items
+   * @param  {{file:FileSource,options:StackCreateOptions}[]} items
    * @param  {BatchStackCreateOptions} [options]
    * @returns Promise with new stack ids & their corresponding transaction ids
    */
@@ -107,126 +104,112 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
-    const size = items.reduce((sum, stack) => {
-      return sum + stack.file.size;
-    }, 0);
-    let progress = 0;
-    let processedStacksCount = 0;
-    const perFileProgress = new Map();
-    if (options.processingCountHook) {
-      options.processingCountHook(processedStacksCount);
-    }
-
-    let data = [] as BatchStackCreateResponse["data"];
-    const errors = [] as BatchStackCreateResponse["errors"];
-    const transactions = [] as StackCreateTransaction[];
-
-    if (options.progressHook) {
-      const onProgress = options.progressHook
-      const stackProgressHook = (localProgress: number, data: any) => {
-        const stackBytesUploaded = Math.floor(localProgress / 100 * data.total)
-        progress += stackBytesUploaded - (perFileProgress.get(data.id) || 0)
-        perFileProgress.set(data.id, stackBytesUploaded);
-        onProgress(Math.min(100, Math.round(progress / size * 100)));
+    // prepare items to upload
+    const itemsToUpload = await Promise.all(items.map(async (item: StackCreateItem) => {
+      const fileLike = await createFileLike(item.file, item.options || {});
+      return {
+        file: fileLike,
+        options: item.options
       }
-      options.progressHook = stackProgressHook;
-    }
+    })) as { file: FileLike, options?: StackCreateOptions }[];
+
+    const batchSize = itemsToUpload.reduce((sum, item) => {
+      return sum + item.file.size;
+    }, 0);
+    batchProgressCount(batchSize, options);
+
+    const data = [] as BatchStackCreateResponse["data"];
+    const errors = [] as BatchStackCreateResponse["errors"];
 
     // set service context
     const vault = await this.api.getVault(vaultId);
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vault);
-    this.setGroupRef(items);
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.setVault(vault);
+    batchService.setVaultId(vaultId);
+    batchService.setIsPublic(vault.public);
+    await batchService.setMembershipKeys(vault);
+    batchService.setGroupRef(items);
+    batchService.setActionRef(actionRefs.STACK_CREATE);
+    batchService.setFunction(functions.NODE_CREATE);
 
     const stackCreateOptions = {
       ...options,
-      cacheOnly: this.vault.cacheOnly
+      cloud: batchService.vault.cloud,
+      storage: batchService.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
 
-    for (const chunk of [...chunks(items, BatchService.BATCH_CHUNK_SIZE)]) {
-      // upload file data & metadata
-      Promise.all(chunk.map(async (item) => {
-        const service = new StackService(this.wallet, this.api, this);
+    let stacksCreated = 0;
+    const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY, });
+    const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
-        const nodeId = uuidv4();
-        service.setObjectId(nodeId);
+    const uploadItem = async (item: { file: FileLike, options?: StackCreateOptions }) => {
+      const service = new StackService(this.wallet, this.api, batchService);
 
-        const createOptions = {
-          ...stackCreateOptions,
-          ...(item.options || {})
-        }
-        service.setAkordTags((service.isPublic ? [item.name] : []).concat(createOptions.tags));
-        service.setParentId(createOptions.parentId);
-        service.arweaveTags = await service.getTxTags();
+      const nodeId = uuidv4();
+      service.setObjectId(nodeId);
 
-        const fileService = new FileService(this.wallet, this.api, service);
+      const createOptions = {
+        ...stackCreateOptions,
+        ...(item.options || {})
+      }
+      service.setAkordTags((service.isPublic ? [item.file.name] : []).concat(createOptions.tags));
+      service.setParentId(createOptions.parentId);
+      service.arweaveTags = await service.getTxTags();
+
+      const fileService = new FileService(this.wallet, this.api, service);
+      try {
         const fileUploadResult = await fileService.create(item.file, createOptions);
         const version = await fileService.newVersion(item.file, fileUploadResult);
 
         const state = {
-          name: await service.processWriteString(item.name ? item.name : item.file.name),
+          name: await service.processWriteString(item.file.name),
           versions: [version],
           tags: service.tags
         };
-        const id = await service.uploadState(state);
-        
-        processedStacksCount += 1;
-        if (options.processingCountHook) {
-          options.processingCountHook(processedStacksCount);
-        }
+        const id = await service.uploadState(state, service.vault.cloud);
 
-        // queue the stack transaction for posting
-        transactions.push({
+        postTxQ.add(() => postTx({
           vaultId: service.vaultId,
           input: { function: service.function, data: id, parentId: createOptions.parentId },
           tags: service.arweaveTags,
           item
-        });
-      }
-      ));
-    }
-
-    // post queued stack transactions
-    let currentTx: StackCreateTransaction;
-    let stacksCreated = 0;
-    while (stacksCreated < items.length) {
-      if (options.cancelHook?.signal.aborted) {
-        return { data, errors, cancelled: items.length - stacksCreated };
-      }
-      if (transactions.length === 0) {
-        // wait for a while if the queue is empty before checking again
-        await new Promise((resolve) => setTimeout(resolve, BatchService.TRANSACTION_QUEUE_WAIT_TIME));
-      } else {
-        try {
-          currentTx = transactions.shift();
-          // process the dequeued stack transaction
-          const { id, object } = await this.api.postContractTransaction<Stack>(
-            currentTx.vaultId,
-            currentTx.input,
-            currentTx.tags
-          );
-          if (options.onStackCreated) {
-            await options.onStackCreated(object);
-          }
-          const stack = await new StackService(this.wallet, this.api, this)
-            .processNode(object, !this.isPublic, this.keys);
-          data.push({ transactionId: id, object: stack, stackId: object.id });
-          stacksCreated += 1;
-          if (options.cancelHook?.signal.aborted) {
-            return { data, errors, cancelled: items.length - stacksCreated };
-          }
-        } catch (error) {
-
-          errors.push({ name: currentTx.item.name, message: error.toString(), error });
-        };
+        }), { signal: options.cancelHook?.signal })
+      } catch (error) {
+        if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
+          errors.push({ name: item.file.name, message: error.toString(), error });
+        }
       }
     }
-    if (options.cancelHook?.signal.aborted) {
-      return { data, errors, cancelled: items.length - stacksCreated };
+
+    const postTx = async (tx) => {
+      try {
+        const { id, object } = await this.api.postContractTransaction<Stack>(
+          tx.vaultId,
+          tx.input,
+          tx.tags
+        );
+        const stack = await new StackService(batchService.wallet, batchService.api, batchService)
+          .processNode(object, !batchService.isPublic, batchService.keys);
+        if (options.onStackCreated) {
+          await options.onStackCreated(stack);
+        }
+        data.push({ transactionId: id, object: stack, stackId: object.id });
+        stacksCreated += 1;
+      } catch (error) {
+        errors.push({ name: tx.item.name, message: error.toString(), error });
+      };
+    }
+
+    try {
+      await uploadQ.addAll(itemsToUpload.map(item => () => uploadItem(item)), { signal: options.cancelHook?.signal });
+    } catch (error) {
+      if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
+        errors.push({ message: error.toString(), error });
+      }
+    }
+    await postTxQ.onIdle();
+    if (options.cancelHook?.signal?.aborted) {
+      return ({ data, errors, cancelled: itemsToUpload.length - stacksCreated });
     }
     return { data, errors, cancelled: 0 };
   }
@@ -246,14 +229,15 @@ class BatchService extends Service {
     const transactions = [] as MembershipInviteTransaction[];
 
     // set service context
-    this.setGroupRef(items);
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.setGroupRef(items);
     const vault = await this.api.getVault(vaultId);
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vault);
-    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    this.setFunction(functions.MEMBERSHIP_INVITE);
+    batchService.setVault(vault);
+    batchService.setVaultId(vaultId);
+    batchService.setIsPublic(vault.public);
+    await batchService.setMembershipKeys(vault);
+    batchService.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+    batchService.setFunction(functions.MEMBERSHIP_INVITE);
 
     // upload metadata
     await Promise.all(items.map(async (item: MembershipInviteItem) => {
@@ -265,7 +249,7 @@ class BatchService extends Service {
         errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
         const userHasAccount = await this.api.existsUser(email);
-        const service = new MembershipService(this.wallet, this.api, this);
+        const service = new MembershipService(this.wallet, this.api, batchService);
         if (userHasAccount) {
           const membershipId = uuidv4();
           service.setObjectId(membershipId);
@@ -279,7 +263,7 @@ class BatchService extends Service {
           service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
             .concat(await service.getTxTags());
 
-          const dataTxId = await service.uploadState(state);
+          const dataTxId = await service.uploadState(state, service.vault.cloud);
 
           transactions.push({
             vaultId,
@@ -310,8 +294,7 @@ class BatchService extends Service {
     for (let tx of transactions) {
       try {
         const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags, { message: options.message });
-        const membership = await new MembershipService(this.wallet, this.api, this).processMembership(object as Membership, !this.isPublic, this.keys);
-        data.push({ membershipId: membership.id, transactionId: id, object: membership });
+        data.push({ membershipId: object.id, transactionId: id, object: new Membership(object) });
       } catch (error: any) {
         errors.push({
           email: tx.item.email,
@@ -326,21 +309,22 @@ class BatchService extends Service {
 
   private async batchUpdate<T>(items: { id: string, type: ObjectType, input: ContractInput, actionRef: string }[])
     : Promise<{ transactionId: string, object: T }[]> {
-    this.setGroupRef(items);
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.setGroupRef(items);
     const result = [] as { transactionId: string, object: T }[];
     for (const [itemIndex, item] of items.entries()) {
       const node = item.type === objectType.MEMBERSHIP
         ? await this.api.getMembership(item.id)
         : await this.api.getNode<NodeLike>(item.id, item.type);
 
-      if (itemIndex === 0 || this.vaultId !== node.vaultId) {
-        this.setVaultId(node.vaultId);
-        this.setIsPublic(node.__public__);
-        await this.setMembershipKeys(node);
+      if (itemIndex === 0 || batchService.vaultId !== node.vaultId) {
+        batchService.setVaultId(node.vaultId);
+        batchService.setIsPublic(node.__public__);
+        await batchService.setMembershipKeys(node);
       }
       const service = item.type === objectType.MEMBERSHIP
-        ? new MembershipService(this.wallet, this.api, this)
-        : new NodeService<T>(this.wallet, this.api, this);
+        ? new MembershipService(this.wallet, this.api, batchService)
+        : new NodeService<T>(this.wallet, this.api, batchService);
 
       service.setFunction(item.input.function);
       service.setActionRef(item.actionRef);
@@ -348,10 +332,10 @@ class BatchService extends Service {
       service.setObjectId(item.id);
       service.setObjectType(item.type);
       service.arweaveTags = await service.getTxTags();
-      const { id, object } = await this.api.postContractTransaction<T>(this.vaultId, item.input, service.arweaveTags);
+      const { id, object } = await this.api.postContractTransaction<T>(service.vaultId, item.input, service.arweaveTags);
       const processedObject = item.type === objectType.MEMBERSHIP
-        ? await (<MembershipService>service).processMembership(object as Membership, !this.isPublic, this.keys)
-        : await (<NodeService<T>>service).processNode(object as any, !this.isPublic, this.keys) as any;
+        ? new Membership(object)
+        : await (<NodeService<T>>service).processNode(object as any, !batchService.isPublic, batchService.keys) as any;
       result.push({ transactionId: id, object: processedObject });
     }
     return result;
@@ -362,10 +346,31 @@ class BatchService extends Service {
   }
 }
 
-export type BatchStackCreateOptions = Hooks & {
-  processingCountHook?: (count: number) => void,
-  onStackCreated?: (item: Stack) => Promise<void>
-};
+export const batchProgressCount = (batchSize: number, options: BatchStackCreateOptions) => {
+  let progress = 0;
+  let uploadedItemsCount = 0;
+  if (options.processingCountHook) {
+    options.processingCountHook(uploadedItemsCount);
+  }
+  const perFileProgress = new Map();
+  const uploadedFiles = new Set();
+  if (options.progressHook) {
+    const onProgress = options.progressHook
+    const itemProgressHook = (percentageProgress: number, binaryProgress: number, progressId: string) => {
+      progress += binaryProgress - (perFileProgress.get(progressId) || 0)
+      perFileProgress.set(progressId, binaryProgress);
+      onProgress(Math.min(100, Math.round(progress / batchSize * 100)));
+      if (percentageProgress === 100 && !uploadedFiles.has(progressId)) {
+        uploadedFiles.add(progressId);
+        uploadedItemsCount += 1;
+        if (options.processingCountHook) {
+          options.processingCountHook(uploadedItemsCount);
+        }
+      }
+    }
+    options.progressHook = itemProgressHook;
+  }
+}
 
 export type TransactionPayload = {
   vaultId: string,
@@ -382,8 +387,7 @@ export type MembershipInviteTransaction = TransactionPayload & {
 }
 
 export type StackCreateItem = {
-  file: FileLike,
-  name: string,
+  file: FileSource,
   options?: StackCreateOptions
 }
 

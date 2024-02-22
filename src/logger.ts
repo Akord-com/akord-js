@@ -3,7 +3,12 @@ export class Logger {
 
   static log = function (message: any) {
     if (this.debug) {
-      console.debug(message);
+      console.log(message);
+    }
+  };
+  static warn = function (message: any) {
+    if (this.debug) {
+      console.warn(message);
     }
   };
 }

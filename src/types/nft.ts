@@ -1,5 +1,7 @@
 import { AssetMetadata } from "./asset";
-import { FileVersion, Node, StorageType } from "./node";
+import { Node, StorageType } from "./node";
+import { FileVersion } from "../types";
+import { FileSource } from "./file";
 
 export class NFT extends Node {
   ticker: string;
@@ -13,6 +15,8 @@ export class NFT extends Node {
   }
   claimable: Claim[];
   asset: FileVersion;
+  thumbnail?: FileVersion;
+  uri: string; // asset arweave uri
 
   constructor(nodeLike: any) {
     super(nodeLike, null);
@@ -24,10 +28,13 @@ export class NFT extends Node {
     this.balances = nodeLike.balances;
     this.claimable = nodeLike.claimable;
     this.asset = new FileVersion(nodeLike.asset);
+    this.thumbnail = nodeLike.thumbnail ? new FileVersion(nodeLike.thumbnail) : undefined;
+    this.uri = this.getUri();
   }
 
   getUri(type: StorageType = StorageType.ARWEAVE): string {
-    return this.asset.getUri(type);
+    const uri = this.asset?.getUri(type);
+    return uri ? uri : this.asset?.getUri(StorageType.S3);
   }
 }
 
@@ -39,9 +46,10 @@ export type Claim = {
 }
 
 export type NFTMetadata = {
-  owner: string // NFT owner address
+  owner?: string // NFT owner address
   creator?: string, // NFT creator address, if not present, default to owner
   collection?: string // NFT collection code
-  contractTxId?: string, // default to "foOzRR7kX-zGzD749Lh4_SoBogVefsFfao67Rurc2Tg"
+  contractTxId?: string, // default to "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"
   ticker?: string, // default to "ATOMIC"
+  thumbnail?: FileSource,
 } & AssetMetadata

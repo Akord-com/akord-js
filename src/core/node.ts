@@ -1,6 +1,6 @@
 import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
-import { Folder, Memo, NodeLike, NodeType, Stack } from '../types/node';
+import { NodeCreateOptions, NodeLike, NodeType, NodeUpdateResult } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
 import { ContractInput, Tag, Tags } from '../types/contract';
@@ -9,7 +9,11 @@ import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 import { BadRequest } from '../errors/bad-request';
 import { handleListErrors, paginate } from './common';
+import { Folder } from '../types/folder';
+import { Stack } from '../types/stack';
+import { Memo } from '../types/memo';
 import { NFT } from '../types/nft';
+import { Collection } from '../types/collection';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -159,7 +163,6 @@ class NodeService<T> extends Service {
     const nodeId = uuidv4();
     this.setObjectId(nodeId);
     this.setFunction(functions.NODE_CREATE);
-    this.setFunction(functions.NODE_CREATE);
     this.setParentId(clientInput.parentId);
 
     this.arweaveTags = await this.getTxTags();
@@ -171,7 +174,7 @@ class NodeService<T> extends Service {
     } as ContractInput;
 
     if (state) {
-      const id = await this.uploadState(state);
+      const id = await this.uploadState(state, this.vault.cloud);
       input.data = id;
     }
 
@@ -194,7 +197,7 @@ class NodeService<T> extends Service {
     this.arweaveTags = await this.getTxTags();
 
     if (stateUpdates) {
-      const id = await this.mergeAndUploadState(stateUpdates);
+      const id = await this.mergeAndUploadState(stateUpdates, this.vault.cloud);
       input.data = id;
     }
     const { id, object } = await this.api.postContractTransaction<T>(
@@ -212,6 +215,8 @@ class NodeService<T> extends Service {
 
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
     const object = await this.api.getNode<NodeLike>(nodeId, type, vaultId);
+    const vault = await this.api.getVault(object.vaultId);
+    this.setVault(vault);
     this.setVaultId(object.vaultId);
     this.setIsPublic(object.__public__);
     await this.setMembershipKeys(object);
@@ -251,23 +256,14 @@ class NodeService<T> extends Service {
       return new Stack(nodeProto, keys);
     } else if (this.objectType === "Memo") {
       return new Memo(nodeProto, keys);
+    } else if (this.objectType === "Collection") {
+      return new Collection(nodeProto);
     } else if (this.objectType === "NFT") {
       return new NFT(nodeProto);
     } else {
       throw new BadRequest("Given type is not supported: " + this.objectType);
     }
   }
-}
-
-type NodeUpdateResult = {
-  transactionId: string,
-  object: NodeLike
-}
-
-export type NodeCreateOptions = {
-  parentId?: string,
-  tags?: string[],
-  arweaveTags?: Tags
 }
 
 export {

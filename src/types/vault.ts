@@ -1,6 +1,10 @@
 import { Encryptable, encrypted, EncryptedKeys } from "@akord/crypto";
 import { Membership } from "./membership";
-import { Folder, Memo, NodeLike, Stack } from "./node";
+import { NodeLike } from "./node";
+import { Folder } from "./folder";
+import { Memo } from "./memo";
+import { Stack } from "./stack";
+import { Tags } from "./contract";
 
 export class Vault extends Encryptable {
   id: string;
@@ -11,7 +15,7 @@ export class Vault extends Encryptable {
   owner: string;
   data: Array<string>;
   size?: number;
-  cacheOnly?: boolean;
+  cloud?: boolean;
   tags?: string[];
   termsOfAccess?: string;
   @encrypted() name: string;
@@ -37,11 +41,38 @@ export class Vault extends Encryptable {
     this.tags = vaultProto.tags;
     this.status = vaultProto.status;
     this.data = vaultProto.data;
-    this.cacheOnly = vaultProto.cacheOnly;
+    this.cloud = vaultProto.cloud;
     this.tags = vaultProto.tags;
     this.memberships = vaultProto?.memberships?.map((membership: Membership) => new Membership(membership, keys));
     this.memos = vaultProto?.memos?.map((memo: Memo) => new Memo(memo, keys));
     this.stacks = vaultProto?.stacks?.map((stack: Stack) => new Stack(stack, keys));
     this.folders = vaultProto?.folders?.map((folder: Folder) => new Folder(folder, keys));
   }
+}
+
+export type VaultCreateOptions = {
+  public?: boolean,
+  termsOfAccess?: string // if the vault is intended for professional or legal use, you can add terms of access and they must be digitally signed before accessing the vault
+  description?: string,
+  tags?: string[],
+  cloud?: boolean,
+  arweaveTags?: Tags
+}
+
+export type VaultUpdateOptions = {
+  name?: string,
+  description?: string,
+  tags?: string[]
+}
+
+export type VaultCreateResult = {
+  vaultId: string,
+  membershipId: string,
+  transactionId: string,
+  object: Vault
+}
+
+export type VaultUpdateResult = {
+  transactionId: string,
+  object: Vault
 }

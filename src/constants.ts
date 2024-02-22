@@ -17,7 +17,8 @@ export enum objectType {
   FOLDER = "Folder",
   NOTE = "Note",
   PROFILE = "Profile",
-  NFT = "NFT"
+  NFT = "NFT",
+  COLLECTION = "Collection"
 };
 
 export enum status {
@@ -81,10 +82,11 @@ export enum actionRefs {
   NOTE_RESTORE = "NOTE_RESTORE",
   NOTE_DELETE = "NOTE_DELETE",
   PROFILE_UPDATE = "PROFILE_UPDATE",
-  NFT_MINT = "NFT_MINT"
+  NFT_MINT = "NFT_MINT",
+  COLLECTION_INIT = "COLLECTION_INIT",
+  COLLECTION_MINT = "COLLECTION_MINT",
+  COLLECTION_REVOKE = "COLLECTION_REVOKE"
 };
-
-export const AKORD_TAG = "Akord-Tag";
 
 export enum protocolTags {
   CLIENT_NAME = "Client-Name",
@@ -119,12 +121,19 @@ export enum fileTags {
   FILE_MODIFIED_AT = "File-Modified-At",
   FILE_SIZE = "File-Size",
   FILE_TYPE = "File-Type",
-  FILE_HASH = "File-Hash"
+  FILE_HASH = "File-Hash",
+  FILE_CHUNK_SIZE = "File-Chunk-Size"
 }
 
 export enum encryptionTags {
   IV = "Initialization-Vector",
   ENCRYPTED_KEY = "Encrypted-Key",
+  PUBLIC_ADDRESS = "Public-Address"
+};
+
+export enum encryptionTagsLegacy {
+  IV = "IV",
+  ENCRYPTED_KEY = "EncryptedKey",
   PUBLIC_ADDRESS = "Public-Address"
 };
 

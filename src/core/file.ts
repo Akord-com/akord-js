@@ -1,168 +1,75 @@
 import * as mime from "mime-types";
-import { v4 as uuid } from "uuid";
+import PQueue, { AbortError } from '@esm2cjs/p-queue';
 import { Readable } from "stream";
-import { base64ToArray, digestRaw, signHash } from "@akord/crypto";
+import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Service } from "./service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
-import { Logger } from "../logger";
 import { ApiClient } from "../api/api-client";
 import { FileLike, FileSource } from "../types/file";
 import { Tag, Tags } from "../types/contract";
 import { getTxData, getTxMetadata } from "../arweave";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
-import { FileVersion } from "../types/node";
 import { UDL } from "../types/udl";
 import { udlToTags } from "./udl";
 import { BadRequest } from "../errors/bad-request";
+import { StorageType } from "../types/node";
+import { StreamConverter } from "../util/stream-converter";
+import { FileVersion } from "../types";
 
 const DEFAULT_FILE_TYPE = "text/plain";
+const BYTES_IN_MB = 1000000;
+const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
+const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
+const CHUNKS_CONCURRENCY = 25;
+const UPLOADER_POLLING_RATE_IN_MILLISECONDS = 2500;
+
 
 class FileService extends Service {
-  asyncUploadTreshold = 209715200;
-  chunkSize = 209715200;
   contentType = null as string;
+  client: ApiClient;
 
-  /**
-   * Returns file as ArrayBuffer. Puts the whole file into memory. 
-   * For downloading without putting whole file to memory use FileService#download()
-   * @param  {string} id file resource url
-   * @param  {string} vaultId
-   * @param  {DownloadOptions} [options]
-   * @returns Promise with file buffer
-   */
-  public async get(id: string, vaultId: string, options: DownloadOptions = {}): Promise<ArrayBuffer> {
-    const service = new FileService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    const downloadOptions = options as FileDownloadOptions;
-    downloadOptions.public = service.isPublic;
-    let fileBinary: ArrayBuffer;
-    if (options.isChunked) {
-      let currentChunk = 0;
-      while (currentChunk < options.numberOfChunks) {
-        const url = `${id}_${currentChunk}`;
-        downloadOptions.loadedSize = currentChunk * this.chunkSize;
-        const chunkBinary = await service.getBinary(url, downloadOptions);
-        fileBinary = service.appendBuffer(fileBinary, chunkBinary);
-        currentChunk++;
-      }
-    } else {
-      const { fileData, metadata } = await this.api.downloadFile(id, downloadOptions);
-      fileBinary = await service.processReadRaw(fileData, metadata)
-    }
-    return fileBinary;
-  }
-
-  /**
-   * Downloads the file keeping memory consumed (RAM) under defiend level: this#chunkSize.
-   * In browser, streaming of the binary requires self hosting of mitm.html and sw.js
-   * See: https://github.com/jimmywarting/StreamSaver.js#configuration
-   * @param  {string} id file resource url
-   * @param  {string} vaultId
-   * @param  {DownloadOptions} [options]
-   * @returns Promise with file buffer
-   */
-  public async download(id: string, vaultId: string, options: DownloadOptions = {}): Promise<void> {
-    const service = new FileService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    const downloadOptions = options as FileDownloadOptions;
-    downloadOptions.public = service.isPublic;
-    const writer = await service.stream(options.name, options.resourceSize);
-    if (options.isChunked) {
-      let currentChunk = 0;
-      try {
-        while (currentChunk < options.numberOfChunks) {
-          const url = `${id}_${currentChunk}`;
-          downloadOptions.loadedSize = currentChunk * service.chunkSize;
-          const fileBinary = await service.getBinary(url, downloadOptions);
-          if (writer instanceof WritableStreamDefaultWriter) {
-            await writer.ready
-          }
-          await writer.write(new Uint8Array(fileBinary));
-          currentChunk++;
-        }
-      } catch (err) {
-        throw new Error(err);
-      } finally {
-        if (writer instanceof WritableStreamDefaultWriter) {
-          await writer.ready
-        }
-        await writer.close();
-      }
-    } else {
-      const fileBinary = await service.getBinary(id, downloadOptions);
-      await writer.write(new Uint8Array(fileBinary));
-      await writer.close();
-    }
-  }
 
   public async create(
     file: FileLike,
     options: FileUploadOptions
   ): Promise<FileUploadResult> {
-    const tags = this.getFileTags(file, options);
-    if (file.size > this.asyncUploadTreshold) {
+    options.public = this.isPublic;
+    const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE_IN_BYTES;
+    if (chunkSize < MINIMAL_CHUNK_SIZE_IN_BYTES) {
+      throw new BadRequest("Chunk size can not be smaller than: " + MINIMAL_CHUNK_SIZE_IN_BYTES / BYTES_IN_MB)
+    }
+    if (file.size > chunkSize) {
+      options.chunkSize = chunkSize;
+      const tags = this.getFileTags(file, options);
       return await this.uploadChunked(file, tags, options);
     } else {
-      const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
-      const resourceHash = await digestRaw(new Uint8Array(processedData));
-      const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
-      const signature = await signHash(
-        base64ToArray(resourceHash),
-        privateKeyRaw
-      );
-      tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-      tags.push(new Tag(protocolTags.SIGNATURE, signature));
-      tags.push(new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()));
-      options.public = this.isPublic;
-      return {
-        resourceHash: resourceHash,
-        udl: options.udl,
-        ...await this.api.uploadFile(processedData, tags.concat(encryptionTags), options)
-      };
+      const tags = this.getFileTags(file, options);
+      return await this.upload(file, tags, options);
     }
   }
 
   public async import(fileTxId: string)
-    : Promise<{ file: FileLike, resourceHash: string, resourceUrl: string }> {
+    : Promise<{ file: FileLike, resourceUri: string[] }> {
     const fileData = await getTxData(fileTxId);
     const fileMetadata = await getTxMetadata(fileTxId);
     const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
     const file = await createFileLike([fileData], { name, mimeType: type, lastModified: fileMetadata?.block?.timestamp });
     const tags = this.getFileTags(file);
 
-    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer());
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-    const resource = await new ApiClient()
+    this.client = new ApiClient()
       .env(this.api.config)
       .data(processedData)
       .tags(tags.concat(encryptionTags))
       .public(this.isPublic)
-      .cacheOnly(true)
-      .uploadFile()
-    return { file, resourceHash, resourceUrl: resource.resourceUrl };
-  }
+      .storage(StorageType.S3);
 
-  public async stream(path: string, size?: number): Promise<any | WritableStreamDefaultWriter> {
-    if (typeof window === 'undefined') {
-      const fs = (await import("fs")).default;
-      return fs.createWriteStream(path);
-    }
-    else {
-      const streamSaver = (await import('streamsaver')).default;
-      if (!streamSaver.WritableStream) {
-        const pony = await import('web-streams-polyfill/ponyfill');
-        streamSaver.WritableStream = pony.WritableStream as unknown as typeof streamSaver.WritableStream;
-      }
-      if (window.location.protocol === 'https:'
-        || window.location.protocol === 'chrome-extension:'
-        || window.location.hostname === 'localhost') {
-        streamSaver.mitm = '/streamsaver/mitm.html';
-      }
-
-      const fileStream = streamSaver.createWriteStream(path, { size: size, writableStrategy: new ByteLengthQueuingStrategy({ highWaterMark: 3 * this.chunkSize }) });
-      return fileStream.getWriter();
-    }
+    const resource = await this.client.uploadFile();
+    const resourceUri = resource.resourceUri
+    resourceUri.push(`${StorageType.ARWEAVE}${fileTxId}`);
+    return { file, resourceUri };
   }
 
   public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
@@ -172,16 +79,31 @@ class FileService extends Service {
       name: await this.processWriteString(file.name),
       type: file.type,
       size: file.size,
-      resourceUri: [
-        `arweave:${uploadResult.resourceTx}`,
-        `hash:${uploadResult.resourceHash}`,
-        `s3:${uploadResult.resourceUrl}`
-      ],
+      resourceUri: uploadResult.resourceUri,
       numberOfChunks: uploadResult.numberOfChunks,
       chunkSize: uploadResult.chunkSize,
-      udl: uploadResult.udl
+      udl: uploadResult.udl,
+      ucm: uploadResult.ucm
     });
     return version;
+  }
+
+  public async download(fileUri: string, options: FileChunkedGetOptions = { responseType: 'arraybuffer' }): Promise<ReadableStream<Uint8Array> | ArrayBuffer> {
+    const file = await this.api.downloadFile(fileUri, { responseType: 'stream', public: this.isPublic });
+    let stream: ReadableStream<Uint8Array>;
+    if (this.isPublic) {
+      stream = file.fileData as ReadableStream<Uint8Array>;
+    } else {
+      const encryptedKey = file.metadata.encryptedKey;
+      const iv = file.metadata.iv?.split(',');
+      const streamChunkSize = options.chunkSize ? options.chunkSize + AUTH_TAG_LENGTH_IN_BYTES + (iv ? 0 : IV_LENGTH_IN_BYTES) : null;
+      stream = await this.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
+    }
+
+    if (options.responseType === 'arraybuffer') {
+      return await StreamConverter.toArrayBuffer<Uint8Array>(stream as any);
+    }
+    return stream;
   }
 
   private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
@@ -209,120 +131,144 @@ class FileService extends Service {
     return null;
   }
 
+  private async upload(
+    file: FileLike,
+    tags: Tags,
+    options: FileUploadOptions
+  ): Promise<FileUploadResult> {
+    const isPublic = options.public || this.isPublic
+    let encryptedKey: string
+
+    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
+    const resourceHash = await digestRaw(new Uint8Array(processedData));
+    const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
+    const resource = await this.api.uploadFile(processedData, tags.concat(encryptionTags).concat(fileSignatureTags), options);
+    const resourceUri = resource.resourceUri;
+    resourceUri.push(`hash:${resourceHash}`);
+    if (!isPublic) {
+      encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
+    }
+    return {
+      resourceUri: resourceUri,
+      resourceHash: resourceHash,
+      encryptedKey: encryptedKey,
+      udl: options.udl,
+      ucm: options.ucm
+    }
+  }
+
   private async uploadChunked(
     file: FileLike,
     tags: Tags,
-    options: Hooks
+    options: FileUploadOptions
   ): Promise<FileUploadResult> {
-    let resourceUrl = uuid();
-    let encryptionTags: Tags;
-    let encryptedKey: string;
-    let iv: Array<string> = [];
-    let uploadedChunks = 0;
-    let offset = 0;
 
-    while (offset < file.size) {
-      const chunk = file.slice(offset, this.chunkSize + offset) as Blob;
-      const { encryptedData, chunkNumber } = await this.encryptChunk(
-        chunk,
-        offset,
-        encryptedKey
-      );
+    const isPublic = options.public || this.isPublic
+    const chunkSize = options.chunkSize || DEFAULT_CHUNK_SIZE_IN_BYTES;
+    const chunkSizeWithNonceAndIv = isPublic ? chunkSize : chunkSize + AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES;
+    const numberOfChunks = Math.ceil(file.size / chunkSize);
+    const fileSize = isPublic ? file.size : file.size + numberOfChunks * (AUTH_TAG_LENGTH_IN_BYTES + IV_LENGTH_IN_BYTES);
 
-      encryptionTags = encryptedData.encryptionTags;
-      if (!this.isPublic) {
-        iv.push(encryptionTags.find((tag) => tag.name === encTags.IV).value);
-        if (!encryptedKey) {
-          encryptedKey = encryptionTags.find((tag) => tag.name === encTags.ENCRYPTED_KEY).value;
+    this.client = new ApiClient()
+      .env(this.api.config)
+      .public(this.isPublic)
+      .tags(tags)
+      .storage(options.storage)
+      .numberOfChunks(numberOfChunks)
+      .totalBytes(fileSize)
+      .progressHook(options.progressHook)
+      .cancelHook(options.cancelHook)
+
+    const digestObject = initDigest();
+
+    // upload the first chunk
+    const chunkedResource = await this.uploadChunk(file, chunkSize, 0, { digestObject, tags: tags });
+    const resourceChunkSize = chunkedResource.resourceSize;
+    const encryptedKey = chunkedResource.tags.find((tag) => tag.name === encTags.ENCRYPTED_KEY)?.value;
+
+    // upload the chunks in parallel
+    let sourceOffset = chunkSize;
+    let targetOffset = resourceChunkSize;
+    const chunksQ = new PQueue({ concurrency: CHUNKS_CONCURRENCY });
+    const chunks = [];
+    while (sourceOffset + chunkSize < file.size) {
+      const localSourceOffset = sourceOffset;
+      const localTargetOffset = targetOffset;
+      chunks.push(
+        () => this.uploadChunk(file, chunkSize, localSourceOffset, { digestObject, encryptedKey, targetOffset: localTargetOffset, location: chunkedResource.resourceLocation }),
+      )
+      sourceOffset += chunkSize;
+      targetOffset += resourceChunkSize;
+    }
+    try {
+      await chunksQ.addAll(chunks, { signal: options.cancelHook?.signal });
+    } catch (error) {
+      if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
+        throw error;
+      }
+    }
+    if (options.cancelHook?.signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // upload the last chunk
+    const resourceHash = digestObject.getHash("B64")
+    const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
+    const fileTags = tags.concat(fileSignatureTags);
+    const resource = await this.uploadChunk(file, chunkSize, sourceOffset, { digestObject, encryptedKey, targetOffset, tags: fileTags, location: chunkedResource.resourceLocation });
+
+    // polling loop
+    if (!options.cloud) {
+      const uri = chunkedResource.resourceLocation.split(":")[0];
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, UPLOADER_POLLING_RATE_IN_MILLISECONDS));
+        const state = await this.api.getUploadState(uri);
+        if (state && state.resourceUri) {
+          resource.resourceUri = state.resourceUri;
+          break;
         }
       }
-
-      await this.uploadChunk(
-        encryptedData,
-        chunkNumber,
-        tags,
-        resourceUrl,
-        file.size,
-        options
-      );
-      offset += this.chunkSize;
-      uploadedChunks += 1;
-      Logger.log("Encrypted & uploaded chunk: " + chunkNumber);
     }
-    if (!this.isPublic) {
-      const ivIndex = encryptionTags.findIndex((tag) => tag.name === encTags.IV);
-      encryptionTags[ivIndex] = new Tag(encTags.IV, iv.join(','));
-    }
-
-    await new ApiClient()
-      .env(this.api.config)
-      .resourceId(resourceUrl)
-      .tags(tags.concat(encryptionTags))
-      .public(this.isPublic)
-      .numberOfChunks(uploadedChunks)
-      .asyncTransaction();
 
     return {
-      resourceUrl: resourceUrl,
-      resourceHash: resourceUrl,
-      numberOfChunks: uploadedChunks,
-      chunkSize: this.chunkSize
+      resourceUri: resource.resourceUri,
+      numberOfChunks: numberOfChunks,
+      chunkSize: chunkSizeWithNonceAndIv,
+      encryptedKey: encryptedKey,
+      resourceHash: resourceHash,
+      udl: options.udl,
+      ucm: options.ucm
     };
   }
 
   private async uploadChunk(
-    chunk: { processedData: ArrayBuffer, encryptionTags: Tags },
-    chunkNumber: number,
-    tags: Tags,
-    resourceUrl: string,
-    resourceSize: number,
-    options: Hooks
-  ) {
-    const resource = await new ApiClient()
-      .env(this.api.config)
-      .resourceId(`${resourceUrl}_${chunkNumber}`)
-      .data(chunk.processedData)
-      .tags(tags.concat(chunk.encryptionTags))
-      .public(this.isPublic)
-      .cacheOnly(true)
-      .progressHook(options.progressHook, chunkNumber * this.chunkSize, resourceSize)
-      .cancelHook(options.cancelHook)
-      .uploadFile()
-    Logger.log("Uploaded file with id: " + resource.resourceUrl);
-  }
-
-  private async encryptChunk(chunk: Blob, offset: number, encryptedKey?: string): Promise<{
-    encryptedData: { processedData: ArrayBuffer, encryptionTags: Tags },
-    chunkNumber: number
-  }> {
-    const chunkNumber = offset / this.chunkSize;
+    file: FileLike,
+    chunkSize: number = DEFAULT_CHUNK_SIZE_IN_BYTES,
+    offset: number = 0,
+    options: { digestObject?: any, encryptedKey?: string, location?: string, tags?: Tags, targetOffset?: number } = {}) {
+    const chunk = file.slice(offset, offset + chunkSize);
     const arrayBuffer = await chunk.arrayBuffer();
-    const encryptedData = await this.processWriteRaw(arrayBuffer, encryptedKey);
-    return { encryptedData, chunkNumber }
-  }
-
-  private appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBufferLike {
-    if (!buffer1 && !buffer2) return;
-    if (!buffer1) return buffer2;
-    if (!buffer2) return buffer1;
-    var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
-    tmp.set(new Uint8Array(buffer1), 0);
-    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
-    return tmp.buffer;
-  }
-
-  private async getBinary(id: string, options: FileDownloadOptions) {
-    try {
-      options.public = this.isPublic;
-      const { fileData, metadata } = await this.api.downloadFile(id, options);
-      return await this.processReadRaw(fileData, metadata);
-    } catch (e) {
-      Logger.log(e);
-      throw new Error(
-        "Failed to download. Please check your network connection." +
-        " Please upload the file again if problem persists and/or contact Akord support."
-      );
+    const data = await this.processWriteRaw(arrayBuffer, { encryptedKey: options.encryptedKey, prefixCiphertextWithIv: true, encode: false });
+    if (options.digestObject) {
+      options.digestObject.update(new Uint8Array(data.processedData));
     }
+
+    const loadedBytes = options.targetOffset ?? offset;
+    const client = this.client
+      .clone()
+      .data(data.processedData)
+      .loadedBytes(loadedBytes);
+
+    if (options.location) {
+      client.resourceId(options.location);
+    }
+
+    if (options.tags && options.tags.length > 0) {
+      client.tags([...options.tags, ...data.encryptionTags]);
+    }
+
+    const res = await client.uploadFile();
+    return { ...res, tags: data.encryptionTags };
   }
 
   private getFileTags(file: FileLike, options: FileUploadOptions = {}): Tags {
@@ -333,12 +279,16 @@ class FileService extends Service {
         tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
     }
-    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type || DEFAULT_FILE_TYPE));
     tags.push(new Tag(fileTags.FILE_SIZE, file.size));
     tags.push(new Tag(fileTags.FILE_TYPE, file.type || DEFAULT_FILE_TYPE));
+    if (options.chunkSize) {
+      tags.push(new Tag(fileTags.FILE_CHUNK_SIZE, options.chunkSize));
+    }
+    tags.push(new Tag(smartweaveTags.CONTENT_TYPE, this.contentType || file.type || DEFAULT_FILE_TYPE));
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     if (options.udl) {
       const udlTags = udlToTags(options.udl);
@@ -346,21 +296,71 @@ class FileService extends Service {
     }
     return tags;
   }
+
+  private async getFileSignatureTags(resourceHash: string): Promise<Tags> {
+    const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
+    const signature = await signHash(
+      base64ToArray(resourceHash),
+      privateKeyRaw
+    );
+    return [new Tag(protocolTags.SIGNATURE, signature), new Tag(fileTags.FILE_HASH, resourceHash)];
+  }
 };
 
-type DownloadOptions = FileDownloadOptions & { name?: string }
+async function createFileLike(source: FileSource, options: FileOptions = {})
+  : Promise<FileLike> {
+  const name = options.name || (source as any).name;
+  const mimeType = options.mimeType || mime.lookup(name) || '';
+  if (typeof window !== "undefined") {
+    if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer || source instanceof Blob) {
+      if (!name) {
+        throw new BadRequest("File name is required, please provide it in the file options.");
+      }
+      if (!mimeType) {
+        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
+      }
+      return new File([source as any], name, { type: mimeType, lastModified: options.lastModified });
+    } else if (source instanceof File) {
+      return source;
+    } else if (source instanceof Array) {
+      if (!name) {
+        throw new BadRequest("File name is required, please provide it in the file options.");
+      }
+      if (!mimeType) {
+        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
+      }
+      return new File(source, name, { type: mimeType, lastModified: options.lastModified });
+    }
+  } else {
+    const nodeJsFile = (await import("../types/file")).NodeJs.File;
+    if (source instanceof Readable) {
+      return nodeJsFile.fromReadable(source, name, mimeType, options.lastModified);
+    } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
+      return new nodeJsFile([source as any], name, mimeType, options.lastModified);
+    } else if (source instanceof nodeJsFile) {
+      return source;
+    } else if (typeof source === "string") {
+      return nodeJsFile.fromPath(source, name, mimeType, options.lastModified);
+    } else if (source instanceof Array) {
+      return new nodeJsFile(source, name, mimeType, options.lastModified);
+    }
+  }
+  throw new BadRequest("File source is not supported. Please provide a valid source: web File object, file path, buffer or stream.");
+}
 
 export type FileUploadResult = {
-  resourceTx?: string,
-  resourceUrl?: string,
+  resourceUri: string[],
   resourceHash?: string,
   numberOfChunks?: number,
   chunkSize?: number,
-  udl?: UDL
+  iv?: string[]
+  encryptedKey?: string,
+  udl?: UDL,
+  ucm?: boolean
 }
 
 export type Hooks = {
-  progressHook?: (progress: number, data?: any) => void,
+  progressHook?: (percentageProgress: number, bytesProgress?: number, id?: string) => void,
   cancelHook?: AbortController
 }
 
@@ -370,60 +370,35 @@ export type FileOptions = {
   lastModified?: number
 }
 
-export type FileUploadOptions = FileOptions & Hooks & {
-  public?: boolean
-  cacheOnly?: boolean,
+export type FileUploadOptions = Hooks & FileOptions & {
+  public?: boolean,
+  storage?: StorageType,
   arweaveTags?: Tags,
+  chunkSize?: number
+  cloud?: boolean,
   udl?: UDL,
   ucm?: boolean
 }
 
 export type FileDownloadOptions = Hooks & {
+  path?: string,
+  skipSave?: boolean,
   public?: boolean,
-  isChunked?: boolean,
-  numberOfChunks?: number,
-  loadedSize?: number,
-  resourceSize?: number
 }
 
-async function createFileLike(source: FileSource, options: FileOptions = {})
-  : Promise<FileLike> {
-  const mimeType = options.mimeType || mime.lookup(options.name) || '';
-  if (typeof window !== "undefined") {
-    if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer || source instanceof Blob) {
-      if (!options.name) {
-        throw new BadRequest("File name is required, please provide it in the file options.");
-      }
-      if (!mimeType) {
-        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
-      }
-      return new File([source as any], options.name, { type: mimeType, lastModified: options.lastModified });
-    } else if (source instanceof File) {
-      return source;
-    } else if (source instanceof Array) {
-      if (!options.name) {
-        throw new BadRequest("File name is required, please provide it in the file options.");
-      }
-      if (!mimeType) {
-        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
-      }
-      return new File(source, options.name, { type: mimeType, lastModified: options.lastModified });
-    }
-  } else {
-    const nodeJsFile = (await import("../types/file")).NodeJs.File;
-    if (source instanceof Readable) {
-      return nodeJsFile.fromReadable(source, options.name, mimeType, options.lastModified);
-    } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
-      return new nodeJsFile([source as any], options.name, mimeType, options.lastModified);
-    } else if (source instanceof nodeJsFile) {
-      return source;
-    } else if (typeof source === "string") {
-      return nodeJsFile.fromPath(source as string);
-    } else if (source instanceof Array) {
-      return new nodeJsFile(source, options.name, mimeType, options.lastModified);
-    }
-  }
-  throw new BadRequest("File source is not supported. Please provide a valid source: web File object, file path, buffer or stream.");
+export type FileGetOptions = FileDownloadOptions & {
+  responseType?: 'arraybuffer' | 'stream',
+}
+
+export type FileChunkedGetOptions = {
+  responseType?: 'arraybuffer' | 'stream',
+  chunkSize?: number
+}
+
+export type FileVersionData = {
+  [K in keyof FileVersion]?: FileVersion[K]
+} & {
+  data: ReadableStream<Uint8Array> | ArrayBuffer
 }
 
 export {

@@ -1,5 +1,6 @@
 import { NodeService } from "./node";
-import { Stack, nodeType } from "../types/node";
+import { nodeType } from "../types/node";
+import { Stack } from "../types/stack";
 import { StackService } from "./stack";
 import { FolderService } from "./folder";
 import { arrayToString } from "@akord/crypto";
@@ -37,8 +38,8 @@ class ManifestService extends NodeService<Stack> {
     if (!manifest) {
       throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
-    const manifestFile = await this.stackService.getVersion(manifest.id, index);
-    return JSON.parse(arrayToString(manifestFile.data));
+    const manifestFile = await this.stackService.getVersion(manifest.id, index, { responseType: 'arraybuffer' });
+    return JSON.parse(arrayToString(manifestFile.data as ArrayBuffer));
   }
 
   /**
@@ -46,7 +47,7 @@ class ManifestService extends NodeService<Stack> {
    * @param  {JSON} manifest manifest JSON
    * @returns Promise with corresponding transaction id
    */
-  public async generate(vaultId: string, manifest?: JSON | Object): Promise<{ transactionId: string, object: Stack }> {
+  public async generate(vaultId: string, manifest?: JSON | Object, indexName?: string): Promise<{ transactionId: string, object: Stack }> {
     this.stackService.fileService.contentType = CONTENT_TYPE;
 
     const vault = await this.api.getVault(vaultId);
@@ -55,7 +56,7 @@ class ManifestService extends NodeService<Stack> {
     }
 
     if (!manifest) {
-      manifest = await this.renderManifestJSON(vaultId);
+      manifest = await this.renderManifestJSON(vaultId, indexName);
     }
     const manifestNode = await this.get(vaultId);
     if (manifestNode) {
@@ -63,7 +64,7 @@ class ManifestService extends NodeService<Stack> {
       return await this.stackService.uploadRevision(manifestNode.id, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     } else {
       // create new vault manifest
-      return await this.stackService.create(vaultId, [JSON.stringify(manifest)], FILE_NAME, { name: FILE_NAME, mimeType: FILE_TYPE });
+      return await this.stackService.create(vaultId, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     }
   }
 
@@ -107,7 +108,7 @@ class ManifestService extends NodeService<Stack> {
       tree.forEach((folder) => {
         folder['stacks'].forEach((stack: Stack) => {
           // construct the path name
-          const pathName = [path, folder['name'], stack.name]
+          const pathName = [path, this.encode(folder['name']), this.encode(stack.name)]
             .filter((p) => p != null)
             .join("/");
           const arweaveId = stack.getUri();
@@ -120,7 +121,7 @@ class ManifestService extends NodeService<Stack> {
         // process the children
         if (folder['children']) {
           let pathName = folder['name'];
-          if (path) pathName = [path, folder['name']].join("/");
+          if (path) pathName = [path, this.encode(folder['name'])].join("/");
           const children = computePaths(folder['children'], pathName);
           paths.push(...children);
         }
@@ -158,6 +159,13 @@ class ManifestService extends NodeService<Stack> {
       },
       paths: manifest,
     };
+  };
+
+  private encode (str?: string) {
+    if (str) {
+      return encodeURIComponent(str);
+    }
+    return null;
   };
 };
 

@@ -17,6 +17,7 @@ import { FileService } from "./core/file";
 import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
 import { NFTService } from "./core/nft";
+import { CollectionService } from "./core/collection";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -27,13 +28,13 @@ export class Akord {
   public membership: MembershipService;
   public vault: VaultService;
   public stack: StackService;
-  public file: FileService;
   public note: NoteService;
   public manifest: ManifestService;
   public profile: ProfileService;
   public batch: BatchService;
   public contract: ContractService;
   public nft: NFTService;
+  public collection: CollectionService;
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
@@ -50,7 +51,6 @@ export class Akord {
     this.memo = new MemoService(wallet, this.api);
     this.folder = new FolderService(wallet, this.api);
     this.stack = new StackService(wallet, this.api);
-    this.file = new FileService(wallet, this.api);
     this.note = new NoteService(wallet, this.api);
     this.manifest = new ManifestService(wallet, this.api);
     this.membership = new MembershipService(wallet, this.api);
@@ -58,5 +58,6 @@ export class Akord {
     this.batch = new BatchService(wallet, this.api);
     this.contract = new ContractService(wallet, this.api);
     this.nft = new NFTService(wallet, this.api);
+    this.collection = new CollectionService(wallet, this.api);
   }
 }

@@ -12,6 +12,8 @@ jobs:
   release:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: "Checkout source code"
       uses: "actions/checkout@v2"

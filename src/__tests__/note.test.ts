@@ -10,6 +10,8 @@ jest.setTimeout(3000000);
 describe("Testing note functions", () => {
   let vaultId: string;
   let noteId: string;
+  let name: string;
+  let tag: string;
 
   beforeEach(async () => {
     akord = await initInstance(email, password);
@@ -17,11 +19,38 @@ describe("Testing note functions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = (await akord.vault.create(faker.random.words(), {
+      public: true,
+      cloud: true
+    })).vaultId;
   });
 
   it("should create new note", async () => {
-    noteId = await noteCreate(akord, vaultId);
+    name = faker.random.words();
+    tag = faker.lorem.word();
+    const content = faker.lorem.sentences();
+
+    noteId = (await akord.note.create(vaultId, content, name, { tags: [tag] })).noteId;
+
+    const note = await akord.note.get(noteId);
+    expect(note.name).toEqual(name);
+    expect(note.tags).toContain(tag);
+    expect(note.versions.length).toEqual(1);
+    const { name: fileName, data } = await akord.note.getVersion(noteId);
+    expect(data).toEqual(content);
+    expect(fileName).toEqual(name);
+  });
+
+  it("should search for the previously created note", async () => {
+    const filter = {
+      name: { contains: name },
+      tags: { contains: tag },
+      status: { eq: "ACTIVE" }
+    };
+
+    const notes = await akord.note.listAll(vaultId, { filter: filter });
+
+    expect(notes.length).toEqual(1);
   });
 
   it("should upload new revision", async () => {

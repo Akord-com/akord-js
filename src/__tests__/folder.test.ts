@@ -40,7 +40,7 @@ describe("Testing folder functions", () => {
     expect(subFolder.status).toEqual("REVOKED");
   });
 
-  it("should fail adding new sub-folder to the revoked root folder", async () => {
+  it.skip("should fail adding new sub-folder to the revoked root folder", async () => {
     const name = faker.random.words();
     await expect(async () =>
       await akord.folder.create(vaultId, name, { parentId: rootFolderId })

@@ -13,11 +13,11 @@ This package can be used in both browser and Node.js environments.
   - [Membership](#membership)
   - [Memo](#memo)
   - [Stack](#stack)
-  - [File](#file)
   - [Folder](#folder)
   - [Note](#note)
   - [Manifest](#manifest)
   - [NFT](#nft)
+  - [Collection](#collection)
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
@@ -52,7 +52,9 @@ const { vaultId } = await akord.vault.create("my first vault");
 
 #### Upload file to the vault by creating new stack
 ```js
-const { stackId } = await akord.stack.create(vaultId, file, "my first file stack");
+const { stackId, uri } = await akord.stack.create(vaultId, file);
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can access your file on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
 
 #### Download latest file version of the stack
@@ -180,7 +182,7 @@ const { vaultId, membershipId } = await akord.vault.create("Arty podcast", {
 
 // create a cloud storage vault 
 const { vaultId, membershipId } = await akord.vault.create("Non permanent stuff", {
-    cacheOnly: true
+    cloud: true
   });
 ```
 </details>
@@ -681,13 +683,15 @@ do {
 
 ```js
 // create a stack from file path with custom arweave tags
-const { stackId } = await akord.stack.create(vaultId, "path to your file", "jam session vol. 1", {
+const { stackId, uri } = await akord.stack.create(vaultId, "path to your file", {
    arweaveTags: [
       { name: "Type", value: "music" },
       { name: "Genre", value: "rock" },
       { name: "Genre", value: "new wave" }
    ]
 });
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can access your file on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
 
 ```js
@@ -720,7 +724,7 @@ const udl = {
   paymentAddress: "89tR0-C1m3_sCWCoVCChg4gFYKdiH5_ZDyZpdJ2DDRw"
 };
 // then pass it as an option when creating the file stack
-const { stackId } = await akord.stack.create(vaultId, file, name, { udl: udl });
+const { stackId } = await akord.stack.create(vaultId, file, { udl: udl });
 ```
 > [See Next.js file upload showcase here][file-upload-example]
 </details>
@@ -904,10 +908,10 @@ const { name: fileName, data: fileBuffer } = await akord.stack.getVersion(stackI
 
 #### `getUri(stackId, type, index)`
 
-Get stack file uri by index, return the latest arweave uri by default
+Get stack file uri by index, return the latest file uri by default
 
 - `stackId` (`string`, required)
-- `type` ([`StorageType`][storage-type], optional) - storage type, default to arweave
+- `type` (`StorageType`, optional) - storage type, default to arweave
 - `index` (`number`, optional) - file version index, default to latest
 - returns `Promise<string>` - Promise with stack file uri
 
@@ -923,34 +927,30 @@ const arweaveUri = await akord.stack.getUri(stackId, 0);
 ```
 </details>
 
-### file
+#### `download(stackId, index, options)`
 
-#### `get(id, vaultId, options)`
+Download stack version by index, return the latest version by default.
+This method can be used for downloading the binary or previewing it in browser (use options.noSave).
 
-Returns file as ArrayBuffer. Puts the whole file into memory.
-For downloading without putting whole file to memory use [download()](#download)
+- `stackId` (`string`, required)
+- `index` (`number`, optional) - file version index, default to latest
+- `options` (`FileDownloadOptions`], optional) - control download behavior
+- returns `Promise<string>` - Promise with location of downloaded file
 
-- `id` (`string`, required) - file resource url
-- `vaultId` (`string`, required)
-- `options` (`DownloadOptions`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
+<details>
+  <summary>example</summary>
 
-#### `download(id, vaultId, options)`
-
-Downloads the file keeping memory consumed (RAM) under defined level: options.chunkSize.
-In browser, streaming of the binary requires self hosting of mitm.html and sw.js
-See: https://github.com/jimmywarting/StreamSaver.js#configuration
-
-- `id` (`string`, required) - file resource url
-- `vaultId` (`string`, required)
-- `options` (`DownloadOptions`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
-
-#### `getPublic(id, options)`
-
-- `id` (`string`, required) - file resource url
-- `options` (`DownloadOptions`, optional)
-- returns `Promise<ArrayBuffer>` - Promise with file buffer
+```js
+    
+  // download the file in browser / on server:
+  await akord.stack.download(stackId, index)
+    
+  // preview the file in browser:
+  const url = await akord.stack.download(stackId, index, { skipSave: true })
+       
+  <video src={url} controls />  
+```
+</details>
 
 ### folder
 
@@ -1338,7 +1338,7 @@ The atomic asset can be minted with the option to attach the [Universal Data Lic
 #### `mint(vaultId, asset, metadata, options)`
 
 - `vaultId` (`string`, required)
-- `asset` ([`FileLike`][file-like], required) - asset data
+- `asset` ([`FileSource`][file-source], required) - asset data
 - `metadata` (`NFTMetadata`, required) - NFT metadata: name, ticker, description, owner, creator, etc.
 - `options` (`FileUploadOptions`, optional) - ex: UDL terms
 - returns `Promise<{ nftId, transactionId }>` - Promise with new nft id & corresponding transaction id
@@ -1370,13 +1370,10 @@ const udlTerms = {
 };
 
 // Finally, let's mint the NFT by passing the path to the asset data, NFT metadata, and UDL terms
-const { nftId } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
+const { uri } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
 
-// Let's retrieve the transaction uri containing the NFT
-import { StorageType } from "@akord/akord-js";
-const nft = await akord.nft.get(nftId);
-const nftUri = nft.asset.getUri(StorageType.ARWEAVE);
-// After few minutes, you should be able to view your NFT on: https://viewblock.io/arweave/tx/{nftUri}
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can access your NFT on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
 </details>
 
@@ -1459,6 +1456,134 @@ const arweaveUri = await akord.nft.getUri(nftId);
 ```
 </details>
 
+### collection
+
+The collection module enables the creation of a collection of [NFTs](#nft) compliant with the [Collection protocol](https://specs.g8way.io/?tx=4zqtz8-U4LNKjFU4gZ28oKkV6bTlfzJiguqjbMl9R4Q).
+
+#### `mint(vaultId, asset, metadata, options)`
+
+NOTE: each NFT will inherit collection metadata setup
+
+- `vaultId` (`string`, required)
+- `items` (`{asset:FileSource,metadata:NFTMetadata,options:StackCreateOptions}[]`, required) - items to mint
+- `metadata` (`CollectionMetadata`, required) - Collection metadata: name, ticker, description, owner, creator, etc.
+- `options` (`StackCreateOptions`, optional) - ex: UDL terms
+- returns `Promise<{ collectionId, transactionId, items }>` - Promise with new collection id, minted NFTs & corresponding transaction id
+
+<details>
+  <summary>example</summary>
+
+```js
+// First, let's define our Collection metadata
+const collectionMetadata = {
+  name: "Golden Orchid - Flora Fantasy #1",
+  creator: "xxxx", // should be a valid Arweave address
+  owner: "yyyy", // should be a valid Arweave address
+  collection: "Flora Fantasy",
+  description: "A rare digital representation of the mythical Golden Orchid",
+  type: "image",
+  topics: ["floral", "nature"]
+};
+
+// Then, let's define UDL terms for the whole collection
+const udlTerms = {
+  licenseFee: {
+    type: "One-Time",
+    value: 10
+  },
+  derivations: [{ type: "Allowed-With-Credit" }]
+};
+
+// Finally, let's mint the collection & list it on UCM
+const { uri } = await akord.collection.mint(
+  vaultId,
+  [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
+  collectionMetadata,
+  { udl: udl, ucm: true }
+);
+// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
+// you can view your collection on BazAR by visiting the following URL: https://bazar.arweave.dev/#/collection/{uri}
+```
+</details>
+
+#### `get(collectionId, options)`
+
+- `collectionId` (`string`, required)
+- `options` ([`GetOptions`][get-options], optional)
+- returns `Promise<Collection>` - Promise with the collection object
+
+<details>
+  <summary>example</summary>
+
+```js
+const collection = await akord.collection.get(collectionId);
+```
+</details>
+
+#### `listAll(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<Array<Collection>>` - Promise with all collections within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+const collections = await akord.collection.listAll(vaultId);
+```
+</details>
+
+#### `list(vaultId, options)`
+
+- `vaultId` (`string`, required)
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated collections within given vault
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 collections for the vault
+const { items } = await akord.collection.list(vaultId);
+
+// retrieve first 20 collections for the vault
+const { items } = await akord.collection.list(vaultId, { limit: 20 });
+```
+</details>
+
+#### `getBanner(collectionId)`
+
+Get collection banner
+
+- `collectionId` (`string`, required)
+- returns `Promise<{ data: ArrayBuffer } & FileVersion>` - Promise with collection banner
+
+<details>
+  <summary>example</summary>
+
+```js
+// get collection banner buffer
+const { data: fileBuffer } = await akord.collection.getBanner(collectionId);
+```
+</details>
+
+#### `getThumbnail(collectionId)`
+
+Get collection thumbnail
+
+- `collectionId` (`string`, required)
+- returns `Promise<{ data: ArrayBuffer } & FileVersion>` - Promise with collection thumbnail
+
+<details>
+  <summary>example</summary>
+
+```js
+// get collection thumbnail buffer
+const { data: fileBuffer } = await akord.collection.getThumbnail(collectionId);
+```
+</details>
+
 ### contract
 
 #### `getState()`
@@ -1521,7 +1646,7 @@ Update user profile along with all active memberships
 #### `stackCreate(vaultId, items)`
 
 - `vaultId` (`string`, required)
-- `items` (`Array<{ file: `[`FileLike`][file-like]`, name: string, options: StackCreateOptions>`, required)
+- `items` (`Array<{ file: `[`FileSource`][file-source]`, name: string, options: StackCreateOptions>`, required)
 - `options` (`BatchStackCreateOptions`, optional)
 - returns `Promise<`[`BatchStackCreateResponse`][batch-stack-create-response]`>` - Promise with new stack ids & their corresponding transaction ids
 
@@ -1563,7 +1688,7 @@ node --inspect node_modules/.bin/jest ./src/__tests__/folder.test.ts
 [list-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L1
 [get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L9
 [vault-get-options]: https://github.com/Akord-com/akord-js/blob/193062c541ad06c186d5b872ecf9066d15806b43/src/types/query-options.ts#L14
-[file-like]: https://github.com/Akord-com/akord-js/blob/ab9bb814fa9cf73d9ed01052738c8b84a86040b2/src/types/file.ts#L8
+[file-source]: https://github.com/Akord-com/akord-js/blob/ccdfd3cd41b8e6fd38ce22cde96529273365e4f6/src/types/file.ts#L48
 [storage-type]: https://github.com/Akord-com/akord-js/blob/26d1945bee727a1af45f0f9cc44c7fa9b68c5d75/src/types/node.ts#L149
 [role-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/membership.ts#L4
 [node-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/node.ts#L11

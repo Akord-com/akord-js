@@ -13,20 +13,17 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags, AKORD_TAG } from '../constants';
+import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../constants';
 import { Vault } from "../types/vault";
 import { Tag, Tags } from "../types/contract";
 import { NodeLike } from "../types/node";
 import { Membership } from "../types/membership";
 import { Object, ObjectType } from "../types/object";
-import { EncryptedPayload } from "@akord/crypto/lib/types";
+import { EncryptOptions, EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "./common";
-
-export type EncryptionMetadata = {
-  encryptedKey?: string,
-  iv?: string
-}
+import { EncryptionMetadata } from "../types/encryption";
+import { assetTags } from "../types";
 
 export const STATE_CONTENT_TYPE = "application/json";
 
@@ -169,7 +166,7 @@ class Service {
     }
   }
 
-  async uploadState(state: any, cacheOnly = false): Promise<string> {
+  async uploadState(state: any, cloud = true): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
@@ -184,7 +181,7 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
-    const ids = await this.api.uploadData([{ data: state, tags }], { cacheOnly });
+    const ids = await this.api.uploadData([{ data: state, tags }], cloud);
     return ids[0];
   }
 
@@ -206,14 +203,18 @@ class Service {
     this.tags
       ?.filter(tag => tag)
       ?.map((tag: string) =>
-        tag?.split(" ").join(",").split(".").join(",").split(",").map((value: string) =>
-          tags.push(new Tag(AKORD_TAG, value.toLowerCase())))
+        tag?.split(" ").join(",").split(".").join(",").split(",")
+        // remove falsy values
+        .filter((tag: string) => tag)
+        .map(
+          (value: string) =>
+          tags.push(new Tag(assetTags.TOPIC + ":" + value.toLowerCase(), value.toLowerCase())))
       );
     // remove duplicates
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
 
-  protected async processWriteRaw(data: ArrayBuffer, encryptedKey?: string) {
+  protected async processWriteRaw(data: ArrayBuffer, options?: EncryptOptions) {
     let processedData: ArrayBuffer;
     const tags = [] as Tags;
     if (this.isPublic) {
@@ -221,15 +222,17 @@ class Service {
     } else {
       let encryptedFile: EncryptedPayload;
       try {
-        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), false, encryptedKey) as EncryptedPayload;
+        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), options) as EncryptedPayload;
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
-      processedData = encryptedFile.encryptedData.ciphertext;
+      processedData = encryptedFile.encryptedData.ciphertext as ArrayBuffer;
       const { address } = await this.getActiveKey();
-      tags.push(new Tag(encryptionTags.IV, encryptedFile.encryptedData.iv))
-      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey))
-      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address))
+      tags.push(new Tag(encryptionTags.PUBLIC_ADDRESS, address));
+      tags.push(new Tag(encryptionTags.ENCRYPTED_KEY, encryptedFile.encryptedKey));
+      if (!options?.prefixCiphertextWithIv) {
+        tags.push(new Tag(encryptionTags.IV, arrayToBase64(encryptedFile.encryptedData.iv)))
+      }
     }
     return { processedData, encryptionTags: tags }
   }
@@ -270,10 +273,10 @@ class Service {
       : {};
   }
 
-  protected async mergeAndUploadState(stateUpdates: any): Promise<string> {
+  protected async mergeAndUploadState(stateUpdates: any, cloud = true): Promise<string> {
     const currentState = await this.getCurrentState();
     const mergedState = mergeState(currentState, stateUpdates);
-    return this.uploadState(mergedState);
+    return this.uploadState(mergedState, cloud);
   }
 
   private async signData(data: any): Promise<string> {
@@ -286,6 +289,4 @@ class Service {
   }
 }
 
-export {
-  Service
-}
+export { Service };

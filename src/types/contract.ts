@@ -1,7 +1,11 @@
 import { Encryptable, encrypted } from "@akord/crypto";
 import { functions } from "../constants";
 import { Membership } from "./membership";
-import { Folder, Memo, Stack, NodeLike } from "./node";
+import { NodeLike } from "./node";
+import { Folder } from "./folder";
+import { Memo } from "./memo";
+import { Stack } from "./stack";
+import { BadRequest } from "../errors/bad-request";
 
 export interface Contract {
   state: ContractState
@@ -34,6 +38,12 @@ export class Tag {
    * @returns 
    */
   constructor(name: string, value: any) {
+    if (!name) {
+      throw new BadRequest("Missing tag name.");
+    }
+    if (!value) {
+      throw new BadRequest("Missing tag value for: " + name);
+    }
     return {
       name: name,
       value: value.toString()

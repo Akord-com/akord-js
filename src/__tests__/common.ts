@@ -8,10 +8,10 @@ export async function initInstance(email: string, password: string): Promise<Ako
   return new Akord(wallet, { debug: true, env: process.env.ENV as any });
 }
 
-export const vaultCreate = async (akord: Akord) => {
+export const vaultCreate = async (akord: Akord, cloud = true) => {
   const name = faker.random.words();
   const termsOfAccess = faker.lorem.sentences();
-  const { vaultId, membershipId } = await akord.vault.create(name, { termsOfAccess, cacheOnly: true });
+  const { vaultId, membershipId } = await akord.vault.create(name, { termsOfAccess, cloud: cloud });
 
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
@@ -53,3 +53,4 @@ export const noteCreate = async (akord: Akord, vaultId: string) => {
 }
 
 export const testDataPath = "./src/__tests__/data/";
+export const testDataOutPath = "./src/__tests__/data/out";

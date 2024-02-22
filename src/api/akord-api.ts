@@ -5,19 +5,23 @@ import { ApiClient } from "./api-client";
 import { Logger } from "../logger";
 import { Membership, MembershipKeys, RoleType } from "../types/membership";
 import { ContractInput, ContractState, Tags } from "../types/contract";
-import { NodeType } from "../types/node";
+import { NodeType, StorageType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
 import { ListOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
-import { FileDownloadOptions, FileUploadOptions } from "../core/file";
-import { EncryptionMetadata } from "../core";
+import { EncryptionMetadata } from "../types/encryption";
+import { FileUploadOptions, FileGetOptions } from "../core/file";
+import { StreamConverter } from "../util/stream-converter";
 
 export const defaultFileUploadOptions = {
-  cacheOnly: false,
+  storage: StorageType.ARWEAVE,
   public: false
 };
+
+const RETRY_MAX = 3;
+const RETRY_AFTER = 1000;
 
 export default class AkordApi extends Api {
 
@@ -28,15 +32,16 @@ export default class AkordApi extends Api {
     this.config = apiConfig(config.env);
   }
 
-  public async uploadData(items: { data: any, tags: Tags }[], options: FileUploadOptions = defaultFileUploadOptions)
+  public async uploadData(items: { data: any, tags: Tags }[], cloud = false)
     : Promise<Array<string>> {
     const resources = [];
 
     await Promise.all(items.map(async (item, index) => {
       const resource = await new ApiClient()
         .env(this.config)
-        .data({ data: item.data, tags: item.tags })
-        .cacheOnly(options.cacheOnly)
+        .tags(item.tags)
+        .state(item.data)
+        .cloud(cloud)
         .uploadState()
       Logger.log("Uploaded state with id: " + resource);
       resources[index] = resource;
@@ -45,15 +50,31 @@ export default class AkordApi extends Api {
   };
 
   public async postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
-    const { id, object } = await new ApiClient()
-      .env(this.config)
-      .vaultId(vaultId)
-      .metadata(metadata)
-      .input(input)
-      .tags(tags)
-      .transaction<T>()
-    Logger.log("Uploaded contract interaction with id: " + id);
-    return { id, object };
+    let retryCount = 0;
+    let lastError: Error;
+    while (retryCount < RETRY_MAX) {
+      try {
+        const { id, object } = await new ApiClient()
+          .env(this.config)
+          .vaultId(vaultId)
+          .metadata(metadata)
+          .input(input)
+          .tags(tags)
+          .transaction<T>()
+        Logger.log("Uploaded contract interaction with id: " + id);
+        return { id, object };
+      } catch (error: any) {
+        lastError = error;
+        Logger.log(error);
+        Logger.log(error.message);
+        await new Promise(r => setTimeout(r, RETRY_AFTER));
+        Logger.log("Retrying...");
+        retryCount++;
+        Logger.log("Retry count: " + retryCount);
+      }
+    }
+    Logger.log(`Request failed after ${RETRY_MAX} attempts.`);
+    throw lastError;
   };
 
   public async getMembers(vaultId: string): Promise<Array<Membership>> {
@@ -66,13 +87,14 @@ export default class AkordApi extends Api {
   public async initContractId(tags: Tags, state?: any): Promise<string> {
     const contractId = await new ApiClient()
       .env(this.config)
-      .data({ tags, state })
+      .tags(tags)
+      .state(state)
       .contract()
     Logger.log("Created contract with id: " + contractId);
     return contractId;
   };
 
-  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUrl: string, resourceTx: string }> {
+  public async uploadFile(file: ArrayBuffer, tags: Tags, options: FileUploadOptions = defaultFileUploadOptions): Promise<{ resourceUri: string[], resourceLocation: string }> {
     const uploadOptions = {
       ...defaultFileUploadOptions,
       ...options
@@ -82,28 +104,51 @@ export default class AkordApi extends Api {
       .data(file)
       .tags(tags)
       .public(uploadOptions.public)
-      .cacheOnly(uploadOptions.cacheOnly)
+      .storage(uploadOptions.storage)
       .progressHook(uploadOptions.progressHook)
       .cancelHook(uploadOptions.cancelHook)
       .uploadFile()
-    Logger.log("Uploaded file with id: " + resource.id);
+    Logger.log("Uploaded file with uri: " + resource.resourceUri);
 
     return resource;
   };
 
-  public async downloadFile(id: string, options: FileDownloadOptions = {}): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }> {
+  public async getUploadState(id: string): Promise<{ resourceUri: string[] }> {
+    try {
+      const resource = await new ApiClient()
+        .env(this.config)
+        .resourceId(id)
+        .getUploadState()
+
+      return resource;
+    } catch (error) {
+      return null; // upload state not saved yet
+    }
+  };
+
+  public async downloadFile(id: string, options: FileGetOptions = {}): Promise<{ fileData: ArrayBuffer | ReadableStream<Uint8Array>, metadata: EncryptionMetadata }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
       .public(options.public)
-      .numberOfChunks(options.numberOfChunks)
-      .progressHook(options.progressHook, options.loadedSize, options.resourceSize)
+      .progressHook(options.progressHook)
       .cancelHook(options.cancelHook)
-      .asArrayBuffer()
       .downloadFile();
 
-    const fileData = response.data;
-    const metadata = { encryptedKey: response.headers["x-amz-meta-encryptedkey"], iv: response.headers["x-amz-meta-iv"] };
+    let fileData: ArrayBuffer | ReadableStream<Uint8Array>;
+    if (options.responseType === 'arraybuffer') {
+      fileData = await response.arrayBuffer();
+    } else {
+      if (response.body.getReader) {
+        fileData = response.body;
+      } else {
+        fileData = StreamConverter.fromAsyncIterable(response.body as unknown as AsyncIterable<Uint8Array>);
+      }
+    }
+    const metadata = {
+      encryptedKey: response.headers.get("x-amz-meta-encrypted-key") || response.headers.get("x-amz-meta-encryptedkey"),
+      iv: response.headers.get("x-amz-meta-initialization-vector") || response.headers.get("x-amz-meta-iv")
+    };
     return { fileData, metadata };
   };
 
@@ -210,30 +255,10 @@ export default class AkordApi extends Api {
   };
 
   public async getNodeState(stateId: string): Promise<any> {
-    const { response } = await new ApiClient()
+    return await new ApiClient()
       .env(this.config)
       .resourceId(stateId)
       .downloadState()
-
-    return response.data
-  };
-
-  public async getNotifications(): Promise<Paginated<any>> {
-    return await new ApiClient()
-      .env(this.config)
-      .getNotifications()
-  };
-
-  public async readNotifications(options: {
-    id?: string,
-    vaultId?: string,
-    readOnly?: Boolean,
-    shouldDelete?: Boolean
-  }): Promise<void> {
-    await new ApiClient()
-      .env(this.config)
-      .queryParams(options)
-      .patchNotifications()
   };
 
   public async getContractState(objectId: string): Promise<ContractState> {
@@ -298,6 +323,13 @@ export default class AkordApi extends Api {
       .env(this.config)
       .vaultId(vaultId)
       .getTransactions();
+  }
+
+  public async getTransactionTags(id: string): Promise<Tags> {
+    return await new ApiClient()
+      .env(this.config)
+      .resourceId(id)
+      .getTransactionTags();
   }
 }
 

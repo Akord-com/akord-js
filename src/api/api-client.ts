@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
-import { v4 as uuid } from "uuid";
-import { Contract, ContractInput, Tags } from "../types/contract";
+import { v4 as uuidv4 } from "uuid";
+import { Contract, ContractInput, Tag, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { nextToken, isPaginated, Paginated } from "../types/paginated";
@@ -11,37 +11,79 @@ import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
+import { StorageType } from "../types";
+import fetch from 'cross-fetch';
+import { jsonToBase64 } from "@akord/crypto";
+
+const CONTENT_RANGE_HEADER = 'Content-Range';
+const CONTENT_LOCATION_HEADER = 'Content-Location';
+const GATEWAY_HEADER_PREFIX = 'x-amz-meta-';
 
 export class ApiClient {
-  private _storageurl: string;
+  private _gatewayurl: string;
   private _apiurl: string;
-  private _dir: string = "files";
-  private _filesDir: string = "files";
-  private _publicDataDir: string = "public";
+
+  // API endpoints
+  private _fileUri: string = "files";
   private _contractUri: string = "contracts";
   private _transactionUri: string = "transactions";
-  private _stateDir: string = "states";
+  private _vaultUri: string = "vaults";
+  private _nodeUri: string = "nodes";
+  private _membershipUri: string = "memberships";
+  private _userUri: string = "users";
+
+  // path params
   private _resourceId: string;
-  private _isPublic: boolean;
-  private _data: any;
-  private _metadata: any;
-  private _queryParams: any = {};
-  private _responseType: string = "json";
-  private _progressHook: (progress: any, data?: any) => void
-  private _processed: number
-  private _total: number
-  private _cancelHook: AbortController
-  private _tags: Tags;
-  private _input: ContractInput;
   private _vaultId: string;
-  private _cacheOnly: boolean;
+
+  // request body
+  private _tags: Tags;
+  private _state: any; // vault/node/membership json state
+  private _input: ContractInput;
+  private _metadata: any;
   private _numberOfChunks: number;
+
+  // axios config
+  private _data: AxiosRequestConfig["data"];
+  private _queryParams: any = {};
+  private _progressId: string
+  private _progressHook: (percentageProgress: number, bytesProgress?: number, id?: string) => void
+  private _cancelHook: AbortController
+
+  // auxiliar
+  private _isPublic: boolean;
+  private _totalBytes: number
+  private _uploadedBytes: number
+  private _storage: StorageType;
 
   constructor() { }
 
-  env(config: { apiurl: string, storageurl: string }): ApiClient {
+  clone(): ApiClient {
+    const clone = new ApiClient();
+    clone._gatewayurl = this._gatewayurl;
+    clone._apiurl = this._apiurl;
+    clone._resourceId = this._resourceId;
+    clone._vaultId = this._vaultId;
+    clone._tags = this._tags;
+    clone._state = this._state;
+    clone._input = this._input;
+    clone._metadata = this._metadata;
+    clone._numberOfChunks = this._numberOfChunks;
+    clone._data = this._data;
+    clone._queryParams = this._queryParams;
+    clone._progressId = this._progressId;
+    clone._progressHook = this._progressHook;
+    clone._cancelHook = this._cancelHook;
+    clone._isPublic = this._isPublic;
+    clone._totalBytes = this._totalBytes;
+    clone._uploadedBytes = this._uploadedBytes;
+    clone._storage = this._storage;
+    return clone;
+  }
+
+  env(config: { apiurl: string, gatewayurl: string }): ApiClient {
     this._apiurl = config.apiurl;
-    this._storageurl = config.storageurl;
+    this._gatewayurl = config.gatewayurl;
     return this;
   }
 
@@ -55,14 +97,13 @@ export class ApiClient {
     return this;
   }
 
-  cacheOnly(cacheOnly: boolean): ApiClient {
-    this._cacheOnly = cacheOnly;
-    this.queryParams({ cacheOnly: cacheOnly })
+  cloud(cloud: boolean): ApiClient {
+    this.queryParams({ cloud: cloud })
     return this;
   }
 
-  asArrayBuffer(): ApiClient {
-    this.setResponseType("arraybuffer");
+  storage(storage: StorageType): ApiClient {
+    this._storage = storage;
     return this;
   }
 
@@ -78,9 +119,14 @@ export class ApiClient {
 
   metadata(metadata: any): ApiClient {
     this._metadata = metadata;
-    if (metadata?.cacheOnly) {
-      this.cacheOnly(metadata.cacheOnly)
+    if (metadata?.cloud) {
+      this.cloud(metadata.cloud)
     }
+    return this;
+  }
+
+  state(state: any): ApiClient {
+    this._state = state;
     return this;
   }
 
@@ -98,15 +144,19 @@ export class ApiClient {
     return this;
   }
 
-  setResponseType(responseType: string): ApiClient {
-    this._responseType = responseType;
+  totalBytes(totalBytes: number): ApiClient {
+    this._totalBytes = totalBytes;
     return this;
   }
 
-  progressHook(hook: (progress: any, data?: any) => void, processed?: number, total?: number): ApiClient {
+  loadedBytes(uploadedBytes: number): ApiClient {
+    this._uploadedBytes = uploadedBytes;
+    return this;
+  }
+
+  progressHook(hook: (percentageProgress: number, bytesProgress?: number, id?: string) => void, id?: string): ApiClient {
     this._progressHook = hook;
-    this._processed = processed;
-    this._total = total;
+    this._progressId = id || uuidv4();
     return this;
   }
 
@@ -126,24 +176,40 @@ export class ApiClient {
   }
 
   /**
-   * 
-   * @requires: 
-   * - auth() 
+   * Initialize a vault smart contract
    * @uses:
-   * - data()
+   * - tags()
+   * - state()
+   * @returns {Promise<string>}
    */
-  async contract() {
-    const response = await this.post(`${this._apiurl}/vaults`);
+  async contract(): Promise<string> {
+    this.data({ tags: this._tags, state: this._state })
+    const response = await this.post(`${this._apiurl}/${this._vaultUri}`);
     return response.id;
   }
 
+  /**
+   * Get current vault contract state
+   * @requires:
+   * - vaultId()
+   * @returns {Promise<Contract>}
+   */
   async getContract(): Promise<Contract> {
-    return await this.public(true).get(`${this._storageurl}/${this._contractUri}/${this._vaultId}`);
+    if (!this._vaultId) {
+      throw new BadRequest("Missing vault id to get contract state. Use ApiClient#vaultId() to add it");
+    }
+    return await this.public(true).get(`${this._gatewayurl}/${this._contractUri}/${this._vaultId}`);
   }
 
+  /**
+   *
+   * @uses:
+   * - queryParams() - email
+   * @returns {Promise<Boolean>}
+   */
   async existsUser(): Promise<Boolean> {
     try {
-      await this.get(`${this._apiurl}/users`);
+      await this.get(`${this._apiurl}/${this._userUri}`);
     } catch (e) {
       if (!(e instanceof NotFound)) {
         throw e;
@@ -153,82 +219,174 @@ export class ApiClient {
     return true;
   }
 
+  /**
+   * Fetch currently authenticated user
+   * @returns {Promise<User>}
+   */
   async getUser(): Promise<User> {
-    return await this.get(`${this._apiurl}/users`);
+    return await this.get(`${this._apiurl}/${this._userUri}`);
   }
 
+  /**
+   *
+   * @uses:
+   * - queryParams() - email
+   * @returns {Promise<UserPublicInfo>}
+   */
   async getUserPublicData(): Promise<UserPublicInfo> {
-    return await this.get(`${this._apiurl}/users`);
+    return await this.get(`${this._apiurl}/${this._userUri}`);
   }
 
+  /**
+   *
+   * @uses:
+   * - data()
+   */
   async updateUser(): Promise<any> {
-    return await this.fetch("put", `${this._apiurl}/users`);
+    return await this.fetch("put", `${this._apiurl}/${this._userUri}`);
   }
 
+  /**
+   *
+   * @uses:
+   * - vaultId()
+   */
   async deleteVault(): Promise<void> {
-    await this.delete(`${this._apiurl}/vaults/${this._vaultId}`);
+    await this.delete(`${this._apiurl}/${this._vaultUri}/${this._vaultId}`);
   }
 
+  /**
+   *
+   * @uses:
+   * - vaultId()
+   * @returns {Promise<Array<Membership>>}
+   */
   async getMembers(): Promise<Array<Membership>> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/members`);
+    return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members`);
   }
 
-  async getNotifications(): Promise<Paginated<any>> {
-    return await this.get(`${this._apiurl}/notifications`);
-  }
-
+  /**
+   * Get memberships for currently authenticated user
+   * @uses:
+   * - queryParams() - limit, nextToken
+   * @returns {Promise<Paginated<Membership>>}
+   */
   async getMemberships(): Promise<Paginated<Membership>> {
-    return await this.get(`${this._apiurl}/memberships`);
+    return await this.get(`${this._apiurl}/${this._membershipUri}`);
   }
 
+  /**
+   * Get vaults for currently authenticated user
+   * @uses:
+   * - queryParams() - limit, nextToken, tags, filter
+   * @returns {Promise<Paginated<Vault>>}
+   */
   async getVaults(): Promise<Paginated<Vault>> {
-    return await this.get(`${this._apiurl}/vaults`);
+    return await this.get(`${this._apiurl}/${this._vaultUri}`);
   }
 
+  /**
+   * Get user membership keys for given vault
+   * @uses:
+   * - vaultId()
+   * @returns {Promise<MembershipKeys>}
+   */
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/keys`);
+    return await this.public(true).get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/keys`);
   }
 
+  /**
+   * Get nodes by vault id and type
+   * @uses:
+   * - vaultId()
+   * - queryParams() - type, parentId, limit, nextToken, tags, filter
+   * @returns {Promise<Paginated<T>>}
+   */
   async getNodesByVaultId<T>(): Promise<Paginated<T>> {
-    return await this.public(true).get(`${this._apiurl}/vaults/${this._vaultId}/nodes`);
+    return await this.public(true).get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._nodeUri}`);
   }
 
+  /**
+   * Get memberships by vault id
+   * @uses:
+   * - vaultId()
+   * - queryParams() - limit, nextToken, filter
+   * @returns {Promise<Paginated<Membership>>}
+   */
   async getMembershipsByVaultId(): Promise<Paginated<Membership>> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/memberships`);
+    return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._membershipUri}`);
   }
 
+  /**
+   * Get node by id and type
+   * @uses:
+   * - resourceId()
+   * - queryParams() - type
+   * @returns {Promise<T>}
+   */
   async getNode<T>(): Promise<T> {
-    return await this.public(true).get(`${this._apiurl}/nodes/${this._resourceId}`);
+    return await this.public(true).get(`${this._apiurl}/${this._nodeUri}/${this._resourceId}`);
   }
 
+  /**
+   * Get membership by id
+   * @uses:
+   * - resourceId()
+   * @returns {Promise<Membership>}
+   */
   async getMembership(): Promise<Membership> {
-    return await this.get(`${this._apiurl}/memberships/${this._resourceId}`);
+    return await this.get(`${this._apiurl}/${this._membershipUri}/${this._resourceId}`);
   }
 
+  /**
+   * Get vault by id
+   * @uses:
+   * - resourceId()
+   * - queryParams() - withNodes, withMemberships, withMemos, withStacks, withFolders
+   * @returns {Promise<Vault>}
+   */
   async getVault(): Promise<Vault> {
-    return await this.public(true).get(`${this._apiurl}/vaults/${this._resourceId}`);
+    return await this.public(true).get(`${this._apiurl}/${this._vaultUri}/${this._resourceId}`);
   }
 
+  /**
+   * Get transactions by vault id
+   * @uses:
+   * - vaultId()
+   * @returns {Promise<Array<Transaction>>}
+   */
   async getTransactions(): Promise<Array<Transaction>> {
-    return await this.get(`${this._apiurl}/vaults/${this._vaultId}/transactions`);
+    return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
   }
 
-  async patchNotifications(): Promise<Paginated<any>> {
-    return await this.patch(`${this._apiurl}/notifications`);
+  async getTransactionTags(): Promise<Tags> {
+    try {
+      const response = await axios({
+        method: 'head',
+        url: `${this._apiurl}/files/${this._resourceId}`
+      });
+      return Object.keys(response.headers)
+        .filter(header => header.startsWith(GATEWAY_HEADER_PREFIX))
+        .map(header => {
+          return new Tag(header.replace(GATEWAY_HEADER_PREFIX, ''), response.headers[header])
+        })
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
   }
 
   async invite(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/members`);
+    const response = await this.post(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members`);
     return response.id;
   }
 
   async inviteResend(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/members/${this._resourceId}`);
+    const response = await this.post(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members/${this._resourceId}`);
     return response.id;
   }
 
   async revokeInvite(): Promise<{ id: string }> {
-    const response = await this.delete(`${this._apiurl}/vaults/${this._vaultId}/members/${this._resourceId}`);
+    const response = await this.delete(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members/${this._resourceId}`);
     return response.id;
   }
 
@@ -265,9 +423,6 @@ export class ApiClient {
     if (this._data) {
       config.data = this._data;
     }
-    if (this._tags) {
-      config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
-    }
     try {
       const response = await axios(config);
       if (isPaginated(response)) {
@@ -286,18 +441,24 @@ export class ApiClient {
   }
 
   /**
-   * 
-   * @requires: 
-   * - auth() 
-   * - vaultId() 
-   * - data()
+   *
+   * @requires:
+   * - vaultId()
+   * - input()
+   * - tags()
+   * @uses:
+   * - metadata()
+   * @returns {Promise<{ id: string, object: T }>}
    */
-  async transaction<T>() {
+  async transaction<T>(): Promise<{ id: string; object: T; }> {
+    if (!this._vaultId) {
+      throw new BadRequest("Missing vault id to post transaction. Use ApiClient#vaultId() to add it");
+    }
     if (!this._input) {
-      throw new BadRequest("Input is required to use /transactions endpoint");
+      throw new BadRequest("Missing input to post transaction. Use ApiClient#input() to add it");
     }
     if (!this._tags) {
-      throw new BadRequest("Tags is required to use /transactions endpoint");
+      throw new BadRequest("Missing tags to post transaction. Use ApiClient#tags() to add it");
     }
 
     this.data({
@@ -305,21 +466,22 @@ export class ApiClient {
       tags: this._tags,
       metadata: this._metadata
     });
-    const response = await this.post(`${this._apiurl}/vaults/${this._vaultId}/transactions`);
-    return response;
+    const { id, object } = await this.post(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
+    return { id, object };
   }
 
   /**
    * Schedules transaction posting
-   * @requires: 
-   * - auth() 
-   * - resourceId() 
+   * @requires:
+   * - resourceId()
    * @uses:
    * - tags()
+   * - public()
+   * - numberOfChunks()
    */
   async asyncTransaction() {
     if (!this._resourceId) {
-      throw new BadRequest("Resource id is required to use /transactions/files endpoint");
+      throw new BadRequest("Missing resource id to schedule transaction posting. Use ApiClient#resourceId() to add it");
     }
 
     this.data({
@@ -328,168 +490,148 @@ export class ApiClient {
       async: true,
       numberOfChunks: this._numberOfChunks
     });
-    await this.post(`${this._apiurl}/${this._transactionUri}/files`);
+    await this.post(`${this._apiurl}/${this._transactionUri}/${this._fileUri}`);
   }
 
   /**
-   * 
-   * @requires: 
-   * - auth() 
-   * - data()
+   *
+   * @requires:
+   * - state()
+   * @uses:
+   * - tags()
+   * - cloud()
+   * @returns {Promise<string>}
    */
-  async uploadState() {
+  async uploadState(): Promise<string> {
+    if (!this._state) {
+      throw new BadRequest("Missing state to upload. Use ApiClient#state() to add it");
+    }
+
+    this.data({ data: this._state, tags: this._tags })
     const response = await this.post(`${this._apiurl}/states`);
     return response.id;
   }
 
   /**
-   * 
-   * @requires: 
-   * - auth() 
+   *
+   * @requires:
    * - data()
    * @uses:
+   * - resourceId()
    * - tags()
-   * - resourceId()
+   * - storage()
+   * - public()
+   * - progressHook()
+   * - cancelHook()
+   * @returns {Promise<string[]>}
    */
-  async uploadFile() {
-    this._dir = this._filesDir;
-    await this.upload();
-    const resourceId = this._resourceId;
-    const resourceTx = !this._cacheOnly ? await this.fileTransaction() : null;
-    return { resourceUrl: resourceId, id: resourceTx, resourceTx: resourceTx }
-  }
-
-  /**
-   * 
-   * @requires: 
-   * - auth() 
-   * - resourceId()
-   */
-  async downloadFile() {
-    this._dir = this._filesDir;
-    return await this.download();
-  }
-
-  /**
-* 
-* @requires: 
-* - auth() 
-* - resourceId()
-*/
-  async downloadState() {
-    this._dir = this._stateDir;
-    return await this.download();
-  }
-
-  /**
-  * Creates data item from uploaded resource. Schedules bundled transaction
-  * @requires: 
-  * - auth() 
-  * - resourceId() 
-  * @uses:
-  * - tags()
-  */
-  private async fileTransaction() {
-    if (!this._resourceId) {
-      this._resourceId = uuid();
-    }
-
-    this.data({
-      resourceUrl: this._resourceId,
-      tags: this._tags
-    });
-
-    const response = await this.post(`${this._apiurl}/${this._transactionUri}/files`);
-    return response.txId;
-  }
-
-  private async upload() {
+  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceSize: number }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._data) {
-      throw new BadRequest('Missing data to upload. Use ApiClient#data() to add it')
-    }
-    if (!this._resourceId) {
-      this._resourceId = this._isPublic ? this._publicDataDir + '/' + uuid() : uuid();
+      throw new BadRequest("Missing data to upload. Use ApiClient#data() to add it");
     }
 
-    const me = this
+    const me = this;
+    const headers = {
+      'Authorization': auth,
+      'Tags': jsonToBase64(this._tags),
+      'Storage-Class': this._storage?.replace(":", ""),
+      'Content-Type': 'application/octet-stream'
+    } as Record<string, string>
+
+    if (this._numberOfChunks > 1) {
+      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength}/${this._totalBytes}`;
+    }
+    if (this._resourceId) {
+      headers[CONTENT_LOCATION_HEADER] = this._resourceId;
+    }
+
+    this._progressId = uuidv4();
+
     const config = {
-      method: 'put',
-      url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
+      method: 'post',
+      url: `${this._apiurl}/files`,
       data: this._data,
-      headers: {
-        'Authorization': auth,
-        'Content-Type': 'application/octet-stream'
-      },
+      headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onUploadProgress(progressEvent) {
         if (me._progressHook) {
-          let progress;
-          if (me._total) {
-            progress = Math.round((me._processed + progressEvent.loaded) / me._total * 100);
+          let percentageProgress;
+          let bytesProgress;
+          if (me._totalBytes) {
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
           } else {
-            progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / progressEvent.total * 100);
           }
-          me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
+          me._progressHook(percentageProgress, bytesProgress, me._progressId);
         }
       }
-    } as AxiosRequestConfig
+    } as AxiosRequestConfig;
 
-    if (this._cacheOnly) {
-      config.headers['x-amz-meta-skipbundle'] = "true";
-    }
-    if (this._tags) {
-      for (let tag of this._tags) {
-        // TODO: move it into the API
-        // ensure S3 backward compatibility
-        if (tag.name === "Encrypted-Key") {
-          config.headers['x-amz-meta-encryptedkey'] = tag.value;
-        } else if (tag.name === "Initialization-Vector") {
-          config.headers['x-amz-meta-iv'] = tag.value;
-        }
-      }
-      config.headers['x-amz-meta-tags'] = JSON.stringify(this._tags);
-    }
 
     try {
       const response = await axios(config);
-      return { resourceUrl: this._resourceId, resourceTx: response.data.resourceTx };
+      return {
+        resourceUri: response.data.resourceUri,
+        resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
+        resourceSize: this._data.byteLength
+      };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
   }
 
-  private async download() {
+  async getUploadState(): Promise<{ resourceUri: string[] }> {
+    if (!this._resourceId) {
+      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
+    }
+    const data = await this.get(`${this._apiurl}/files/uploader/${this._resourceId}`);
+    return {
+      resourceUri: data.resourceUri
+    }
+  }
+
+  /**
+   *
+   * @requires:
+   * - resourceId()
+   */
+  async downloadState() {
+    if (!this._resourceId) {
+      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
+    }
+    return await this.get(`${this._apiurl}/states/${this._resourceId}`);
+  }
+
+  /**
+   *
+   * @requires:
+   * - resourceId()
+   * @uses:
+   * - responseType()
+   * - public()
+   * - progressHook()
+   * - cancelHook()
+   * - numberOfChunks()
+   */
+  async downloadFile() {
     const auth = await Auth.getAuthorization();
     if (!auth && !this._isPublic) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
-      throw new BadRequest('Missing resource id to download')
+      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
     }
 
-    const me = this;
     const config = {
       method: 'get',
-      url: `${this._storageurl}/${this._dir}/${this._resourceId}`,
-      responseType: this._responseType,
       signal: this._cancelHook ? this._cancelHook.signal : null,
-      onDownloadProgress(progressEvent) {
-        if (me._progressHook) {
-          let progress;
-          if (me._total) {
-            const chunkSize = me._total / me._numberOfChunks;
-            progress = Math.round(me._processed / me._total * 100 + progressEvent.loaded / progressEvent.total * chunkSize / me._total * 100);
-          } else {
-            progress = Math.round(progressEvent.loaded / progressEvent.total * 100);
-          }
-          me._progressHook(progress, { id: me._resourceId, total: progressEvent.total });
-        }
-      },
-    } as AxiosRequestConfig
+    } as RequestInit
 
     if (!this._isPublic) {
       config.headers = {
@@ -498,7 +640,7 @@ export class ApiClient {
     }
 
     try {
-      const response = await axios(config);
+      const response = await fetch(`${this._apiurl}/files/${this._resourceId}`, config);
       return { resourceUrl: this._resourceId, response: response };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
