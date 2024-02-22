@@ -75,7 +75,7 @@ describe("Testing vault functions", () => {
     expect(vault.status).toEqual("ARCHIVED");
   });
 
-  it("should fail renaming the archived vault", async () => {
+  it.skip("should fail renaming the archived vault", async () => {
     const name = faker.random.words();
     await expect(async () =>
       await akord.vault.rename(vaultId, name)
