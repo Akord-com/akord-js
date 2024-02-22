@@ -38,14 +38,14 @@ describe("Testing note functions", () => {
     expect(fileName).toEqual(name);
   });
 
-  it("should fetch the note from filter", async () => {
+  it("should search for the previously created note", async () => {
     const filter = {
       name: { contains: name },
       tags: { contains: tag },
       status: { eq: "ACTIVE" }
     };
 
-    const notes = await akord.stack.listAll(vaultId, { filter: filter });
+    const notes = await akord.note.listAll(vaultId, { filter: filter });
 
     expect(notes.length).toEqual(1);
   });
