@@ -25,16 +25,14 @@ describe("Testing stack functions", () => {
   });
 
   it("should create stack from path", async () => {
-    const name = faker.random.words();
-
-    const { stackId, uri } = await akord.stack.create(vaultId, testDataPath + firstFileName, name);
+    const { stackId, uri } = await akord.stack.create(vaultId, testDataPath + firstFileName);
     expect(stackId).toBeTruthy();
     expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
     expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
-    expect(stack.name).toEqual(name);
+    expect(stack.name).toEqual(firstFileName);
     expect(stack.versions.length).toEqual(1);
     expect(stack.versions[0].name).toEqual(firstFileName);
 
@@ -45,19 +43,17 @@ describe("Testing stack functions", () => {
   });
 
   it("should create stack from file buffer", async () => {
-    const name = faker.random.words();
-
     const fileBuffer = fs.readFileSync(testDataPath + firstFileName);
     const type = "image/png";
 
-    const { stackId, uri } = await akord.stack.create(vaultId, fileBuffer, name, { name: firstFileName, mimeType: type });
+    const { stackId, uri } = await akord.stack.create(vaultId, fileBuffer, { name: firstFileName, mimeType: type });
     expect(stackId).toBeTruthy();
     expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
     expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
-    expect(stack.name).toEqual(name);
+    expect(stack.name).toEqual(firstFileName);
     expect(stack.versions.length).toEqual(1);
     expect(stack.versions[0].name).toEqual(firstFileName);
     expect(stack.versions[0].type).toEqual(type);
@@ -68,19 +64,17 @@ describe("Testing stack functions", () => {
   });
 
   it("should create stack from file stream", async () => {
-    const name = faker.random.words();
-
     const fileStream = fs.createReadStream(testDataPath + firstFileName);
     const type = "image/png";
 
-    const { stackId, uri } = await akord.stack.create(vaultId, fileStream, name, { name: firstFileName, mimeType: type });
+    const { stackId, uri } = await akord.stack.create(vaultId, fileStream, { name: firstFileName, mimeType: type });
     expect(stackId).toBeTruthy();
     expect(uri).toBeTruthy();
 
     const stack = await akord.stack.get(stackId);
     expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
-    expect(stack.name).toEqual(name);
+    expect(stack.name).toEqual(firstFileName);
     expect(stack.versions.length).toEqual(1);
     expect(stack.versions[0].name).toEqual(firstFileName);
     expect(stack.versions[0].type).toEqual(type);
@@ -91,16 +85,14 @@ describe("Testing stack functions", () => {
   });
 
   it("should create stack from file object", async () => {
-    const name = faker.random.words();
-
     const file = await createFileLike(testDataPath + firstFileName);
 
-    stackId = (await akord.stack.create(vaultId, file, name)).stackId;
+    stackId = (await akord.stack.create(vaultId, file)).stackId;
 
     const stack = await akord.stack.get(stackId);
     expect(stack.uri).toBeTruthy();
     expect(stack.status).toEqual("ACTIVE");
-    expect(stack.name).toEqual(name);
+    expect(stack.name).toEqual(firstFileName);
     expect(stack.versions.length).toEqual(1);
     expect(stack.versions[0].name).toEqual(firstFileName);
     expect(stack.versions[0].type).toEqual(file.type);

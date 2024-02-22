@@ -63,8 +63,7 @@ class NFTService extends NodeService<NFT> {
       const thumbnailService = new StackService(this.wallet, this.api, service);
       const { object } = await thumbnailService.create(
         vaultId,
-        metadata.thumbnail,
-        (<any>metadata.thumbnail).name ? (<any>metadata.thumbnail).name : "Thumbnail"
+        metadata.thumbnail
       );
       createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Thumbnail', object.getUri(StorageType.ARWEAVE))]);
       thumbnail = object.versions[0];

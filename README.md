@@ -52,7 +52,7 @@ const { vaultId } = await akord.vault.create("my first vault");
 
 #### Upload file to the vault by creating new stack
 ```js
-const { stackId, uri } = await akord.stack.create(vaultId, file, "my first file stack");
+const { stackId, uri } = await akord.stack.create(vaultId, file);
 // Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
 // you can access your file on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
 ```
@@ -683,7 +683,7 @@ do {
 
 ```js
 // create a stack from file path with custom arweave tags
-const { stackId, uri } = await akord.stack.create(vaultId, "path to your file", "jam session vol. 1", {
+const { stackId, uri } = await akord.stack.create(vaultId, "path to your file", {
    arweaveTags: [
       { name: "Type", value: "music" },
       { name: "Genre", value: "rock" },
@@ -724,7 +724,7 @@ const udl = {
   paymentAddress: "89tR0-C1m3_sCWCoVCChg4gFYKdiH5_ZDyZpdJ2DDRw"
 };
 // then pass it as an option when creating the file stack
-const { stackId } = await akord.stack.create(vaultId, file, name, { udl: udl });
+const { stackId } = await akord.stack.create(vaultId, file, { udl: udl });
 ```
 > [See Next.js file upload showcase here][file-upload-example]
 </details>

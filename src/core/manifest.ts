@@ -64,7 +64,7 @@ class ManifestService extends NodeService<Stack> {
       return await this.stackService.uploadRevision(manifestNode.id, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     } else {
       // create new vault manifest
-      return await this.stackService.create(vaultId, [JSON.stringify(manifest)], FILE_NAME, { name: FILE_NAME, mimeType: FILE_TYPE });
+      return await this.stackService.create(vaultId, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     }
   }
 

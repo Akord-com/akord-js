@@ -95,7 +95,7 @@ class BatchService extends Service {
 
   /**
    * @param  {string} vaultId
-   * @param  {{file:FileSource,name:string,options:StackCreateOptions}[]} items
+   * @param  {{file:FileSource,options:StackCreateOptions}[]} items
    * @param  {BatchStackCreateOptions} [options]
    * @returns Promise with new stack ids & their corresponding transaction ids
    */
@@ -109,10 +109,9 @@ class BatchService extends Service {
       const fileLike = await createFileLike(item.file, item.options || {});
       return {
         file: fileLike,
-        name: item.name,
         options: item.options
       }
-    })) as { file: FileLike, name: string, options?: StackCreateOptions }[];
+    })) as { file: FileLike, options?: StackCreateOptions }[];
 
     const batchSize = itemsToUpload.reduce((sum, item) => {
       return sum + item.file.size;
@@ -143,7 +142,7 @@ class BatchService extends Service {
     const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY, });
     const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
-    const uploadItem = async (item: { file: FileLike, name: string, options?: StackCreateOptions }) => {
+    const uploadItem = async (item: { file: FileLike, options?: StackCreateOptions }) => {
       const service = new StackService(this.wallet, this.api, batchService);
 
       const nodeId = uuidv4();
@@ -153,7 +152,7 @@ class BatchService extends Service {
         ...stackCreateOptions,
         ...(item.options || {})
       }
-      service.setAkordTags((service.isPublic ? [item.name] : []).concat(createOptions.tags));
+      service.setAkordTags((service.isPublic ? [item.file.name] : []).concat(createOptions.tags));
       service.setParentId(createOptions.parentId);
       service.arweaveTags = await service.getTxTags();
 
@@ -163,7 +162,7 @@ class BatchService extends Service {
         const version = await fileService.newVersion(item.file, fileUploadResult);
 
         const state = {
-          name: await service.processWriteString(item.name ? item.name : item.file.name),
+          name: await service.processWriteString(item.file.name),
           versions: [version],
           tags: service.tags
         };
@@ -177,7 +176,7 @@ class BatchService extends Service {
         }), { signal: options.cancelHook?.signal })
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
-          errors.push({ name: item.name, message: error.toString(), error });
+          errors.push({ name: item.file.name, message: error.toString(), error });
         }
       }
     }
@@ -389,7 +388,6 @@ export type MembershipInviteTransaction = TransactionPayload & {
 
 export type StackCreateItem = {
   file: FileSource,
-  name: string,
   options?: StackCreateOptions
 }
 

@@ -52,7 +52,6 @@ class NoteService extends NodeService<Stack> {
     const { stackId, transactionId, object } = await this.stackService.create(
       vaultId,
       [content],
-      name,
       { ...createOptions, name }
     );
     return { noteId: stackId, transactionId, object };
