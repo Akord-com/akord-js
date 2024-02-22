@@ -19,7 +19,10 @@ describe("Testing note functions", () => {
 
   beforeAll(async () => {
     akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = (await akord.vault.create(faker.random.words(), {
+      public: true,
+      cloud: true
+    })).vaultId;
   });
 
   it("should create new note", async () => {
