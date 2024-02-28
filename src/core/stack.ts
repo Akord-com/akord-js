@@ -8,6 +8,8 @@ import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
 import { PROXY_DOWNLOAD_URL } from "@akord/crypto";
 import { Platform, getPlatform } from "../util/platform";
 import { Logger } from "../logger";
+import { BadRequest } from "../errors/bad-request";
+import { ARWEAVE_URL, headFileTx } from "../arweave";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -44,7 +46,7 @@ class StackService extends NodeService<Stack> {
     const fileService = new FileService(this.wallet, this.api, service);
     fileService.contentType = this.fileService.contentType;
 
-    const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name: undefined });
+    const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name : undefined });
 
     const stackName = options.name || fileLike.name;
 
@@ -71,21 +73,24 @@ class StackService extends NodeService<Stack> {
   public async import(vaultId: string, fileTxId: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<StackCreateResult> {
     const service = new StackService(this.wallet, this.api);
     await service.setVaultContext(vaultId);
+    if (!service.isPublic) {
+      throw new BadRequest("Import is not supported on private vaults.")
+    }
     service.setActionRef(actionRefs.STACK_CREATE);
     service.setFunction(functions.NODE_CREATE);
 
-    const fileService = new FileService(this.wallet, this.api, service);
-    const { file, resourceUri } = await fileService.import(fileTxId);
+    const { name, mimeType, size } = await headFileTx(fileTxId);
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
-      name: await service.processWriteString(file.name),
-      type: file.type,
-      size: file.size,
-      resourceUri: resourceUri,
+      name: name,
+      type: mimeType,
+      size: size,
+      resourceUri: [StorageType.ARWEAVE + fileTxId],
+      external: true
     });
     const state = {
-      name: await service.processWriteString(file.name),
+      name: name,
       versions: [version]
     };
     const { nodeId, transactionId, object } = await service.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
@@ -140,7 +145,8 @@ class StackService extends NodeService<Stack> {
     if (!service.isPublic) {
       await version.decrypt();
     }
-    const data = await service.download(version.getUri(StorageType.S3), { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
+    const uri = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3)
+    const data = await service.download(uri, { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
     return { ...version, data };
   }
 
@@ -181,9 +187,9 @@ class StackService extends NodeService<Stack> {
         const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK)
         const stack = new Stack(stackProto, stackProto.__keys__);
         const version = stack.getVersion(index);
-        const id = version.getUri(StorageType.S3);
+        const id = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3);
 
-        const url = `${service.api.config.apiurl}/files/${id}`
+        const url = version.external ? `${ARWEAVE_URL}/${id}` : `${service.api.config.apiurl}/files/${id}`
         const proxyUrl = `${PROXY_DOWNLOAD_URL}/${id}`
         await service.setVaultContext(stack.vaultId);
 
