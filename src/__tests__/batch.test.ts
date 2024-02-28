@@ -1,10 +1,10 @@
 import { Akord } from "../index";
-import faker from '@faker-js/faker';
 import { initInstance, folderCreate, noteCreate, testDataPath, vaultCreate } from './common';
 import { email, email2, email3, password } from './data/test-credentials';
 import { firstFileName } from "./data/content";
 import { createFileLike } from "../core/file";
 import { StackCreateItem } from "../core/batch";
+import { EMPTY_FILE_ERROR_MESSAGE } from "../core/stack";
 
 let akord: Akord;
 
@@ -64,23 +64,25 @@ describe("Testing batch actions", () => {
   });
 
   describe("Batch upload", () => {
-    it("should upload a batch of 10 files", async () => {
+    const batchSize = 10;
+    it(`should upload a batch of ${batchSize} files`, async () => {
       const file = await createFileLike(testDataPath + firstFileName);
 
       const items = [] as StackCreateItem[];
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < batchSize; i++) {
         items.push({ file });
       }
 
-      const { data: response, errors } = await akord.batch.stackCreate(vaultId, items);
+      const { data, errors } = await akord.batch.stackCreate(vaultId, items);
 
       expect(errors.length).toEqual(0);
-      stackIds = response.map((item) => item.stackId);
+      expect(data.length).toEqual(batchSize);
+      stackIds = data.map((item) => item.stackId);
       for (let index in items) {
-        const stack = await akord.stack.get(response[index].stackId);
+        const stack = await akord.stack.get(data[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
-        expect(stack.name).toEqual(response[index].object.name);
+        expect(stack.name).toEqual(data[index].object.name);
         expect(stack.versions.length).toEqual(1);
         expect(stack.versions[0].name).toEqual(firstFileName);
       }
@@ -88,6 +90,17 @@ describe("Testing batch actions", () => {
 
     it("should revoke the previously uploaded batch", async () => {
       await akord.batch.revoke(stackIds.map(stackId => ({ id: stackId, type: "Stack" })));
+    });
+
+    it(`should try to upload 2 files (the empty one should be skipped)`, async () => {
+      const { data, errors } = await akord.batch.stackCreate(vaultId, [
+         { file: await createFileLike(testDataPath + firstFileName) },
+         { file: testDataPath + "empty-file.md" }
+      ]);
+
+      expect(errors.length).toEqual(1);
+      expect(errors[0].message).toEqual(EMPTY_FILE_ERROR_MESSAGE);
+      expect(data.length).toEqual(1);
     });
   });
 
