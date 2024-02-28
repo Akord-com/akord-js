@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
 import { Service } from "../core";
 import { MembershipService } from "./membership";
-import { StackService } from "./stack";
+import { EMPTY_FILE_ERROR_MESSAGE, StackService } from "./stack";
 import { NodeService } from "./node";
 import { Node, NodeLike, NodeType } from "../types/node";
 import { StackCreateOptions, Stack } from "../types/stack";
@@ -15,6 +15,7 @@ import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types";
+import lodash from "lodash";
 
 
 class BatchService extends Service {
@@ -104,22 +105,28 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
+    const data = [] as BatchStackCreateResponse["data"];
+    const errors = [] as BatchStackCreateResponse["errors"];
+
     // prepare items to upload
-    const itemsToUpload = await Promise.all(items.map(async (item: StackCreateItem) => {
+    const stackUploadItems = await Promise.all(items.map(async (item: StackCreateItem) => {
       const fileLike = await createFileLike(item.file, item.options || {});
       return {
         file: fileLike,
         options: item.options
       }
-    })) as { file: FileLike, options?: StackCreateOptions }[];
+    })) as StackUploadItem[];
+
+    const [itemsToUpload, emptyFileItems] = lodash.partition(stackUploadItems, function (item: StackUploadItem) { return item.file?.size > 0 });
+
+    emptyFileItems.map((item: StackUploadItem) => {
+      errors.push({ name: item.file?.name, message: EMPTY_FILE_ERROR_MESSAGE, error: new BadRequest(EMPTY_FILE_ERROR_MESSAGE) });
+    })
 
     const batchSize = itemsToUpload.reduce((sum, item) => {
       return sum + item.file.size;
     }, 0);
     batchProgressCount(batchSize, options);
-
-    const data = [] as BatchStackCreateResponse["data"];
-    const errors = [] as BatchStackCreateResponse["errors"];
 
     // set service context
     const vault = await this.api.getVault(vaultId);
@@ -370,6 +377,11 @@ export const batchProgressCount = (batchSize: number, options: BatchStackCreateO
     }
     options.progressHook = itemProgressHook;
   }
+}
+
+export type StackUploadItem = {
+  file: FileLike,
+  options?: StackCreateOptions
 }
 
 export type TransactionPayload = {

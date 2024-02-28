@@ -8,6 +8,9 @@ import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
 import { PROXY_DOWNLOAD_URL } from "@akord/crypto";
 import { Platform, getPlatform } from "../util/platform";
 import { Logger } from "../logger";
+import { BadRequest } from "../errors/bad-request";
+
+export const EMPTY_FILE_ERROR_MESSAGE = "Cannot upload an empty file";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
@@ -44,7 +47,11 @@ class StackService extends NodeService<Stack> {
     const fileService = new FileService(this.wallet, this.api, service);
     fileService.contentType = this.fileService.contentType;
 
-    const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name: undefined });
+    const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name : undefined });
+
+    if (fileLike.size === 0) {
+      throw new BadRequest(EMPTY_FILE_ERROR_MESSAGE);
+    }
 
     const stackName = options.name || fileLike.name;
 
