@@ -7,8 +7,6 @@ import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweave
 import { ApiClient } from "../api/api-client";
 import { FileLike, FileSource } from "../types/file";
 import { Tag, Tags } from "../types/contract";
-import { getTxData, getTxMetadata } from "../arweave";
-import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./manifest";
 import { UDL } from "../types/udl";
 import { udlToTags } from "./udl";
 import { BadRequest } from "../errors/bad-request";
@@ -48,30 +46,6 @@ class FileService extends Service {
     }
   }
 
-  public async import(fileTxId: string)
-    : Promise<{ file: FileLike, resourceUri: string[] }> {
-    const fileData = await getTxData(fileTxId);
-    const fileMetadata = await getTxMetadata(fileTxId);
-    const { name, type } = this.retrieveFileMetadata(fileTxId, fileMetadata?.tags);
-    const file = await createFileLike([fileData], { name, mimeType: type, lastModified: fileMetadata?.block?.timestamp });
-    const tags = this.getFileTags(file);
-
-    const { processedData, encryptionTags } = await this.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
-    const resourceHash = await digestRaw(new Uint8Array(processedData));
-    tags.push(new Tag(fileTags.FILE_HASH, resourceHash));
-    this.client = new ApiClient()
-      .env(this.api.config)
-      .data(processedData)
-      .tags(tags.concat(encryptionTags))
-      .public(this.isPublic)
-      .storage(StorageType.S3);
-
-    const resource = await this.client.uploadFile();
-    const resourceUri = resource.resourceUri
-    resourceUri.push(`${StorageType.ARWEAVE}${fileTxId}`);
-    return { file, resourceUri };
-  }
-
   public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
     const version = new FileVersion({
       owner: await this.wallet.getAddress(),
@@ -104,31 +78,6 @@ class FileService extends Service {
       return await StreamConverter.toArrayBuffer<Uint8Array>(stream as any);
     }
     return stream;
-  }
-
-  private retrieveFileMetadata(fileTxId: string, tags: Tags = [])
-    : { name: string, type: string } {
-    const type = this.retrieveFileType(tags);
-    const name = this.retrieveDecodedTag(tags, "File-Name")
-      || this.retrieveDecodedTag(tags, "Title")
-      || this.retrieveDecodedTag(tags, "Name")
-      || (fileTxId + "." + mime.extension(type));
-    return { name, type };
-  }
-
-  private retrieveFileType(tags: Tags = [])
-    : string {
-    const contentType = this.retrieveDecodedTag(tags, "Content-Type");
-    return (contentType === MANIFEST_CONTENT_TYPE ? MANIFEST_FILE_TYPE : contentType)
-      || DEFAULT_FILE_TYPE;
-  }
-
-  private retrieveDecodedTag(tags: Tags, tagName: string) {
-    const tagValue = tags?.find((tag: Tag) => tag.name === tagName)?.value;
-    if (tagValue) {
-      return decodeURIComponent(tagValue);
-    }
-    return null;
   }
 
   private async upload(
@@ -403,5 +352,6 @@ export type FileVersionData = {
 
 export {
   FileService,
-  createFileLike
+  createFileLike,
+  DEFAULT_FILE_TYPE
 }

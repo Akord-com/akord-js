@@ -1,16 +1,19 @@
 import axios, { AxiosRequestConfig } from "axios";
+import * as mime from "mime-types";
 import { throwError } from "./errors/error-factory";
 import { NotFound } from "./errors/not-found";
-import { Tags } from "./types/contract";
+import { Tag, Tags } from "./types/contract";
+import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./core/manifest";
+import { DEFAULT_FILE_TYPE } from "./core/file";
 
-const ARWEAVE_URL = "https://arweave.net/";
+const ARWEAVE_URL = "https://arweave.net";
 
 const DEFAULT_RESPONSE_TYPE = "arraybuffer";
 
 const getTxData = async (id: string, responseType = DEFAULT_RESPONSE_TYPE) => {
   const config = {
     method: "get",
-    url: ARWEAVE_URL + id,
+    url: `${ARWEAVE_URL}/${id}`,
     responseType: responseType
   } as AxiosRequestConfig;
   try {
@@ -26,6 +29,35 @@ const getTxData = async (id: string, responseType = DEFAULT_RESPONSE_TYPE) => {
     throwError(error.response?.status, error.response?.data?.msg, error);
   }
 };
+
+const headFileTx = async (id: string) => {
+  const txMetadata = await getTxMetadata(id);
+  const mimeType = retrieveMimeType(txMetadata.tags);
+  const name = retrieveName(txMetadata.tags) || (id + "." + mime.extension(mimeType));
+  const size = txMetadata.data.size;
+  const lastModified = txMetadata.block.timestamp;
+  return { mimeType, name, size, lastModified };
+}
+
+const retrieveName = (tags: Tags = []): string => {
+  return retrieveDecodedTag(tags, "File-Name")
+    || retrieveDecodedTag(tags, "Title")
+    || retrieveDecodedTag(tags, "Name")
+}
+
+const retrieveMimeType = (tags: Tags = []): string => {
+  const contentType = retrieveDecodedTag(tags, "Content-Type");
+  return (contentType === MANIFEST_CONTENT_TYPE ? MANIFEST_FILE_TYPE : contentType)
+    || DEFAULT_FILE_TYPE;
+}
+
+const retrieveDecodedTag = (tags: Tags, tagName: string) => {
+  const tagValue = tags?.find((tag: Tag) => tag.name === tagName)?.value;
+  if (tagValue) {
+    return decodeURIComponent(tagValue);
+  }
+  return null;
+}
 
 const getTxMetadata = async (id: string): Promise<TransactionMetadata> => {
   const result = await graphql(getTransaction, { id });
@@ -65,7 +97,7 @@ query transactionsById($id: ID!) {
 const graphql = async (query: any, variables: any) => {
   try {
     const config = {
-      url: ARWEAVE_URL + "graphql",
+      url:`${ARWEAVE_URL}/graphql`,
       method: <any>'post',
       headers: {
         'content-type': 'application/json'
@@ -98,5 +130,7 @@ export type TransactionMetadata = {
 
 export {
   getTxData,
-  getTxMetadata
+  getTxMetadata,
+  headFileTx,
+  ARWEAVE_URL
 }
