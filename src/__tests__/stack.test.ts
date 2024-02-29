@@ -6,6 +6,7 @@ import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
 import { createFileLike } from "../core/file";
 import fs from "fs";
+import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
 
@@ -40,6 +41,12 @@ describe("Testing stack functions", () => {
     const file = await createFileLike(testDataPath + firstFileName);
     expect(stack.versions[0].type).toEqual(file.type);
     expect(data).toEqual(await file.arrayBuffer());
+  });
+
+  it("should fail uploading an empty file", async () => {
+    await expect(async () => {
+      await akord.stack.create(vaultId, testDataPath + "empty-file.md");
+    }).rejects.toThrow(BadRequest);
   });
 
   it("should create stack from file buffer", async () => {

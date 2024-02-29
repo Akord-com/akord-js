@@ -11,6 +11,8 @@ import { Logger } from "../logger";
 import { BadRequest } from "../errors/bad-request";
 import { ARWEAVE_URL, headFileTx } from "../arweave";
 
+export const EMPTY_FILE_ERROR_MESSAGE = "Cannot upload an empty file";
+
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
   objectType = nodeType.STACK;
@@ -47,6 +49,10 @@ class StackService extends NodeService<Stack> {
     fileService.contentType = this.fileService.contentType;
 
     const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name : undefined });
+
+    if (fileLike.size === 0) {
+      throw new BadRequest(EMPTY_FILE_ERROR_MESSAGE);
+    }
 
     const stackName = options.name || fileLike.name;
 
