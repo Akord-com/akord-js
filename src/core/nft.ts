@@ -42,17 +42,16 @@ class NFTService extends NodeService<NFT> {
       ...this.defaultCreateOptions,
       ...options
     }
-    const service = new NFTService(this.wallet, this.api, this);
-    service.setVault(vault);
-    service.setVaultId(vaultId);
-    service.setIsPublic(vault.public);
-    service.setActionRef(actionRefs.NFT_MINT);
-    service.setFunction(functions.NODE_CREATE);
-    service.setAkordTags([]);
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.public);
+    this.setActionRef(actionRefs.NFT_MINT);
+    this.setFunction(functions.NODE_CREATE);
+    this.setAkordTags([]);
 
     createOptions.arweaveTags = (createOptions.arweaveTags || []).concat(nftTags);
 
-    createOptions.cloud = service.vault.cloud;
+    createOptions.cloud = false;
 
     if (createOptions.ucm) {
       createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Indexed-By', 'ucm')]);
@@ -60,7 +59,7 @@ class NFTService extends NodeService<NFT> {
 
     let thumbnail = undefined;
     if (metadata.thumbnail && !metadata.collection) {
-      const thumbnailService = new StackService(this.wallet, this.api, service);
+      const thumbnailService = new StackService(this.wallet, this.api, this);
       const { object } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail
@@ -73,7 +72,7 @@ class NFTService extends NodeService<NFT> {
     if (fileLike.type) {
       createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
     }
-    const fileService = new FileService(this.wallet, this.api, service);
+    const fileService = new FileService(this.wallet, this.api, this);
     createOptions.storage = StorageType.ARWEAVE;
     const fileUploadResult = await fileService.create(fileLike, createOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
@@ -82,7 +81,7 @@ class NFTService extends NodeService<NFT> {
     state.asset = version;
     state.thumbnail = thumbnail;
 
-    const { nodeId, transactionId, object } = await service.nodeCreate<NFT>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<NFT>(state, { parentId: options.parentId });
     return { nftId: nodeId, transactionId, object, uri: object.uri };
   }
 

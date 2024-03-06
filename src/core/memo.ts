@@ -26,16 +26,15 @@ class MemoService extends NodeService<Memo> {
    * @returns Promise with new node id & corresponding transaction id
    */
   public async create(vaultId: string, message: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<MemoCreateResult> {
-    const service = new MemoService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    service.setActionRef(actionRefs.MEMO_CREATE);
-    service.setFunction(functions.NODE_CREATE);
-    service.setAkordTags(options.tags);
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.MEMO_CREATE);
+    this.setFunction(functions.NODE_CREATE);
+    this.setAkordTags(options.tags);
     const state = {
-      versions: [await service.memoVersion(message)],
+      versions: [await this.memoVersion(message)],
       tags: options.tags || []
     };
-    const { nodeId, transactionId, object } = await service.nodeCreate<Memo>(state, { parentId: options.parentId }, options.arweaveTags);
+    const { nodeId, transactionId, object } = await this.nodeCreate<Memo>(state, { parentId: options.parentId }, options.arweaveTags);
     return { memoId: nodeId, transactionId, object };
   }
 
@@ -45,23 +44,22 @@ class MemoService extends NodeService<Memo> {
    * @returns Promise with corresponding transaction id
    */
   public async addReaction(memoId: string, reaction: reactionEmoji): Promise<MemoUpdateResult> {
-    const service = new MemoService(this.wallet, this.api);
-    await service.setVaultContextFromNodeId(memoId, this.objectType);
-    service.setActionRef(actionRefs.MEMO_ADD_REACTION);
-    service.setFunction(functions.NODE_UPDATE);
-    service.arweaveTags = await service.getTxTags();
+    await this.setVaultContextFromNodeId(memoId, this.objectType);
+    this.setActionRef(actionRefs.MEMO_ADD_REACTION);
+    this.setFunction(functions.NODE_UPDATE);
+    this.arweaveTags = await this.getTxTags();
 
-    const currentState = await service.getCurrentState();
+    const currentState = await this.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
-    newState.versions[newState.versions.length - 1].reactions.push(await service.memoReaction(reaction));
-    const dataTxId = await service.uploadState(newState, service.vault.cloud);
+    newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
+    const dataTxId = await this.uploadState(newState, this.vault.cloud);
 
     const { id, object } = await this.api.postContractTransaction<Memo>(
-      service.vaultId,
-      { function: service.function, data: dataTxId },
-      service.arweaveTags
+      this.vaultId,
+      { function: this.function, data: dataTxId },
+      this.arweaveTags
     );
-    const memo = await this.processMemo(object, !service.isPublic, service.keys);
+    const memo = await this.processMemo(object, !this.isPublic, this.keys);
     return { transactionId: id, object: memo };
   }
 
@@ -71,21 +69,20 @@ class MemoService extends NodeService<Memo> {
    * @returns Promise with corresponding transaction id
    */
   public async removeReaction(memoId: string, reaction: reactionEmoji): Promise<MemoUpdateResult> {
-    const service = new MemoService(this.wallet, this.api);
-    await service.setVaultContextFromNodeId(memoId, this.objectType);
-    service.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
-    service.setFunction(functions.NODE_UPDATE);
-    service.arweaveTags = await service.getTxTags();
+    await this.setVaultContextFromNodeId(memoId, this.objectType);
+    this.setActionRef(actionRefs.MEMO_REMOVE_REACTION);
+    this.setFunction(functions.NODE_UPDATE);
+    this.arweaveTags = await this.getTxTags();
 
-    const state = await service.deleteReaction(reaction);
-    const dataTxId = await service.uploadState(state, service.vault.cloud);
+    const state = await this.deleteReaction(reaction);
+    const dataTxId = await this.uploadState(state, this.vault.cloud);
 
     const { id, object } = await this.api.postContractTransaction<Memo>(
-      service.vaultId,
-      { function: service.function, data: dataTxId },
-      service.arweaveTags
+      this.vaultId,
+      { function: this.function, data: dataTxId },
+      this.arweaveTags
     );
-    const memo = await this.processMemo(object, !service.isPublic, service.keys);
+    const memo = await this.processMemo(object, !this.isPublic, this.keys);
     return { transactionId: id, object: memo };
   }
 

@@ -14,16 +14,15 @@ class FolderService extends NodeService<Folder> {
    * @returns Promise with new folder id & corresponding transaction id
    */
   public async create(vaultId: string, name: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<FolderCreateResult> {
-    const service = new FolderService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    service.setActionRef(actionRefs.FOLDER_CREATE);
-    service.setFunction(functions.NODE_CREATE);
-    service.setAkordTags((service.isPublic ? [name] : []).concat(options.tags));
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.FOLDER_CREATE);
+    this.setFunction(functions.NODE_CREATE);
+    this.setAkordTags((this.isPublic ? [name] : []).concat(options.tags));
     const state = {
-      name: await service.processWriteString(name),
+      name: await this.processWriteString(name),
       tags: options.tags || []
     }
-    const { nodeId, transactionId, object } = await service.nodeCreate<Folder>(state, { parentId: options.parentId }, options.arweaveTags);
+    const { nodeId, transactionId, object } = await this.nodeCreate<Folder>(state, { parentId: options.parentId }, options.arweaveTags);
     return { folderId: nodeId, transactionId, object };
   }
 };
