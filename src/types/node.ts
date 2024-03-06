@@ -85,11 +85,6 @@ export class NodeFactory {
   }
 }
 
-export type NodeUpdateResult = {
-  transactionId: string,
-  object: NodeLike
-}
-
 export type NodeCreateOptions = {
   parentId?: string,
   tags?: string[],

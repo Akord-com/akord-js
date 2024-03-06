@@ -1,6 +1,6 @@
 import { Service } from './service';
 import { functions, protocolTags, status } from "../constants";
-import { NodeCreateOptions, NodeLike, NodeType, NodeUpdateResult } from '../types/node';
+import { NodeCreateOptions, NodeLike, NodeType } from '../types/node';
 import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
 import { ContractInput, Tag, Tags } from '../types/contract';
@@ -95,14 +95,14 @@ class NodeService<T> extends Service {
    * @param  {string} name new name
    * @returns Promise with corresponding transaction id
    */
-  public async rename(nodeId: string, name: string): Promise<NodeUpdateResult> {
+  public async rename(nodeId: string, name: string): Promise<{ transactionId: string, object: T }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType);
     this.setActionRef(this.objectType.toUpperCase() + "_RENAME");
     this.setFunction(functions.NODE_UPDATE);
     const state = {
       name: await this.processWriteString(name)
     };
-    return this.nodeUpdate<T>(state) as Promise<NodeUpdateResult>;
+    return this.nodeUpdate<T>(state);
   }
 
   /**
@@ -110,44 +110,44 @@ class NodeService<T> extends Service {
    * @param  {string} [parentId] new parent folder id
    * @returns Promise with corresponding transaction id
    */
-  public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<NodeUpdateResult> {
+  public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setActionRef(this.objectType.toUpperCase() + "_MOVE");
     this.setFunction(functions.NODE_MOVE);
-    return this.nodeUpdate<NodeLike>(null, { parentId });
+    return this.nodeUpdate<T>(null, { parentId });
   }
 
   /**
    * @param  {string} nodeId
    * @returns Promise with corresponding transaction id
    */
-  public async revoke(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
+  public async revoke(nodeId: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
     this.setFunction(functions.NODE_REVOKE);
-    return this.nodeUpdate<T>() as Promise<NodeUpdateResult>;
+    return this.nodeUpdate<T>();
   }
 
   /**
    * @param  {string} nodeId
    * @returns Promise with corresponding transaction id
    */
-  public async restore(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
+  public async restore(nodeId: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
     this.setFunction(functions.NODE_RESTORE);
-    return this.nodeUpdate<T>() as Promise<NodeUpdateResult>;
+    return this.nodeUpdate<T>();
   }
 
   /**
    * @param  {string} nodeId
    * @returns Promise with corresponding transaction id
    */
-  public async delete(nodeId: string, vaultId?: string): Promise<NodeUpdateResult> {
+  public async delete(nodeId: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
     await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
     this.setActionRef(this.objectType.toUpperCase() + "_DELETE");
     this.setFunction(functions.NODE_DELETE);
-    return this.nodeUpdate<T>() as Promise<NodeUpdateResult>;
+    return this.nodeUpdate<T>();
   }
 
   protected async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
