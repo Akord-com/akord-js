@@ -1,16 +1,14 @@
 name: Release
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
-      - 'main'
+      - main
 env:
     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 jobs:
   release:
-    if: github.event.pull_request.merged == true
+    if: github.actor != 'akord-service'
     runs-on: ubuntu-latest
     permissions:
       contents: write
