@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - dev
+      - main
 env:
     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 jobs:
