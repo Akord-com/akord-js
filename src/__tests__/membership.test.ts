@@ -55,7 +55,7 @@ describe("Testing membership functions", () => {
     invitee.membership = await ownerAkordInstance.membership.get(invitee.membershipId);
     expect(invitee.membership.status).toEqual("PENDING");
     expect(invitee.membership.role).toEqual("CONTRIBUTOR");
-    expect(invitee.membership.memberDetails.profileName).toBeFalsy();
+    expect(invitee.membership.memberDetails.profileName).toEqual(invitee.profileName);
     expect(invitee.membership.email).toEqual(invitee.email);
     expect(invitee.membership.address).toEqual(invitee.address);
     expect(invitee.membership.owner).toEqual(owner.address);
