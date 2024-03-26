@@ -148,7 +148,7 @@ class BatchService extends Service {
     const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY, });
     const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
-    const uploadItem = async (item: { file: FileLike, options?: StackCreateOptions }) => {
+    const uploadItem = async (item: StackUploadItem) => {
       const service = new StackService(this.wallet, this.api, this);
 
       const nodeId = uuidv4();
@@ -178,7 +178,7 @@ class BatchService extends Service {
           vaultId: service.vaultId,
           input: { function: service.function, data: id, parentId: createOptions.parentId },
           tags: service.arweaveTags,
-          item
+          item: item
         }), { signal: options.cancelHook?.signal })
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
@@ -187,7 +187,7 @@ class BatchService extends Service {
       }
     }
 
-    const postTx = async (tx) => {
+    const postTx = async (tx: { vaultId: string; input: ContractInput; tags: any; item: StackUploadItem; }) => {
       try {
         const { id, object } = await this.api.postContractTransaction<Stack>(
           tx.vaultId,
@@ -202,7 +202,7 @@ class BatchService extends Service {
         data.push({ transactionId: id, object: stack, stackId: object.id });
         stacksCreated += 1;
       } catch (error) {
-        errors.push({ name: tx.item.name, message: error.toString(), error });
+        errors.push({ name: tx.item.file.name, message: error.toString(), error });
       };
     }
 
