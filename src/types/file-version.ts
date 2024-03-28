@@ -4,6 +4,7 @@ import { UDL } from "./udl";
 
 export class FileVersion extends Encryptable implements Version {
   @encrypted() name: string;
+  id: string;
   type: string;
   resourceUri: string[];
   owner: string;
@@ -12,11 +13,13 @@ export class FileVersion extends Encryptable implements Version {
   size: number;
   udl?: UDL;
   ucm?: boolean;
+  external?: boolean;
   numberOfChunks?: number;
   chunkSize?: number;
 
   constructor(fileVersionProto: any, keys?: Array<EncryptedKeys>, publicKey?: string) {
     super(keys, publicKey);
+    this.id = fileVersionProto.id;
     this.owner = fileVersionProto.owner;
     this.createdAt = fileVersionProto.createdAt;
     this.type = fileVersionProto.type;
@@ -28,6 +31,7 @@ export class FileVersion extends Encryptable implements Version {
     this.status = fileVersionProto.status;
     this.udl = fileVersionProto.udl;
     this.ucm = fileVersionProto.ucm;
+    this.external = fileVersionProto.external;
   }
 
   getUri(type: StorageType): string {

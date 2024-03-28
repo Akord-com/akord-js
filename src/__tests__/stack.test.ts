@@ -172,6 +172,10 @@ describe("Testing stack functions", () => {
   });
 
   it("should import new stack from arweave tx", async () => {
+    const { vaultId } = await akord.vault.create(faker.random.words(), {
+      public: true,
+      cloud: true
+    });
     const fileName = arweaveImportFileTx + ".jpeg";
     const { stackId } = await akord.stack.import(vaultId, arweaveImportFileTx);
 

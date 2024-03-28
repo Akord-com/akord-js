@@ -1,9 +1,9 @@
 import { NodeService } from "./node";
-import { FileVersion, StackCreateOptions, StorageType, UDL_LICENSE_TX_ID, nodeType, tagNames } from "../types";
+import { FileVersion, StorageType, UDL_LICENSE_TX_ID, nodeType, tagNames } from "../types";
 import { FileSource } from "../types/file";
 import { FileGetOptions, createFileLike } from "./file";
-import { NFT, NFTMetadata } from "../types/nft";
-import { Collection, CollectionMetadata } from "../types/collection";
+import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
+import { Collection, CollectionMetadata, CollectionMintOptions } from "../types/collection";
 import { actionRefs, functions } from "../constants";
 import { Tag } from "../types/contract";
 import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "../types/asset";
@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import { StackService } from "./stack";
 import { Logger } from "../logger";
 import { batchProgressCount } from "./batch";
-import { NFTService } from "./nft";
+import { NFTService, validateWallets } from "./nft";
 import { InternalError } from "../errors/internal-error";
 
 class CollectionService extends NodeService<Collection> {
@@ -23,19 +23,19 @@ class CollectionService extends NodeService<Collection> {
   /**
    * Mint a complete collection of Atomic NFTs, note that each NFT will inherit collection metadata setup
    * @param  {string} vaultId
-   * @param  {{asset:FileSource,metadata:NFTMetadata,options:StackCreateOptions}[]} items
+   * @param  {{asset:FileSource,metadata:NFTMetadata,options:NFTMintOptions}[]} items
    * @param  {CollectionMetadata} metadata
-   * @param  {StackCreateOptions} options
+   * @param  {CollectionMintOptions} options
    * @returns Promise with corresponding collection & all minted nfts
    */
   public async mint(
     vaultId: string,
     items: NFTMintItem[],
     metadata: CollectionMetadata,
-    options: StackCreateOptions = this.defaultCreateOptions
+    options: CollectionMintOptions = this.defaultCreateOptions
   ): Promise<MintCollectionResponse> {
 
-    const { collectionId, object: collection, service } = await this.init(vaultId, items, metadata, options);
+    const { collectionId, object: collection, groupRef } = await this.init(vaultId, items, metadata, options);
 
     const mintedItems = [] as string[];
     const nfts = [] as NFTResponseItem[];
@@ -45,15 +45,15 @@ class CollectionService extends NodeService<Collection> {
       await Promise.all(chunk.map(async (nft) => {
         try {
           const nftService = new NFTService(this.wallet, this.api);
-          nftService.setGroupRef(service.groupRef);
-          const { nftId, transactionId, object } = await nftService.mint(
+          nftService.setGroupRef(groupRef);
+          const { nftId, transactionId, object, uri } = await nftService.mint(
             vaultId,
             nft.asset,
             { ...metadata, collection: collection.code, ...nft.metadata },
             { parentId: collectionId, ...options, ...nft.options }
           );
           mintedItems.push(object.getUri(StorageType.ARWEAVE));
-          nfts.push({ nftId, transactionId, object });
+          nfts.push({ nftId, transactionId, object, uri });
         } catch (error) {
           Logger.log("Minting the atomic asset failed.");
           Logger.log(error);
@@ -69,11 +69,12 @@ class CollectionService extends NodeService<Collection> {
     }
 
     try {
-      const { transactionId, object } = await this.finalize(service, collection, metadata, nfts.map((item) => item.object));
+      const { transactionId, object, uri } = await this.finalize(collection, metadata, nfts.map((item) => item.object), vaultId, groupRef);
       return {
-        object: new Collection(object),
+        object: object,
         collectionId: collection.id,
         transactionId: transactionId,
+        uri: uri,
         items: nfts
       }
     } catch (error) {
@@ -86,23 +87,25 @@ class CollectionService extends NodeService<Collection> {
   /**
    * Init collection minting by validating metadata & items to mint
    * @param  {string} vaultId
-   * @param  {{asset:FileSource,metadata:NFTMetadata,options:StackCreateOptions}[]} items
+   * @param  {{asset:FileSource,metadata:NFTMetadata,options:NFTMintOptions}[]} items
    * @param  {CollectionMetadata} metadata
-   * @param  {StackCreateOptions} options
+   * @param  {CollectionMintOptions} options
    * @returns Promise with corresponding collection id & collection object
    */
   public async init(
     vaultId: string,
     items: NFTMintItem[],
     metadata: CollectionMetadata,
-    options: StackCreateOptions = this.defaultCreateOptions
-  ): Promise<{ collectionId: string, transactionId: string, object: Collection, service: CollectionService }> {
+    options: CollectionMintOptions = this.defaultCreateOptions
+  ): Promise<{ collectionId: string, transactionId: string, object: Collection, groupRef: string }> {
 
     if (!items || items.length === 0) {
       throw new BadRequest("No items provided for minting.");
     }
 
+    // validate fields
     validateAssetMetadata(metadata);
+    validateWallets(metadata);
 
     const vault = await this.api.getVault(vaultId);
     if (!vault.public || vault.cacheOnly) {
@@ -111,8 +114,9 @@ class CollectionService extends NodeService<Collection> {
 
     // validate items to mint
     const itemsToMint = await Promise.all(items.map(async (nft: NFTMintItem) => {
-      validateAssetMetadata(nft.metadata);
-      const fileLike = await createFileLike(nft.asset, { ...options, ...nft.options });
+      validateAssetMetadata({ ...metadata, ...nft.metadata });
+      validateWallets({ ...metadata, ...nft.metadata });
+      const fileLike = await createFileLike(nft.asset);
       return { asset: fileLike, metadata: nft.metadata, options: nft.options };
     }));
 
@@ -130,7 +134,8 @@ class CollectionService extends NodeService<Collection> {
     service.setAkordTags([]);
     service.setObjectType("Collection");
 
-    service.setGroupRef(uuidv4());
+    const groupRef = uuidv4();
+    service.setGroupRef(groupRef);
 
     // if no collection code provided, derive one from collection name
     const collectionCode = metadata.code
@@ -149,7 +154,7 @@ class CollectionService extends NodeService<Collection> {
 
     const { nodeId: collectionId, object, transactionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
-    return { collectionId, object, transactionId, service };
+    return { collectionId, object, transactionId, groupRef };
   }
 
   /**
@@ -160,32 +165,33 @@ class CollectionService extends NodeService<Collection> {
    * @returns Promise with corresponding transaction id & collection object
    */
   public async finalize(
-    initService: CollectionService,
     collection: Collection,
     metadata: CollectionMetadata,
-    nfts: NFT[]
-  ): Promise<{ transactionId: string, object: Collection, uri: string }> {
+    nfts: NFT[],
+    vaultId: string,
+    groupRef: string
+    ): Promise<{ transactionId: string, object: Collection, uri: string }> {
     const mintedItems = nfts.map((nft: NFT) => nft.asset.getUri(StorageType.ARWEAVE));
     const collectionMintedState = {
       type: "Collection",
       items: mintedItems
     } as any;
 
-    const service = new CollectionService(this.wallet, this.api, initService);
-    service.setObject(collection);
-    service.setObjectType("Collection");
-    service.setObjectId(collection.id);
-    service.setVaultId(initService.vaultId);
-    service.setIsPublic(true);
-    service.setActionRef(actionRefs.COLLECTION_MINT);
-    service.setFunction(functions.NODE_UPDATE);
+    this.setObject(collection);
+    this.setObjectType("Collection");
+    this.setObjectId(collection.id);
+    this.setVaultId(vaultId);
+    this.setIsPublic(true);
+    this.setActionRef(actionRefs.COLLECTION_MINT);
+    this.setFunction(functions.NODE_UPDATE);
+    this.setGroupRef(groupRef);
 
     const collectionTags = [
       new Tag("Data-Protocol", "Collection"),
       new Tag("Content-Type", "application/json"),
       new Tag("Name", metadata.name),
       new Tag("Type", "document"),
-      new Tag("Vault-Id", initService.vaultId),
+      new Tag("Vault-Id", vaultId),
       new Tag("Collection-Code", collection.code),
       new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID)
     ];
@@ -201,9 +207,9 @@ class CollectionService extends NodeService<Collection> {
     }
 
     if (metadata.banner) {
-      const bannerService = new StackService(this.wallet, this.api, service);
+      const bannerService = new StackService(this.wallet, this.api, this);
       const { object: banner } = await bannerService.create(
-        initService.vaultId,
+        vaultId,
         metadata.banner,
         { parentId: collection.id }
       );
@@ -216,9 +222,9 @@ class CollectionService extends NodeService<Collection> {
     }
 
     if (metadata.thumbnail) {
-      const thumbnailService = new StackService(this.wallet, this.api, service);
+      const thumbnailService = new StackService(this.wallet, this.api, this);
       const { object: thumbnail } = await thumbnailService.create(
-        initService.vaultId,
+        vaultId,
         metadata.thumbnail,
         { parentId: collection.id }
       );
@@ -226,7 +232,7 @@ class CollectionService extends NodeService<Collection> {
       collectionMintedState.thumbnail = thumbnail.versions[0];
     }
 
-    service.arweaveTags = await service.getTxTags();
+    this.arweaveTags = await this.getTxTags();
 
     const mergedState = mergeState({
       owner: metadata.owner,
@@ -238,12 +244,12 @@ class CollectionService extends NodeService<Collection> {
       ucm: collection.ucm,
     }, collectionMintedState);
 
-    const ids = await service.api.uploadData([{ data: mergedState, tags: collectionTags }]);
+    const ids = await this.api.uploadData([{ data: mergedState, tags: collectionTags }]);
 
-    const { id, object } = await service.api.postContractTransaction<Collection>(
-      service.vaultId,
-      { function: service.function, data: ids[0] },
-      service.arweaveTags
+    const { id, object } = await this.api.postContractTransaction<Collection>(
+      this.vaultId,
+      { function: this.function, data: ids[0] },
+      this.arweaveTags
     );
     const collectionInstance = new Collection(object);
     return {
@@ -293,17 +299,19 @@ function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
 export type NFTMintItem = {
   asset: FileSource,
   metadata: NFTMetadata,
-  options?: StackCreateOptions
+  options?: NFTMintOptions
 }
 
 export type NFTResponseItem = {
   nftId: string,
   transactionId: string,
-  object: NFT
+  object: NFT,
+  uri: string
 }
 
 export interface MintCollectionResponse {
   object: Collection,
+  uri: string,
   collectionId: string,
   transactionId: string,
   items: Array<NFTResponseItem>

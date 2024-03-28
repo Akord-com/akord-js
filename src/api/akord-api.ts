@@ -67,10 +67,15 @@ export default class AkordApi extends Api {
         lastError = error;
         Logger.log(error);
         Logger.log(error.message);
-        await new Promise(r => setTimeout(r, RETRY_AFTER));
-        Logger.log("Retrying...");
-        retryCount++;
-        Logger.log("Retry count: " + retryCount);
+        if (error?.statusCode >= 400 && error?.statusCode < 500) {
+          retryCount = RETRY_MAX;
+          throw error;
+        } else {
+          await new Promise(r => setTimeout(r, RETRY_AFTER));
+          Logger.log("Retrying...");
+          retryCount++;
+          Logger.log("Retry count: " + retryCount);
+        }
       }
     }
     Logger.log(`Request failed after ${RETRY_MAX} attempts.`);

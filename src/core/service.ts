@@ -118,7 +118,8 @@ class Service {
   }
 
   setAkordTags(tags: string[]) {
-    this.tags = tags;
+    // remove falsy values
+    this.tags = tags?.filter((tag: string) => tag) || [];
   }
 
   async processWriteString(data: string): Promise<string> {

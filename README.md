@@ -1282,7 +1282,7 @@ Manifest is a special case of Stack that is unique per vault and follows [Arweav
 
 If there is no manifest for the vault, a new manifest stack will be created, otherwise a new version of the manifest will be generated and uploaded.
 
-If no input JSON is provided by the user, manifest will be genarated automatically from the current vault state.
+If no input JSON is provided by the user, manifest will be generated automatically from the current vault state.
 
 - `vaultId` (`string`, required)
 - `manifest` (`JSON`, optional) - manifest JSON
@@ -1292,7 +1292,7 @@ If no input JSON is provided by the user, manifest will be genarated automatical
   <summary>example</summary>
 
 ```js
-const { transactionId } = await akord.manifest.generate(vaultId);
+const { transactionId, uri } = await akord.manifest.generate(vaultId);
 ```
 </details>
 
@@ -1340,8 +1340,8 @@ The atomic asset can be minted with the option to attach the [Universal Data Lic
 - `vaultId` (`string`, required)
 - `asset` ([`FileSource`][file-source], required) - asset data
 - `metadata` (`NFTMetadata`, required) - NFT metadata: name, ticker, description, owner, creator, etc.
-- `options` (`FileUploadOptions`, optional) - ex: UDL terms
-- returns `Promise<{ nftId, transactionId }>` - Promise with new nft id & corresponding transaction id
+- `options` (`NFTMintOptions`, optional) - ex: UDL terms
+- returns `Promise<{ nftId, transactionId, uri }>` - Promise with new nft id & corresponding transaction id
 
 <details>
   <summary>example</summary>
@@ -1352,11 +1352,11 @@ The atomic asset can be minted with the option to attach the [Universal Data Lic
 // First, let's define our NFT metadata
 const nftMetadata = {
   name: "Golden Orchid - Flora Fantasy #1",
-  creator: "xxxx", // should be a valid Arweave address
-  owner: "yyyy", // should be a valid Arweave address
+  creator: "VALID_ARWEAVE_ADDRESS",
+  owner: "VALID_ARWEAVE_ADDRESS",
   collection: "Flora Fantasy",
   description: "A rare digital representation of the mythical Golden Orchid",
-  type: "image",
+  types: ["image"],
   topics: ["floral", "nature"]
 };
 
@@ -1370,10 +1370,11 @@ const udlTerms = {
 };
 
 // Finally, let's mint the NFT by passing the path to the asset data, NFT metadata, and UDL terms
-const { uri } = await akord.nft.mint(vaultId, "path to your asset", nftMetadata, { udl: udlTerms });
+const { uri } = await akord.nft.mint(vaultId, "./your-nft.jpeg", nftMetadata, { udl: udlTerms });
 
 // Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
-// you can access your NFT on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
+// you can access your NFT on ViewBlock by visiting the following URL:
+// https://viewblock.io/arweave/tx/{uri}
 ```
 </details>
 
@@ -1465,9 +1466,9 @@ The collection module enables the creation of a collection of [NFTs](#nft) compl
 NOTE: each NFT will inherit collection metadata setup
 
 - `vaultId` (`string`, required)
-- `items` (`{asset:FileSource,metadata:NFTMetadata,options:StackCreateOptions}[]`, required) - items to mint
+- `items` (`{asset:FileSource,metadata:NFTMetadata,options:NFTMintOptions}[]`, required) - items to mint
 - `metadata` (`CollectionMetadata`, required) - Collection metadata: name, ticker, description, owner, creator, etc.
-- `options` (`StackCreateOptions`, optional) - ex: UDL terms
+- `options` (`CollectionMintOptions`, optional) - ex: UDL terms
 - returns `Promise<{ collectionId, transactionId, items }>` - Promise with new collection id, minted NFTs & corresponding transaction id
 
 <details>
@@ -1476,12 +1477,11 @@ NOTE: each NFT will inherit collection metadata setup
 ```js
 // First, let's define our Collection metadata
 const collectionMetadata = {
-  name: "Golden Orchid - Flora Fantasy #1",
-  creator: "xxxx", // should be a valid Arweave address
-  owner: "yyyy", // should be a valid Arweave address
-  collection: "Flora Fantasy",
-  description: "A rare digital representation of the mythical Golden Orchid",
-  type: "image",
+  name: "Flora Fantasy",
+  creator: "VALID_ARWEAVE_ADDRESS", // should be a valid Arweave address
+  owner: "VALID_ARWEAVE_ADDRESS", // should be a valid Arweave address
+  description: "Discover the enchanting world of Flora Fantasy, where nature meets fantasy in mesmerizing digital artworks",
+  types: ["image", "collection"],
   topics: ["floral", "nature"]
 };
 
@@ -1495,14 +1495,15 @@ const udlTerms = {
 };
 
 // Finally, let's mint the collection & list it on UCM
-const { uri } = await akord.collection.mint(
+const { uri, items } = await akord.collection.mint(
   vaultId,
   [{ asset: file, metadata: { name: "Golden Orchid #1" } }],
   collectionMetadata,
   { udl: udl, ucm: true }
 );
 // Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
-// you can view your collection on BazAR by visiting the following URL: https://bazar.arweave.dev/#/collection/{uri}
+// you can view your collection on BazAR by visiting the following URL:
+// https://bazar.arweave.dev/#/collection/{uri}
 ```
 </details>
 

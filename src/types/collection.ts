@@ -1,7 +1,8 @@
 import { AssetMetadata } from "./asset";
 import { Node } from "./node";
-import { FileVersion, UDL } from "../types";
+import { FileVersion, NFTMintOptions, UDL } from "../types";
 import { FileSource } from "./file";
+import { Hooks } from "../core/file";
 
 export class Collection extends Node {
   name: string;
@@ -46,3 +47,5 @@ export type CollectionMetadata = {
   banner?: FileSource,
   thumbnail?: FileSource,
 } & AssetMetadata
+
+export type CollectionMintOptions = NFTMintOptions & Hooks
