@@ -120,6 +120,8 @@ const bufferToArrayBuffer = (buffer: Buffer) => {
   return arrayBuffer;
 }
 
+const isArweaveId = (id: string) => /[a-z0-9_-]{43}/i.test(id);
+
 export type TransactionMetadata = {
   id: string,
   owner: { address: string },
@@ -129,6 +131,7 @@ export type TransactionMetadata = {
 }
 
 export {
+  isArweaveId,
   getTxData,
   getTxMetadata,
   headFileTx,
