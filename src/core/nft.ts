@@ -1,13 +1,14 @@
 import { NodeService } from "./node";
-import { FileVersion, StackCreateOptions, StorageType, nodeType } from "../types";
+import { FileVersion, StorageType, nodeType } from "../types";
 import { FileSource } from "../types/file";
 import { FileGetOptions, FileService, createFileLike } from "./file";
-import { NFT, NFTMetadata } from "../types/nft";
+import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
 import { actionRefs, functions } from "../constants";
 import { Tag, Tags } from "../types/contract";
 import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
 import { StackService } from "./stack";
+import { isArweaveId } from "../arweave";
 
 const DEFAULT_TICKER = "ATOMIC";
 
@@ -19,14 +20,14 @@ class NFTService extends NodeService<NFT> {
    * @param  {string} vaultId
    * @param  {FileSource} asset file source: web File object, file path, buffer or stream
    * @param  {NFTMetadata} metadata
-   * @param  {StackCreateOptions} options
+   * @param  {NFTMintOptions} options
    * @returns Promise with corresponding transaction id
    */
   public async mint(
     vaultId: string,
     asset: FileSource,
     metadata: NFTMetadata,
-    options: StackCreateOptions = this.defaultCreateOptions
+    options: NFTMintOptions = this.defaultCreateOptions
   ): Promise<{ nftId: string, transactionId: string, object: NFT, uri: string }> {
 
     const vault = await this.api.getVault(vaultId);
@@ -34,7 +35,9 @@ class NFTService extends NodeService<NFT> {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
 
+    // validate fields
     validateAssetMetadata(metadata);
+    validateWallets(metadata);
 
     const nftTags = nftMetadataToTags(metadata);
 
@@ -42,17 +45,14 @@ class NFTService extends NodeService<NFT> {
       ...this.defaultCreateOptions,
       ...options
     }
-    const service = new NFTService(this.wallet, this.api, this);
-    service.setVault(vault);
-    service.setVaultId(vaultId);
-    service.setIsPublic(vault.public);
-    service.setActionRef(actionRefs.NFT_MINT);
-    service.setFunction(functions.NODE_CREATE);
-    service.setAkordTags([]);
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.public);
+    this.setActionRef(actionRefs.NFT_MINT);
+    this.setFunction(functions.NODE_CREATE);
+    this.setAkordTags([]);
 
     createOptions.arweaveTags = (createOptions.arweaveTags || []).concat(nftTags);
-
-    createOptions.cloud = service.vault.cloud;
 
     if (createOptions.ucm) {
       createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Indexed-By', 'ucm')]);
@@ -60,7 +60,7 @@ class NFTService extends NodeService<NFT> {
 
     let thumbnail = undefined;
     if (metadata.thumbnail && !metadata.collection) {
-      const thumbnailService = new StackService(this.wallet, this.api, service);
+      const thumbnailService = new StackService(this.wallet, this.api, this);
       const { object } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail
@@ -69,20 +69,19 @@ class NFTService extends NodeService<NFT> {
       thumbnail = object.versions[0];
     }
 
-    const fileLike = await createFileLike(asset, createOptions);
+    const fileLike = await createFileLike(asset);
     if (fileLike.type) {
       createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
     }
-    const fileService = new FileService(this.wallet, this.api, service);
-    createOptions.storage = StorageType.ARWEAVE;
-    const fileUploadResult = await fileService.create(fileLike, createOptions);
+    const fileService = new FileService(this.wallet, this.api, this);
+    const fileUploadResult = await fileService.create(fileLike, { ...createOptions, storage: StorageType.ARWEAVE });
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = JSON.parse(nftTags.find((tag: Tag) => tag.name === "Init-State").value);
     state.asset = version;
     state.thumbnail = thumbnail;
 
-    const { nodeId, transactionId, object } = await service.nodeCreate<NFT>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.nodeCreate<NFT>(state, { parentId: options.parentId });
     return { nftId: nodeId, transactionId, object, uri: object.uri };
   }
 
@@ -123,6 +122,20 @@ class NFTService extends NodeService<NFT> {
     return nft.getUri(type);
   }
 };
+
+export const validateWallets = (metadata: NFTMetadata) => {
+  if (!metadata?.owner) {
+    throw new BadRequest("The NFT owner is mandatory.");
+  }
+
+  if (!isArweaveId(metadata?.owner)) {
+    throw new BadRequest("The NFT owner needs to be a valid Arweave address.");
+  }
+
+  if (metadata?.creator && !isArweaveId(metadata?.creator)) {
+    throw new BadRequest("The NFT creator needs to be a valid Arweave address.");
+  }
+}
 
 export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
   const initState = {

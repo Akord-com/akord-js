@@ -1,6 +1,6 @@
 import { AssetMetadata } from "./asset";
 import { Node, StorageType } from "./node";
-import { FileVersion } from "../types";
+import { FileVersion, Tag, UDL } from "../types";
 import { FileSource } from "./file";
 
 export class NFT extends Node {
@@ -53,3 +53,10 @@ export type NFTMetadata = {
   ticker?: string, // default to "ATOMIC"
   thumbnail?: FileSource,
 } & AssetMetadata
+
+export type NFTMintOptions = {
+  parentId?: string,
+  arweaveTags?: Tag[],
+  udl?:UDL
+  ucm?: boolean
+};

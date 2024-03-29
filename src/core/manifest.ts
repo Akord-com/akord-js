@@ -47,7 +47,7 @@ class ManifestService extends NodeService<Stack> {
    * @param  {JSON} manifest manifest JSON
    * @returns Promise with corresponding transaction id
    */
-  public async generate(vaultId: string, manifest?: JSON | Object, indexName?: string): Promise<{ transactionId: string, object: Stack }> {
+  public async generate(vaultId: string, manifest?: JSON | Object, indexName?: string): Promise<{ transactionId: string, object: Stack, uri: string }> {
     this.stackService.fileService.contentType = CONTENT_TYPE;
 
     const vault = await this.api.getVault(vaultId);

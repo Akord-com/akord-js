@@ -80,35 +80,34 @@ class MembershipService extends Service {
    * @returns Promise with new membership id & corresponding transaction id
    */
   public async invite(vaultId: string, email: string, role: RoleType, options: MembershipCreateOptions = {}): Promise<MembershipCreateResult> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    service.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    service.setFunction(functions.MEMBERSHIP_INVITE);
+    await this.setVaultContext(vaultId);
+    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
     const membershipId = uuidv4();
-    service.setObjectId(membershipId);
+    this.setObjectId(membershipId);
 
     const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(email);
     const state = {
-      keys: await service.prepareMemberKeys(publicKey),
-      encPublicSigningKey: await service.processWriteString(publicSigningKey)
+      keys: await this.prepareMemberKeys(publicKey),
+      encPublicSigningKey: await this.processWriteString(publicSigningKey)
     };
 
-    service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
-      .concat(await service.getTxTags());
+    this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+      .concat(await this.getTxTags());
 
-    const dataTxId = await service.uploadState(state, service.vault.cloud);
+    const dataTxId = await this.uploadState(state, this.vault.cloud);
 
     const input = {
-      function: service.function,
+      function: this.function,
       address,
       role,
       data: dataTxId
     }
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
+      this.vaultId,
       input,
-      service.arweaveTags,
+      this.arweaveTags,
       { message: options.message }
     );
     return { membershipId, transactionId: id, object: object };
@@ -127,29 +126,28 @@ class MembershipService extends Service {
     transactionId: string,
     members: Array<{ id: string, address: string }>
   }> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContext(vaultId);
-    service.setActionRef("MEMBERSHIP_AIRDROP");
-    service.setFunction(functions.MEMBERSHIP_ADD);
+    await this.setVaultContext(vaultId);
+    this.setActionRef("MEMBERSHIP_AIRDROP");
+    this.setFunction(functions.MEMBERSHIP_ADD);
     const memberArray = [] as MembershipInput[];
     const membersMetadata = [];
     const dataArray = [] as { id: string, data: string }[];
     const memberTags = [] as Tags;
     for (const member of members) {
       const membershipId = uuidv4();
-      service.setObjectId(membershipId);
+      this.setObjectId(membershipId);
 
       const memberAddress = await deriveAddress(base64ToArray(member.publicSigningKey));
 
       const state = {
         id: membershipId,
         address: memberAddress,
-        keys: await service.prepareMemberKeys(member.publicKey),
-        encPublicSigningKey: await service.processWriteString(member.publicSigningKey),
+        keys: await this.prepareMemberKeys(member.publicKey),
+        encPublicSigningKey: await this.processWriteString(member.publicSigningKey),
         //    memberDetails: { name: member.options?.name },
       };
 
-      const data = await service.uploadState(state, service.vault.cloud);
+      const data = await this.uploadState(state, this.vault.cloud);
       dataArray.push({
         id: membershipId,
         data
@@ -165,17 +163,17 @@ class MembershipService extends Service {
       memberTags.push(new Tag(protocolTags.MEMBERSHIP_ID, membershipId));
     }
 
-    service.arweaveTags = memberTags.concat(await service.getTxTags());
+    this.arweaveTags = memberTags.concat(await this.getTxTags());
 
     const input = {
-      function: service.function,
+      function: this.function,
       members: memberArray
     };
 
     const { id } = await this.api.postContractTransaction(
-      service.vaultId,
+      this.vaultId,
       input,
-      service.arweaveTags,
+      this.arweaveTags,
       { members: membersMetadata }
     );
     return { members: input.members, transactionId: id };
@@ -188,20 +186,19 @@ class MembershipService extends Service {
   public async accept(membershipId: string): Promise<MembershipUpdateResult> {
     const profileService = new ProfileService(this.wallet, this.api);
     const memberDetails = await profileService.get();
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContextFromMembershipId(membershipId);
+    await this.setVaultContextFromMembershipId(membershipId);
     const state = {
       //  memberDetails: memberDetails,
-      encPublicSigningKey: await service.processWriteString(this.wallet.signingPublicKey())
+      encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
-    service.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
-    service.setFunction(functions.MEMBERSHIP_ACCEPT);
+    this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
+    this.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await service.mergeAndUploadState(state, service.vault.cloud);
+    const data = await this.mergeAndUploadState(state, this.vault.cloud);
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
-      { function: service.function, data },
-      await service.getTxTags()
+      this.vaultId,
+      { function: this.function, data },
+      await this.getTxTags()
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -211,33 +208,32 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async confirm(membershipId: string): Promise<MembershipUpdateResult> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContextFromMembershipId(membershipId);
-    service.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
-    service.setFunction(functions.MEMBERSHIP_INVITE);
-    const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(service.object.email);
+    await this.setVaultContextFromMembershipId(membershipId);
+    this.setActionRef(actionRefs.MEMBERSHIP_CONFIRM);
+    this.setFunction(functions.MEMBERSHIP_INVITE);
+    const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(this.object.email);
 
     const state = {
-      keys: await service.prepareMemberKeys(publicKey),
-      encPublicSigningKey: await service.processWriteString(publicSigningKey)
+      keys: await this.prepareMemberKeys(publicKey),
+      encPublicSigningKey: await this.processWriteString(publicSigningKey)
     };
 
-    service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
-      .concat(await service.getTxTags());
+    this.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
+      .concat(await this.getTxTags());
 
-    const dataTxId = await service.uploadState(state, service.vault.cloud);
+    const dataTxId = await this.uploadState(state, this.vault.cloud);
 
     const input = {
-      function: service.function,
+      function: this.function,
       address,
       data: dataTxId,
-      role: service.object.role
+      role: this.object.role
     }
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
+      this.vaultId,
       input,
-      service.arweaveTags
+      this.arweaveTags
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -247,15 +243,14 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async reject(membershipId: string): Promise<MembershipUpdateResult> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContextFromMembershipId(membershipId);
-    service.setActionRef(actionRefs.MEMBERSHIP_REJECT);
-    service.setFunction(functions.MEMBERSHIP_REJECT);
+    await this.setVaultContextFromMembershipId(membershipId);
+    this.setActionRef(actionRefs.MEMBERSHIP_REJECT);
+    this.setFunction(functions.MEMBERSHIP_REJECT);
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
-      { function: service.function },
-      await service.getTxTags()
+      this.vaultId,
+      { function: this.function },
+      await this.getTxTags()
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -265,15 +260,14 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async leave(membershipId: string): Promise<MembershipUpdateResult> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContextFromMembershipId(membershipId);
-    service.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
-    service.setFunction(functions.MEMBERSHIP_REJECT);
+    await this.setVaultContextFromMembershipId(membershipId);
+    this.setActionRef(actionRefs.MEMBERSHIP_LEAVE);
+    this.setFunction(functions.MEMBERSHIP_REJECT);
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
-      { function: service.function },
-      await service.getTxTags()
+      this.vaultId,
+      { function: this.function },
+      await this.getTxTags()
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -283,19 +277,18 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(membershipId: string): Promise<MembershipUpdateResult> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContextFromMembershipId(membershipId);
-    service.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
-    service.setFunction(functions.MEMBERSHIP_REVOKE);
+    await this.setVaultContextFromMembershipId(membershipId);
+    this.setActionRef(actionRefs.MEMBERSHIP_REVOKE);
+    this.setFunction(functions.MEMBERSHIP_REVOKE);
 
-    service.arweaveTags = await service.getTxTags();
+    this.arweaveTags = await this.getTxTags();
 
     let data: { id: string, value: string }[];
-    if (!service.isPublic) {
-      const memberships = await this.listAll(service.vaultId, { shouldDecrypt: false });
+    if (!this.isPublic) {
+      const memberships = await this.listAll(this.vaultId, { shouldDecrypt: false });
 
       const activeMembers = memberships.filter((member: Membership) =>
-        member.id !== service.objectId
+        member.id !== this.objectId
         && (member.status === status.ACCEPTED || member.status === status.PENDING));
 
       // rotate keys for all active members
@@ -304,24 +297,24 @@ class MembershipService extends Service {
         const { publicKey } = await this.api.getUserPublicData(member.email);
         memberPublicKeys.set(member.id, publicKey);
       }));
-      const { memberKeys } = await service.rotateMemberKeys(memberPublicKeys);
+      const { memberKeys } = await this.rotateMemberKeys(memberPublicKeys);
 
       // upload new state for all active members
       data = [];
       await Promise.all(activeMembers.map(async (member: Membership) => {
         const memberService = new MembershipService(this.wallet, this.api);
-        memberService.setVaultId(service.vaultId);
+        memberService.setVaultId(this.vaultId);
         memberService.setObjectId(member.id);
         memberService.setObject(member);
-        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, service.vault.cloud);
+        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, this.vault.cloud);
         data.push({ id: member.id, value: dataTx });
       }));
     }
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
-      { function: service.function, data },
-      service.arweaveTags
+      this.vaultId,
+      { function: this.function, data },
+      this.arweaveTags
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -332,15 +325,14 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async changeRole(membershipId: string, role: RoleType): Promise<MembershipUpdateResult> {
-    const service = new MembershipService(this.wallet, this.api);
-    await service.setVaultContextFromMembershipId(membershipId);
-    service.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
-    service.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
+    await this.setVaultContextFromMembershipId(membershipId);
+    this.setActionRef(actionRefs.MEMBERSHIP_CHANGE_ROLE);
+    this.setFunction(functions.MEMBERSHIP_CHANGE_ROLE);
 
     const { id, object } = await this.api.postContractTransaction<Membership>(
-      service.vaultId,
-      { function: service.function, role },
-      await service.getTxTags()
+      this.vaultId,
+      { function: this.function, role },
+      await this.getTxTags()
     );
     return { transactionId: id, object: new Membership(object) };
   }

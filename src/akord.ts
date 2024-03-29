@@ -13,7 +13,6 @@ import { NoteService } from "./core/note";
 import { ManifestService } from "./core/manifest";
 import { ProfileService } from "./core/profile";
 import { CacheBusters } from "./types/cacheable";
-import { FileService } from "./core/file";
 import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
 import { NFTService } from "./core/nft";
@@ -23,20 +22,46 @@ export class Akord {
   static readonly reactionEmoji = reactionEmoji;
 
   public api: Api;
-  public memo: MemoService;
-  public folder: FolderService;
-  public membership: MembershipService;
-  public vault: VaultService;
-  public stack: StackService;
-  public note: NoteService;
-  public manifest: ManifestService;
-  public profile: ProfileService;
-  public batch: BatchService;
-  public contract: ContractService;
-  public nft: NFTService;
-  public collection: CollectionService;
+  public wallet: Wallet;
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
+
+  get memo(): MemoService {
+    return new MemoService(this.wallet, this.api);
+  }
+  get folder(): FolderService {
+    return new FolderService(this.wallet, this.api);
+  }
+  get membership(): MembershipService {
+    return new MembershipService(this.wallet, this.api);
+  }
+  get vault(): VaultService {
+    return new VaultService(this.wallet, this.api);
+  }
+  get stack(): StackService {
+    return new StackService(this.wallet, this.api);
+  }
+  get note(): NoteService {
+    return new NoteService(this.wallet, this.api);
+  }
+  get manifest(): ManifestService {
+    return new ManifestService(this.wallet, this.api);
+  }
+  get profile(): ProfileService {
+    return new ProfileService(this.wallet, this.api);
+  }
+  get batch(): BatchService {
+    return new BatchService(this.wallet, this.api);
+  }
+  get contract(): ContractService {
+    return new ContractService(this.wallet, this.api);
+  }
+  get nft(): NFTService {
+    return new NFTService(this.wallet, this.api);
+  }
+  get collection(): CollectionService {
+    return new CollectionService(this.wallet, this.api);
+  }
 
   /**
    * @param  {ClientConfig} config
@@ -47,17 +72,6 @@ export class Akord {
     CacheBusters.cache = config.cache;
     Crypto.configure({ wallet: wallet });
     this.api = config.api ? config.api : new AkordApi(config);
-    this.vault = new VaultService(wallet, this.api);
-    this.memo = new MemoService(wallet, this.api);
-    this.folder = new FolderService(wallet, this.api);
-    this.stack = new StackService(wallet, this.api);
-    this.note = new NoteService(wallet, this.api);
-    this.manifest = new ManifestService(wallet, this.api);
-    this.membership = new MembershipService(wallet, this.api);
-    this.profile = new ProfileService(wallet, this.api);
-    this.batch = new BatchService(wallet, this.api);
-    this.contract = new ContractService(wallet, this.api);
-    this.nft = new NFTService(wallet, this.api);
-    this.collection = new CollectionService(wallet, this.api);
+    this.wallet = wallet;
   }
 }
