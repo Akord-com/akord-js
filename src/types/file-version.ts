@@ -29,7 +29,7 @@ export class FileVersion extends Encryptable implements Version {
     this.chunkSize = fileVersionProto.chunkSize;
     this.name = fileVersionProto.name;
     this.status = fileVersionProto.status;
-    this.udl = fileVersionProto.udl;
+    this.udl = fileVersionProto.udl ? new UDL(fileVersionProto.udl) : undefined;
     this.ucm = fileVersionProto.ucm;
     this.external = fileVersionProto.external;
   }
