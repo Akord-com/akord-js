@@ -27,7 +27,7 @@ export class Collection extends Node {
     this.owner = collectionProto.owner;
     this.banner = collectionProto.banner ? new FileVersion(collectionProto.banner): undefined;
     this.thumbnail = collectionProto.thumbnail ? new FileVersion(collectionProto.thumbnail) : undefined;
-    this.udl = new UDL(collectionProto.udl);
+    this.udl = collectionProto.udl ? new UDL(collectionProto.udl) : undefined;
     this.ucm = collectionProto.ucm;
     this.items = collectionProto.items;
     this.type = collectionProto.type;
