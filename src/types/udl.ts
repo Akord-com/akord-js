@@ -17,7 +17,7 @@ export class UDL {
   paymentMode?: PaymentMode // if there is a smart contract attached to the content transaction, payment mode specifies the distribution across owner addresses defined by smart contract
 
   constructor(udlProto: any) {
-    this.license = udlProto.id;
+    this.license = udlProto.license;
     this.derivations = (udlProto.derivations || []).map((derivation: Derivation) => new Derivation(derivation));
     this.commercialUses = (udlProto.commercialUses || []).map((commercialUse: CommercialUse) => new CommercialUse(commercialUse));
     this.dataModelTrainings = (udlProto.dataModelTrainings || []).map((dataModelTraining: DataModelTraining) => new DataModelTraining(dataModelTraining));

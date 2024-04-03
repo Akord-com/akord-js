@@ -15,6 +15,7 @@ import { Logger } from "../logger";
 import { batchProgressCount } from "./batch";
 import { NFTService, validateWallets } from "./nft";
 import { InternalError } from "../errors/internal-error";
+import { formatUDL } from "./udl";
 
 class CollectionService extends NodeService<Collection> {
   objectType = nodeType.COLLECTION;
@@ -148,13 +149,13 @@ class CollectionService extends NodeService<Collection> {
       name: metadata.name,
       description: metadata.description,
       code: collectionCode,
-      udl: options.udl,
+      udl: formatUDL(options.udl),
       ucm: options.ucm,
     } as any;
 
     const { nodeId: collectionId, object, transactionId } = await service.nodeCreate<Collection>(collectionState, { parentId: options.parentId });
 
-    return { collectionId, object, transactionId, groupRef };
+    return { collectionId, object: new Collection(object), transactionId, groupRef };
   }
 
   /**

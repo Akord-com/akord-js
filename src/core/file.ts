@@ -8,7 +8,7 @@ import { ApiClient } from "../api/api-client";
 import { FileLike, FileSource } from "../types/file";
 import { Tag, Tags } from "../types/contract";
 import { UDL } from "../types/udl";
-import { udlToTags } from "./udl";
+import { formatUDL, udlToTags } from "./udl";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
@@ -101,7 +101,7 @@ class FileService extends Service {
       resourceUri: resourceUri,
       resourceHash: resourceHash,
       encryptedKey: encryptedKey,
-      udl: options.udl,
+      udl: formatUDL(options.udl),
       ucm: options.ucm
     }
   }
@@ -185,7 +185,7 @@ class FileService extends Service {
       chunkSize: chunkSizeWithNonceAndIv,
       encryptedKey: encryptedKey,
       resourceHash: resourceHash,
-      udl: options.udl,
+      udl: formatUDL(options.udl),
       ucm: options.ucm
     };
   }

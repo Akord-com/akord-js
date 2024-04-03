@@ -82,3 +82,10 @@ export const setDerivation = (derivation: Derivation | CommercialUse): string =>
   }
   return derivationValue;
 }
+
+export const formatUDL = (udl: UDL): UDL => {
+  return {
+    license: UDL_LICENSE_TX_ID,
+    ...udl
+  }
+}
