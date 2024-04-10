@@ -3,6 +3,7 @@ import faker from '@faker-js/faker';
 import { initInstance, testDataPath } from './common';
 import { email, password } from './data/test-credentials';
 import { NodeJs } from "../types/file";
+import { DEFAULT_FRACTION_PARTS } from "../core/nft";
 
 let akord: Akord;
 
@@ -52,6 +53,7 @@ describe("Testing NFT functions", () => {
     expect(nft.creator).toEqual(nftMetadata.creator);
     expect(nft.collection).toEqual(nftMetadata.collection);
     expect(nft.description).toEqual(nftMetadata.description);
+    expect(nft.balances[nft.owner]).toEqual(1);
     expect(nft.asset.udl?.license).toEqual(UDL_LICENSE_TX_ID);
     expect(nft.asset.udl?.licenseFee?.type).toEqual(udl.licenseFee?.type);
     expect(nft.asset.udl?.licenseFee?.value).toEqual(udl.licenseFee?.value);
@@ -78,6 +80,7 @@ describe("Testing NFT functions", () => {
       description: "Discover the enchanting world of Flora Fantasy, where nature meets fantasy in mesmerizing digital artworks",
       topics: ["floral", "nature"],
       types: ["image", "collection"],
+      fractional: true,
       banner: file,
     } as CollectionMetadata;
 
@@ -111,6 +114,7 @@ describe("Testing NFT functions", () => {
     expect(nft.owner).toEqual(collectionMetadata.owner);
     expect(nft.creator).toEqual(collectionMetadata.creator);
     expect(nft.description).toEqual(collectionMetadata.description);
+    expect(nft.balances[nft.owner]).toEqual(DEFAULT_FRACTION_PARTS);
     expect(nft.asset.udl?.license).toEqual(UDL_LICENSE_TX_ID);
     expect(nft.asset.udl?.licenseFee?.type).toEqual(udl.licenseFee?.type);
     expect(nft.asset.udl?.licenseFee?.value).toEqual(udl.licenseFee?.value);
