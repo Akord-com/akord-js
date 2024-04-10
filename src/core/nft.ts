@@ -11,6 +11,7 @@ import { StackService } from "./stack";
 import { isArweaveId } from "../arweave";
 
 const DEFAULT_TICKER = "ATOMIC";
+export const DEFAULT_FRACTION_PARTS = 100;
 
 class NFTService extends NodeService<NFT> {
   objectType = nodeType.NFT;
@@ -147,7 +148,7 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
     owner: metadata.owner,
     canEvolve: true,
     balances: {
-      [metadata.owner]: 1,
+      [metadata.owner]: metadata.fractional ? (metadata.fractionParts || DEFAULT_FRACTION_PARTS) : 1,
     },
     claimable: []
   } as any;
