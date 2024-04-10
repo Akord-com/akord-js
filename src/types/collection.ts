@@ -46,6 +46,8 @@ export type CollectionMetadata = {
   contractTxId?: string, // default to "Of9pi--Gj7hCTawhgxOwbuWnFI1h24TTgO5pw8ENJNQ"
   banner?: FileSource,
   thumbnail?: FileSource,
+  fractional?: boolean, // allow multiple collectors to own fractions of the same Atomic NFT
+  fractionParts?: number // used when fractional option is set to true, default to 100
 } & AssetMetadata
 
 export type CollectionMintOptions = NFTMintOptions & Hooks
