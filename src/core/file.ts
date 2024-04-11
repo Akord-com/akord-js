@@ -237,6 +237,7 @@ class FileService extends Service {
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.vaultId));
+    tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
 
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     if (options.udl) {
