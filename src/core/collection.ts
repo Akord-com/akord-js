@@ -6,7 +6,7 @@ import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
 import { Collection, CollectionMetadata, CollectionMintOptions } from "../types/collection";
 import { actionRefs, functions } from "../constants";
 import { Tag } from "../types/contract";
-import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "../types/asset";
+import { DEFAULT_CONTRACT_SRC, WARP_MANIFEST, assetMetadataToTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
 import { mergeState } from "./common";
 import { v4 as uuidv4 } from "uuid";
@@ -171,17 +171,19 @@ class CollectionService extends NodeService<Collection> {
     nfts: NFT[],
     vaultId: string,
     groupRef: string
-    ): Promise<{ transactionId: string, object: Collection, uri: string }> {
+  ): Promise<{ transactionId: string, object: Collection, uri: string }> {
     const mintedItems = nfts.map((nft: NFT) => nft.asset.getUri(StorageType.ARWEAVE));
     const collectionMintedState = {
       type: "Collection",
       items: mintedItems
     } as any;
 
+    const vault = await this.api.getVault(vaultId);
     this.setObject(collection);
     this.setObjectType("Collection");
     this.setObjectId(collection.id);
     this.setVaultId(vaultId);
+    this.setVault(vault);
     this.setIsPublic(true);
     this.setActionRef(actionRefs.COLLECTION_MINT);
     this.setFunction(functions.NODE_UPDATE);
@@ -194,11 +196,9 @@ class CollectionService extends NodeService<Collection> {
       new Tag("Type", "document"),
       new Tag("Vault-Id", vaultId),
       new Tag("Collection-Code", collection.code),
-      new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID)
+      new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID),
+      new Tag("Contract-Manifest", WARP_MANIFEST),
     ];
-
-    const contractTags = atomicContractTags(collectionMintedState, metadata.contractTxId);
-    collectionTags.push(...contractTags);
 
     const assetTags = assetMetadataToTags(metadata);
     collectionTags.push(...assetTags);
@@ -206,6 +206,16 @@ class CollectionService extends NodeService<Collection> {
     if (metadata.creator) {
       collectionTags.push(new Tag("Creator", metadata.creator));
     }
+
+    const collectionState = mergeState({
+      owner: metadata.owner,
+      creator: metadata.creator,
+      name: metadata.name,
+      description: metadata.description,
+      code: collection.code,
+      udl: collection.udl,
+      ucm: collection.ucm,
+    }, collectionMintedState);
 
     if (metadata.banner) {
       const bannerService = new StackService(this.wallet, this.api, this);
@@ -215,11 +225,11 @@ class CollectionService extends NodeService<Collection> {
         { parentId: collection.id }
       );
       collectionTags.push(new Tag("Banner", banner.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.banner = banner.versions[0];
+      collectionState.banner = banner.versions[0];
     } else {
       // if not provided, set the first NFT as a collection banner
       collectionTags.push(new Tag("Banner", nfts[0].asset.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.banner = nfts[0].asset;
+      collectionState.banner = nfts[0].asset;
     }
 
     if (metadata.thumbnail) {
@@ -230,33 +240,23 @@ class CollectionService extends NodeService<Collection> {
         { parentId: collection.id }
       );
       collectionTags.push(new Tag("Thumbnail", thumbnail.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.thumbnail = thumbnail.versions[0];
+      collectionState.thumbnail = thumbnail.versions[0];
     }
 
     this.arweaveTags = await this.getTxTags();
 
-    const mergedState = mergeState({
-      owner: metadata.owner,
-      creator: metadata.creator,
-      name: metadata.name,
-      description: metadata.description,
-      code: collection.code,
-      udl: collection.udl,
-      ucm: collection.ucm,
-    }, collectionMintedState);
+    const contractDeployData = {
+      contractSrcTxId: metadata.contractTxId || DEFAULT_CONTRACT_SRC,
+      state: collectionMintedState,
+      tags: collectionTags
+    };
 
-    const ids = await this.api.uploadData([{ data: mergedState, tags: collectionTags }]);
+    const { transactionId, object } = await this.nodeUpdate<Collection>(collectionState, undefined, contractDeployData);
 
-    const { id, object } = await this.api.postContractTransaction<Collection>(
-      this.vaultId,
-      { function: this.function, data: ids[0] },
-      this.arweaveTags
-    );
-    const collectionInstance = new Collection(object);
     return {
-      transactionId: id,
-      object: collectionInstance,
-      uri: collectionInstance.uri
+      transactionId: transactionId,
+      object: object,
+      uri: object.uri
     }
   }
 

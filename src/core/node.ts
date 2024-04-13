@@ -182,7 +182,7 @@ class NodeService<T> extends Service {
     return { nodeId, transactionId: id, object: node };
   }
 
-  protected async nodeUpdate<T>(stateUpdates?: any, clientInput?: { parentId?: string }): Promise<{ transactionId: string, object: T }> {
+  protected async nodeUpdate<T>(stateUpdates?: any, clientInput?: { parentId?: string }, metadata?: any): Promise<{ transactionId: string, object: T }> {
     const input = {
       function: this.function,
       ...clientInput
@@ -198,7 +198,8 @@ class NodeService<T> extends Service {
     const { id, object } = await this.api.postContractTransaction<T>(
       this.vaultId,
       input,
-      this.arweaveTags
+      this.arweaveTags,
+      metadata
     );
     const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
     return { transactionId: id, object: node };
