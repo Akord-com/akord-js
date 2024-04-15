@@ -150,7 +150,7 @@ class NodeService<T> extends Service {
     return this.nodeUpdate<T>();
   }
 
-  protected async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
+  async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
     nodeId: string,
     transactionId: string,
     object: T
@@ -205,7 +205,7 @@ class NodeService<T> extends Service {
     return { transactionId: id, object: node };
   }
 
-  async setParentId(parentId?: string) {
+  setParentId(parentId?: string) {
     this.parentId = parentId;
   }
 
