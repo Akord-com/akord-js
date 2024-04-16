@@ -7,7 +7,7 @@ import { NodeService } from "./node";
 import { Node, NodeLike, NodeType } from "../types/node";
 import { StackCreateOptions, Stack } from "../types/stack";
 import { FileLike, FileSource } from "../types/file";
-import { BatchMembershipInviteResponse, BatchNFTMintResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
+import { BatchMembershipInviteResponse, BatchNFTMintOptions, BatchNFTMintResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
 import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
 import { FileService, Hooks, createFileLike } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
@@ -140,7 +140,7 @@ class BatchService extends Service {
   /**
    * @param  {string} vaultId
    * @param  {{asset:FileSource,metadata:NFTMetadata,options:NFTMintOptions}[]} items
-   * @param  {BatchStackCreateOptions} [options]
+   * @param  {CollectionMintOptions} [options]
    * @returns Promise with new stack ids & their corresponding transaction ids
    */
   public async nftMint(
@@ -261,7 +261,7 @@ class BatchService extends Service {
       }
     }
 
-    const postStackTx = async (service: StackService, item: StackUploadItem, version: any, options: BatchUploadOptions) => {
+    const postStackTx = async (service: StackService, item: StackUploadItem, version: FileVersion, options: BatchStackCreateOptions) => {
       try {
         const state = {
           name: await service.processWriteString(item.file.name),
@@ -291,7 +291,7 @@ class BatchService extends Service {
       };
     }
 
-    const postMintTx = async (service: NFTService, item: UploadItem, version: FileVersion, options: BatchUploadOptions) => {
+    const postMintTx = async (service: NFTService, item: UploadItem, version: FileVersion, options: BatchNFTMintOptions) => {
       try {
         const state = JSON.parse(service.arweaveTags.find((tag: Tag) => tag.name === "Init-State").value);
         state.asset = version;

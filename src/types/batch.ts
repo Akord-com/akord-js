@@ -8,6 +8,11 @@ export type BatchStackCreateOptions = Hooks & {
   onStackCreated?: (item: Stack) => Promise<void>
 };
 
+export type BatchNFTMintOptions = Hooks & {
+  processingCountHook?: (count: number) => void,
+  onItemCreated?: (item: NFT) => Promise<void>
+};
+
 export interface BatchStackCreateResponse {
   data: Array<{ stackId: string, transactionId: string, object: Stack, uri: string }>
   errors: Array<{ name?: string, message: string, error: Error }>
