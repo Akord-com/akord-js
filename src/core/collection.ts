@@ -1,21 +1,21 @@
 import { NodeService } from "./node";
 import { FileVersion, StorageType, UDL_LICENSE_TX_ID, nodeType, tagNames } from "../types";
 import { FileSource } from "../types/file";
-import { FileGetOptions, createFileLike } from "./file";
+import { FileGetOptions } from "./file";
 import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
 import { Collection, CollectionMetadata, CollectionMintOptions } from "../types/collection";
 import { actionRefs, functions } from "../constants";
 import { Tag } from "../types/contract";
-import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "../types/asset";
+import { DEFAULT_CONTRACT_SRC, WARP_MANIFEST, assetMetadataToTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
 import { mergeState } from "./common";
 import { v4 as uuidv4 } from "uuid";
 import { StackService } from "./stack";
-import { Logger } from "../logger";
-import { batchProgressCount } from "./batch";
-import { NFTService, validateWallets } from "./nft";
+import { BatchService } from "./batch";
+import { validateWallets } from "./nft";
 import { InternalError } from "../errors/internal-error";
 import { formatUDL } from "./udl";
+import { Logger } from "../logger";
 
 class CollectionService extends NodeService<Collection> {
   objectType = nodeType.COLLECTION;
@@ -38,45 +38,33 @@ class CollectionService extends NodeService<Collection> {
 
     const { collectionId, object: collection, groupRef } = await this.init(vaultId, items, metadata, options);
 
-    const mintedItems = [] as string[];
-    const nfts = [] as NFTResponseItem[];
-    const errors = [] as any;
+    const batchService = new BatchService(this.wallet, this.api);
+    batchService.groupRef = groupRef;
+    const { data, errors } = await batchService.nftMint(
+      vaultId, 
+      items.map((item) => ({ 
+        asset: item.asset,
+        metadata: { ...metadata, collection: collection.code, ...item.metadata },
+        options: { parentId: collectionId, ...options, ...item.options }
+      })), 
+      options
+    );
 
-    for (const chunk of [...chunks(items, BATCH_CHUNK_SIZE)]) {
-      await Promise.all(chunk.map(async (nft) => {
-        try {
-          const nftService = new NFTService(this.wallet, this.api);
-          nftService.setGroupRef(groupRef);
-          const { nftId, transactionId, object, uri } = await nftService.mint(
-            vaultId,
-            nft.asset,
-            { ...metadata, collection: collection.code, ...nft.metadata },
-            { parentId: collectionId, ...options, ...nft.options }
-          );
-          mintedItems.push(object.getUri(StorageType.ARWEAVE));
-          nfts.push({ nftId, transactionId, object, uri });
-        } catch (error) {
-          Logger.log("Minting the atomic asset failed.");
-          Logger.log(error);
-          errors.push({ name: nft.metadata?.name, message: error.message, error: error });
-        }
-      }))
-    }
-
-    if (mintedItems.length !== items.length) {
+    if (data.length !== items.length) {
+      Logger.log(errors);
       const service = new CollectionService(this.wallet, this.api);
       await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
 
     try {
-      const { transactionId, object, uri } = await this.finalize(collection, metadata, nfts.map((item) => item.object), vaultId, groupRef);
+      const { transactionId, object, uri } = await this.finalize(collection, metadata, data.map((item) => item.object), vaultId, groupRef);
       return {
         object: object,
         collectionId: collection.id,
         transactionId: transactionId,
         uri: uri,
-        items: nfts
+        items: data
       }
     } catch (error) {
       const service = new CollectionService(this.wallet, this.api);
@@ -114,17 +102,10 @@ class CollectionService extends NodeService<Collection> {
     }
 
     // validate items to mint
-    const itemsToMint = await Promise.all(items.map(async (nft: NFTMintItem) => {
+    await Promise.all(items.map(async (nft: NFTMintItem) => {
       validateAssetMetadata({ ...metadata, ...nft.metadata });
       validateWallets({ ...metadata, ...nft.metadata });
-      const fileLike = await createFileLike(nft.asset);
-      return { asset: fileLike, metadata: nft.metadata, options: nft.options };
     }));
-
-    const batchSize = itemsToMint.reduce((sum, nft) => {
-      return sum + nft.asset.size;
-    }, 0);
-    batchProgressCount(batchSize, options);
 
     const service = new CollectionService(this.wallet, this.api);
     service.setVault(vault);
@@ -171,17 +152,19 @@ class CollectionService extends NodeService<Collection> {
     nfts: NFT[],
     vaultId: string,
     groupRef: string
-    ): Promise<{ transactionId: string, object: Collection, uri: string }> {
+  ): Promise<{ transactionId: string, object: Collection, uri: string }> {
     const mintedItems = nfts.map((nft: NFT) => nft.asset.getUri(StorageType.ARWEAVE));
     const collectionMintedState = {
       type: "Collection",
       items: mintedItems
     } as any;
 
+    const vault = await this.api.getVault(vaultId);
     this.setObject(collection);
     this.setObjectType("Collection");
     this.setObjectId(collection.id);
     this.setVaultId(vaultId);
+    this.setVault(vault);
     this.setIsPublic(true);
     this.setActionRef(actionRefs.COLLECTION_MINT);
     this.setFunction(functions.NODE_UPDATE);
@@ -194,11 +177,9 @@ class CollectionService extends NodeService<Collection> {
       new Tag("Type", "document"),
       new Tag("Vault-Id", vaultId),
       new Tag("Collection-Code", collection.code),
-      new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID)
+      new Tag(tagNames.LICENSE, UDL_LICENSE_TX_ID),
+      new Tag("Contract-Manifest", WARP_MANIFEST),
     ];
-
-    const contractTags = atomicContractTags(collectionMintedState, metadata.contractTxId);
-    collectionTags.push(...contractTags);
 
     const assetTags = assetMetadataToTags(metadata);
     collectionTags.push(...assetTags);
@@ -206,6 +187,16 @@ class CollectionService extends NodeService<Collection> {
     if (metadata.creator) {
       collectionTags.push(new Tag("Creator", metadata.creator));
     }
+
+    const collectionState = mergeState({
+      owner: metadata.owner,
+      creator: metadata.creator,
+      name: metadata.name,
+      description: metadata.description,
+      code: collection.code,
+      udl: collection.udl,
+      ucm: collection.ucm,
+    }, collectionMintedState);
 
     if (metadata.banner) {
       const bannerService = new StackService(this.wallet, this.api, this);
@@ -215,11 +206,11 @@ class CollectionService extends NodeService<Collection> {
         { parentId: collection.id }
       );
       collectionTags.push(new Tag("Banner", banner.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.banner = banner.versions[0];
+      collectionState.banner = banner.versions[0];
     } else {
       // if not provided, set the first NFT as a collection banner
       collectionTags.push(new Tag("Banner", nfts[0].asset.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.banner = nfts[0].asset;
+      collectionState.banner = nfts[0].asset;
     }
 
     if (metadata.thumbnail) {
@@ -230,33 +221,23 @@ class CollectionService extends NodeService<Collection> {
         { parentId: collection.id }
       );
       collectionTags.push(new Tag("Thumbnail", thumbnail.getUri(StorageType.ARWEAVE)));
-      collectionMintedState.thumbnail = thumbnail.versions[0];
+      collectionState.thumbnail = thumbnail.versions[0];
     }
 
     this.arweaveTags = await this.getTxTags();
 
-    const mergedState = mergeState({
-      owner: metadata.owner,
-      creator: metadata.creator,
-      name: metadata.name,
-      description: metadata.description,
-      code: collection.code,
-      udl: collection.udl,
-      ucm: collection.ucm,
-    }, collectionMintedState);
+    const contractDeployData = {
+      contractSrcTxId: metadata.contractTxId || DEFAULT_CONTRACT_SRC,
+      state: collectionMintedState,
+      tags: collectionTags
+    };
 
-    const ids = await this.api.uploadData([{ data: mergedState, tags: collectionTags }]);
+    const { transactionId, object } = await this.nodeUpdate<Collection>(collectionState, undefined, contractDeployData);
 
-    const { id, object } = await this.api.postContractTransaction<Collection>(
-      this.vaultId,
-      { function: this.function, data: ids[0] },
-      this.arweaveTags
-    );
-    const collectionInstance = new Collection(object);
     return {
-      transactionId: id,
-      object: collectionInstance,
-      uri: collectionInstance.uri
+      transactionId: transactionId,
+      object: object,
+      uri: object.uri
     }
   }
 
@@ -288,14 +269,6 @@ class CollectionService extends NodeService<Collection> {
     }
   }
 };
-
-const BATCH_CHUNK_SIZE = 50;
-
-function* chunks<T>(arr: T[], n: number): Generator<T[], void> {
-  for (let i = 0; i < arr.length; i += n) {
-    yield arr.slice(i, i + n);
-  }
-}
 
 export type NFTMintItem = {
   asset: FileSource,

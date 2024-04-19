@@ -1,8 +1,8 @@
 import { AssetMetadata } from "./asset";
 import { Node } from "./node";
-import { FileVersion, NFTMintOptions, UDL } from "../types";
+import { BatchNFTMintOptions, FileVersion, NFTMintOptions, UDL } from "../types";
 import { FileSource } from "./file";
-import { Hooks } from "../core/file";
+import { BatchUploadOptions } from "../core/batch";
 
 export class Collection extends Node {
   name: string;
@@ -50,4 +50,4 @@ export type CollectionMetadata = {
   fractionParts?: number // used when fractional option is set to true, default to 100
 } & AssetMetadata
 
-export type CollectionMintOptions = NFTMintOptions & Hooks
+export type CollectionMintOptions = NFTMintOptions & BatchNFTMintOptions;

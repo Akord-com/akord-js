@@ -9,8 +9,6 @@ import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { paginate } from "./common";
-import { ProfileService } from "./profile";
-
 
 class MembershipService extends Service {
   objectType = objectType.MEMBERSHIP;
@@ -184,11 +182,8 @@ class MembershipService extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async accept(membershipId: string): Promise<MembershipUpdateResult> {
-    const profileService = new ProfileService(this.wallet, this.api);
-    const memberDetails = await profileService.get();
     await this.setVaultContextFromMembershipId(membershipId);
     const state = {
-      //  memberDetails: memberDetails,
       encPublicSigningKey: await this.processWriteString(this.wallet.signingPublicKey())
     }
     this.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);

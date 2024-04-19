@@ -1,5 +1,6 @@
 import { Hooks } from "../core/file";
 import { Membership } from "./membership"
+import { NFT } from "./nft";
 import { Stack } from "./stack"
 
 export type BatchStackCreateOptions = Hooks & {
@@ -7,8 +8,19 @@ export type BatchStackCreateOptions = Hooks & {
   onStackCreated?: (item: Stack) => Promise<void>
 };
 
+export type BatchNFTMintOptions = Hooks & {
+  processingCountHook?: (count: number) => void,
+  onItemCreated?: (item: NFT) => Promise<void>
+};
+
 export interface BatchStackCreateResponse {
-  data: Array<{ stackId: string, transactionId: string, object: Stack }>
+  data: Array<{ stackId: string, transactionId: string, object: Stack, uri: string }>
+  errors: Array<{ name?: string, message: string, error: Error }>
+  cancelled: number
+}
+
+export interface BatchNFTMintResponse {
+  data: Array<{ nftId: string, transactionId: string, object: NFT, uri: string }>
   errors: Array<{ name?: string, message: string, error: Error }>
   cancelled: number
 }
