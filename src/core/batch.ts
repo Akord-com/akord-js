@@ -7,20 +7,23 @@ import { NodeService } from "./node";
 import { Node, NodeLike, NodeType } from "../types/node";
 import { StackCreateOptions, Stack } from "../types/stack";
 import { FileLike, FileSource } from "../types/file";
-import { BatchMembershipInviteResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
+import { BatchMembershipInviteResponse, BatchNFTMintOptions, BatchNFTMintResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
 import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
 import { FileService, Hooks, createFileLike } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { BadRequest } from "../errors/bad-request";
-import { StorageType } from "../types";
+import { CollectionMintOptions, FileVersion, NFT, NFTMetadata, NFTMintOptions, StorageType, validateAssetMetadata } from "../types";
 import lodash from "lodash";
+import { NFTService, nftMetadataToTags, validateWallets } from "./nft";
+import { NFTMintItem } from "./collection";
 
 
 class BatchService extends Service {
 
   public static BATCH_CONCURRENCY = 50;
+  parentId: string;
 
   /**
    * @param  {{id:string,type:NoteType}[]} items
@@ -105,9 +108,6 @@ class BatchService extends Service {
     items: StackCreateItem[],
     options: BatchStackCreateOptions = {}
   ): Promise<BatchStackCreateResponse> {
-    const data = [] as BatchStackCreateResponse["data"];
-    const errors = [] as BatchStackCreateResponse["errors"];
-
     // prepare items to upload
     const stackUploadItems = await Promise.all(items.map(async (item: StackCreateItem) => {
       const fileLike = await createFileLike(item.file, item.options || {});
@@ -116,17 +116,6 @@ class BatchService extends Service {
         options: item.options
       }
     })) as StackUploadItem[];
-
-    const [itemsToUpload, emptyFileItems] = lodash.partition(stackUploadItems, function (item: StackUploadItem) { return item.file?.size > 0 });
-
-    emptyFileItems.map((item: StackUploadItem) => {
-      errors.push({ name: item.file?.name, message: EMPTY_FILE_ERROR_MESSAGE, error: new BadRequest(EMPTY_FILE_ERROR_MESSAGE) });
-    })
-
-    const batchSize = itemsToUpload.reduce((sum, item) => {
-      return sum + item.file.size;
-    }, 0);
-    batchProgressCount(batchSize, options);
 
     // set service context
     const vault = await this.api.getVault(vaultId);
@@ -141,45 +130,130 @@ class BatchService extends Service {
     const stackCreateOptions = {
       ...options,
       cloud: this.vault.cloud,
-      storage: this.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
+      storage: this.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE,
     }
 
-    let stacksCreated = 0;
-    const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY, });
+    const { errors, data, cancelled } = await this.upload(stackUploadItems, stackCreateOptions);
+    return { data: data.map(item => ({ stackId: item.id, object: item.object as Stack, transactionId: item.transactionId, uri: item.uri })), errors, cancelled };
+  }
+
+  /**
+   * @param  {string} vaultId
+   * @param  {{asset:FileSource,metadata:NFTMetadata,options:NFTMintOptions}[]} items
+   * @param  {CollectionMintOptions} [options]
+   * @returns Promise with new stack ids & their corresponding transaction ids
+   */
+  public async nftMint(
+    vaultId: string,
+    items: NFTMintItem[],
+    options: CollectionMintOptions = {}
+  ): Promise<BatchNFTMintResponse> {
+    const vault = await this.api.getVault(vaultId);
+    if (!vault.public || vault.cloud) {
+      throw new BadRequest("NFT module applies only to public permanent vaults.");
+    }
+
+    if (!items || items.length === 0) {
+      throw new BadRequest("No items provided for minting.");
+    }
+
+    // validate items to mint
+    const itemsToMint = await Promise.all(items.map(async (nft: NFTMintItem) => {
+      validateAssetMetadata(nft.metadata);
+      validateWallets(nft.metadata);
+      const fileLike = await createFileLike(nft.asset);
+      const nftTags = nftMetadataToTags(nft.metadata);
+      const createOptions = {
+        ...nft.options
+      } as any;
+      createOptions.arweaveTags = (options?.arweaveTags || []).concat(nftTags);
+
+      if (options?.ucm) {
+        createOptions.arweaveTags = createOptions.arweaveTags.concat([new Tag('Indexed-By', 'ucm')]);
+      }
+      if (fileLike.type) {
+        createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
+      }
+      return { file: fileLike, metadata: nft.metadata, options: createOptions };
+    })) as UploadItem[];
+
+    if (!this.groupRef) {
+      this.setGroupRef(items);
+    }
+
+    // set service context
+    this.setVault(vault);
+    this.setVaultId(vaultId);
+    this.setIsPublic(vault.public);
+    this.setActionRef(actionRefs.NFT_MINT);
+    this.setFunction(functions.NODE_CREATE);
+    this.setAkordTags([]);
+
+    const { errors, data, cancelled } = await this.upload(itemsToMint, options);
+    return { data: data.map(item => ({ nftId: item.id, object: item.object as NFT, transactionId: item.transactionId, uri: item.uri })), errors, cancelled };
+  }
+
+  /**
+   * @param  {{file:FileLike,options:StackCreateOptions}[]} items
+   * @param  {BatchUploadOptions} [options]
+   * @returns Promise with item ids & their corresponding transaction ids
+   */
+  public async upload(
+    items: UploadItem[],
+    options: BatchUploadOptions = {}
+  ): Promise<BatchUploadResponse> {
+    const data = [] as BatchUploadResponse["data"];
+    const errors = [] as BatchUploadResponse["errors"];
+
+    const [itemsToUpload, emptyFileItems] = lodash.partition(items, function (item: UploadItem) { return item.file?.size > 0 });
+
+    emptyFileItems.map((item: UploadItem) => {
+      errors.push({ name: item.file?.name, message: EMPTY_FILE_ERROR_MESSAGE, error: new BadRequest(EMPTY_FILE_ERROR_MESSAGE) });
+    })
+
+    const batchSize = itemsToUpload.reduce((sum, item) => {
+      return sum + item.file.size;
+    }, 0);
+    batchProgressCount(batchSize, options);
+
+    let itemsCreated = 0;
+    const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
     const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
 
-    const uploadItem = async (item: StackUploadItem) => {
-      const service = new StackService(this.wallet, this.api, this);
+    const uploadItem = async (item: UploadItem) => {
+      let service: StackService | NFTService;
+      if (item.metadata) {
+        service = new NFTService(this.wallet, this.api, this)
+      } else {
+        service = new StackService(this.wallet, this.api, this);
+      }
 
       const nodeId = uuidv4();
       service.setObjectId(nodeId);
 
       const createOptions = {
-        ...stackCreateOptions,
+        ...options,
         ...(item.options || {})
+      } as StackCreateOptions;
+
+      if (service instanceof StackService) {
+        service.setAkordTags((service.isPublic ? [item.file.name] : []).concat(createOptions.tags));
+        service.setParentId(createOptions.parentId);
+        service.arweaveTags = await service.getTxTags();
+      } else {
+        service.arweaveTags = createOptions.arweaveTags;
       }
-      service.setAkordTags((service.isPublic ? [item.file.name] : []).concat(createOptions.tags));
-      service.setParentId(createOptions.parentId);
-      service.arweaveTags = await service.getTxTags();
 
       const fileService = new FileService(this.wallet, this.api, service);
       try {
         const fileUploadResult = await fileService.create(item.file, createOptions);
         const version = await fileService.newVersion(item.file, fileUploadResult);
 
-        const state = {
-          name: await service.processWriteString(item.file.name),
-          versions: [version],
-          tags: service.tags
-        };
-        const id = await service.uploadState(state, service.vault.cloud);
-
-        postTxQ.add(() => postTx({
-          vaultId: service.vaultId,
-          input: { function: service.function, data: id, parentId: createOptions.parentId },
-          tags: service.arweaveTags,
-          item: item
-        }), { signal: options.cancelHook?.signal })
+        if (service instanceof StackService) {
+          postTxQ.add(() => postStackTx(service as StackService, item, version, options), { signal: options.cancelHook?.signal })
+        } else {
+          postTxQ.add(() => postMintTx(service as NFTService, item, version, options), { signal: options.cancelHook?.signal })
+        }
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
           errors.push({ name: item.file.name, message: error.toString(), error });
@@ -187,22 +261,49 @@ class BatchService extends Service {
       }
     }
 
-    const postTx = async (tx: { vaultId: string; input: ContractInput; tags: any; item: StackUploadItem; }) => {
+    const postStackTx = async (service: StackService, item: StackUploadItem, version: FileVersion, options: BatchStackCreateOptions) => {
       try {
-        const { id, object } = await this.api.postContractTransaction<Stack>(
-          tx.vaultId,
-          tx.input,
-          tx.tags
+        const state = {
+          name: await service.processWriteString(item.file.name),
+          versions: [version],
+          tags: service.tags
+        };
+        const dataTx = await service.uploadState(state, service.vault.cloud);
+        const input = {
+          function: service.function,
+          data: dataTx,
+          parentId: item.options?.parentId
+        };
+        const { id, object } = await service.api.postContractTransaction<Stack>(
+          service.vaultId,
+          input,
+          service.arweaveTags
         );
-        const stack = await new StackService(this.wallet, this.api, this)
-          .processNode(object, !this.isPublic, this.keys);
+        const stack = await new StackService(service.wallet,service.api, service)
+          .processNode(object, !service.isPublic, service.keys);
         if (options.onStackCreated) {
           await options.onStackCreated(stack);
         }
-        data.push({ transactionId: id, object: stack, stackId: object.id });
-        stacksCreated += 1;
+        data.push({ transactionId: id, object: stack, id: object.id, uri: object.uri });
+        itemsCreated += 1;
       } catch (error) {
-        errors.push({ name: tx.item.file.name, message: error.toString(), error });
+        errors.push({ name: item.file.name, message: error.toString(), error });
+      };
+    }
+
+    const postMintTx = async (service: NFTService, item: UploadItem, version: FileVersion, options: BatchNFTMintOptions) => {
+      try {
+        const state = JSON.parse(service.arweaveTags.find((tag: Tag) => tag.name === "Init-State").value);
+        state.asset = version;
+        const { transactionId, object } = await service.nodeCreate<NFT>(state, { parentId: item.options?.parentId });
+
+        if (options.onItemCreated) {
+          await options.onItemCreated(object);
+        }
+        data.push({ transactionId: transactionId, object: object, id: object.id, uri: object.uri });
+        itemsCreated += 1;
+      } catch (error) {
+        errors.push({ name: item.file.name, message: error.toString(), error });
       };
     }
 
@@ -215,7 +316,7 @@ class BatchService extends Service {
     }
     await postTxQ.onIdle();
     if (options.cancelHook?.signal?.aborted) {
-      return ({ data, errors, cancelled: itemsToUpload.length - stacksCreated });
+      return ({ data, errors, cancelled: items.length - itemsCreated });
     }
     return { data, errors, cancelled: 0 };
   }
@@ -348,6 +449,10 @@ class BatchService extends Service {
   public setGroupRef(items: any) {
     this.groupRef = items && items.length > 1 ? uuidv4() : null;
   }
+
+  setParentId(parentId?: string) {
+    this.parentId = parentId;
+  }
 }
 
 export const batchProgressCount = (batchSize: number, options: BatchStackCreateOptions) => {
@@ -381,6 +486,12 @@ export type StackUploadItem = {
   options?: StackCreateOptions
 }
 
+export type ItemToMint = {
+  asset: FileLike,
+  metadata: NFTMetadata,
+  options?: NFTMintOptions
+}
+
 export type TransactionPayload = {
   vaultId: string,
   input: ContractInput,
@@ -398,6 +509,24 @@ export type MembershipInviteTransaction = TransactionPayload & {
 export type StackCreateItem = {
   file: FileSource,
   options?: StackCreateOptions
+}
+
+export type UploadItem = {
+  file: FileLike,
+  options?: StackCreateOptions | NFTMintOptions,
+  metadata?: NFTMetadata,
+}
+
+export type BatchUploadOptions = Hooks & {
+  processingCountHook?: (count: number) => void,
+  onItemCreated?: (item: NFT) => Promise<void>
+  onStackCreated?: (item: Stack) => Promise<void>
+};
+
+export interface BatchUploadResponse {
+  data: Array<{ id: string, transactionId: string, object: Stack | NFT, uri: string }>
+  errors: Array<{ name?: string, message: string, error: Error }>
+  cancelled: number
 }
 
 export type MembershipInviteItem = {
