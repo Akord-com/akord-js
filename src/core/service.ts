@@ -23,7 +23,6 @@ import { EncryptOptions, EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "./common";
 import { EncryptionMetadata } from "../types/encryption";
-import { assetTags } from "../types";
 
 export const STATE_CONTENT_TYPE = "application/json";
 

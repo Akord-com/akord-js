@@ -17,6 +17,7 @@ import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
 import { NFTService } from "./core/nft";
 import { CollectionService } from "./core/collection";
+import { ZipService } from "./core/zip";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -61,6 +62,9 @@ export class Akord {
   }
   get collection(): CollectionService {
     return new CollectionService(this.wallet, this.api);
+  }
+  get zip(): ZipService {
+    return new ZipService(this.wallet, this.api);
   }
 
   /**

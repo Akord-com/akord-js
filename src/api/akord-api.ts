@@ -14,6 +14,8 @@ import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { FileUploadOptions, FileGetOptions } from "../core/file";
 import { StreamConverter } from "../util/stream-converter";
+import { FileLike } from "../types/file";
+import { ZipUploadOptions } from "../types/zip";
 
 export const defaultFileUploadOptions = {
   storage: StorageType.ARWEAVE,
@@ -155,6 +157,17 @@ export default class AkordApi extends Api {
       iv: response.headers.get("x-amz-meta-initialization-vector") || response.headers.get("x-amz-meta-iv")
     };
     return { fileData, metadata };
+  };
+
+  public async uploadZip(file: FileLike, vaultId: string, options: ZipUploadOptions = {}): Promise<void> {
+    await new ApiClient()
+      .env(this.config)
+      .data(file)
+      .vaultId(vaultId)
+      .parentId(options.parentId)
+      .progressHook(options.progressHook)
+      .cancelHook(options.cancelHook)
+      .uploadZip()
   };
 
   public async existsUser(email: string): Promise<Boolean> {

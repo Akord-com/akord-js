@@ -14,6 +14,7 @@ import { User, UserPublicInfo } from "../types/user";
 import { StorageType } from "../types";
 import fetch from 'cross-fetch';
 import { jsonToBase64 } from "@akord/crypto";
+import { FileLike } from "../types/file";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -35,6 +36,7 @@ export class ApiClient {
   // path params
   private _resourceId: string;
   private _vaultId: string;
+  private _parentId: string;
 
   // request body
   private _tags: Tags;
@@ -109,6 +111,11 @@ export class ApiClient {
 
   vaultId(vaultId: string): ApiClient {
     this._vaultId = vaultId;
+    return this;
+  }
+
+  parentId(parentId: string): ApiClient {
+    this._parentId = parentId;
     return this;
   }
 
@@ -642,6 +649,53 @@ export class ApiClient {
     try {
       const response = await fetch(`${this._apiurl}/files/${this._resourceId}`, config);
       return { resourceUrl: this._resourceId, response: response };
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
+  }
+
+  /**
+     *
+     * @requires:
+     * - data()
+     * @uses:
+     * - progressHook()
+     * - cancelHook()
+     * @returns {Promise<string[]>}
+     */
+  async uploadZip(): Promise<void> {
+    const auth = await Auth.getAuthorization();
+    if (!auth) {
+      throw new Unauthorized("Authentication is required to use Akord API");
+    }
+    if (!this._data) {
+      throw new BadRequest("Missing data to upload. Use ApiClient#data() to add it");
+    }
+    if (!this._vaultId) {
+      throw new BadRequest("Missing vault Id. Use ApiClient#vaultId() to add it");
+    }
+
+
+    const config = {
+      method: 'put',
+      signal: this._cancelHook ? this._cancelHook.signal : null,
+      headers: {
+        'Authorization': auth,
+        'Content-Type': 'application/zip'
+      },
+      body: await (this._data as FileLike).arrayBuffer()
+    } as RequestInit
+
+    const params = {
+      vaultId: this._vaultId
+    } as Record<string, string>;
+
+    if (this._parentId) {
+      params.parentId = this._parentId;
+    }
+    try {
+      const response = await fetch(`${this._apiurl}/zips?${new URLSearchParams(params).toString()}`, config);
+      console.log(response.status)
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
