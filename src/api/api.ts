@@ -26,7 +26,7 @@ abstract class Api {
 
   abstract uploadData(items: { data: any, tags: Tags }[], cloud?: boolean): Promise<Array<string>>
 
-  abstract uploadZip(file: FileLike, vaultId: string, options?: ZipUploadOptions): Promise<void>
+  abstract uploadZip(file: ArrayBuffer, vaultId: string, options?: ZipUploadOptions): Promise<void>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 

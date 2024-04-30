@@ -14,7 +14,6 @@ import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { FileUploadOptions, FileGetOptions } from "../core/file";
 import { StreamConverter } from "../util/stream-converter";
-import { FileLike } from "../types/file";
 import { ZipUploadOptions } from "../types/zip";
 
 export const defaultFileUploadOptions = {
@@ -159,7 +158,7 @@ export default class AkordApi extends Api {
     return { fileData, metadata };
   };
 
-  public async uploadZip(file: FileLike, vaultId: string, options: ZipUploadOptions = {}): Promise<void> {
+  public async uploadZip(file: ArrayBuffer, vaultId: string, options: ZipUploadOptions = {}): Promise<void> {
     await new ApiClient()
       .env(this.config)
       .data(file)

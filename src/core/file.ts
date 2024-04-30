@@ -14,12 +14,12 @@ import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
 import { FileVersion } from "../types";
 
-const DEFAULT_FILE_TYPE = "text/plain";
-const BYTES_IN_MB = 1000000;
-const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
-const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
-const CHUNKS_CONCURRENCY = 25;
-const UPLOADER_POLLING_RATE_IN_MILLISECONDS = 2500;
+export const DEFAULT_FILE_TYPE = "text/plain";
+export const BYTES_IN_MB = 1000000;
+export const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
+export const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
+export const CHUNKS_CONCURRENCY = 25;
+export const UPLOADER_POLLING_RATE_IN_MILLISECONDS = 2500;
 
 
 class FileService extends Service {
@@ -352,6 +352,5 @@ export type FileVersionData = {
 
 export {
   FileService,
-  createFileLike,
-  DEFAULT_FILE_TYPE
+  createFileLike
 }

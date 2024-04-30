@@ -14,7 +14,6 @@ import { User, UserPublicInfo } from "../types/user";
 import { StorageType } from "../types";
 import fetch from 'cross-fetch';
 import { jsonToBase64 } from "@akord/crypto";
-import { FileLike } from "../types/file";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -675,16 +674,11 @@ export class ApiClient {
       throw new BadRequest("Missing vault Id. Use ApiClient#vaultId() to add it");
     }
 
-
-    const config = {
-      method: 'put',
-      signal: this._cancelHook ? this._cancelHook.signal : null,
-      headers: {
-        'Authorization': auth,
-        'Content-Type': 'application/zip'
-      },
-      body: await (this._data as FileLike).arrayBuffer()
-    } as RequestInit
+    const me = this;
+    const headers = {
+      'Authorization': auth,
+      'Content-Type': 'application/zip'
+    } as Record<string, string>
 
     const params = {
       vaultId: this._vaultId
@@ -693,9 +687,31 @@ export class ApiClient {
     if (this._parentId) {
       params.parentId = this._parentId;
     }
+
+    const config = {
+      method: 'put',
+      url: `${this._apiurl}/zips?${new URLSearchParams(params).toString()}`,
+      data: this._data,
+      headers: headers,
+      signal: this._cancelHook ? this._cancelHook.signal : null,
+      onUploadProgress(progressEvent) {
+        if (me._progressHook) {
+          let percentageProgress;
+          let bytesProgress;
+          if (me._totalBytes) {
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
+          } else {
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / progressEvent.total * 100);
+          }
+          me._progressHook(percentageProgress, bytesProgress, me._progressId);
+        }
+      }
+    } as AxiosRequestConfig;
+
     try {
-      const response = await fetch(`${this._apiurl}/zips?${new URLSearchParams(params).toString()}`, config);
-      console.log(response.status)
+      await axios(config);
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
