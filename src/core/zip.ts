@@ -2,7 +2,7 @@ import { Service } from "./service";
 import { FileLike, FileSource } from "../types/file";
 import { BadRequest } from "../errors/bad-request";
 import { ZipUploadOptions } from "../types/zip";
-import { BYTES_IN_MB, MINIMAL_CHUNK_SIZE_IN_BYTES, createFileLike } from "./file";
+import { BYTES_IN_MB, FileOptions, MINIMAL_CHUNK_SIZE_IN_BYTES, createFileLike } from "./file";
 
 const DEFAULT_CHUNK_SIZE_IN_BYTES = 100 * BYTES_IN_MB
 
@@ -22,7 +22,7 @@ class ZipService extends Service {
     if (chunkSize < MINIMAL_CHUNK_SIZE_IN_BYTES) {
       throw new BadRequest("Chunk size can not be smaller than: " + MINIMAL_CHUNK_SIZE_IN_BYTES / BYTES_IN_MB)
     }
-    const file = await createFileLike(fileSource);
+    const file = await createFileLike(fileSource, { name: 'zip' } as FileOptions);
 
 
     if (file.size > chunkSize) {
