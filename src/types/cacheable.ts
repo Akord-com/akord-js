@@ -1,7 +1,6 @@
 import { Subject } from "rxjs"
 
-export class CacheBusters {
+export class CacheConfig {
   static cache: boolean;
-  static profile = new Subject<any>();
-  static vaults = new Subject<any>();
+  static profileBuster = new Subject<any>();
 }

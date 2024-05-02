@@ -24,6 +24,8 @@ import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "./common";
 import { EncryptionMetadata } from "../types/encryption";
 import { assetTags } from "../types";
+import { InMemoryStorageStrategy, PCacheable } from "@akord/ts-cacheable";
+import { CacheConfig } from "../types/cacheable";
 
 export const STATE_CONTENT_TYPE = "application/json";
 
@@ -122,6 +124,14 @@ class Service {
     this.tags = tags?.filter((tag: string) => tag) || [];
   }
 
+  @PCacheable({
+    storageStrategy: InMemoryStorageStrategy,
+    shouldCacheDecider: () => CacheConfig.cache
+  })
+  async getVault(id: string) {
+    return await this.api.getVault(id)
+  }
+
   async processWriteString(data: string): Promise<string> {
     if (this.isPublic) return data;
     let encryptedPayload: string;
@@ -137,7 +147,7 @@ class Service {
   }
 
   async setVaultContext(vaultId: string) {
-    const vault = await this.api.getVault(vaultId);
+    const vault = await this.getVault(vaultId);
     this.setVault(vault);
     this.setVaultId(vaultId);
     this.setIsPublic(vault.public);

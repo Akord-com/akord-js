@@ -14,6 +14,8 @@ import { Stack } from '../types/stack';
 import { Memo } from '../types/memo';
 import { NFT } from '../types/nft';
 import { Collection } from '../types/collection';
+import { InMemoryStorageStrategy, PCacheable } from '@akord/ts-cacheable';
+import { CacheConfig } from '../types/cacheable';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -209,6 +211,10 @@ class NodeService<T> extends Service {
     this.parentId = parentId;
   }
 
+  @PCacheable({
+    storageStrategy: InMemoryStorageStrategy,
+    shouldCacheDecider: () => CacheConfig.cache
+  })
   protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
     const object = await this.api.getNode<NodeLike>(nodeId, type, vaultId);
     const vault = await this.api.getVault(object.vaultId);
