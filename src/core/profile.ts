@@ -1,5 +1,5 @@
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
-import { CacheBusters } from "../types/cacheable";
+import { CacheConfig } from "../types/cacheable";
 import { Service } from "./service";
 import { objectType } from "../constants";
 import { StorageType, User } from "../types";
@@ -13,8 +13,8 @@ class ProfileService extends Service {
    */
   @PCacheable({
     storageStrategy: InMemoryStorageStrategy,
-    cacheBusterObserver: CacheBusters.profile,
-    shouldCacheDecider: () => CacheBusters.cache
+    cacheBusterObserver: CacheConfig.profileBuster,
+    shouldCacheDecider: () => CacheConfig.cache
   })
   public async get(): Promise<User> {
     return await this.api.getUser();
@@ -27,7 +27,7 @@ class ProfileService extends Service {
    * @returns Promise with corresponding transaction ids
    */
   @PCacheBuster({
-    cacheBusterNotifier: CacheBusters.profile
+    cacheBusterNotifier: CacheConfig.profileBuster
   })
   public async update(profileName?: string, avatar?: ArrayBuffer): Promise<void> {
     const user = await this.api.getUser();

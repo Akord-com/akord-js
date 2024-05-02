@@ -12,7 +12,7 @@ import { StackService } from "./core/stack";
 import { NoteService } from "./core/note";
 import { ManifestService } from "./core/manifest";
 import { ProfileService } from "./core/profile";
-import { CacheBusters } from "./types/cacheable";
+import { CacheConfig } from "./types/cacheable";
 import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
 import { NFTService } from "./core/nft";
@@ -69,7 +69,7 @@ export class Akord {
    */
   constructor(wallet?: Wallet, config: ClientConfig = {}) {
     Logger.debug = config.debug;
-    CacheBusters.cache = config.cache;
+    CacheConfig.cache = config.cache;
     Crypto.configure({ wallet: wallet });
     this.api = config.api ? config.api : new AkordApi(config);
     this.wallet = wallet;
