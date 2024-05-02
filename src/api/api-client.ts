@@ -23,6 +23,7 @@ const GATEWAY_HEADER_PREFIX = 'x-amz-meta-';
 export class ApiClient {
   private _gatewayurl: string;
   private _apiurl: string;
+  private _uploadsurl: string;
 
   // API endpoints
   private _fileUri: string = "files";
@@ -65,6 +66,7 @@ export class ApiClient {
     const clone = new ApiClient();
     clone._gatewayurl = this._gatewayurl;
     clone._apiurl = this._apiurl;
+    clone._uploadsurl = this._uploadsurl;
     clone._resourceId = this._resourceId;
     clone._vaultId = this._vaultId;
     clone._tags = this._tags;
@@ -84,8 +86,9 @@ export class ApiClient {
     return clone;
   }
 
-  env(config: { apiurl: string, gatewayurl: string }): ApiClient {
+  env(config: { apiurl: string, uploadsurl: string, gatewayurl: string }): ApiClient {
     this._apiurl = config.apiurl;
+    this._uploadsurl = config.uploadsurl;
     this._gatewayurl = config.gatewayurl;
     return this;
   }
