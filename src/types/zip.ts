@@ -2,5 +2,16 @@ import { Hooks } from "../core/file"
 
 export type ZipUploadOptions = Hooks & {
     parentId?: string,
-    chunkSize?: number
+    skipHidden?: boolean,
+    chunkSize?: number,
+    chunksConcurrency?: number,
+}
+
+export type ZipUploadApiOptions = Hooks & {
+    parentId?: string,
+    skipHidden?: boolean, 
+    multipartToken?: string,
+    partNumber?: number   
+    multipartInit?: boolean   
+    multipartComplete?: boolean,
 }

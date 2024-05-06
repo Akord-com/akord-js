@@ -8,7 +8,7 @@ import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { ApiConfig } from "./config";
 import { FileGetOptions, FileUploadOptions } from "../core/file";
-import { ZipUploadOptions } from "../types/zip";
+import { ZipUploadApiOptions, ZipUploadOptions } from "../types/zip";
 import { FileLike } from "../types/file";
 
 abstract class Api {
@@ -26,7 +26,7 @@ abstract class Api {
 
   abstract uploadData(items: { data: any, tags: Tags }[], cloud?: boolean): Promise<Array<string>>
 
-  abstract uploadZip(file: ArrayBuffer, vaultId: string, options?: ZipUploadOptions): Promise<void>
+  abstract uploadZip(file: ArrayBuffer, vaultId: string, options?: ZipUploadApiOptions): Promise<{ sourceKey: string, multipartToken?: string }>
 
   abstract getContractState(vaultId: string): Promise<ContractState>
 

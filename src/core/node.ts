@@ -16,11 +16,11 @@ import { NFT } from '../types/nft';
 import { Collection } from '../types/collection';
 
 class NodeService<T> extends Service {
-  objectType: NodeType;
+  protected objectType: NodeType;
 
-  parentId?: string;
+  protected parentId?: string;
 
-  defaultListOptions = {
+  protected defaultListOptions = {
     shouldDecrypt: true,
     parentId: undefined,
     filter: {
@@ -31,11 +31,11 @@ class NodeService<T> extends Service {
     }
   } as ListOptions;
 
-  defaultGetOptions = {
+  protected defaultGetOptions = {
     shouldDecrypt: true,
   } as GetOptions;
 
-  defaultCreateOptions = {
+  protected defaultCreateOptions = {
     parentId: undefined,
     tags: [],
     arweaveTags: [],

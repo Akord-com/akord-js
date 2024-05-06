@@ -138,7 +138,10 @@ export class ApiClient {
 
   queryParams(queryParams: any): ApiClient {
     if (queryParams) {
-      this._queryParams = { ...this._queryParams, ...queryParams };
+      const params = Object.fromEntries(
+        Object.entries(queryParams).filter(([_, value]) => value)
+      );
+      this._queryParams = { ...this._queryParams, ...params };
     } else {
       this._queryParams = {}
     }
@@ -662,35 +665,21 @@ export class ApiClient {
      * - cancelHook()
      * @returns {Promise<string[]>}
      */
-  async uploadZip(): Promise<void> {
+  async uploadZip(): Promise<{ sourceKey: string, multipartToken?: string }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
-    if (!this._data) {
-      throw new BadRequest("Missing data to upload. Use ApiClient#data() to add it");
-    }
-    if (!this._vaultId) {
-      throw new BadRequest("Missing vault Id. Use ApiClient#vaultId() to add it");
-    }
-
+    console.log(this._queryParams)
     const me = this;
     const headers = {
       'Authorization': auth,
       'Content-Type': 'application/zip'
     } as Record<string, string>
 
-    const params = {
-      vaultId: this._vaultId
-    } as Record<string, string>;
-
-    if (this._parentId) {
-      params.parentId = this._parentId;
-    }
-
     const config = {
-      method: 'put',
-      url: `${this._apiurl}/zips?${new URLSearchParams(params).toString()}`,
+      method: 'post',
+      url: `${this._apiurl}/zips?${new URLSearchParams(this._queryParams).toString()}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
@@ -711,7 +700,8 @@ export class ApiClient {
     } as AxiosRequestConfig;
 
     try {
-      await axios(config);
+      const response = await axios(config);
+      return response.data
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
