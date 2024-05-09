@@ -119,7 +119,7 @@ class MembershipService extends Service {
    */
   public async airdrop(
     vaultId: string,
-    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: { name?: string, expirationDate?: Date } }>,
+    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: { name?: string, expirationDate?: Date, allowedPermanentStorage?: number, allowedCloudStorage?: number } }>,
   ): Promise<{
     transactionId: string,
     members: Array<{ id: string, address: string }>

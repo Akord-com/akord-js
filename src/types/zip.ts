@@ -15,3 +15,8 @@ export type ZipUploadApiOptions = Hooks & {
     multipartInit?: boolean   
     multipartComplete?: boolean,
 }
+
+export type ZipLog = {
+    id: string,
+    uploadedAt: string
+}

@@ -11,9 +11,10 @@ import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
-import { StorageType } from "../types";
+import { FileVersion, StorageType } from "../types";
 import fetch from 'cross-fetch';
 import { jsonToBase64 } from "@akord/crypto";
+import { ZipLog } from "../types/zip";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -31,6 +32,7 @@ export class ApiClient {
   private _nodeUri: string = "nodes";
   private _membershipUri: string = "memberships";
   private _userUri: string = "users";
+  private _zipsUri: string = "zips";
 
   // path params
   private _resourceId: string;
@@ -368,6 +370,26 @@ export class ApiClient {
     return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
   }
 
+  /**
+   * Get files for currently authenticated user
+   * @uses:
+   * - queryParams() - limit, nextToken
+   * @returns {Promise<Paginated<FileVersion>>}
+   */
+  async getFiles(): Promise<Paginated<FileVersion>> {
+    return await this.get(`${this._apiurl}/${this._fileUri}`);
+  }
+
+  /**
+   * Get zip upload logs for currently authenticated user
+   * @uses:
+   * - queryParams() - limit, nextToken
+   * @returns {Promise<Paginated<ZipLog>>}
+   */
+  async getZipLogs(): Promise<Paginated<ZipLog>> {
+    return await this.get(`${this._apiurl}/${this._zipsUri}`);
+  }
+
   async getTransactionTags(): Promise<Tags> {
     try {
       const response = await axios({
@@ -665,12 +687,11 @@ export class ApiClient {
      * - cancelHook()
      * @returns {Promise<string[]>}
      */
-  async uploadZip(): Promise<{ sourceKey: string, multipartToken?: string }> {
+  async uploadZip(): Promise<{ sourceId: string, multipartToken?: string }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
-    console.log(this._queryParams)
     const me = this;
     const headers = {
       'Authorization': auth,
@@ -679,7 +700,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `${this._apiurl}/zips?${new URLSearchParams(this._queryParams).toString()}`,
+      url: `${this._apiurl}/${this._zipsUri}?${new URLSearchParams(this._queryParams).toString()}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,

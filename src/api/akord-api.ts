@@ -9,12 +9,13 @@ import { NodeType, StorageType } from "../types/node";
 import { Vault } from "../types/vault";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
-import { ListOptions, VaultApiGetOptions } from "../types/query-options";
+import { ListApiOptions, ListOptions, ListPaginatedApiOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { FileUploadOptions, FileGetOptions } from "../core/file";
 import { StreamConverter } from "../util/stream-converter";
-import { ZipUploadApiOptions, ZipUploadOptions } from "../types/zip";
+import { ZipLog, ZipUploadApiOptions, ZipUploadOptions } from "../types/zip";
+import { FileVersion } from "../types";
 
 export const defaultFileUploadOptions = {
   storage: StorageType.ARWEAVE,
@@ -132,6 +133,13 @@ export default class AkordApi extends Api {
     }
   };
 
+  public async getFiles(options?: ListApiOptions): Promise<Paginated<FileVersion>> {
+    return await new ApiClient()
+      .env(this.config)
+      .queryParams({ ...options, raw: true })
+      .getFiles();
+  }
+
   public async downloadFile(id: string, options: FileGetOptions = {}): Promise<{ fileData: ArrayBuffer | ReadableStream<Uint8Array>, metadata: EncryptionMetadata }> {
     const { response } = await new ApiClient()
       .env(this.config)
@@ -158,7 +166,14 @@ export default class AkordApi extends Api {
     return { fileData, metadata };
   };
 
-  public async uploadZip(file: ArrayBuffer, vaultId: string, options: ZipUploadApiOptions = {}): Promise<{ sourceKey: string, multipartToken?: string }> {
+  public async getZipLogs(options?: ListPaginatedApiOptions): Promise<Paginated<ZipLog>> {
+    return await new ApiClient()
+      .env(this.config)
+      .queryParams(options)
+      .getZipLogs();
+  }
+
+  public async uploadZip(file: ArrayBuffer, vaultId: string, options: ZipUploadApiOptions = {}): Promise<{ sourceId: string, multipartToken?: string }> {
     return await new ApiClient()
       .env(this.config)
       .data(file)

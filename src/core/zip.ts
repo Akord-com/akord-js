@@ -1,19 +1,42 @@
 import { Service } from "./service";
 import { FileLike, FileSource } from "../types/file";
 import { BadRequest } from "../errors/bad-request";
-import { ZipUploadOptions } from "../types/zip";
+import { ZipLog, ZipUploadOptions } from "../types/zip";
 import { BYTES_IN_MB, CHUNKS_CONCURRENCY, DEFAULT_CHUNK_SIZE_IN_BYTES, FileOptions, MINIMAL_CHUNK_SIZE_IN_BYTES, createFileLike } from "./file";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
+import { ListPaginatedApiOptions } from "../types/query-options";
+import { Paginated } from "../types/paginated";
+import { paginate } from "./common";
+import { PluginKey, Plugins } from "../plugin";
+import { Logger } from "../logger";
+import { Notification } from "../types/notification";
 
 
 class ZipService extends Service {
+
+  private events: [ "UNZIP_FINISHED" ]
+
+  public async list(options: ListPaginatedApiOptions = {}): Promise<Paginated<ZipLog>> {
+    return await this.api.getZipLogs(options);
+  }
+
+  /**
+ * @param  {ListFileOptions} options
+ * @returns Promise with list of all files per query options
+ */
+  public async listAll(options: ListPaginatedApiOptions = {}): Promise<Array<ZipLog>> {
+    const list = async (listOptions: ListPaginatedApiOptions) => {
+      return await this.list(listOptions);
+    }
+    return await paginate<ZipLog>(list, options);
+  }
 
   /**
    * @param  {string} vaultId
    * @param  {string} name folder name
    * @param  {ZipUploadOptions} [options] parent id, etc.
    */
-  public async upload(vaultId: string, fileSource: FileSource, options: ZipUploadOptions = {}): Promise<{ sourceKey: string }> {
+  public async upload(vaultId: string, fileSource: FileSource, options: ZipUploadOptions = {}): Promise<{ sourceId: string }> {
     await this.setVaultContext(vaultId);
     if (!this.vault.public) {
       throw new BadRequest("Zip upload is not supported for private vaults.")
@@ -35,12 +58,44 @@ class ZipService extends Service {
     }
   }
 
-  private async simpleUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceKey: string }> {
+  public async subscribe(next: (notification: Notification) => void | Promise<void>): Promise<void> {
+    if (!Plugins.registered.has(PluginKey.PUBSUB)) {
+      Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
+      return;
+    }
+    const address = await this.wallet.getAddress();
+    await Plugins.registered.get(PluginKey.PUBSUB).use({
+      action: 'subscribe',
+      filter: {
+        event: { in: this.events },
+        toAddress: { eq: address }
+      },
+      next: next
+    });
+  }
+
+  public async unsubscribe(): Promise<void> {
+    if (!Plugins.registered.has(PluginKey.PUBSUB)) {
+      Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
+      return;
+    }
+    const address = await this.wallet.getAddress();
+    await Plugins.registered.get(PluginKey.PUBSUB).use({
+      action: 'unsubscribe',
+      filter: {
+        event: { in: this.events },
+        toAddress: { eq: address }
+      }
+    });
+  }
+
+
+  private async simpleUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceId: string }> {
     const buffer = await file.arrayBuffer()
     return await this.api.uploadZip(buffer, vaultId, options)
   }
 
-  private async multipartUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceKey: string }> {
+  private async multipartUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceId: string }> {
     const { chunkSize, chunksConcurrency, ...initOptions } = options
     const { multipartToken } = await this.api.uploadZip(null, vaultId, { ...initOptions, multipartInit: true })
     let offset = 0;
@@ -67,8 +122,8 @@ class ZipService extends Service {
     if (options.cancelHook?.signal?.aborted) {
       throw new AbortError();
     }
-    const { sourceKey } = await this.api.uploadZip(null, vaultId, { multipartToken: multipartToken, multipartComplete: true });
-    return { sourceKey }
+    const { sourceId } = await this.api.uploadZip(null, vaultId, { multipartToken: multipartToken, multipartComplete: true });
+    return { sourceId }
   }
 };
 
