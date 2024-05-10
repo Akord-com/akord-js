@@ -19,7 +19,6 @@ export class PubSubPlugin implements Plugin {
     private active: Map<string, Subscription> = new Map();
 
     register(env?: 'dev' | 'v2') {
-        console.log("configuring for: " + env)
         Amplify.configure({
             API: {
                 GraphQL: {

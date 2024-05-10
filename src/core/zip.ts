@@ -90,7 +90,6 @@ class ZipService extends Service {
     });
   }
 
-
   private async simpleUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceId: string }> {
     const buffer = await file.arrayBuffer()
     return await this.api.uploadZip(buffer, vaultId, options)
