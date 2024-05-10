@@ -43,148 +43,148 @@ describe("Testing stack functions", () => {
     expect(data).toEqual(await file.arrayBuffer());
   });
 
-  // it("should fail uploading an empty file", async () => {
-  //   await expect(async () => {
-  //     await akord.stack.create(vaultId, testDataPath + "empty-file.md");
-  //   }).rejects.toThrow(BadRequest);
-  // });
+  it("should fail uploading an empty file", async () => {
+    await expect(async () => {
+      await akord.stack.create(vaultId, testDataPath + "empty-file.md");
+    }).rejects.toThrow(BadRequest);
+  });
 
-  // it("should create stack from file buffer", async () => {
-  //   const fileBuffer = fs.readFileSync(testDataPath + firstFileName);
-  //   const type = "image/png";
+  it("should create stack from file buffer", async () => {
+    const fileBuffer = fs.readFileSync(testDataPath + firstFileName);
+    const type = "image/png";
 
-  //   const { stackId, uri } = await akord.stack.create(vaultId, fileBuffer, { name: firstFileName, mimeType: type });
-  //   expect(stackId).toBeTruthy();
-  //   expect(uri).toBeTruthy();
+    const { stackId, uri } = await akord.stack.create(vaultId, fileBuffer, { name: firstFileName, mimeType: type });
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
 
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.uri).toBeTruthy();
-  //   expect(stack.status).toEqual("ACTIVE");
-  //   expect(stack.name).toEqual(firstFileName);
-  //   expect(stack.versions.length).toEqual(1);
-  //   expect(stack.versions[0].name).toEqual(firstFileName);
-  //   expect(stack.versions[0].type).toEqual(type);
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.status).toEqual("ACTIVE");
+    expect(stack.name).toEqual(firstFileName);
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(stack.versions[0].type).toEqual(type);
 
-  //   const { data } = await akord.stack.getVersion(stackId, 0);
-  //   const file = await createFileLike(testDataPath + firstFileName);
-  //   expect(data).toEqual(await file.arrayBuffer());
-  // });
+    const { data } = await akord.stack.getVersion(stackId, 0);
+    const file = await createFileLike(testDataPath + firstFileName);
+    expect(data).toEqual(await file.arrayBuffer());
+  });
 
-  // it("should create stack from file stream", async () => {
-  //   const fileStream = fs.createReadStream(testDataPath + firstFileName);
-  //   const type = "image/png";
+  it("should create stack from file stream", async () => {
+    const fileStream = fs.createReadStream(testDataPath + firstFileName);
+    const type = "image/png";
 
-  //   const { stackId, uri } = await akord.stack.create(vaultId, fileStream, { name: firstFileName, mimeType: type });
-  //   expect(stackId).toBeTruthy();
-  //   expect(uri).toBeTruthy();
+    const { stackId, uri } = await akord.stack.create(vaultId, fileStream, { name: firstFileName, mimeType: type });
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
 
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.uri).toBeTruthy();
-  //   expect(stack.status).toEqual("ACTIVE");
-  //   expect(stack.name).toEqual(firstFileName);
-  //   expect(stack.versions.length).toEqual(1);
-  //   expect(stack.versions[0].name).toEqual(firstFileName);
-  //   expect(stack.versions[0].type).toEqual(type);
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.status).toEqual("ACTIVE");
+    expect(stack.name).toEqual(firstFileName);
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(stack.versions[0].type).toEqual(type);
 
-  //   const { data } = await akord.stack.getVersion(stackId, 0);
-  //   const file = await createFileLike(testDataPath + firstFileName);
-  //   expect(data).toEqual(await file.arrayBuffer());
-  // });
+    const { data } = await akord.stack.getVersion(stackId, 0);
+    const file = await createFileLike(testDataPath + firstFileName);
+    expect(data).toEqual(await file.arrayBuffer());
+  });
 
-  // it("should create stack from file object", async () => {
-  //   const file = await createFileLike(testDataPath + firstFileName);
+  it("should create stack from file object", async () => {
+    const file = await createFileLike(testDataPath + firstFileName);
 
-  //   stackId = (await akord.stack.create(vaultId, file)).stackId;
+    stackId = (await akord.stack.create(vaultId, file)).stackId;
 
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.uri).toBeTruthy();
-  //   expect(stack.status).toEqual("ACTIVE");
-  //   expect(stack.name).toEqual(firstFileName);
-  //   expect(stack.versions.length).toEqual(1);
-  //   expect(stack.versions[0].name).toEqual(firstFileName);
-  //   expect(stack.versions[0].type).toEqual(file.type);
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.status).toEqual("ACTIVE");
+    expect(stack.name).toEqual(firstFileName);
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(stack.versions[0].type).toEqual(file.type);
 
-  //   const { data } = await akord.stack.getVersion(stackId, 0);
-  //   expect(data).toEqual(await file.arrayBuffer());
-  // });
+    const { data } = await akord.stack.getVersion(stackId, 0);
+    expect(data).toEqual(await file.arrayBuffer());
+  });
 
 
-  // it("should download the stack", async () => {
-  //   const { name, data } = await akord.stack.getVersion(stackId, 0);
-  //   await akord.stack.download(stackId, 0, { path: testDataOutPath });
-  //   const file = await createFileLike(`${testDataOutPath}/${name}`);
+  it("should download the stack", async () => {
+    const { name, data } = await akord.stack.getVersion(stackId, 0);
+    await akord.stack.download(stackId, 0, { path: testDataOutPath });
+    const file = await createFileLike(`${testDataOutPath}/${name}`);
 
-  //   expect(data).toEqual(await file.arrayBuffer());
-  // });
+    expect(data).toEqual(await file.arrayBuffer());
+  });
 
-  // it("should upload new revision", async () => {
-  //   const { uri } = await akord.stack.uploadRevision(stackId, testDataPath + secondFileName);
-  //   expect(uri).toBeTruthy();
+  it("should upload new revision", async () => {
+    const { uri } = await akord.stack.uploadRevision(stackId, testDataPath + secondFileName);
+    expect(uri).toBeTruthy();
 
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.uri).toBeTruthy();
-  //   expect(stack.versions.length).toEqual(2);
-  //   expect(stack.versions[0].name).toEqual(firstFileName);
-  //   expect(stack.versions[1].name).toEqual(secondFileName);
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.versions.length).toEqual(2);
+    expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(stack.versions[1].name).toEqual(secondFileName);
 
-  //   const { data } = await akord.stack.getVersion(stackId);
-  //   const file = await createFileLike(testDataPath + secondFileName);
-  //   expect(stack.versions[1].type).toEqual(file.type);
-  //   expect(data).toEqual(await file.arrayBuffer());
+    const { data } = await akord.stack.getVersion(stackId);
+    const file = await createFileLike(testDataPath + secondFileName);
+    expect(stack.versions[1].type).toEqual(file.type);
+    expect(data).toEqual(await file.arrayBuffer());
 
-  //   const firstFile = await createFileLike(testDataPath + firstFileName);
-  //   const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
-  //   expect(firstFileData).toEqual(await firstFile.arrayBuffer());
-  // });
+    const firstFile = await createFileLike(testDataPath + firstFileName);
+    const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
+    expect(firstFileData).toEqual(await firstFile.arrayBuffer());
+  });
 
-  // it("should rename the stack", async () => {
-  //   const name = faker.random.words();
+  it("should rename the stack", async () => {
+    const name = faker.random.words();
 
-  //   await akord.stack.rename(stackId, name);
+    await akord.stack.rename(stackId, name);
 
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.uri).toBeTruthy();
-  //   expect(stack.name).toEqual(name);
-  //   expect(stack.versions.length).toEqual(2);
-  //   expect(stack.versions[0].name).toEqual(firstFileName);
-  //   expect(stack.versions[1].name).toEqual(secondFileName);
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.name).toEqual(name);
+    expect(stack.versions.length).toEqual(2);
+    expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(stack.versions[1].name).toEqual(secondFileName);
 
-  //   const firstFile = await createFileLike(testDataPath + firstFileName);
-  //   const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
-  //   expect(firstFileData).toEqual(await firstFile.arrayBuffer());
+    const firstFile = await createFileLike(testDataPath + firstFileName);
+    const { data: firstFileData } = await akord.stack.getVersion(stackId, 0);
+    expect(firstFileData).toEqual(await firstFile.arrayBuffer());
 
-  //   const secondFile = await createFileLike(testDataPath + secondFileName);
+    const secondFile = await createFileLike(testDataPath + secondFileName);
 
-  //   const { data: secondFileData } = await akord.stack.getVersion(stackId);
-  //   expect(secondFileData).toEqual(await secondFile.arrayBuffer());
-  // });
+    const { data: secondFileData } = await akord.stack.getVersion(stackId);
+    expect(secondFileData).toEqual(await secondFile.arrayBuffer());
+  });
 
-  // it("should revoke the stack", async () => {
-  //   await akord.stack.revoke(stackId)
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.status).toEqual("REVOKED");
-  // });
+  it("should revoke the stack", async () => {
+    await akord.stack.revoke(stackId)
+    const stack = await akord.stack.get(stackId);
+    expect(stack.status).toEqual("REVOKED");
+  });
 
-  // it("should restore the stack", async () => {
-  //   await akord.stack.restore(stackId)
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.status).toEqual("ACTIVE");
-  // });
+  it("should restore the stack", async () => {
+    await akord.stack.restore(stackId)
+    const stack = await akord.stack.get(stackId);
+    expect(stack.status).toEqual("ACTIVE");
+  });
 
-  // it("should import new stack from arweave tx", async () => {
-  //   const { vaultId } = await akord.vault.create(faker.random.words(), {
-  //     public: true,
-  //     cloud: true
-  //   });
-  //   const fileName = arweaveImportFileTx + ".jpeg";
-  //   const { stackId } = await akord.stack.import(vaultId, arweaveImportFileTx);
+  it("should import new stack from arweave tx", async () => {
+    const { vaultId } = await akord.vault.create(faker.random.words(), {
+      public: true,
+      cloud: true
+    });
+    const fileName = arweaveImportFileTx + ".jpeg";
+    const { stackId } = await akord.stack.import(vaultId, arweaveImportFileTx);
 
-  //   const stack = await akord.stack.get(stackId);
-  //   expect(stack.name).toEqual(fileName);
-  //   expect(stack.versions.length).toEqual(1);
-  //   expect(stack.versions[0].name).toEqual(fileName);
+    const stack = await akord.stack.get(stackId);
+    expect(stack.name).toEqual(fileName);
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual(fileName);
 
-  //   const { data } = await akord.stack.getVersion(stackId);
-  //   expect(data).toEqual(await getTxData(arweaveImportFileTx));
-  // });
+    const { data } = await akord.stack.getVersion(stackId);
+    expect(data).toEqual(await getTxData(arweaveImportFileTx));
+  });
 });

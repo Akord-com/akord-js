@@ -2,10 +2,10 @@ import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/api';
 import { Plugin, PluginKey, Notification } from "@akord/akord-js";
 import { Types, subscriptions } from "@akord/gql";
-import { ZenObservable } from "zen-observable-ts";
+import { Subscription } from 'rxjs';
 
 const DEV_GQL_API_URL = 'https://7doygkohfjbp7ma6bab5ryxabi.appsync-api.eu-central-1.amazonaws.com/graphql'
-const GQL_API_URL = 'https://7doygkohfjbp7ma6bab5ryxabi.appsync-api.eu-central-1.amazonaws.com/graphql'
+const GQL_API_URL = 'https://gkce35zhtvfllkbnc3oy2zs6ty.appsync-api.eu-central-1.amazonaws.com/graphql'
 
 type PubSubParams = {
     action: 'subscribe' | 'unsubscribe'
@@ -16,17 +16,16 @@ type PubSubParams = {
 
 export class PubSubPlugin implements Plugin {
     key: PluginKey = PluginKey.PUBSUB;
-    private active: Map<string, ZenObservable.Subscription> = new Map();
+    private active: Map<string, Subscription> = new Map();
 
     register(env?: 'dev' | 'v2') {
+        console.log("configuring for: " + env)
         Amplify.configure({
             API: {
                 GraphQL: {
-                    endpoint: DEV_GQL_API_URL,
+                    endpoint: env === 'dev' ? DEV_GQL_API_URL : GQL_API_URL,
                     region: 'eu-central-1',
-                    // Set the default auth mode to "apiKey" and provide the API key value
-                    defaultAuthMode: 'apiKey',
-                    apiKey: 'da2-xxxxxxxxxxxxxxxxxxxxxxxxxx'
+                    defaultAuthMode: 'lambda'
                 }
             }
         });
@@ -59,11 +58,10 @@ export class PubSubPlugin implements Plugin {
                 // @ts-ignore
                 }).subscribe({
                     next: async ({ data }) => {
-                        console.log(data)
-                        //const notificationProto = value.data.onCreateNotification;
-                        // if (notificationProto && params.next) {
-                        //     await params.next(new Notification(notificationProto));
-                        // }
+                        const notificationProto = data.onCreateNotification;
+                        if (notificationProto && params.next) {
+                            await params.next(new Notification(notificationProto));
+                        }
                     },
                 error: (e) => {
                     if (params.error) {
@@ -72,13 +70,12 @@ export class PubSubPlugin implements Plugin {
                 }
             });
             if (sub) {
-                console.log(sub)
                 this.active.set(params.filter.toString(), sub);
             }
         } else if (params.action === 'unsubscribe') {
             if (params.filter) {
                 if (this.active.has(params.filter.toString())) {
-                    console.warn("No active subscription with given ID")
+                    console.warn("No active subscription with given filter criteria")
                 } else {
                     const sub = this.active.get(params.filter.toString())
                     sub.unsubscribe()

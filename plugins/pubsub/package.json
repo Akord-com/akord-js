@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js-pubsub-plugin",
-  "version": "5.4.0-beta.3",
+  "version": "0.1.0",
   "description": "A set of core js functions to interact with Akord",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
@@ -33,12 +33,12 @@
   "devDependencies": {
     "@akord/akord-js": "file:../../"
   },
+  "peerDependencies": {
+    "@akord/akord-js": ">=5.4.0"
+  },
   "dependencies": {
     "@akord/gql": "0.241.0",
-    "@aws-amplify/api": "^5.4.12",
-    "aws-amplify": "^6.3.0",
-    "isomorphic-ws": "^5.0.0",
-    "uuid": "^8.3.2",
-    "ws": "^8.11.0"
+    "@aws-amplify/api-graphql": "4.1.1",
+    "aws-amplify": "^6.3.0"
   }
 }

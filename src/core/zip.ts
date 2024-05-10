@@ -10,11 +10,12 @@ import { paginate } from "./common";
 import { PluginKey, Plugins } from "../plugin";
 import { Logger } from "../logger";
 import { Notification } from "../types/notification";
+import { Auth } from "@akord/akord-auth";
 
 
 class ZipService extends Service {
 
-  private events: [ "UNZIP_FINISHED" ]
+  private events = [ "UNZIP_FINISHED" ]
 
   public async list(options: ListPaginatedApiOptions = {}): Promise<Paginated<ZipLog>> {
     return await this.api.getZipLogs(options);
@@ -63,7 +64,7 @@ class ZipService extends Service {
       Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
       return;
     }
-    const address = await this.wallet.getAddress();
+    const address = await Auth.getAddress();
     await Plugins.registered.get(PluginKey.PUBSUB).use({
       action: 'subscribe',
       filter: {
@@ -79,7 +80,7 @@ class ZipService extends Service {
       Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
       return;
     }
-    const address = await this.wallet.getAddress();
+    const address = await Auth.getAddress();
     await Plugins.registered.get(PluginKey.PUBSUB).use({
       action: 'unsubscribe',
       filter: {

@@ -80,9 +80,9 @@ export class Akord {
   constructor(wallet?: Wallet, config: ClientConfig = {}) {
     this.api = config.api ? config.api : new AkordApi(config);
     this.wallet = wallet;
-    this.env = config.env;
+    this.env = config.env || 'v2';
     Crypto.configure({ wallet: wallet });
-    Plugins.register(config.plugins);
+    Plugins.register(config.plugins, this.env);
     Logger.debug = config.debug;
     CacheBusters.cache = config.cache;
   }
