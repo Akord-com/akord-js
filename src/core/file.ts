@@ -13,19 +13,45 @@ import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
 import { FileVersion } from "../types";
+import { ListFileOptions } from "../types/query-options";
+import { Paginated } from "../types/paginated";
+import { paginate } from "./common";
+import { Auth } from "@akord/akord-auth";
 
-const DEFAULT_FILE_TYPE = "text/plain";
-const BYTES_IN_MB = 1000000;
-const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
-const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
-const CHUNKS_CONCURRENCY = 25;
-const UPLOADER_POLLING_RATE_IN_MILLISECONDS = 2500;
+export const DEFAULT_FILE_TYPE = "text/plain";
+export const BYTES_IN_MB = 1000000;
+export const DEFAULT_CHUNK_SIZE_IN_BYTES = 10 * BYTES_IN_MB;
+export const MINIMAL_CHUNK_SIZE_IN_BYTES = 5 * BYTES_IN_MB;
+export const CHUNKS_CONCURRENCY = 25;
+export const UPLOADER_POLLING_RATE_IN_MILLISECONDS = 2500;
 
 
 class FileService extends Service {
   contentType = null as string;
   client: ApiClient;
 
+/**
+ * @param  {ListFileOptions} options
+ * @returns Promise with list of files per query options
+ */
+  public async list(options: ListFileOptions = {}): Promise<Paginated<FileVersion>> {
+    const { items, nextToken } = await this.api.getFiles(options);
+    return {
+      items: items?.map((item: any) => new FileVersion(item)),
+      nextToken: nextToken
+    }
+  }
+
+/**
+ * @param  {ListFileOptions} options
+ * @returns Promise with list of all files per query options
+ */
+  public async listAll(options: ListFileOptions = {}): Promise<Array<FileVersion>> {
+    const list = async (listOptions: ListFileOptions) => {
+      return await this.list(listOptions);
+    }
+    return await paginate<FileVersion>(list, options);
+  }
 
   public async create(
     file: FileLike,
@@ -48,7 +74,7 @@ class FileService extends Service {
 
   public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
     const version = new FileVersion({
-      owner: await this.wallet.getAddress(),
+      owner: await Auth.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.processWriteString(file.name),
       type: file.type,
@@ -352,6 +378,5 @@ export type FileVersionData = {
 
 export {
   FileService,
-  createFileLike,
-  DEFAULT_FILE_TYPE
+  createFileLike
 }

@@ -15,10 +15,10 @@ export const EMPTY_FILE_ERROR_MESSAGE = "Cannot upload an empty file";
 
 class StackService extends NodeService<Stack> {
   public fileService = new FileService(this.wallet, this.api);
-  objectType = nodeType.STACK;
-  NodeType = Stack;
+  protected objectType = nodeType.STACK;
+  protected NodeType = Stack;
 
-  stackCreateDefaultOptions = {
+  protected stackCreateDefaultOptions = {
     ...this.defaultCreateOptions,
     overrideFileName: true
   }
@@ -140,15 +140,15 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data stream or buffer
    */
   public async getVersion(stackId: string, index?: number, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersionData> {
-    const service = new FileService(this.wallet, this.api);
     const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK);
     const stack = new Stack(stackProto, stackProto.__keys__);
-    await service.setVaultContext(stack.vaultId);
+    await this.setVaultContext(stack.vaultId);
     const version = stack.getVersion(index);
-    if (!service.isPublic) {
+    if (!this.isPublic) {
       await version.decrypt();
     }
-    const uri = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3)
+    const uri = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3);
+    const service = new FileService(this.wallet, this.api, this);
     const data = await service.download(uri, { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
     return { ...version, data };
   }

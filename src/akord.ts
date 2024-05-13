@@ -17,12 +17,16 @@ import { BatchService } from "./core/batch";
 import { ContractService } from "./core/contract";
 import { NFTService } from "./core/nft";
 import { CollectionService } from "./core/collection";
+import { ZipService } from "./core/zip";
+import { FileService } from "./core/file";
+import { Plugins } from "./plugin";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
 
   public api: Api;
   public wallet: Wallet;
+  public env: 'dev' | 'v2';
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
@@ -62,16 +66,24 @@ export class Akord {
   get collection(): CollectionService {
     return new CollectionService(this.wallet, this.api);
   }
+  get file(): FileService {
+    return new FileService(this.wallet, this.api);
+  }
+  get zip(): ZipService {
+    return new ZipService(this.wallet, this.api);
+  }
 
   /**
    * @param  {ClientConfig} config
    * @param  {Wallet} [wallet]
    */
   constructor(wallet?: Wallet, config: ClientConfig = {}) {
-    Logger.debug = config.debug;
-    CacheBusters.cache = config.cache;
-    Crypto.configure({ wallet: wallet });
     this.api = config.api ? config.api : new AkordApi(config);
     this.wallet = wallet;
+    this.env = config.env || 'v2';
+    Crypto.configure({ wallet: wallet });
+    Plugins.register(config.plugins, this.env);
+    Logger.debug = config.debug;
+    CacheBusters.cache = config.cache;
   }
 }

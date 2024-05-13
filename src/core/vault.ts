@@ -14,19 +14,19 @@ import { BadRequest } from "../errors/bad-request";
 import { handleListErrors, paginate } from "./common";
 
 class VaultService extends Service {
-  objectType = objectType.VAULT;
+  protected objectType = objectType.VAULT;
 
-  defaultListOptions = {
+  protected defaultListOptions = {
     shouldDecrypt: true,
     filter: { status: { eq: status.ACCEPTED } }
   } as ListOptions;
 
-  defaultGetOptions = {
+  protected defaultGetOptions = {
     shouldDecrypt: true,
     deep: false
   } as VaultGetOptions;
 
-  defaultCreateOptions = {
+  protected defaultCreateOptions = {
     public: false,
     termsOfAccess: undefined,
     description: undefined,

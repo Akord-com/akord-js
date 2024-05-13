@@ -4,8 +4,8 @@ import { nodeType, NodeCreateOptions } from "../types/node";
 import { Folder, FolderCreateResult } from "../types/folder";
 
 class FolderService extends NodeService<Folder> {
-  objectType = nodeType.FOLDER;
-  NodeType = Folder;
+  protected objectType = nodeType.FOLDER;
+  protected NodeType = Folder;
 
   /**
    * @param  {string} vaultId

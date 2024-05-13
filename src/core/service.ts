@@ -31,19 +31,19 @@ class Service {
   api: Api
   wallet: Wallet
 
-  dataEncrypter: Encrypter
+  protected dataEncrypter: Encrypter
   keys: Array<EncryptedKeys>
 
   vaultId: string
-  objectId: string
-  objectType: ObjectType
-  function: functions
+  protected objectId: string
+  protected objectType: ObjectType
   isPublic: boolean
   vault: Vault
-  object: Object
-  actionRef: string
+  protected object: Object
+  protected actionRef: string
   groupRef: string
 
+  function: functions
   tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
 
@@ -109,7 +109,7 @@ class Service {
     this.isPublic = isPublic;
   }
 
-  setVault(vault: Vault) {
+  protected setVault(vault: Vault) {
     this.vault = vault;
   }
 
@@ -186,7 +186,7 @@ class Service {
     return ids[0];
   }
 
-  async getTxTags(): Promise<Tags> {
+  protected async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
@@ -215,7 +215,7 @@ class Service {
     return [...new Map(tags.map(item => [item.value, item])).values()];
   }
 
-  protected async processWriteRaw(data: ArrayBuffer, options?: EncryptOptions) {
+  async processWriteRaw(data: ArrayBuffer, options?: EncryptOptions) {
     let processedData: ArrayBuffer;
     const tags = [] as Tags;
     if (this.isPublic) {
@@ -238,7 +238,7 @@ class Service {
     return { processedData, encryptionTags: tags }
   }
 
-  protected async processReadRaw(data: ArrayBuffer | string, metadata: EncryptionMetadata, shouldDecrypt = true): Promise<ArrayBuffer> {
+  async processReadRaw(data: ArrayBuffer | string, metadata: EncryptionMetadata, shouldDecrypt = true): Promise<ArrayBuffer> {
     if (this.isPublic || !shouldDecrypt) {
       return data as ArrayBuffer;
     }

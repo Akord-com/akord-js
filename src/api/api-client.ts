@@ -11,9 +11,10 @@ import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
-import { StorageType } from "../types";
+import { FileVersion, StorageType } from "../types";
 import fetch from 'cross-fetch';
 import { jsonToBase64 } from "@akord/crypto";
+import { ZipLog } from "../types/zip";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -31,10 +32,12 @@ export class ApiClient {
   private _nodeUri: string = "nodes";
   private _membershipUri: string = "memberships";
   private _userUri: string = "users";
+  private _zipsUri: string = "zips";
 
   // path params
   private _resourceId: string;
   private _vaultId: string;
+  private _parentId: string;
 
   // request body
   private _tags: Tags;
@@ -112,6 +115,11 @@ export class ApiClient {
     return this;
   }
 
+  parentId(parentId: string): ApiClient {
+    this._parentId = parentId;
+    return this;
+  }
+
   data(data: any): ApiClient {
     this._data = data;
     return this;
@@ -132,7 +140,10 @@ export class ApiClient {
 
   queryParams(queryParams: any): ApiClient {
     if (queryParams) {
-      this._queryParams = { ...this._queryParams, ...queryParams };
+      const params = Object.fromEntries(
+        Object.entries(queryParams).filter(([_, value]) => value)
+      );
+      this._queryParams = { ...this._queryParams, ...params };
     } else {
       this._queryParams = {}
     }
@@ -357,6 +368,26 @@ export class ApiClient {
    */
   async getTransactions(): Promise<Array<Transaction>> {
     return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
+  }
+
+  /**
+   * Get files for currently authenticated user
+   * @uses:
+   * - queryParams() - limit, nextToken
+   * @returns {Promise<Paginated<FileVersion>>}
+   */
+  async getFiles(): Promise<Paginated<FileVersion>> {
+    return await this.get(`${this._apiurl}/${this._fileUri}`);
+  }
+
+  /**
+   * Get zip upload logs for currently authenticated user
+   * @uses:
+   * - queryParams() - limit, nextToken
+   * @returns {Promise<Paginated<ZipLog>>}
+   */
+  async getZipLogs(): Promise<Paginated<ZipLog>> {
+    return await this.get(`${this._apiurl}/${this._zipsUri}`);
   }
 
   async getTransactionTags(): Promise<Tags> {
@@ -642,6 +673,56 @@ export class ApiClient {
     try {
       const response = await fetch(`${this._apiurl}/files/${this._resourceId}`, config);
       return { resourceUrl: this._resourceId, response: response };
+    } catch (error) {
+      throwError(error.response?.status, error.response?.data?.msg, error);
+    }
+  }
+
+  /**
+     *
+     * @requires:
+     * - data()
+     * @uses:
+     * - progressHook()
+     * - cancelHook()
+     * @returns {Promise<string[]>}
+     */
+  async uploadZip(): Promise<{ sourceId: string, multipartToken?: string }> {
+    const auth = await Auth.getAuthorization();
+    if (!auth) {
+      throw new Unauthorized("Authentication is required to use Akord API");
+    }
+    const me = this;
+    const headers = {
+      'Authorization': auth,
+      'Content-Type': 'application/zip'
+    } as Record<string, string>
+
+    const config = {
+      method: 'post',
+      url: `${this._apiurl}/${this._zipsUri}?${new URLSearchParams(this._queryParams).toString()}`,
+      data: this._data,
+      headers: headers,
+      signal: this._cancelHook ? this._cancelHook.signal : null,
+      onUploadProgress(progressEvent) {
+        if (me._progressHook) {
+          let percentageProgress;
+          let bytesProgress;
+          if (me._totalBytes) {
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
+          } else {
+            bytesProgress = progressEvent.loaded
+            percentageProgress = Math.round(bytesProgress / progressEvent.total * 100);
+          }
+          me._progressHook(percentageProgress, bytesProgress, me._progressId);
+        }
+      }
+    } as AxiosRequestConfig;
+
+    try {
+      const response = await axios(config);
+      return response.data
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }

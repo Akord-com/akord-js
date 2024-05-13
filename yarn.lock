@@ -2,13 +2,14 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.29.2":
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.29.2.tgz#f1ad43b41a9d84c3cccf5ec2344eaab45e243714"
-  integrity sha512-/xc7rO2vlNEzbW0+DN9a+EbbAOMkFXwwjcKI5clkAe15LS2D1Ybgx2RvtkssxXrKkeJtT73Wddk4eFumYSDjQw==
+"@akord/akord-auth@0.30.0":
+  version "0.30.0"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.0.tgz#deb1c87940417b8630ffbfc351c63604e6c9586e"
+  integrity sha512-d6RxBrcaTdtBfAC+GESfdKyDnXOGiFtPsStN5CafPa/SiNsQu8aVDe0bM3eQ71FbAV4ZsqryFxHcf/958WKzrg==
   dependencies:
     "@akord/crypto" "0.10.0"
     amazon-cognito-identity-js "6.1.2"
+    memorystorage "^0.12.0"
 
 "@akord/browser-level@^1.0.2":
   version "1.0.2"
@@ -2160,6 +2161,11 @@ memory-level@^1.0.0:
     abstract-level "^1.0.0"
     functional-red-black-tree "^1.0.1"
     module-error "^1.0.1"
+
+memorystorage@^0.12.0:
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/memorystorage/-/memorystorage-0.12.0.tgz#582a3374d298e8352dc4512df0186c335d137018"
+  integrity sha512-8oAVcjcyCCqG2iYSXf7AhyESaHkodE3UUouMS6NhqoY2Bnb1xoPe3sdbf3ExufPGkFYi/HgP7SPer8SFsc6MYg==
 
 merge-stream@^2.0.0:
   version "2.0.0"

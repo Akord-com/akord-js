@@ -21,6 +21,7 @@ This package can be used in both browser and Node.js environments.
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
+  - [Zip](#zip)
 - [Development](#development)
 - [Deployment](#deployment)
 
@@ -1657,6 +1658,28 @@ Update user profile along with all active memberships
 - `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
 - `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
+
+### zip
+
+#### `upload(vaultId, file, options)`
+- `vaultId` (`string`, required)
+- `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
+- `options` (`ZipUploadOptions`, optional)
+- returns `Promise<{ sourceId }>` - Promise with corresponding source id, allowing to query corresponding files
+
+<details>
+  <summary>example</summary>
+
+```js
+const { sourceId } = await akord.zip.upload(vaultId, "path to your file");
+```
+</details>
+
+#### `restore(items)`
+
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
+- returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
+
 
 ### Development
 > requires Node.js 16

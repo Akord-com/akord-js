@@ -3,11 +3,14 @@ import { Vault } from "../types/vault";
 import { Membership, MembershipKeys } from "../types/membership";
 import { Transaction } from "../types/transaction";
 import { Paginated } from "../types/paginated";
-import { ListOptions, VaultApiGetOptions } from "../types/query-options";
+import { ListApiOptions, ListOptions, ListPaginatedApiOptions, VaultApiGetOptions } from "../types/query-options";
 import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { ApiConfig } from "./config";
 import { FileGetOptions, FileUploadOptions } from "../core/file";
+import { ZipLog, ZipUploadApiOptions } from "../types/zip";
+import { FileLike } from "../types/file";
+import { FileVersion } from "../types";
 
 abstract class Api {
   config: ApiConfig
@@ -24,7 +27,13 @@ abstract class Api {
 
   abstract uploadData(items: { data: any, tags: Tags }[], cloud?: boolean): Promise<Array<string>>
 
+  abstract getZipLogs(options?: ListPaginatedApiOptions): Promise<Paginated<ZipLog>>
+
+  abstract uploadZip(file: ArrayBuffer, vaultId: string, options?: ZipUploadApiOptions): Promise<{ sourceId: string, multipartToken?: string }>
+
   abstract getContractState(vaultId: string): Promise<ContractState>
+
+  abstract getFiles(options?: ListApiOptions): Promise<Paginated<FileVersion>>
 
   abstract downloadFile(id: string, options?: FileGetOptions): Promise<{ fileData: ArrayBuffer | ReadableStream, metadata: EncryptionMetadata }>
 
