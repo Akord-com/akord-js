@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@akord/akord-js": "file:../../../",
-    "@akord/akord-js-pubsub-plugin": "file:../../../plugins/pubsub/",
+    "@akord/akord-js": "file:../../..",
+    "@akord/akord-js-pubsub-plugin": "file:../../../plugins/pubsub",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "react": "^18.3.1",
@@ -25,6 +25,7 @@
   },
   "scripts": {
     "start": "react-app-rewired start",
+    "preinstall": "cd ../../.. && yarn install && yarn build && cd ./plugins/pubsub && yarn install && yarn build",
     "build": "react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
