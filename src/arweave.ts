@@ -1,5 +1,4 @@
 import axios, { AxiosRequestConfig } from "axios";
-import * as mime from "mime-types";
 import { throwError } from "./errors/error-factory";
 import { NotFound } from "./errors/not-found";
 import { Tag, Tags } from "./types/contract";
@@ -33,7 +32,7 @@ const getTxData = async (id: string, responseType = DEFAULT_RESPONSE_TYPE) => {
 const headFileTx = async (id: string) => {
   const txMetadata = await getTxMetadata(id);
   const mimeType = retrieveMimeType(txMetadata.tags);
-  const name = retrieveName(txMetadata.tags) || (id + "." + mime.extension(mimeType));
+  const name = retrieveName(txMetadata.tags) || id;
   const size = txMetadata.data.size;
   const lastModified = txMetadata.block.timestamp;
   return { mimeType, name, size, lastModified };
