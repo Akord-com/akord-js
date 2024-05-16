@@ -2,7 +2,7 @@ import { actionRefs, objectType, status, functions, protocolTags } from "../cons
 import { v4 as uuidv4 } from "uuid";
 import { EncryptedKeys, Encrypter, deriveAddress, base64ToArray, generateKeyPair, Keys } from "@akord/crypto";
 import { Service } from "./service";
-import { Membership, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType } from "../types/membership";
+import { Membership, MembershipAirdropOptions, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType } from "../types/membership";
 import { GetOptions, ListOptions } from "../types/query-options";
 import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
@@ -114,12 +114,12 @@ class MembershipService extends Service {
   /**
    * Airdrop access to the vault directly through public keys
    * @param  {string} vaultId
-   * @param  {{publicKey:string,publicSigningKey:string,role:RoleType}[]} members
+   * @param  {{publicKey:string,publicSigningKey:string,role:RoleType,options:MembershipAirdropOptions}[]} members
    * @returns Promise with new memberships & corresponding transaction id
    */
   public async airdrop(
     vaultId: string,
-    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: { name?: string, expirationDate?: Date, allowedPermanentStorage?: number, allowedCloudStorage?: number } }>,
+    members: Array<{ publicKey: string, publicSigningKey: string, role: RoleType, options?: MembershipAirdropOptions }>,
   ): Promise<{
     transactionId: string,
     members: Array<{ id: string, address: string }>

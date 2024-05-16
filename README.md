@@ -392,10 +392,39 @@ import { AkordWallet } from "@akord/crypto";
 
 const wallet1 = await AkordWallet.create();
 const wallet2 = await AkordWallet.create();
+const wallet3 = await AkordWallet.create();
+const wallet4 = await AkordWallet.create();
+
+const tomorrowSameHour = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+const inOneMinute = new Date(new Date().getTime() + 60 * 1000);
 
 await akord.membership.airdrop(vaultId, [
-   { publicSigningKey: wallet1.signingPublicKey(), publicKey: wallet1.publicKey(), role: "VIEWER" },
-   { publicSigningKey: wallet2.signingPublicKey(), publicKey: wallet2.publicKey(), role: "CONTRIBUTOR" }
+   { 
+    publicSigningKey: wallet1.signingPublicKey(), 
+    publicKey: wallet1.publicKey(), 
+    role: "VIEWER", // view only access to vault
+    expirationDate: tomorrowSameHour // access valid for 24 hours
+   },
+   { 
+    publicSigningKey: wallet2.signingPublicKey(), 
+    publicKey: wallet2.publicKey(), 
+    role: "CONTRIBUTOR", // can edit / add / delete
+    expirationDate: inOneMinute, // access valid for 1 minute
+    allowedStorage: 10 // can use up to 10Mb from host account
+   },
+   { 
+    publicSigningKey: wallet3.signingPublicKey(), 
+    publicKey: wallet3.publicKey(), 
+    role: "CONTRIBUTOR",
+    expirationDate: null, // valid until manual revoke
+    allowedStorage: 0 // can't upload (but can edit e.g. move, rename)
+   },
+   { 
+    publicSigningKey: wallet4.signingPublicKey(), 
+    publicKey: wallet4.publicKey(), 
+    role: "CONTRIBUTOR",
+    allowedStorage: null // can upload using full storage balance of the host
+   }
 ]);
 
 // access the vault as user 1
