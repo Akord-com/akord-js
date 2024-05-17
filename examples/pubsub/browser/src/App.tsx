@@ -11,7 +11,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       const { wallet } = await Auth.signIn(process.env.REACT_APP_USERNAME!, process.env.REACT_APP_PASSWORD!);
-      akord.current = new Akord(wallet, { env: 'dev',  plugins: [new PubSubPlugin()] });
+      akord.current = new Akord(wallet, { plugins: [new PubSubPlugin()] });
       await akord.current.zip.subscribe((notification) => console.log(notification))
     }
     
