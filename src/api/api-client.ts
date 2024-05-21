@@ -703,7 +703,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `${this._apiurl}/${this._uploadsurl}?${new URLSearchParams(this._queryParams).toString()}`,
+      url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(this._queryParams).toString()}`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,

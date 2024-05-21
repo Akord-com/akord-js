@@ -1,11 +1,15 @@
 import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cacheable";
 import { CacheBusters } from "../types/cacheable";
-import { Service } from "./service";
-import { objectType } from "../constants";
 import { StorageType, User } from "../types";
+import { Api } from "../api/api";
+import { Wallet } from "@akord/crypto";
 
-class ProfileService extends Service {
-  objectType = objectType.PROFILE;
+class ProfileModule {
+  protected api: Api;
+
+  constructor(wallet: Wallet, api: Api) {
+    this.api = api;
+  }
 
   /**
    * Fetch currently authenticated user's profile details
@@ -40,5 +44,5 @@ class ProfileService extends Service {
 };
 
 export {
-  ProfileService
+  ProfileModule
 }

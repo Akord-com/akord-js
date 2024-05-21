@@ -403,27 +403,35 @@ await akord.membership.airdrop(vaultId, [
     publicSigningKey: wallet1.signingPublicKey(), 
     publicKey: wallet1.publicKey(), 
     role: "VIEWER", // view only access to vault
-    expirationDate: tomorrowSameHour // access valid for 24 hours
+    options: {
+      expirationDate: tomorrowSameHour // access valid for 24 hours
+    }
    },
    { 
     publicSigningKey: wallet2.signingPublicKey(), 
     publicKey: wallet2.publicKey(), 
     role: "CONTRIBUTOR", // can edit / add / delete
-    expirationDate: inOneMinute, // access valid for 1 minute
-    allowedStorage: 10 // can use up to 10Mb from host account
+    options: {
+      expirationDate: inOneMinute, // access valid for 1 minute
+      allowedStorage: 10 // can use up to 10Mb from host account
+    }
    },
    { 
     publicSigningKey: wallet3.signingPublicKey(), 
     publicKey: wallet3.publicKey(), 
     role: "CONTRIBUTOR",
-    expirationDate: null, // valid until manual revoke
-    allowedStorage: 0 // can't upload (but can edit e.g. move, rename)
+    options: {
+      expirationDate: null, // valid until manual revoke
+      allowedStorage: 0 // can't upload (but can edit e.g. move, rename)
+    }
    },
    { 
     publicSigningKey: wallet4.signingPublicKey(), 
     publicKey: wallet4.publicKey(), 
     role: "CONTRIBUTOR",
-    allowedStorage: null // can upload using full storage balance of the host
+    options: {
+      allowedStorage: null // can upload using full storage balance of the host
+    }
    }
 ]);
 

@@ -4,73 +4,73 @@ import { ClientConfig } from "./config";
 import { Crypto, Wallet } from "@akord/crypto";
 import { reactionEmoji } from "./constants";
 import { Logger } from "./logger";
-import { MemoService } from "./core/memo";
-import { FolderService } from "./core/folder";
-import { MembershipService } from "./core/membership";
-import { VaultService } from "./core/vault";
-import { StackService } from "./core/stack";
-import { NoteService } from "./core/note";
-import { ManifestService } from "./core/manifest";
-import { ProfileService } from "./core/profile";
+import { MemoModule } from "./core/memo";
+import { FolderModule } from "./core/folder";
+import { MembershipModule } from "./core/membership";
+import { VaultModule } from "./core/vault";
+import { StackModule } from "./core/stack";
+import { NoteModule } from "./core/note";
+import { ManifestModule } from "./core/manifest";
+import { ProfileModule } from "./core/profile";
 import { CacheBusters } from "./types/cacheable";
-import { BatchService } from "./core/batch";
-import { ContractService } from "./core/contract";
-import { NFTService } from "./core/nft";
-import { CollectionService } from "./core/collection";
-import { ZipService } from "./core/zip";
-import { FileService } from "./core/file";
+import { BatchModule } from "./core/batch";
+import { ContractModule } from "./core/contract";
+import { NFTModule } from "./core/nft";
+import { CollectionModule } from "./core/collection";
+import { ZipModule } from "./core/zip";
+import { FileModule } from "./core/file";
 import { Plugins } from "./plugin";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
 
   public api: Api;
-  public wallet: Wallet;
-  public env: 'dev' | 'v2';
+  private wallet: Wallet;
+  private env: 'dev' | 'v2';
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
-  get memo(): MemoService {
-    return new MemoService(this.wallet, this.api);
+  get memo(): MemoModule {
+    return new MemoModule(this.wallet, this.api);
   }
-  get folder(): FolderService {
-    return new FolderService(this.wallet, this.api);
+  get folder(): FolderModule {
+    return new FolderModule(this.wallet, this.api);
   }
-  get membership(): MembershipService {
-    return new MembershipService(this.wallet, this.api);
+  get membership(): MembershipModule {
+    return new MembershipModule(this.wallet, this.api);
   }
-  get vault(): VaultService {
-    return new VaultService(this.wallet, this.api);
+  get vault(): VaultModule {
+    return new VaultModule(this.wallet, this.api);
   }
-  get stack(): StackService {
-    return new StackService(this.wallet, this.api);
+  get stack(): StackModule {
+    return new StackModule(this.wallet, this.api);
   }
-  get note(): NoteService {
-    return new NoteService(this.wallet, this.api);
+  get note(): NoteModule {
+    return new NoteModule(this.wallet, this.api);
   }
-  get manifest(): ManifestService {
-    return new ManifestService(this.wallet, this.api);
+  get manifest(): ManifestModule {
+    return new ManifestModule(this.wallet, this.api);
   }
-  get profile(): ProfileService {
-    return new ProfileService(this.wallet, this.api);
+  get profile(): ProfileModule {
+    return new ProfileModule(this.wallet, this.api);
   }
-  get batch(): BatchService {
-    return new BatchService(this.wallet, this.api);
+  get batch(): BatchModule {
+    return new BatchModule(this.wallet, this.api);
   }
-  get contract(): ContractService {
-    return new ContractService(this.wallet, this.api);
+  get contract(): ContractModule {
+    return new ContractModule(this.wallet, this.api);
   }
-  get nft(): NFTService {
-    return new NFTService(this.wallet, this.api);
+  get nft(): NFTModule {
+    return new NFTModule(this.wallet, this.api);
   }
-  get collection(): CollectionService {
-    return new CollectionService(this.wallet, this.api);
+  get collection(): CollectionModule {
+    return new CollectionModule(this.wallet, this.api);
   }
-  get file(): FileService {
-    return new FileService(this.wallet, this.api);
+  get file(): FileModule {
+    return new FileModule(this.wallet, this.api);
   }
-  get zip(): ZipService {
-    return new ZipService(this.wallet, this.api);
+  get zip(): ZipModule {
+    return new ZipModule(this.wallet, this.api);
   }
 
   /**
