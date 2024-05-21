@@ -1,4 +1,4 @@
-import { Service } from "./service";
+import { Service } from "./service/service";
 import { FileLike, FileSource } from "../types/file";
 import { BadRequest } from "../errors/bad-request";
 import { ZipLog, ZipUploadOptions } from "../types/zip";
@@ -11,14 +11,20 @@ import { PluginKey, Plugins } from "../plugin";
 import { Logger } from "../logger";
 import { Notification } from "../types/notification";
 import { Auth } from "@akord/akord-auth";
+import { Wallet } from "@akord/crypto";
+import { Api } from "../api/api";
 
+class ZipModule {
+  protected service: Service;
 
-class ZipService extends Service {
+  constructor(wallet: Wallet, api: Api) {
+    this.service = new Service(wallet, api);
+  }
 
   private events = [ "UNZIP_FINISHED" ]
 
   public async list(options: ListPaginatedApiOptions = {}): Promise<Paginated<ZipLog>> {
-    return await this.api.getZipLogs(options);
+    return await this.service.api.getZipLogs(options);
   }
 
   /**
@@ -38,8 +44,8 @@ class ZipService extends Service {
    * @param  {ZipUploadOptions} [options] parent id, etc.
    */
   public async upload(vaultId: string, fileSource: FileSource, options: ZipUploadOptions = {}): Promise<{ sourceId: string }> {
-    await this.setVaultContext(vaultId);
-    if (!this.vault.public) {
+    await this.service.setVaultContext(vaultId);
+    if (!this.service.vault.public) {
       throw new BadRequest("Zip upload is not supported for private vaults.")
     }
     const file = await createFileLike(fileSource, { name: 'zip' } as FileOptions);
@@ -92,12 +98,12 @@ class ZipService extends Service {
 
   private async simpleUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceId: string }> {
     const buffer = await file.arrayBuffer()
-    return await this.api.uploadZip(buffer, vaultId, options)
+    return await this.service.api.uploadZip(buffer, vaultId, options)
   }
 
   private async multipartUpload(file: FileLike, vaultId: string, options: ZipUploadOptions): Promise<{ sourceId: string }> {
     const { chunkSize, chunksConcurrency, ...initOptions } = options
-    const { multipartToken } = await this.api.uploadZip(null, vaultId, { ...initOptions, multipartInit: true })
+    const { multipartToken } = await this.service.api.uploadZip(null, vaultId, { ...initOptions, multipartInit: true })
     let offset = 0;
     let partNumber = 1;
     const chunksQ = new PQueue({ concurrency: options.chunksConcurrency || CHUNKS_CONCURRENCY });
@@ -107,7 +113,7 @@ class ZipService extends Service {
       const buffer = await file.slice(offset, offset + options.chunkSize).arrayBuffer();
       const currentPart = partNumber;
       chunks.push(
-        () => this.api.uploadZip(buffer, vaultId, { ...apiOptions, partNumber: currentPart })
+        () => this.service.api.uploadZip(buffer, vaultId, { ...apiOptions, partNumber: currentPart })
       )
       offset += options.chunkSize;
       partNumber += 1;
@@ -122,11 +128,11 @@ class ZipService extends Service {
     if (options.cancelHook?.signal?.aborted) {
       throw new AbortError();
     }
-    const { sourceId } = await this.api.uploadZip(null, vaultId, { multipartToken: multipartToken, multipartComplete: true });
+    const { sourceId } = await this.service.api.uploadZip(null, vaultId, { multipartToken: multipartToken, multipartComplete: true });
     return { sourceId }
   }
 };
 
 export {
-  ZipService
+  ZipModule
 }

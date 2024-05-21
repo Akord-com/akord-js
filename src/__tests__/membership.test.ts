@@ -27,8 +27,8 @@ describe("Testing membership functions", () => {
     inviteeAkordInstance = await initInstance(email2, password2);
     const inviteeProfileDetails = await inviteeAkordInstance.profile.get();
     invitee = {
-      publicSigningKey: inviteeAkordInstance.vault.wallet.signingPublicKey(),
-      address: await inviteeAkordInstance.vault.wallet.getAddress(),
+      publicSigningKey: inviteeProfileDetails.publicSigningKey,
+      address: inviteeProfileDetails.address,
       email: email2,
       profileName: inviteeProfileDetails.profileName,
       membershipId: ""
@@ -36,8 +36,8 @@ describe("Testing membership functions", () => {
     ownerAkordInstance = await initInstance(email, password);
     const ownerProfileDetails = await ownerAkordInstance.profile.get();
     owner = {
-      publicSigningKey: ownerAkordInstance.vault.wallet.signingPublicKey(),
-      address: await ownerAkordInstance.vault.wallet.getAddress(),
+      publicSigningKey: ownerProfileDetails.publicSigningKey,
+      address: ownerProfileDetails.address,
       email: email,
       profileName: ownerProfileDetails.profileName,
       membershipId: ""

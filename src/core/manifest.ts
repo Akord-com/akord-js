@@ -1,9 +1,7 @@
-import { NodeService } from "./node";
-import { nodeType } from "../types/node";
 import { Stack } from "../types/stack";
-import { StackService } from "./stack";
-import { FolderService } from "./folder";
-import { arrayToString } from "@akord/crypto";
+import { StackModule } from "./stack";
+import { FolderModule } from "./folder";
+import { Wallet, arrayToString } from "@akord/crypto";
 import { BadRequest } from "../errors/bad-request";
 
 export const CONTENT_TYPE = "application/x.arweave-manifest+json";
@@ -11,18 +9,25 @@ export const FILE_TYPE = "application/json";
 const FILE_NAME = "manifest.json";
 const MANIFEST_TYPE = "arweave/paths";
 const MANIFEST_VERSION = "0.1.0";
+import { Api } from "../api/api";
+import { Service } from ".";
 
-class ManifestService extends NodeService<Stack> {
-  public stackService = new StackService(this.wallet, this.api);
-  public folderService = new FolderService(this.wallet, this.api);
-  objectType = nodeType.STACK;
-  NodeType = Stack;
+class ManifestModule {
+  private stackModule: StackModule;
+  private folderModule: FolderModule;
+  private api: Api;
+
+  constructor(wallet: Wallet, api: Api, service?: Service) {
+    this.api = api;
+    this.stackModule = new StackModule(wallet, api, service, CONTENT_TYPE);
+    this.folderModule = new FolderModule(wallet, api);
+  }
 
   /**
    * @returns Promise with vault manifest node
    */
   public async get(vaultId: string): Promise<Stack> {
-    const stacks = await this.stackService.listAll(vaultId);
+    const stacks = await this.stackModule.listAll(vaultId);
     const manifest = stacks.find((stack) => stack.name === FILE_NAME) as Stack;
     return manifest;
   }
@@ -38,7 +43,7 @@ class ManifestService extends NodeService<Stack> {
     if (!manifest) {
       throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
     }
-    const manifestFile = await this.stackService.getVersion(manifest.id, index, { responseType: 'arraybuffer' });
+    const manifestFile = await this.stackModule.getVersion(manifest.id, index, { responseType: 'arraybuffer' });
     return JSON.parse(arrayToString(manifestFile.data as ArrayBuffer));
   }
 
@@ -48,8 +53,7 @@ class ManifestService extends NodeService<Stack> {
    * @returns Promise with corresponding transaction id
    */
   public async generate(vaultId: string, manifest?: JSON | Object, indexName?: string): Promise<{ transactionId: string, object: Stack, uri: string }> {
-    this.stackService.fileService.contentType = CONTENT_TYPE;
-
+    // TODO: this.stackModule.setContentType(CONTENT_TYPE);
     const vault = await this.api.getVault(vaultId);
     if (!vault.public) {
       throw new BadRequest("Manifest applies only to public vaults.")
@@ -61,10 +65,10 @@ class ManifestService extends NodeService<Stack> {
     const manifestNode = await this.get(vaultId);
     if (manifestNode) {
       // update vault manifest
-      return await this.stackService.uploadRevision(manifestNode.id, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
+      return await this.stackModule.uploadRevision(manifestNode.id, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     } else {
       // create new vault manifest
-      return await this.stackService.create(vaultId, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
+      return await this.stackModule.create(vaultId, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     }
   }
 
@@ -130,13 +134,13 @@ class ManifestService extends NodeService<Stack> {
     };
 
     // load and clean list of folders
-    const folders = (await this.folderService.listAll(vaultId)).map((n) => {
+    const folders = (await this.folderModule.listAll(vaultId)).map((n) => {
       const { id, parentId, name } = n;
       return { id, parentId, name };
     });
 
     // load and clean list of stacks
-    const stacks = (await this.stackService.listAll(vaultId)).map((s) => {
+    const stacks = (await this.stackModule.listAll(vaultId)).map((s) => {
       const { id, parentId, name, versions } = s;
       return new Stack({ id, parentId, name, versions }, null);
     });
@@ -161,7 +165,7 @@ class ManifestService extends NodeService<Stack> {
     };
   };
 
-  private encode (str?: string) {
+  private encode(str?: string) {
     if (str) {
       return encodeURIComponent(str);
     }
@@ -170,5 +174,5 @@ class ManifestService extends NodeService<Stack> {
 };
 
 export {
-  ManifestService
+  ManifestModule
 }

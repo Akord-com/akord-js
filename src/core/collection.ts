@@ -1,25 +1,31 @@
-import { NodeService } from "./node";
+import { NodeService } from "./service/node";
 import { FileVersion, StorageType, UDL_LICENSE_TX_ID, nodeType, tagNames } from "../types";
 import { FileSource } from "../types/file";
 import { FileGetOptions } from "./file";
 import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
 import { Collection, CollectionMetadata, CollectionMintOptions } from "../types/collection";
-import { actionRefs, functions } from "../constants";
+import { actionRefs, functions, objectType } from "../constants";
 import { Tag } from "../types/contract";
 import { DEFAULT_CONTRACT_SRC, WARP_MANIFEST, assetMetadataToTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
 import { mergeState } from "./common";
 import { v4 as uuidv4 } from "uuid";
-import { StackService } from "./stack";
-import { BatchService } from "./batch";
+import { StackModule } from "./stack";
+import { NodeModule } from "./node";
+import { BatchModule } from "./batch";
 import { validateWallets } from "./nft";
 import { InternalError } from "../errors/internal-error";
 import { formatUDL } from "./udl";
 import { Logger } from "../logger";
+import { Service } from "./service/service";
+import { Wallet } from "@akord/crypto";
+import { Api } from "../api/api";
 
-class CollectionService extends NodeService<Collection> {
-  objectType = nodeType.COLLECTION;
-  NodeType = Collection;
+class CollectionModule extends NodeModule<Collection> {
+
+  constructor(wallet: Wallet, api: Api, service?: Service) {
+    super(wallet, api, Collection, nodeType.COLLECTION, service);
+  }
 
   /**
    * Mint a complete collection of Atomic NFTs, note that each NFT will inherit collection metadata setup
@@ -38,21 +44,21 @@ class CollectionService extends NodeService<Collection> {
 
     const { collectionId, object: collection, groupRef } = await this.init(vaultId, items, metadata, options);
 
-    const batchService = new BatchService(this.wallet, this.api);
-    batchService.groupRef = groupRef;
+    const batchService = new BatchModule(this.service.wallet, this.service.api);
+    // batchService.service.groupRef = groupRef;
     const { data, errors } = await batchService.nftMint(
-      vaultId, 
-      items.map((item) => ({ 
+      vaultId,
+      items.map((item) => ({
         asset: item.asset,
         metadata: { ...metadata, collection: collection.code, ...item.metadata },
         options: { parentId: collectionId, ...options, ...item.options }
-      })), 
+      })),
       options
     );
 
     if (data.length !== items.length) {
       Logger.log(errors);
-      const service = new CollectionService(this.wallet, this.api);
+      const service = new CollectionModule(this.service.wallet, this.service.api);
       await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
@@ -67,7 +73,7 @@ class CollectionService extends NodeService<Collection> {
         items: data
       }
     } catch (error) {
-      const service = new CollectionService(this.wallet, this.api);
+      const service = new CollectionModule(this.service.wallet, this.service.api);
       await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
@@ -96,7 +102,7 @@ class CollectionService extends NodeService<Collection> {
     validateAssetMetadata(metadata);
     validateWallets(metadata);
 
-    const vault = await this.api.getVault(vaultId);
+    const vault = await this.service.api.getVault(vaultId);
     if (!vault.public || vault.cacheOnly) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
@@ -107,7 +113,7 @@ class CollectionService extends NodeService<Collection> {
       validateWallets({ ...metadata, ...nft.metadata });
     }));
 
-    const service = new CollectionService(this.wallet, this.api);
+    const service = new NodeService<Collection>(this.service.wallet, this.service.api, Collection, objectType.COLLECTION);
     service.setVault(vault);
     service.setVaultId(vaultId);
     service.setIsPublic(vault.public);
@@ -159,16 +165,16 @@ class CollectionService extends NodeService<Collection> {
       items: mintedItems
     } as any;
 
-    const vault = await this.api.getVault(vaultId);
-    this.setObject(collection);
-    this.setObjectType("Collection");
-    this.setObjectId(collection.id);
-    this.setVaultId(vaultId);
-    this.setVault(vault);
-    this.setIsPublic(true);
-    this.setActionRef(actionRefs.COLLECTION_MINT);
-    this.setFunction(functions.NODE_UPDATE);
-    this.setGroupRef(groupRef);
+    const vault = await this.service.api.getVault(vaultId);
+    this.service.setObject(collection);
+    this.service.setObjectType("Collection");
+    this.service.setObjectId(collection.id);
+    this.service.setVaultId(vaultId);
+    this.service.setVault(vault);
+    this.service.setIsPublic(true);
+    this.service.setActionRef(actionRefs.COLLECTION_MINT);
+    this.service.setFunction(functions.NODE_UPDATE);
+    this.service.setGroupRef(groupRef);
 
     const collectionTags = [
       new Tag("Data-Protocol", "Collection"),
@@ -199,7 +205,7 @@ class CollectionService extends NodeService<Collection> {
     }, collectionMintedState);
 
     if (metadata.banner) {
-      const bannerService = new StackService(this.wallet, this.api, this);
+      const bannerService = new StackModule(this.service.wallet, this.service.api, this.service);
       const { object: banner } = await bannerService.create(
         vaultId,
         metadata.banner,
@@ -214,7 +220,7 @@ class CollectionService extends NodeService<Collection> {
     }
 
     if (metadata.thumbnail) {
-      const thumbnailService = new StackService(this.wallet, this.api, this);
+      const thumbnailService = new StackModule(this.service.wallet, this.service.api, this.service);
       const { object: thumbnail } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail,
@@ -224,7 +230,7 @@ class CollectionService extends NodeService<Collection> {
       collectionState.thumbnail = thumbnail.versions[0];
     }
 
-    this.arweaveTags = await this.getTxTags();
+    this.service.arweaveTags = await this.service.getTxTags();
 
     const contractDeployData = {
       contractSrcTxId: metadata.contractTxId || DEFAULT_CONTRACT_SRC,
@@ -232,7 +238,7 @@ class CollectionService extends NodeService<Collection> {
       tags: collectionTags
     };
 
-    const { transactionId, object } = await this.nodeUpdate<Collection>(collectionState, undefined, contractDeployData);
+    const { transactionId, object } = await this.service.nodeUpdate<Collection>(collectionState, undefined, contractDeployData);
 
     return {
       transactionId: transactionId,
@@ -246,9 +252,9 @@ class CollectionService extends NodeService<Collection> {
    * @returns Promise with the collection banner
    */
   public async getBanner(collectionId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
-    const collection = new Collection(await this.api.getNode<Collection>(collectionId, "Collection"));
+    const collection = new Collection(await this.service.api.getNode<Collection>(collectionId, "Collection"));
     if (collection.banner) {
-      const { fileData } = await this.api.downloadFile(collection.banner.getUri(StorageType.S3), options);
+      const { fileData } = await this.service.api.downloadFile(collection.banner.getUri(StorageType.S3), options);
       return { data: fileData, ...collection.banner } as FileVersion & { data: ArrayBuffer };
     } else {
       return undefined;
@@ -260,9 +266,9 @@ class CollectionService extends NodeService<Collection> {
    * @returns Promise with the collection thumbnail
    */
   public async getThumbnail(collectionId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer } | undefined> {
-    const collection = new Collection(await this.api.getNode<Collection>(collectionId, "Collection"));
+    const collection = new Collection(await this.service.api.getNode<Collection>(collectionId, "Collection"));
     if (collection.thumbnail) {
-      const { fileData } = await this.api.downloadFile(collection.thumbnail.getUri(StorageType.S3), options);
+      const { fileData } = await this.service.api.downloadFile(collection.thumbnail.getUri(StorageType.S3), options);
       return { data: fileData, ...collection.thumbnail } as FileVersion & { data: ArrayBuffer };
     } else {
       return undefined;
@@ -292,5 +298,5 @@ export interface MintCollectionResponse {
 }
 
 export {
-  CollectionService
+  CollectionModule
 }

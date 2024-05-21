@@ -1,8 +1,7 @@
-import { Api } from "../api/api";
+import { Api } from "../../api/api";
 import {
   Wallet,
   Encrypter,
-  EncryptionKeys,
   signString,
   jsonToBase64,
   base64ToArray,
@@ -13,17 +12,17 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../constants';
-import { Vault } from "../types/vault";
-import { Tag, Tags } from "../types/contract";
-import { NodeLike } from "../types/node";
-import { Membership } from "../types/membership";
-import { Object, ObjectType } from "../types/object";
+import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../../constants';
+import { Vault } from "../../types/vault";
+import { Tag, Tags } from "../../types/contract";
+import { NodeLike } from "../../types/node";
+import { Membership } from "../../types/membership";
+import { Object, ObjectType } from "../../types/object";
 import { EncryptOptions, EncryptedPayload } from "@akord/crypto/lib/types";
-import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
-import { getEncryptedPayload, mergeState } from "./common";
-import { EncryptionMetadata } from "../types/encryption";
-import { assetTags } from "../types";
+import { IncorrectEncryptionKey } from "../../errors/incorrect-encryption-key";
+import { getEncryptedPayload, mergeState } from "../common";
+import { EncryptionMetadata } from "../../types/encryption";
+import { assetTags } from "../../types";
 
 export const STATE_CONTENT_TYPE = "application/json";
 
@@ -31,31 +30,27 @@ class Service {
   api: Api
   wallet: Wallet
 
-  protected dataEncrypter: Encrypter
+  dataEncrypter : Encrypter
   keys: Array<EncryptedKeys>
 
   vaultId: string
-  protected objectId: string
-  protected objectType: ObjectType
+  objectId: string
+  objectType: ObjectType
   isPublic: boolean
   vault: Vault
-  protected object: Object
-  protected actionRef: string
+  object: Object
+  actionRef: string
   groupRef: string
 
   function: functions
   tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
 
-  constructor(wallet: Wallet, api: Api, service?: Service, encryptionKeys?: EncryptionKeys) {
+  constructor(wallet: Wallet, api: Api, service?: Service) {
     this.wallet = wallet
     this.api = api
     // for the data encryption
-    this.dataEncrypter = new Encrypter(
-      wallet,
-      encryptionKeys?.keys,
-      encryptionKeys?.getPublicKey()
-    )
+    this.dataEncrypter = new Encrypter(wallet, null, null)
     // set context from another service
     if (service) {
       this.setVault(service.vault);
@@ -109,7 +104,7 @@ class Service {
     this.isPublic = isPublic;
   }
 
-  protected setVault(vault: Vault) {
+  setVault(vault: Vault) {
     this.vault = vault;
   }
 
@@ -186,7 +181,7 @@ class Service {
     return ids[0];
   }
 
-  protected async getTxTags(): Promise<Tags> {
+  async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
       new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
@@ -255,7 +250,7 @@ class Service {
     }
   }
 
-  protected async processReadString(data: string, shouldDecrypt = true): Promise<string> {
+  async processReadString(data: string, shouldDecrypt = true): Promise<string> {
     if (this.isPublic || !shouldDecrypt) return data;
     const decryptedDataRaw = await this.processReadRaw(data, {});
     return arrayToString(decryptedDataRaw);
@@ -268,13 +263,13 @@ class Service {
     };
   }
 
-  protected async getCurrentState(): Promise<any> {
+  async getCurrentState(): Promise<any> {
     return this.object?.data?.length > 0
       ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
       : {};
   }
 
-  protected async mergeAndUploadState(stateUpdates: any, cloud = true): Promise<string> {
+  async mergeAndUploadState(stateUpdates: any, cloud = true): Promise<string> {
     const currentState = await this.getCurrentState();
     const mergedState = mergeState(currentState, stateUpdates);
     return this.uploadState(mergedState, cloud);

@@ -1,21 +1,25 @@
-import { NodeService } from "./node";
 import { FileVersion, StorageType, nodeType } from "../types";
 import { FileSource } from "../types/file";
-import { FileGetOptions, FileService, createFileLike } from "./file";
+import { FileGetOptions, FileModule, createFileLike } from "./file";
 import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
 import { actionRefs, functions } from "../constants";
 import { Tag, Tags } from "../types/contract";
 import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
-import { StackService } from "./stack";
+import { StackModule } from "./stack";
 import { isArweaveId } from "../arweave";
+import { Api } from "../api/api";
+import { Service } from ".";
+import { NodeModule } from "./node";
+import { Wallet } from "@akord/crypto";
 
 const DEFAULT_TICKER = "ATOMIC";
 export const DEFAULT_FRACTION_PARTS = 100;
 
-class NFTService extends NodeService<NFT> {
-  objectType = nodeType.NFT;
-  NodeType = NFT;
+class NFTModule extends NodeModule<NFT> {
+  constructor(wallet: Wallet, api: Api, service?: Service) {
+    super(wallet, api, NFT, nodeType.NFT, service);
+  }
 
   /**
    * @param  {string} vaultId
@@ -31,7 +35,7 @@ class NFTService extends NodeService<NFT> {
     options: NFTMintOptions = this.defaultCreateOptions
   ): Promise<{ nftId: string, transactionId: string, object: NFT, uri: string }> {
 
-    const vault = await this.api.getVault(vaultId);
+    const vault = await this.service.api.getVault(vaultId);
     if (!vault.public || vault.cloud) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
@@ -46,12 +50,12 @@ class NFTService extends NodeService<NFT> {
       ...this.defaultCreateOptions,
       ...options
     }
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    this.setActionRef(actionRefs.NFT_MINT);
-    this.setFunction(functions.NODE_CREATE);
-    this.setAkordTags([]);
+    this.service.setVault(vault);
+    this.service.setVaultId(vaultId);
+    this.service.setIsPublic(vault.public);
+    this.service.setActionRef(actionRefs.NFT_MINT);
+    this.service.setFunction(functions.NODE_CREATE);
+    this.service.setAkordTags([]);
 
     createOptions.arweaveTags = (createOptions.arweaveTags || []).concat(nftTags);
 
@@ -61,7 +65,7 @@ class NFTService extends NodeService<NFT> {
 
     let thumbnail = undefined;
     if (metadata.thumbnail && !metadata.collection) {
-      const thumbnailService = new StackService(this.wallet, this.api, this);
+      const thumbnailService = new StackModule(this.service.wallet, this.service.api, this.service);
       const { object } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail
@@ -74,7 +78,7 @@ class NFTService extends NodeService<NFT> {
     if (fileLike.type) {
       createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
     }
-    const fileService = new FileService(this.wallet, this.api, this);
+    const fileService = new FileModule(this.service.wallet, this.service.api, this.service);
     const fileUploadResult = await fileService.create(fileLike, { ...createOptions, storage: StorageType.ARWEAVE });
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
@@ -82,7 +86,7 @@ class NFTService extends NodeService<NFT> {
     state.asset = version;
     state.thumbnail = thumbnail;
 
-    const { nodeId, transactionId, object } = await this.nodeCreate<NFT>(state, { parentId: options.parentId });
+    const { nodeId, transactionId, object } = await this.service.nodeCreate<NFT>(state, { parentId: options.parentId });
     return { nftId: nodeId, transactionId, object, uri: object.uri };
   }
 
@@ -92,8 +96,8 @@ class NFTService extends NodeService<NFT> {
    * @returns Promise with NFT asset
    */
   public async getAsset(nftId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
-    const nft = new NFT(await this.api.getNode<NFT>(nftId, "NFT"));
-    const { fileData } = await this.api.downloadFile(nft.getUri(StorageType.S3), options);
+    const nft = new NFT(await this.service.api.getNode<NFT>(nftId, "NFT"));
+    const { fileData } = await this.service.api.downloadFile(nft.getUri(StorageType.S3), options);
     return { data: fileData, ...nft.asset } as FileVersion & { data: ArrayBuffer };
   }
 
@@ -103,9 +107,9 @@ class NFTService extends NodeService<NFT> {
    * @returns Promise with the collection thumbnail
    */
   public async getThumbnail(nftId: string, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersion & { data: ArrayBuffer }> {
-    const nft = new NFT(await this.api.getNode<NFT>(nftId, "NFT"));
+    const nft = new NFT(await this.service.api.getNode<NFT>(nftId, "NFT"));
     if (nft.thumbnail) {
-      const { fileData } = await this.api.downloadFile(nft.thumbnail.getUri(StorageType.S3), options);
+      const { fileData } = await this.service.api.downloadFile(nft.thumbnail.getUri(StorageType.S3), options);
       return { data: fileData, ...nft.thumbnail } as FileVersion & { data: ArrayBuffer };
     } else {
       return undefined;
@@ -119,7 +123,7 @@ class NFTService extends NodeService<NFT> {
    * @returns Promise with NFT asset uri
    */
   public async getUri(nftId: string, type: StorageType = StorageType.ARWEAVE): Promise<string> {
-    const nft = new NFT(await this.api.getNode<NFT>(nftId, this.objectType));
+    const nft = new NFT(await this.service.api.getNode<NFT>(nftId, this.objectType));
     return nft.getUri(type);
   }
 };
@@ -168,5 +172,5 @@ export const nftMetadataToTags = (metadata: NFTMetadata): Tags => {
 }
 
 export {
-  NFTService
+  NFTModule
 }
