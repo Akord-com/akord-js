@@ -1,29 +1,36 @@
 import { v4 as uuidv4 } from "uuid";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
 import { Service } from "../core";
-import { MembershipService } from "./membership";
-import { EMPTY_FILE_ERROR_MESSAGE, StackService } from "./stack";
-import { NodeService } from "./node";
+import { EMPTY_FILE_ERROR_MESSAGE } from "./stack";
+import { NodeService } from "./service/node";
 import { Node, NodeLike, NodeType } from "../types/node";
 import { StackCreateOptions, Stack } from "../types/stack";
 import { FileLike, FileSource } from "../types/file";
 import { BatchMembershipInviteResponse, BatchNFTMintOptions, BatchNFTMintResponse, BatchStackCreateOptions, BatchStackCreateResponse } from "../types/batch";
 import { Membership, RoleType, MembershipCreateOptions, activeStatus } from "../types/membership";
-import { FileService, Hooks, createFileLike } from "./file";
+import { FileModule, Hooks, createFileLike } from "./file";
 import { actionRefs, functions, objectType, protocolTags } from "../constants";
 import { ContractInput, Tag, Tags } from "../types/contract";
 import { ObjectType } from "../types/object";
 import { BadRequest } from "../errors/bad-request";
 import { CollectionMintOptions, FileVersion, NFT, NFTMetadata, NFTMintOptions, StorageType, validateAssetMetadata } from "../types";
 import lodash from "lodash";
-import { NFTService, nftMetadataToTags, validateWallets } from "./nft";
+import { nftMetadataToTags, validateWallets } from "./nft";
 import { NFTMintItem } from "./collection";
+import { Wallet } from "@akord/crypto";
+import { Api } from "../api/api";
+import { MembershipService } from "./service/membership";
 
-
-class BatchService extends Service {
+class BatchModule {
 
   public static BATCH_CONCURRENCY = 50;
   parentId: string;
+
+  protected service: Service;
+
+  constructor(wallet: Wallet, api: Api, service?: Service) {
+    this.service = new Service(wallet, api, service);
+  }
 
   /**
    * @param  {{id:string,type:NoteType}[]} items
@@ -118,19 +125,19 @@ class BatchService extends Service {
     })) as StackUploadItem[];
 
     // set service context
-    const vault = await this.api.getVault(vaultId);
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vault);
+    const vault = await this.service.api.getVault(vaultId);
+    this.service.setVault(vault);
+    this.service.setVaultId(vaultId);
+    this.service.setIsPublic(vault.public);
+    await this.service.setMembershipKeys(vault);
     this.setGroupRef(items);
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
+    this.service.setActionRef(actionRefs.STACK_CREATE);
+    this.service.setFunction(functions.NODE_CREATE);
 
     const stackCreateOptions = {
       ...options,
-      cloud: this.vault.cloud,
-      storage: this.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE,
+      cloud: this.service.vault.cloud,
+      storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE,
     }
 
     const { errors, data, cancelled } = await this.upload(stackUploadItems, stackCreateOptions);
@@ -148,7 +155,7 @@ class BatchService extends Service {
     items: NFTMintItem[],
     options: CollectionMintOptions = {}
   ): Promise<BatchNFTMintResponse> {
-    const vault = await this.api.getVault(vaultId);
+    const vault = await this.service.api.getVault(vaultId);
     if (!vault.public || vault.cloud) {
       throw new BadRequest("NFT module applies only to public permanent vaults.");
     }
@@ -177,17 +184,17 @@ class BatchService extends Service {
       return { file: fileLike, metadata: nft.metadata, options: createOptions };
     })) as UploadItem[];
 
-    if (!this.groupRef) {
+    if (!this.service.groupRef) {
       this.setGroupRef(items);
     }
 
     // set service context
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    this.setActionRef(actionRefs.NFT_MINT);
-    this.setFunction(functions.NODE_CREATE);
-    this.setAkordTags([]);
+    this.service.setVault(vault);
+    this.service.setVaultId(vaultId);
+    this.service.setIsPublic(vault.public);
+    this.service.setActionRef(actionRefs.NFT_MINT);
+    this.service.setFunction(functions.NODE_CREATE);
+    this.service.setAkordTags([]);
 
     const { errors, data, cancelled } = await this.upload(itemsToMint, options);
     return { data: data.map(item => ({ nftId: item.id, object: item.object as NFT, transactionId: item.transactionId, uri: item.uri })), errors, cancelled };
@@ -217,15 +224,16 @@ class BatchService extends Service {
     batchProgressCount(batchSize, options);
 
     let itemsCreated = 0;
-    const uploadQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
-    const postTxQ = new PQueue({ concurrency: BatchService.BATCH_CONCURRENCY });
+    const uploadQ = new PQueue({ concurrency: BatchModule.BATCH_CONCURRENCY });
+    const postTxQ = new PQueue({ concurrency: BatchModule.BATCH_CONCURRENCY });
 
     const uploadItem = async (item: UploadItem) => {
-      let service: StackService | NFTService;
-      if (item.metadata) {
-        service = new NFTService(this.wallet, this.api, this)
+      let service: NodeService<NFT | Stack>;
+      const isStackService = !item.metadata;
+      if (isStackService) {
+        service = new NodeService<Stack>(this.service.wallet, this.service.api, Stack, objectType.STACK, this.service);
       } else {
-        service = new StackService(this.wallet, this.api, this);
+        service = new NodeService<NFT>(this.service.wallet, this.service.api, NFT, objectType.NFT, this.service)
       }
 
       const nodeId = uuidv4();
@@ -236,7 +244,7 @@ class BatchService extends Service {
         ...(item.options || {})
       } as StackCreateOptions;
 
-      if (service instanceof StackService) {
+      if (isStackService) {
         service.setAkordTags((service.isPublic ? [item.file.name] : []).concat(createOptions.tags));
         service.setParentId(createOptions.parentId);
         service.arweaveTags = await service.getTxTags();
@@ -244,15 +252,15 @@ class BatchService extends Service {
         service.arweaveTags = createOptions.arweaveTags;
       }
 
-      const fileService = new FileService(this.wallet, this.api, service);
+      const fileService = new FileModule(this.service.wallet, this.service.api, service);
       try {
         const fileUploadResult = await fileService.create(item.file, createOptions);
         const version = await fileService.newVersion(item.file, fileUploadResult);
 
-        if (service instanceof StackService) {
-          postTxQ.add(() => postStackTx(service as StackService, item, version, options), { signal: options.cancelHook?.signal })
+        if (isStackService) {
+          postTxQ.add(() => postStackTx(service as NodeService<Stack>, item, version, options), { signal: options.cancelHook?.signal })
         } else {
-          postTxQ.add(() => postMintTx(service as NFTService, item, version, options), { signal: options.cancelHook?.signal })
+          postTxQ.add(() => postMintTx(service as NodeService<NFT>, item, version, options), { signal: options.cancelHook?.signal })
         }
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
@@ -261,7 +269,7 @@ class BatchService extends Service {
       }
     }
 
-    const postStackTx = async (service: StackService, item: StackUploadItem, version: FileVersion, options: BatchStackCreateOptions) => {
+    const postStackTx = async (service: NodeService<Stack>, item: StackUploadItem, version: FileVersion, options: BatchStackCreateOptions) => {
       try {
         const state = {
           name: await service.processWriteString(item.file.name),
@@ -279,7 +287,7 @@ class BatchService extends Service {
           input,
           service.arweaveTags
         );
-        const stack = await new StackService(service.wallet,service.api, service)
+        const stack = await new NodeService<Stack>(service.wallet, service.api, Stack, objectType.STACK, service)
           .processNode(object, !service.isPublic, service.keys);
         if (options.onStackCreated) {
           await options.onStackCreated(stack);
@@ -291,7 +299,7 @@ class BatchService extends Service {
       };
     }
 
-    const postMintTx = async (service: NFTService, item: UploadItem, version: FileVersion, options: BatchNFTMintOptions) => {
+    const postMintTx = async (service: NodeService<NFT>, item: UploadItem, version: FileVersion, options: BatchNFTMintOptions) => {
       try {
         const state = JSON.parse(service.arweaveTags.find((tag: Tag) => tag.name === "Init-State").value);
         state.asset = version;
@@ -329,7 +337,7 @@ class BatchService extends Service {
    */
   public async membershipInvite(vaultId: string, items: MembershipInviteItem[], options: MembershipCreateOptions = {})
     : Promise<BatchMembershipInviteResponse> {
-    const members = await this.api.getMembers(vaultId);
+    const members = await this.service.api.getMembers(vaultId);
     const data = [] as BatchMembershipInviteResponse["data"];
     const errors = [];
 
@@ -337,13 +345,13 @@ class BatchService extends Service {
 
     // set service context
     this.setGroupRef(items);
-    const vault = await this.api.getVault(vaultId);
-    this.setVault(vault);
-    this.setVaultId(vaultId);
-    this.setIsPublic(vault.public);
-    await this.setMembershipKeys(vault);
-    this.setActionRef(actionRefs.MEMBERSHIP_INVITE);
-    this.setFunction(functions.MEMBERSHIP_INVITE);
+    const vault = await this.service.api.getVault(vaultId);
+    this.service.setVault(vault);
+    this.service.setVaultId(vaultId);
+    this.service.setIsPublic(vault.public);
+    await this.service.setMembershipKeys(vault);
+    this.service.setActionRef(actionRefs.MEMBERSHIP_INVITE);
+    this.service.setFunction(functions.MEMBERSHIP_INVITE);
 
     // upload metadata
     await Promise.all(items.map(async (item: MembershipInviteItem) => {
@@ -354,13 +362,13 @@ class BatchService extends Service {
         const message = "Membership already exists for this user.";
         errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
-        const userHasAccount = await this.api.existsUser(email);
-        const service = new MembershipService(this.wallet, this.api, this);
+        const userHasAccount = await this.service.api.existsUser(email);
+        const service = new MembershipService(this.service.wallet, this.service.api, this.service);
         if (userHasAccount) {
           const membershipId = uuidv4();
           service.setObjectId(membershipId);
 
-          const { address, publicKey, publicSigningKey } = await this.api.getUserPublicData(email);
+          const { address, publicKey, publicSigningKey } = await this.service.api.getUserPublicData(email);
           const state = {
             keys: await service.prepareMemberKeys(publicKey),
             encPublicSigningKey: await service.processWriteString(publicSigningKey)
@@ -379,7 +387,7 @@ class BatchService extends Service {
           });
         } else {
           try {
-            const { id } = await this.api.inviteNewUser(vaultId, email, role, options.message);
+            const { id } = await this.service.api.inviteNewUser(vaultId, email, role, options.message);
             data.push({
               membershipId: id,
               transactionId: null
@@ -399,7 +407,7 @@ class BatchService extends Service {
 
     for (let tx of transactions) {
       try {
-        const { id, object } = await this.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags, { message: options.message });
+        const { id, object } = await this.service.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags, { message: options.message });
         data.push({ membershipId: object.id, transactionId: id, object: new Membership(object) });
       } catch (error: any) {
         errors.push({
@@ -419,17 +427,17 @@ class BatchService extends Service {
     const result = [] as { transactionId: string, object: T }[];
     for (const [itemIndex, item] of items.entries()) {
       const node = item.type === objectType.MEMBERSHIP
-        ? await this.api.getMembership(item.id)
-        : await this.api.getNode<NodeLike>(item.id, item.type);
+        ? await this.service.api.getMembership(item.id)
+        : await this.service.api.getNode<NodeLike>(item.id, item.type);
 
-      if (itemIndex === 0 || this.vaultId !== node.vaultId) {
-        this.setVaultId(node.vaultId);
-        this.setIsPublic(node.__public__);
-        await this.setMembershipKeys(node);
+      if (itemIndex === 0 || this.service.vaultId !== node.vaultId) {
+        this.service.setVaultId(node.vaultId);
+        this.service.setIsPublic(node.__public__);
+        await this.service.setMembershipKeys(node);
       }
       const service = item.type === objectType.MEMBERSHIP
-        ? new MembershipService(this.wallet, this.api, this)
-        : new NodeService<T>(this.wallet, this.api, this);
+        ? new MembershipService(this.service.wallet, this.service.api, this.service)
+        : new NodeService<T>(this.service.wallet, this.service.api, undefined, item.type as any, this.service);
 
       service.setFunction(item.input.function);
       service.setActionRef(item.actionRef);
@@ -437,20 +445,20 @@ class BatchService extends Service {
       service.setObjectId(item.id);
       service.setObjectType(item.type);
       service.arweaveTags = await service.getTxTags();
-      const { id, object } = await this.api.postContractTransaction<T>(service.vaultId, item.input, service.arweaveTags);
+      const { id, object } = await this.service.api.postContractTransaction<T>(service.vaultId, item.input, service.arweaveTags);
       const processedObject = item.type === objectType.MEMBERSHIP
         ? new Membership(object)
-        : await (<NodeService<T>>service).processNode(object as any, !this.isPublic, this.keys) as any;
+        : await (<NodeService<T>>service).processNode(object as any, !this.service.isPublic, this.service.keys) as any;
       result.push({ transactionId: id, object: processedObject });
     }
     return result;
   }
 
-  public setGroupRef(items: any) {
-    this.groupRef = items && items.length > 1 ? uuidv4() : null;
+  protected setGroupRef(items: any) {
+    this.service.groupRef = items && items.length > 1 ? uuidv4() : null;
   }
 
-  setParentId(parentId?: string) {
+  protected setParentId(parentId?: string) {
     this.parentId = parentId;
   }
 }
@@ -535,5 +543,5 @@ export type MembershipInviteItem = {
 }
 
 export {
-  BatchService
+  BatchModule
 }

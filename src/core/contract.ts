@@ -1,9 +1,16 @@
-import { Service } from "../core";
+import { Wallet } from "@akord/crypto";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ContractState, Tags } from "../types/contract";
 import { Transaction } from "../types/transaction";
+import { Api } from "../api/api";
 
-class ContractService extends Service {
+class ContractModule {
+
+  protected api: Api;
+
+  constructor(wallet: Wallet, api: Api) {
+    this.api = api;
+  }
 
   /**
    * @param  id vault contract id
@@ -42,5 +49,5 @@ class ContractService extends Service {
 }
 
 export {
-  ContractService
+  ContractModule
 }
