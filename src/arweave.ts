@@ -4,6 +4,7 @@ import { NotFound } from "./errors/not-found";
 import { Tag, Tags } from "./types/contract";
 import { CONTENT_TYPE as MANIFEST_CONTENT_TYPE, FILE_TYPE as MANIFEST_FILE_TYPE } from "./core/manifest";
 import { DEFAULT_FILE_TYPE } from "./core/file";
+import { mimeTypeToExtension } from "./util/mime-types";
 
 const ARWEAVE_URL = "https://arweave.net";
 
@@ -32,7 +33,8 @@ const getTxData = async (id: string, responseType = DEFAULT_RESPONSE_TYPE) => {
 const headFileTx = async (id: string) => {
   const txMetadata = await getTxMetadata(id);
   const mimeType = retrieveMimeType(txMetadata.tags);
-  const name = retrieveName(txMetadata.tags) || id;
+  const name = retrieveName(txMetadata.tags)
+    || mimeTypeToExtension[mimeType] ? (id + "." + mimeTypeToExtension[mimeType]) : id;
   const size = txMetadata.data.size;
   const lastModified = txMetadata.block.timestamp;
   return { mimeType, name, size, lastModified };
@@ -96,7 +98,7 @@ query transactionsById($id: ID!) {
 const graphql = async (query: any, variables: any) => {
   try {
     const config = {
-      url:`${ARWEAVE_URL}/graphql`,
+      url: `${ARWEAVE_URL}/graphql`,
       method: <any>'post',
       headers: {
         'content-type': 'application/json'
