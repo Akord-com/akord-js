@@ -4,7 +4,7 @@ import { FileSource } from "../types/file";
 import { FileGetOptions } from "./file";
 import { NFT, NFTMetadata, NFTMintOptions } from "../types/nft";
 import { Collection, CollectionMetadata, CollectionMintOptions } from "../types/collection";
-import { actionRefs, functions, objectType } from "../constants";
+import { actionRefs, functions } from "../constants";
 import { Tag } from "../types/contract";
 import { DEFAULT_CONTRACT_SRC, WARP_MANIFEST, assetMetadataToTags, validateAssetMetadata } from "../types/asset";
 import { BadRequest } from "../errors/bad-request";
@@ -17,14 +17,12 @@ import { validateWallets } from "./nft";
 import { InternalError } from "../errors/internal-error";
 import { formatUDL } from "./udl";
 import { Logger } from "../logger";
-import { Service } from "./service/service";
-import { Wallet } from "@akord/crypto";
-import { Api } from "../api/api";
+import { ServiceConfig } from "./service/service";
 
 class CollectionModule extends NodeModule<Collection> {
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    super(wallet, api, Collection, nodeType.COLLECTION, service);
+  constructor(config?: ServiceConfig) {
+    super({ ...config, objectType: nodeType.COLLECTION, nodeType: Collection });
   }
 
   /**
@@ -44,7 +42,7 @@ class CollectionModule extends NodeModule<Collection> {
 
     const { collectionId, object: collection, groupRef } = await this.init(vaultId, items, metadata, options);
 
-    const batchService = new BatchModule(this.service.wallet, this.service.api);
+    const batchService = new BatchModule(this.service);
     // batchService.service.groupRef = groupRef;
     const { data, errors } = await batchService.nftMint(
       vaultId,
@@ -58,7 +56,7 @@ class CollectionModule extends NodeModule<Collection> {
 
     if (data.length !== items.length) {
       Logger.log(errors);
-      const service = new CollectionModule(this.service.wallet, this.service.api);
+      const service = new CollectionModule(this.service);
       await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
@@ -73,7 +71,7 @@ class CollectionModule extends NodeModule<Collection> {
         items: data
       }
     } catch (error) {
-      const service = new CollectionModule(this.service.wallet, this.service.api);
+      const service = new CollectionModule(this.service);
       await service.revoke(collectionId, vaultId);
       throw new InternalError("Something went wrong, please try again later or contact Akord support.");
     }
@@ -113,7 +111,7 @@ class CollectionModule extends NodeModule<Collection> {
       validateWallets({ ...metadata, ...nft.metadata });
     }));
 
-    const service = new NodeService<Collection>(this.service.wallet, this.service.api, Collection, objectType.COLLECTION);
+    const service = new NodeService<Collection>(this.service);
     service.setVault(vault);
     service.setVaultId(vaultId);
     service.setIsPublic(vault.public);
@@ -205,7 +203,7 @@ class CollectionModule extends NodeModule<Collection> {
     }, collectionMintedState);
 
     if (metadata.banner) {
-      const bannerService = new StackModule(this.service.wallet, this.service.api, this.service);
+      const bannerService = new StackModule(this.service);
       const { object: banner } = await bannerService.create(
         vaultId,
         metadata.banner,
@@ -220,7 +218,7 @@ class CollectionModule extends NodeModule<Collection> {
     }
 
     if (metadata.thumbnail) {
-      const thumbnailService = new StackModule(this.service.wallet, this.service.api, this.service);
+      const thumbnailService = new StackModule(this.service);
       const { object: thumbnail } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail,

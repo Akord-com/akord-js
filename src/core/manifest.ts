@@ -1,7 +1,7 @@
 import { Stack } from "../types/stack";
 import { StackModule } from "./stack";
 import { FolderModule } from "./folder";
-import { Wallet, arrayToString } from "@akord/crypto";
+import { arrayToString } from "@akord/crypto";
 import { BadRequest } from "../errors/bad-request";
 
 export const CONTENT_TYPE = "application/x.arweave-manifest+json";
@@ -10,17 +10,17 @@ const FILE_NAME = "manifest.json";
 const MANIFEST_TYPE = "arweave/paths";
 const MANIFEST_VERSION = "0.1.0";
 import { Api } from "../api/api";
-import { Service } from ".";
+import { NodeServiceConfig } from "./service/node";
 
 class ManifestModule {
   private stackModule: StackModule;
   private folderModule: FolderModule;
   private api: Api;
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    this.api = api;
-    this.stackModule = new StackModule(wallet, api, service, CONTENT_TYPE);
-    this.folderModule = new FolderModule(wallet, api);
+  constructor(config?: NodeServiceConfig) {
+    this.api = config?.api;
+    this.stackModule = new StackModule({ ...config, contentType: CONTENT_TYPE });
+    this.folderModule = new FolderModule(config);
   }
 
   /**

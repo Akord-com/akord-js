@@ -1,8 +1,6 @@
 import { Api } from "../../api/api";
 import {
-  Wallet,
   Encrypter,
-  signString,
   jsonToBase64,
   base64ToArray,
   arrayToString,
@@ -23,14 +21,16 @@ import { IncorrectEncryptionKey } from "../../errors/incorrect-encryption-key";
 import { getEncryptedPayload, mergeState } from "../common";
 import { EncryptionMetadata } from "../../types/encryption";
 import { assetTags } from "../../types";
+import { Signer } from "../../signer";
 
 export const STATE_CONTENT_TYPE = "application/json";
 
 class Service {
   api: Api
-  wallet: Wallet
 
-  dataEncrypter : Encrypter
+  signer: Signer
+  encrypter: Encrypter
+
   keys: Array<EncryptedKeys>
 
   vaultId: string
@@ -46,30 +46,28 @@ class Service {
   tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    this.wallet = wallet
-    this.api = api
+  constructor(config: ServiceConfig) {
+    this.signer = config.signer;
+    this.api = config.api;
     // for the data encryption
-    this.dataEncrypter = new Encrypter(wallet, null, null)
-    // set context from another service
-    if (service) {
-      this.setVault(service.vault);
-      this.setVaultId(service.vaultId);
-      this.setIsPublic(service.isPublic);
-      this.setKeys(service.keys);
-      this.setRawDataEncryptionPublicKey(service.dataEncrypter.publicKey);
-      this.setFunction(service.function);
-      this.setActionRef(service.actionRef);
-      this.setObjectId(service.objectId);
-      this.setObject(service.object);
-      this.setGroupRef(service.groupRef);
-      this.setAkordTags(service.tags);
-    }
+    this.encrypter = new Encrypter(config.encrypter?.wallet, config.encrypter?.keys, config.encrypter?.publicKey);
+    // set context from config / another service
+    this.vault = config.vault;
+    this.vaultId = config.vaultId;
+    this.keys = config.keys;
+    this.function = config.function;
+    this.actionRef = config.actionRef;
+    this.objectId = config.objectId;
+    this.isPublic = config.isPublic;
+    this.object = config.object;
+    this.groupRef = config.groupRef;
+    this.tags = config.tags || [];
+    this.arweaveTags = config.arweaveTags || [];
   }
 
   setKeys(keys: EncryptedKeys[]) {
     this.keys = keys;
-    this.dataEncrypter.setKeys(keys);
+    this.encrypter.setKeys(keys);
   }
 
   setVaultId(vaultId: string) {
@@ -109,7 +107,7 @@ class Service {
   }
 
   setRawDataEncryptionPublicKey(publicKey: Uint8Array) {
-    this.dataEncrypter.setRawPublicKey(publicKey);
+    this.encrypter.setRawPublicKey(publicKey);
   }
 
   setAkordTags(tags: string[]) {
@@ -121,7 +119,7 @@ class Service {
     if (this.isPublic) return data;
     let encryptedPayload: string;
     try {
-      encryptedPayload = await this.dataEncrypter.encryptRaw(stringToArray(data)) as string;
+      encryptedPayload = await this.encrypter.encryptRaw(stringToArray(data)) as string;
     } catch (error) {
       throw new IncorrectEncryptionKey(error);
     }
@@ -153,7 +151,7 @@ class Service {
           this.setRawDataEncryptionPublicKey(base64ToArray(object.__publicKey__));
         } else {
           const currentEncPublicKey = object.__keys__[object.__keys__.length - 1].encPublicKey;
-          const publicKey = await this.dataEncrypter.wallet.decrypt(currentEncPublicKey);
+          const publicKey = await this.encrypter.wallet.decrypt(currentEncPublicKey);
           this.setRawDataEncryptionPublicKey(publicKey);
         }
       } catch (error) {
@@ -162,13 +160,17 @@ class Service {
     }
   }
 
+  isCloud() {
+    return this.vault.cloud;
+  }
+
   async uploadState(state: any, cloud = true): Promise<string> {
     const signature = await this.signData(state);
     const tags = [
       new Tag(dataTags.DATA_TYPE, "State"),
       new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
       new Tag(protocolTags.SIGNATURE, signature),
-      new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+      new Tag(protocolTags.SIGNER_ADDRESS, await this.signer.getAddress()),
       new Tag(protocolTags.VAULT_ID, this.vaultId),
       new Tag(protocolTags.NODE_TYPE, this.objectType),
     ]
@@ -184,7 +186,7 @@ class Service {
   async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
-      new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
+      new Tag(protocolTags.SIGNER_ADDRESS, await this.signer.getAddress()),
       new Tag(protocolTags.VAULT_ID, this.vaultId),
       new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())),
       new Tag(protocolTags.NODE_TYPE, this.objectType),
@@ -200,11 +202,11 @@ class Service {
       ?.filter(tag => tag)
       ?.map((tag: string) =>
         tag?.split(" ").join(",").split(".").join(",").split(",")
-        // remove falsy values
-        .filter((tag: string) => tag)
-        .map(
-          (value: string) =>
-          tags.push(new Tag(assetTags.TOPIC + ":" + value.toLowerCase(), value.toLowerCase())))
+          // remove falsy values
+          .filter((tag: string) => tag)
+          .map(
+            (value: string) =>
+              tags.push(new Tag(assetTags.TOPIC + ":" + value.toLowerCase(), value.toLowerCase())))
       );
     // remove duplicates
     return [...new Map(tags.map(item => [item.value, item])).values()];
@@ -218,7 +220,7 @@ class Service {
     } else {
       let encryptedFile: EncryptedPayload;
       try {
-        encryptedFile = await this.dataEncrypter.encryptRaw(new Uint8Array(data), options) as EncryptedPayload;
+        encryptedFile = await this.encrypter.encryptRaw(new Uint8Array(data), options) as EncryptedPayload;
       } catch (error) {
         throw new IncorrectEncryptionKey(error);
       }
@@ -241,9 +243,9 @@ class Service {
     const encryptedPayload = getEncryptedPayload(data, metadata);
     try {
       if (encryptedPayload) {
-        return this.dataEncrypter.decryptRaw(encryptedPayload, false);
+        return this.encrypter.decryptRaw(encryptedPayload, false);
       } else {
-        return this.dataEncrypter.decryptRaw(data as string);
+        return this.encrypter.decryptRaw(data as string);
       }
     } catch (error) {
       throw new IncorrectEncryptionKey(error);
@@ -258,8 +260,8 @@ class Service {
 
   protected async getActiveKey() {
     return {
-      address: await deriveAddress(this.dataEncrypter.publicKey),
-      publicKey: arrayToBase64(this.dataEncrypter.publicKey)
+      address: await deriveAddress(this.encrypter.publicKey),
+      publicKey: arrayToBase64(this.encrypter.publicKey)
     };
   }
 
@@ -276,13 +278,28 @@ class Service {
   }
 
   private async signData(data: any): Promise<string> {
-    const privateKeyRaw = this.wallet.signingPrivateKeyRaw();
-    const signature = await signString(
-      jsonToBase64(data),
-      privateKeyRaw
-    );
+    const signature = await this.signer.sign(jsonToBase64(data));
     return signature;
   }
+}
+
+export type ServiceConfig = {
+  api?: Api,
+  signer?: Signer,
+  encrypter?: Encrypter,
+  keys?: Array<EncryptedKeys>
+  vaultId?: string,
+  objectId?: string,
+  objectType?: ObjectType,
+  function?: functions,
+  isPublic?: boolean,
+  vault?: Vault,
+  object?: Object,
+  actionRef?: string,
+  groupRef?: string,
+  tags?: string[], // akord tags for easier search
+  arweaveTags?: Tags // arweave tx tags,
+  contentType?: string
 }
 
 export { Service };

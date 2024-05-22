@@ -2,14 +2,12 @@ import { actionRefs, functions } from "../constants";
 import { nodeType, NodeCreateOptions } from "../types/node";
 import { Folder, FolderCreateResult } from "../types/folder";
 import { NodeModule } from "./node";
-import { Wallet } from "@akord/crypto";
-import { Api } from "../api/api";
-import { Service } from ".";
+import { ServiceConfig } from ".";
 
 class FolderModule extends NodeModule<Folder> {
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    super(wallet, api, Folder, nodeType.FOLDER, service);
+  constructor(config?: ServiceConfig) {
+    super({ ...config, objectType: nodeType.FOLDER, nodeType: Folder });
   }
 
   /**

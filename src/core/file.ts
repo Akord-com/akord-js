@@ -1,5 +1,5 @@
 import PQueue, { AbortError } from '@esm2cjs/p-queue';
-import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, Wallet, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
+import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, digestRaw, initDigest } from "@akord/crypto";
 import { Service } from "./service/service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
 import { ApiClient } from "../api/api-client";
@@ -16,7 +16,7 @@ import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { Auth } from "@akord/akord-auth";
 import { isServer } from '../util/platform';
-import { Api } from '../api/api';
+import { ServiceConfig } from "./service/service";
 
 export const DEFAULT_FILE_TYPE = "text/plain";
 export const BYTES_IN_MB = 1000000;
@@ -32,9 +32,9 @@ class FileModule {
 
   protected service: Service;
 
-  constructor(wallet: Wallet, api: Api, service?: Service, contentType?: string) {
-    this.service = new Service(wallet, api, service);
-    this.contentType = contentType;
+  constructor(config?: ServiceConfig) {
+    this.service = new Service(config);
+    this.contentType = config?.contentType;
   }
 
   /**
@@ -104,7 +104,7 @@ class FileModule {
       const encryptedKey = file.metadata.encryptedKey;
       const iv = file.metadata.iv?.split(',');
       const streamChunkSize = options.chunkSize ? options.chunkSize + AUTH_TAG_LENGTH_IN_BYTES + (iv ? 0 : IV_LENGTH_IN_BYTES) : null;
-      stream = await this.service.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
+      stream = await this.service.encrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
     }
 
     if (options.responseType === 'arraybuffer') {
@@ -280,11 +280,7 @@ class FileModule {
   }
 
   private async getFileSignatureTags(resourceHash: string): Promise<Tags> {
-    const privateKeyRaw = this.service.wallet.signingPrivateKeyRaw();
-    const signature = await signHash(
-      base64ToArray(resourceHash),
-      privateKeyRaw
-    );
+    const signature = await this.service.signer.sign(resourceHash);
     return [new Tag(protocolTags.SIGNATURE, signature), new Tag(fileTags.FILE_HASH, resourceHash)];
   }
 };

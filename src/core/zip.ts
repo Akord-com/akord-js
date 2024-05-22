@@ -1,4 +1,4 @@
-import { Service } from "./service/service";
+import { Service, ServiceConfig } from "./service/service";
 import { FileLike, FileSource } from "../types/file";
 import { BadRequest } from "../errors/bad-request";
 import { ZipLog, ZipUploadOptions } from "../types/zip";
@@ -11,14 +11,12 @@ import { PluginKey, Plugins } from "../plugin";
 import { Logger } from "../logger";
 import { Notification } from "../types/notification";
 import { Auth } from "@akord/akord-auth";
-import { Wallet } from "@akord/crypto";
-import { Api } from "../api/api";
 
 class ZipModule {
   protected service: Service;
 
-  constructor(wallet: Wallet, api: Api) {
-    this.service = new Service(wallet, api);
+  constructor(config?: ServiceConfig) {
+    this.service = new Service(config);
   }
 
   private events = [ "UNZIP_FINISHED" ]

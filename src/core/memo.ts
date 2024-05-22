@@ -7,15 +7,13 @@ import { NotFound } from "../errors/not-found";
 import { EncryptedKeys } from "@akord/crypto";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { NodeModule } from "./node";
-import { Wallet } from "@akord/crypto";
-import { Api } from "../api/api";
-import { Service } from ".";
+import { ServiceConfig } from ".";
 
 class MemoModule extends NodeModule<Memo> {
   static readonly reactionEmoji = reactionEmoji;
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    super(wallet, api, Memo, nodeType.MEMO, service);
+  constructor(config?: ServiceConfig) {
+    super({ ...config, objectType: nodeType.MEMO, nodeType: Memo });
     this.service.defaultListOptions = {
       shouldDecrypt: true,
       filter: {}
@@ -55,7 +53,7 @@ class MemoModule extends NodeModule<Memo> {
     const currentState = await this.service.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
-    const dataTxId = await this.service.uploadState(newState, this.service.vault.cloud);
+    const dataTxId = await this.service.uploadState(newState, this.service.isCloud());
 
     const { id, object } = await this.service.api.postContractTransaction<Memo>(
       this.service.vaultId,
@@ -78,7 +76,7 @@ class MemoModule extends NodeModule<Memo> {
     this.service.arweaveTags = await this.service.getTxTags();
 
     const state = await this.deleteReaction(reaction);
-    const dataTxId = await this.service.uploadState(state, this.service.vault.cloud);
+    const dataTxId = await this.service.uploadState(state, this.service.isCloud());
 
     const { id, object } = await this.service.api.postContractTransaction<Memo>(
       this.service.vaultId,
@@ -103,7 +101,7 @@ class MemoModule extends NodeModule<Memo> {
 
   private async memoVersion(message: string): Promise<MemoVersion> {
     const version = {
-      owner: await this.service.wallet.getAddress(),
+      owner: await this.service.signer.getAddress(),
       message: await this.service.processWriteString(message),
       createdAt: JSON.stringify(Date.now()),
       reactions: []
@@ -114,7 +112,7 @@ class MemoModule extends NodeModule<Memo> {
   private async memoReaction(reactionEmoji: reactionEmoji): Promise<MemoReaction> {
     const reaction = {
       reaction: await this.service.processWriteString(reactionEmoji),
-      owner: await this.service.wallet.getAddress(),
+      owner: await this.service.signer.getAddress(),
       createdAt: JSON.stringify(Date.now())
     };
     return new MemoReaction(reaction);
@@ -129,7 +127,7 @@ class MemoModule extends NodeModule<Memo> {
   }
 
   private async getReactionIndex(reactions: MemoReaction[], reaction: string) {
-    const address = await this.service.wallet.getAddress();
+    const address = await this.service.signer.getAddress();
     for (const [key, value] of Object.entries(reactions)) {
       if (value.owner === address && reaction === await this.service.processReadString(value.reaction)) {
         return key;

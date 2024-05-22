@@ -1,4 +1,4 @@
-import { NodeService } from "./service/node";
+import { NodeService, NodeServiceConfig } from "./service/node";
 import { actionRefs, encryptionTags, encryptionTagsLegacy, functions, objectType } from "../constants";
 import { FileDownloadOptions, FileGetOptions, FileModule, FileUploadOptions, FileVersionData, createFileLike } from "./file";
 import { FileSource } from "../types/file";
@@ -6,26 +6,22 @@ import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateR
 import { StreamConverter } from "../util/stream-converter";
 import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
 import { importDynamic } from "../util/import";
-import { PROXY_DOWNLOAD_URL, Wallet } from "@akord/crypto";
+import { PROXY_DOWNLOAD_URL } from "@akord/crypto";
 import { Platform, getPlatform, isServer } from "../util/platform";
 import { Logger } from "../logger";
 import { BadRequest } from "../errors/bad-request";
 import { ARWEAVE_URL, headFileTx } from "../arweave";
-import { Api } from "../api/api";
-import { Service } from ".";
 import { NodeModule } from "./node";
 
 export const EMPTY_FILE_ERROR_MESSAGE = "Cannot upload an empty file";
 
 class StackModule extends NodeModule<Stack> {
-  private fileModule: FileModule;
   protected stackCreateDefaultOptions: StackCreateOptions;
   protected contentType: string;
 
-  constructor(wallet: Wallet, api: Api, service?: Service, contentType?: string) {
-    super(wallet, api, Stack, nodeType.STACK, service);
-    this.fileModule = new FileModule(wallet, api, service, contentType);
-    this.contentType = contentType;
+  constructor(config?: NodeServiceConfig) {
+    super({ ...config, nodeType: Stack, objectType: nodeType.STACK });
+    this.contentType = config?.contentType;
     this.stackCreateDefaultOptions = {
       ...this.service.defaultCreateOptions,
       overrideFileName: true
@@ -45,7 +41,7 @@ class StackModule extends NodeModule<Stack> {
     this.service.setFunction(functions.NODE_CREATE);
 
     const optionsFromVault = {
-      storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
+      storage: this.service.isCloud() ? StorageType.S3 : StorageType.ARWEAVE
     }
     const createOptions = {
       ...this.stackCreateDefaultOptions,
@@ -53,7 +49,7 @@ class StackModule extends NodeModule<Stack> {
       ...options
     }
 
-    const fileService = new FileModule(this.service.wallet, this.service.api, this.service, this.contentType);
+    const fileService = new FileModule({ ...this.service, contentType: this.contentType });
 
     const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name : undefined });
 
@@ -93,7 +89,7 @@ class StackModule extends NodeModule<Stack> {
 
     const { name, mimeType, size } = await headFileTx(fileTxId);
     const version = new FileVersion({
-      owner: await this.service.wallet.getAddress(),
+      owner: await this.service.signer.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: name,
       type: mimeType,
@@ -121,14 +117,14 @@ class StackModule extends NodeModule<Stack> {
     this.service.setFunction(functions.NODE_UPDATE);
 
     const optionsFromVault = {
-      storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
+      storage: this.service.isCloud() ? StorageType.S3 : StorageType.ARWEAVE
     }
     const uploadOptions = {
       ...optionsFromVault,
       ...options
     }
 
-    const fileService = new FileModule(this.service.wallet, this.service.api, this.service, this.contentType);
+    const fileService = new FileModule({ ...this.service, contentType: this.contentType });
 
     const fileLike = await createFileLike(file, options);
     const fileUploadResult = await fileService.create(fileLike, uploadOptions);
@@ -156,8 +152,8 @@ class StackModule extends NodeModule<Stack> {
       await version.decrypt();
     }
     const uri = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3);
-    const service = new FileModule(this.service.wallet, this.service.api, this.service);
-    const data = await service.download(uri, { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
+    const fileService = new FileModule(this.service);
+    const data = await fileService.download(uri, { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
     return { ...version, data };
   }
 
@@ -194,7 +190,7 @@ class StackModule extends NodeModule<Stack> {
         downloadPromise = this.saveFile(path, contentType, data as ReadableStream, options.skipSave);
         break;
       case Platform.Browser:
-        const service = new NodeService<Stack>(this.service.wallet, this.service.api, Stack, objectType.STACK);
+        const service = new NodeService<Stack>(this.service);
         const stackProto = await this.service.api.getNode<Stack>(stackId, objectType.STACK)
         const stack = new Stack(stackProto, stackProto.__keys__);
         const version = stack.getVersion(index);
@@ -219,7 +215,7 @@ class StackModule extends NodeModule<Stack> {
             || tag.name.toLowerCase() === encryptionTagsLegacy.ENCRYPTED_KEY.toLowerCase())?.value
           const iv = tags.find(tag => tag.name === encryptionTags.IV
             || tag.name.toLowerCase() === encryptionTagsLegacy.IV.toLowerCase())?.value
-          const key = await service.dataEncrypter.decryptKey(encryptedKey);
+          const key = await service.encrypter.decryptKey(encryptedKey);
           workerMessage.key = key;
           workerMessage.iv = iv;
         }

@@ -1,15 +1,15 @@
-import { Wallet } from "@akord/crypto";
 import { IncorrectEncryptionKey } from "../errors/incorrect-encryption-key";
 import { ContractState, Tags } from "../types/contract";
 import { Transaction } from "../types/transaction";
 import { Api } from "../api/api";
+import { ServiceConfig } from ".";
 
 class ContractModule {
 
   protected api: Api;
 
-  constructor(wallet: Wallet, api: Api) {
-    this.api = api;
+  constructor(config?: ServiceConfig) {
+    this.api = config?.api;
   }
 
   /**

@@ -2,13 +2,13 @@ import { InMemoryStorageStrategy, PCacheable, PCacheBuster } from "@akord/ts-cac
 import { CacheBusters } from "../types/cacheable";
 import { StorageType, User } from "../types";
 import { Api } from "../api/api";
-import { Wallet } from "@akord/crypto";
+import { ServiceConfig } from ".";
 
 class ProfileModule {
   protected api: Api;
 
-  constructor(wallet: Wallet, api: Api) {
-    this.api = api;
+  constructor(config?: ServiceConfig) {
+    this.api = config?.api;
   }
 
   /**

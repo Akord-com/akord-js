@@ -1,12 +1,12 @@
 import { Stack } from "../types/stack";
 import { StackModule } from "./stack";
-import { Wallet, arrayToString } from "@akord/crypto";
+import { arrayToString } from "@akord/crypto";
 import { Paginated } from "../types/paginated";
 import { NoteCreateOptions, NoteCreateResult, NoteOptions, NoteTypes, NoteUpdateResult } from "../types/note";
-import { Api } from "../api/api";
 import { ListOptions } from "../types/query-options";
 import { NodeModule } from "./node";
-import { objectType } from "../constants";
+import { NodeServiceConfig } from "./service/node";
+import { nodeType } from "../types";
 
 class NoteModule extends NodeModule<Stack> {
 
@@ -17,9 +17,9 @@ class NoteModule extends NodeModule<Stack> {
 
   private stackModule: StackModule;
 
-  constructor(wallet: Wallet, api: Api) {
-    super(wallet, api, Stack, objectType.STACK);
-    this.stackModule = new StackModule(wallet, api);
+  constructor(config?: NodeServiceConfig) {
+    super({ ...config, nodeType: Stack, objectType: nodeType.STACK });
+    this.stackModule = new StackModule(config);
   }
 
   /**

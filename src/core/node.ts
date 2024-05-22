@@ -1,7 +1,6 @@
-import { Service } from './service/service';
 import { functions, status } from "../constants";
 import { NodeCreateOptions, NodeLike, NodeType } from '../types/node';
-import { EncryptedKeys, Wallet } from '@akord/crypto';
+import { EncryptedKeys } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
 import { Paginated } from '../types/paginated';
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
@@ -12,8 +11,7 @@ import { Stack } from '../types/stack';
 import { Memo } from '../types/memo';
 import { NFT } from '../types/nft';
 import { Collection } from '../types/collection';
-import { NodeService } from './service/node';
-import { Api } from '../api/api';
+import { NodeService, NodeServiceConfig } from './service/node';
 
 class NodeModule<T> {
   protected objectType: NodeType;
@@ -43,9 +41,9 @@ class NodeModule<T> {
     arweaveTags: [],
   } as NodeCreateOptions;
 
-  constructor(wallet: Wallet, api: Api, nodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike, objectType: NodeType, service?: Service) {
-    this.service = new NodeService<T>(wallet, api, nodeType, objectType, service);
-    this.objectType = objectType;
+  constructor(config?: NodeServiceConfig) {
+    this.service = new NodeService<T>(config);
+    this.objectType = config.objectType;
   }
 
   /**

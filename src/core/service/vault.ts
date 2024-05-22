@@ -1,15 +1,14 @@
-import { EncryptedKeys, Wallet } from "@akord/crypto";
-import { Service } from "./service";
+import { EncryptedKeys } from "@akord/crypto";
+import { Service, ServiceConfig } from "./service";
 import { IncorrectEncryptionKey } from "../../errors/incorrect-encryption-key";
 import { NotFound } from "../../errors/not-found";
 import { Vault } from "../../types";
-import { Api } from "../../api/api";
 import { objectType } from "../../constants";
 
 class VaultService extends Service {
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    super(wallet, api, service);
+  constructor(config?: ServiceConfig) {
+    super(config);
     this.objectType = objectType.VAULT;
   }
 

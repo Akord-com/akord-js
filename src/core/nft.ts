@@ -8,17 +8,16 @@ import { assetMetadataToTags, atomicContractTags, validateAssetMetadata } from "
 import { BadRequest } from "../errors/bad-request";
 import { StackModule } from "./stack";
 import { isArweaveId } from "../arweave";
-import { Api } from "../api/api";
-import { Service } from ".";
+import { ServiceConfig } from ".";
 import { NodeModule } from "./node";
-import { Wallet } from "@akord/crypto";
 
 const DEFAULT_TICKER = "ATOMIC";
 export const DEFAULT_FRACTION_PARTS = 100;
 
 class NFTModule extends NodeModule<NFT> {
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    super(wallet, api, NFT, nodeType.NFT, service);
+
+  constructor(config?: ServiceConfig) {
+    super({ ...config, objectType: nodeType.NFT, nodeType: NFT });
   }
 
   /**
@@ -65,7 +64,7 @@ class NFTModule extends NodeModule<NFT> {
 
     let thumbnail = undefined;
     if (metadata.thumbnail && !metadata.collection) {
-      const thumbnailService = new StackModule(this.service.wallet, this.service.api, this.service);
+      const thumbnailService = new StackModule(this.service);
       const { object } = await thumbnailService.create(
         vaultId,
         metadata.thumbnail
@@ -78,7 +77,7 @@ class NFTModule extends NodeModule<NFT> {
     if (fileLike.type) {
       createOptions.arweaveTags.push(new Tag('Content-Type', fileLike.type));
     }
-    const fileService = new FileModule(this.service.wallet, this.service.api, this.service);
+    const fileService = new FileModule(this.service);
     const fileUploadResult = await fileService.create(fileLike, { ...createOptions, storage: StorageType.ARWEAVE });
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 

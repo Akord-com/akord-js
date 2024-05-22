@@ -2,20 +2,19 @@ import { actionRefs, status, functions, protocolTags } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { Membership, MembershipAirdropOptions, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType } from "../types/membership";
 import { deriveAddress, base64ToArray, Wallet } from "@akord/crypto";
-import { Service } from "./service/service";
+import { ServiceConfig } from "./service/service";
 import { GetOptions, ListOptions } from "../types/query-options";
 import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
 import { paginate } from "./common";
-import { Api } from "../api/api";
 import { MembershipService } from "./service/membership";
 
 class MembershipModule {
   protected service: MembershipService;
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    this.service = new MembershipService(wallet, api, service);
+  constructor(config?: ServiceConfig) {
+    this.service = new MembershipService(config);
   }
 
   protected defaultListOptions = {
@@ -98,7 +97,7 @@ class MembershipModule {
     this.service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.service.getTxTags());
 
-    const dataTxId = await this.service.uploadState(state, this.service.vault.cloud);
+    const dataTxId = await this.service.uploadState(state, this.service.isCloud());
 
     const input = {
       function: this.service.function,
@@ -149,7 +148,7 @@ class MembershipModule {
         encPublicSigningKey: await this.service.processWriteString(member.publicSigningKey),
       };
 
-      const data = await this.service.uploadState(state, this.service.vault.cloud);
+      const data = await this.service.uploadState(state, this.service.isCloud());
       dataArray.push({
         id: membershipId,
         data
@@ -188,12 +187,12 @@ class MembershipModule {
   public async accept(membershipId: string): Promise<MembershipUpdateResult> {
     await this.service.setVaultContextFromMembershipId(membershipId);
     const state = {
-      encPublicSigningKey: await this.service.processWriteString(this.service.wallet.signingPublicKey())
+      encPublicSigningKey: await this.service.processWriteString(await this.service.signer.signingPublicKey())
     }
     this.service.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     this.service.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await this.service.mergeAndUploadState(state, this.service.vault.cloud);
+    const data = await this.service.mergeAndUploadState(state, this.service.isCloud());
     const { id, object } = await this.service.api.postContractTransaction<Membership>(
       this.service.vaultId,
       { function: this.service.function, data },
@@ -220,7 +219,7 @@ class MembershipModule {
     this.service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.service.getTxTags());
 
-    const dataTxId = await this.service.uploadState(state, this.service.vault.cloud);
+    const dataTxId = await this.service.uploadState(state, this.service.isCloud());
 
     const input = {
       function: this.service.function,
@@ -301,11 +300,11 @@ class MembershipModule {
       // upload new state for all active members
       data = [];
       await Promise.all(activeMembers.map(async (member: Membership) => {
-        const memberService = new MembershipService(this.service.wallet, this.service.api);
+        const memberService = new MembershipService(this.service);
         memberService.setVaultId(this.service.vaultId);
         memberService.setObjectId(member.id);
         memberService.setObject(member);
-        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, this.service.vault.cloud);
+        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, this.service.isCloud());
         data.push({ id: member.id, value: dataTx });
       }));
     }

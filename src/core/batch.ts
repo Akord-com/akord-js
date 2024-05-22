@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
-import { Service } from "../core";
+import { Service, ServiceConfig } from "../core";
 import { EMPTY_FILE_ERROR_MESSAGE } from "./stack";
 import { NodeService } from "./service/node";
 import { Node, NodeLike, NodeType } from "../types/node";
@@ -17,8 +17,6 @@ import { CollectionMintOptions, FileVersion, NFT, NFTMetadata, NFTMintOptions, S
 import lodash from "lodash";
 import { nftMetadataToTags, validateWallets } from "./nft";
 import { NFTMintItem } from "./collection";
-import { Wallet } from "@akord/crypto";
-import { Api } from "../api/api";
 import { MembershipService } from "./service/membership";
 
 class BatchModule {
@@ -28,8 +26,8 @@ class BatchModule {
 
   protected service: Service;
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    this.service = new Service(wallet, api, service);
+  constructor(config?: ServiceConfig) {
+    this.service = new Service(config);
   }
 
   /**
@@ -136,8 +134,8 @@ class BatchModule {
 
     const stackCreateOptions = {
       ...options,
-      cloud: this.service.vault.cloud,
-      storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE,
+      cloud: this.service.isCloud(),
+      storage: this.service.isCloud() ? StorageType.S3 : StorageType.ARWEAVE
     }
 
     const { errors, data, cancelled } = await this.upload(stackUploadItems, stackCreateOptions);
@@ -231,9 +229,9 @@ class BatchModule {
       let service: NodeService<NFT | Stack>;
       const isStackService = !item.metadata;
       if (isStackService) {
-        service = new NodeService<Stack>(this.service.wallet, this.service.api, Stack, objectType.STACK, this.service);
+        service = new NodeService<Stack>({ ...this.service, objectType: objectType.STACK, nodeType: Stack });
       } else {
-        service = new NodeService<NFT>(this.service.wallet, this.service.api, NFT, objectType.NFT, this.service)
+        service = new NodeService<NFT>({ ...this.service, objectType: objectType.NFT, nodeType: NFT });
       }
 
       const nodeId = uuidv4();
@@ -252,7 +250,7 @@ class BatchModule {
         service.arweaveTags = createOptions.arweaveTags;
       }
 
-      const fileService = new FileModule(this.service.wallet, this.service.api, service);
+      const fileService = new FileModule(this.service);
       try {
         const fileUploadResult = await fileService.create(item.file, createOptions);
         const version = await fileService.newVersion(item.file, fileUploadResult);
@@ -276,7 +274,7 @@ class BatchModule {
           versions: [version],
           tags: service.tags
         };
-        const dataTx = await service.uploadState(state, service.vault.cloud);
+        const dataTx = await service.uploadState(state, service.isCloud());
         const input = {
           function: service.function,
           data: dataTx,
@@ -287,7 +285,7 @@ class BatchModule {
           input,
           service.arweaveTags
         );
-        const stack = await new NodeService<Stack>(service.wallet, service.api, Stack, objectType.STACK, service)
+        const stack = await new NodeService<Stack>({ ...service, objectType: objectType.STACK, nodeType: Stack })
           .processNode(object, !service.isPublic, service.keys);
         if (options.onStackCreated) {
           await options.onStackCreated(stack);
@@ -363,7 +361,7 @@ class BatchModule {
         errors.push({ email: email, message, error: new BadRequest(message) });
       } else {
         const userHasAccount = await this.service.api.existsUser(email);
-        const service = new MembershipService(this.service.wallet, this.service.api, this.service);
+        const service = new MembershipService(this.service);
         if (userHasAccount) {
           const membershipId = uuidv4();
           service.setObjectId(membershipId);
@@ -377,7 +375,7 @@ class BatchModule {
           service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
             .concat(await service.getTxTags());
 
-          const dataTxId = await service.uploadState(state, service.vault.cloud);
+          const dataTxId = await service.uploadState(state, service.isCloud());
 
           transactions.push({
             vaultId,
@@ -436,8 +434,8 @@ class BatchModule {
         await this.service.setMembershipKeys(node);
       }
       const service = item.type === objectType.MEMBERSHIP
-        ? new MembershipService(this.service.wallet, this.service.api, this.service)
-        : new NodeService<T>(this.service.wallet, this.service.api, undefined, item.type as any, this.service);
+        ? new MembershipService(this.service)
+        : new NodeService<T>(<any>this.service);
 
       service.setFunction(item.input.function);
       service.setActionRef(item.actionRef);

@@ -2,13 +2,14 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.30.34":
-  version "0.30.34"
-  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.34.tgz#73962cd1326b4b093aaf536d9f10ebb4b3991922"
-  integrity sha512-ibGHjpR0oTidYgaogPRy4g9TuNPclgLbSFpRlaJlr5OqCC40LqZAjZ1Cy+GPGnqqW7NjuZns99asFHmD80rpPQ==
+"@akord/akord-auth@0.30.0-alpha.13":
+  version "0.30.0-alpha.13"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.0-alpha.13.tgz#1c2ead20d6b032759b9cd9eae4545b835cde4e4c"
+  integrity sha512-6M2pxCOszV7AuKYD0LBqM2ErrK2O3H0uXzbzWkFiNsHG4fJEgW71hS6mBCEsJ6aDxuk8GG6jwsFRnsZrSxU4Mg==
   dependencies:
-    "@akord/crypto" "0.21.49"
+    "@akord/crypto" "0.21.54"
     amazon-cognito-identity-js "6.1.2"
+    jwt-decode "4.0.0"
     memorystorage "^0.12.0"
 
 "@akord/browser-level@^1.0.2":
@@ -21,10 +22,10 @@
     module-error "^1.0.2"
     run-parallel-limit "^1.1.0"
 
-"@akord/crypto@0.21.49":
-  version "0.21.49"
-  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.21.49.tgz#e4471569a3a36e6a0040c5409c5455549f38edae"
-  integrity sha512-TGS9Ii+AEX+8EzJMeP+1LrBnjtF99/dETAXbmQ86n5VVPugdVaJNfOLjOkkxeuXAx4GPIC3g8IysXMGlVJwSzw==
+"@akord/crypto@0.21.54":
+  version "0.21.54"
+  resolved "https://registry.yarnpkg.com/@akord/crypto/-/crypto-0.21.54.tgz#2a5c5c53738c965defe54b5450a10435be47ccac"
+  integrity sha512-MKbXi/Ttbel48xHel2oM9DJQPIsxJKH1qLjL7pE3umZxSBq+F1ow+lINbmJ2Xx0xaOzb9ZkGSxxbFuorJEhtbg==
   dependencies:
     "@akord/browser-level" "^1.0.2"
     bip39 "^3.1.0"
@@ -2045,6 +2046,11 @@ jssha@^3.3.1:
   resolved "https://registry.npmjs.org/jssha/-/jssha-3.3.1.tgz"
   integrity sha512-VCMZj12FCFMQYcFLPRm/0lOBbLi8uM2BhXPTqw3U4YAfs4AZfiApOoBLoN8cQE60Z50m1MYMTQVCfgF/KaCVhQ==
 
+jwt-decode@4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/jwt-decode/-/jwt-decode-4.0.0.tgz#2270352425fd413785b2faf11f6e755c5151bd4b"
+  integrity sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==
+
 kleur@^3.0.3:
   version "3.0.3"
   resolved "https://registry.npmjs.org/kleur/-/kleur-3.0.3.tgz"
@@ -2146,7 +2152,7 @@ memory-level@^1.0.0:
 
 memorystorage@^0.12.0:
   version "0.12.0"
-  resolved "https://registry.npmjs.org/memorystorage/-/memorystorage-0.12.0.tgz"
+  resolved "https://registry.yarnpkg.com/memorystorage/-/memorystorage-0.12.0.tgz#582a3374d298e8352dc4512df0186c335d137018"
   integrity sha512-8oAVcjcyCCqG2iYSXf7AhyESaHkodE3UUouMS6NhqoY2Bnb1xoPe3sdbf3ExufPGkFYi/HgP7SPer8SFsc6MYg==
 
 merge-stream@^2.0.0:

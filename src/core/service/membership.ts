@@ -1,14 +1,13 @@
 import { objectType, protocolTags } from "../../constants";
-import { EncryptedKeys, Encrypter, base64ToArray, generateKeyPair, Keys, Wallet } from "@akord/crypto";
-import { Service } from "./service";
+import { EncryptedKeys, Encrypter, base64ToArray, generateKeyPair, Keys } from "@akord/crypto";
+import { Service, ServiceConfig } from "./service";
 import { Tag, Tags } from "../../types/contract";
 import { IncorrectEncryptionKey } from "../../errors/incorrect-encryption-key";
-import { Api } from "../../api/api";
 
 class MembershipService extends Service {
 
-  constructor(wallet: Wallet, api: Api, service?: Service) {
-    super(wallet, api, service);
+  constructor(config?: ServiceConfig) {
+    super(config);
     this.objectType = objectType.MEMBERSHIP;
   }
 
@@ -31,7 +30,7 @@ class MembershipService extends Service {
 
   async prepareMemberKeys(publicKey: string): Promise<EncryptedKeys[]> {
     if (!this.isPublic) {
-      const keysEncrypter = new Encrypter(this.wallet, this.dataEncrypter.keys, base64ToArray(publicKey));
+      const keysEncrypter = new Encrypter(this.encrypter.wallet, this.encrypter.keys, base64ToArray(publicKey));
       try {
         const keys = await keysEncrypter.encryptMemberKeys([]);
         return keys.map((keyPair: EncryptedKeys) => {
@@ -56,8 +55,8 @@ class MembershipService extends Service {
 
     for (let [memberId, publicKey] of publicKeys) {
       const memberKeysEncrypter = new Encrypter(
-        this.wallet,
-        this.dataEncrypter.keys,
+        this.encrypter.wallet,
+        this.encrypter.keys,
         base64ToArray(publicKey)
       );
       try {
