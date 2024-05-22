@@ -82,7 +82,7 @@ const Home: NextPage = () => {
   return (
     <div>
       <Head>
-        <title>Home Page</title>
+        <title>AkordJS &lt;&gt; Next.js starter</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
