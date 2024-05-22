@@ -317,7 +317,7 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
     }
   } else {
     const nodeJsFile = (await import("../types/file")).NodeJs.File;
-    if (source instanceof ReadableStream) {
+    if (typeof source?.read === 'function') {
       return nodeJsFile.fromReadable(source, name, options.mimeType, options.lastModified);
     } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
       return new nodeJsFile([source as any], name, options.mimeType, options.lastModified);
