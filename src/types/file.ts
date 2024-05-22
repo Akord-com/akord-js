@@ -28,7 +28,7 @@ export namespace NodeJs {
       if (isServer()) {
         const fs = importDynamic("fs");
         const path = importDynamic("path");
-        const mime = importDynamic("mime");
+        const mime = importDynamic("mime-types");
 
         if (!fs.existsSync(filePath)) {
           throw new NotFound("Could not find a file in your filesystem: " + filePath);
