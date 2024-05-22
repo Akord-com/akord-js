@@ -31,8 +31,8 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@akord/akord-auth": "0.30.28",
-    "@akord/crypto": "0.21.42",
+    "@akord/akord-auth": "0.30.29",
+    "@akord/crypto": "0.21.43",
     "@akord/ts-cacheable": "1.0.13",
     "@esm2cjs/p-queue": "^7.3.0",
     "axios": "0.27.2",
