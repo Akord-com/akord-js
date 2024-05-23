@@ -1,0 +1,44 @@
+{
+  "name": "@akord/akord-js-pubsub-plugin",
+  "version": "0.1.0",
+  "description": "Plugin for akord-js enabling subscribe() on modules",
+  "main": "lib/index.js",
+  "repository": "git@github.com:Akord-com/akord-js.git",
+  "scripts": {
+    "test": "jest --verbose --collectCoverage=false --forceExit --detectOpenHandles",
+    "build": "rm -r lib || true && tsc -p .",
+    "prepublish": "yarn build"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts",
+    "lib/index.d.ts"
+  ],
+  "keywords": [
+    "akord",
+    "storage",
+    "web3",
+    "encryption",
+    "e2ee"
+  ],
+  "bugs": {
+    "url": "https://github.com/Akord-com/akord-js/issues"
+  },
+  "homepage": "https://github.com/Akord-com/akord-js#readme",
+  "author": "Akord Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@akord/akord-js": "file:../../"
+  },
+  "peerDependencies": {
+    "@akord/akord-js": ">=5.4.0"
+  },
+  "dependencies": {
+    "@akord/gql": "0.241.0",
+    "@aws-amplify/api-graphql": "4.1.1",
+    "aws-amplify": "^6.3.0"
+  }
+}

@@ -1,26 +1,35 @@
-import { NodeService } from "./node";
+import { NodeService } from "./service/node";
 import { actionRefs, encryptionTags, encryptionTagsLegacy, functions, objectType } from "../constants";
-import { FileDownloadOptions, FileGetOptions, FileService, FileUploadOptions, FileVersionData, createFileLike } from "./file";
+import { FileDownloadOptions, FileGetOptions, FileModule, FileUploadOptions, FileVersionData, createFileLike } from "./file";
 import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
 import { StreamConverter } from "../util/stream-converter";
 import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
-import { PROXY_DOWNLOAD_URL } from "@akord/crypto";
-import { Platform, getPlatform } from "../util/platform";
+import { importDynamic } from "../util/import";
+import { PROXY_DOWNLOAD_URL, Wallet } from "@akord/crypto";
+import { Platform, getPlatform, isServer } from "../util/platform";
 import { Logger } from "../logger";
 import { BadRequest } from "../errors/bad-request";
 import { ARWEAVE_URL, headFileTx } from "../arweave";
+import { Api } from "../api/api";
+import { Service } from ".";
+import { NodeModule } from "./node";
 
 export const EMPTY_FILE_ERROR_MESSAGE = "Cannot upload an empty file";
 
-class StackService extends NodeService<Stack> {
-  public fileService = new FileService(this.wallet, this.api);
-  objectType = nodeType.STACK;
-  NodeType = Stack;
+class StackModule extends NodeModule<Stack> {
+  private fileModule: FileModule;
+  protected stackCreateDefaultOptions: StackCreateOptions;
+  protected contentType: string;
 
-  stackCreateDefaultOptions = {
-    ...this.defaultCreateOptions,
-    overrideFileName: true
+  constructor(wallet: Wallet, api: Api, service?: Service, contentType?: string) {
+    super(wallet, api, Stack, nodeType.STACK, service);
+    this.fileModule = new FileModule(wallet, api, service, contentType);
+    this.contentType = contentType;
+    this.stackCreateDefaultOptions = {
+      ...this.service.defaultCreateOptions,
+      overrideFileName: true
+    }
   }
 
   /**
@@ -31,12 +40,12 @@ class StackService extends NodeService<Stack> {
    */
   public async create(vaultId: string, file: FileSource, options: StackCreateOptions = this.stackCreateDefaultOptions):
     Promise<StackCreateResult> {
-    await this.setVaultContext(vaultId);
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
+    await this.service.setVaultContext(vaultId);
+    this.service.setActionRef(actionRefs.STACK_CREATE);
+    this.service.setFunction(functions.NODE_CREATE);
 
     const optionsFromVault = {
-      storage: this.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
+      storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
     const createOptions = {
       ...this.stackCreateDefaultOptions,
@@ -44,8 +53,7 @@ class StackService extends NodeService<Stack> {
       ...options
     }
 
-    const fileService = new FileService(this.wallet, this.api, this);
-    fileService.contentType = this.fileService.contentType;
+    const fileService = new FileModule(this.service.wallet, this.service.api, this.service, this.contentType);
 
     const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name : undefined });
 
@@ -55,17 +63,17 @@ class StackService extends NodeService<Stack> {
 
     const stackName = options.name || fileLike.name;
 
-    this.setAkordTags((this.isPublic ? [stackName] : []).concat(createOptions.tags));
+    this.service.setAkordTags((this.service.isPublic ? [stackName] : []).concat(createOptions.tags));
 
     const fileUploadResult = await fileService.create(fileLike, createOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
 
     const state = {
-      name: await this.processWriteString(stackName),
+      name: await this.service.processWriteString(stackName),
       versions: [version],
       tags: createOptions.tags || []
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
+    const { nodeId, transactionId, object } = await this.service.nodeCreate<Stack>(state, { parentId: createOptions.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object, uri: object.uri };
   }
 
@@ -75,17 +83,17 @@ class StackService extends NodeService<Stack> {
    * @param  {NodeCreateOptions} [options] parent id, etc.
    * @returns Promise with new stack id & corresponding transaction id
    */
-  public async import(vaultId: string, fileTxId: string, options: NodeCreateOptions = this.defaultCreateOptions): Promise<StackCreateResult> {
-    await this.setVaultContext(vaultId);
-    if (!this.isPublic) {
+  public async import(vaultId: string, fileTxId: string, options: NodeCreateOptions = this.service.defaultCreateOptions): Promise<StackCreateResult> {
+    await this.service.setVaultContext(vaultId);
+    if (!this.service.isPublic) {
       throw new BadRequest("Import is not supported on private vaults.")
     }
-    this.setActionRef(actionRefs.STACK_CREATE);
-    this.setFunction(functions.NODE_CREATE);
+    this.service.setActionRef(actionRefs.STACK_CREATE);
+    this.service.setFunction(functions.NODE_CREATE);
 
     const { name, mimeType, size } = await headFileTx(fileTxId);
     const version = new FileVersion({
-      owner: await this.wallet.getAddress(),
+      owner: await this.service.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: name,
       type: mimeType,
@@ -97,7 +105,7 @@ class StackService extends NodeService<Stack> {
       name: name,
       versions: [version]
     };
-    const { nodeId, transactionId, object } = await this.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
+    const { nodeId, transactionId, object } = await this.service.nodeCreate<Stack>(state, { parentId: options.parentId }, options.arweaveTags);
     return { stackId: nodeId, transactionId, object, uri: object.uri };
   }
 
@@ -108,20 +116,20 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with corresponding transaction id
    */
   public async uploadRevision(stackId: string, file: FileSource, options: FileUploadOptions = {}): Promise<StackUpdateResult> {
-    await this.setVaultContextFromNodeId(stackId, this.objectType);
-    this.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
-    this.setFunction(functions.NODE_UPDATE);
+    await this.service.setVaultContextFromNodeId(stackId, this.service.objectType);
+    this.service.setActionRef(actionRefs.STACK_UPLOAD_REVISION);
+    this.service.setFunction(functions.NODE_UPDATE);
 
     const optionsFromVault = {
-      storage: this.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
+      storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
     const uploadOptions = {
       ...optionsFromVault,
       ...options
     }
 
-    const fileService = new FileService(this.wallet, this.api, this);
-    fileService.contentType = this.fileService.contentType;
+    const fileService = new FileModule(this.service.wallet, this.service.api, this.service, this.contentType);
+
     const fileLike = await createFileLike(file, options);
     const fileUploadResult = await fileService.create(fileLike, uploadOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
@@ -129,7 +137,7 @@ class StackService extends NodeService<Stack> {
     const state = {
       versions: [version]
     };
-    const { transactionId, object } = await this.nodeUpdate<Stack>(state);
+    const { transactionId, object } = await this.service.nodeUpdate<Stack>(state);
     return { transactionId, object, uri: object.uri };
   }
 
@@ -140,15 +148,15 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with version name & data stream or buffer
    */
   public async getVersion(stackId: string, index?: number, options: FileGetOptions = { responseType: 'arraybuffer' }): Promise<FileVersionData> {
-    const service = new FileService(this.wallet, this.api);
-    const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK);
+    const stackProto = await this.service.api.getNode<Stack>(stackId, objectType.STACK);
     const stack = new Stack(stackProto, stackProto.__keys__);
-    await service.setVaultContext(stack.vaultId);
+    await this.service.setVaultContext(stack.vaultId);
     const version = stack.getVersion(index);
-    if (!service.isPublic) {
+    if (!this.service.isPublic) {
       await version.decrypt();
     }
-    const uri = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3)
+    const uri = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3);
+    const service = new FileModule(this.service.wallet, this.service.api, this.service);
     const data = await service.download(uri, { responseType: options.responseType, chunkSize: version.chunkSize || version.size });
     return { ...version, data };
   }
@@ -173,7 +181,7 @@ class StackService extends NodeService<Stack> {
     let downloadPromise: Promise<string>;
     switch (getPlatform()) {
       case Platform.BrowserNoWorker:
-        if (!this.isPublic) {
+        if (!this.service.isPublic) {
           Logger.warn(
             '@akord/crypto: decryption worker is not registered, falling back to in memory decryption.\n' +
             'See: https://github.com/Akord-com/akord-crypto#decryption-worker.'
@@ -186,8 +194,8 @@ class StackService extends NodeService<Stack> {
         downloadPromise = this.saveFile(path, contentType, data as ReadableStream, options.skipSave);
         break;
       case Platform.Browser:
-        const service = new StackService(this.wallet, this.api);
-        const stackProto = await this.api.getNode<Stack>(stackId, objectType.STACK)
+        const service = new NodeService<Stack>(this.service.wallet, this.service.api, Stack, objectType.STACK);
+        const stackProto = await this.service.api.getNode<Stack>(stackId, objectType.STACK)
         const stack = new Stack(stackProto, stackProto.__keys__);
         const version = stack.getVersion(index);
         const id = version.external ? version.getUri(StorageType.ARWEAVE) : version.getUri(StorageType.S3);
@@ -206,7 +214,7 @@ class StackService extends NodeService<Stack> {
 
         if (!service.isPublic) {
           await version.decrypt();
-          const tags = await this.api.getTransactionTags(id);
+          const tags = await this.service.api.getTransactionTags(id);
           const encryptedKey = tags.find(tag => tag.name.toLowerCase() === encryptionTags.ENCRYPTED_KEY.toLowerCase()
             || tag.name.toLowerCase() === encryptionTagsLegacy.ENCRYPTED_KEY.toLowerCase())?.value
           const iv = tags.find(tag => tag.name === encryptionTags.IV
@@ -276,15 +284,14 @@ class StackService extends NodeService<Stack> {
    * @returns Promise with stack file uri
    */
   public async getUri(stackId: string, type: StorageType = StorageType.ARWEAVE, index?: number): Promise<string> {
-    const stack = new Stack(await this.api.getNode<Stack>(stackId, objectType.STACK), null);
+    const stack = new Stack(await this.service.api.getNode<Stack>(stackId, objectType.STACK), null);
     return stack.getUri(type, index);
   }
 
-
   private async saveFile(path: string, type: string, stream: ReadableStream, skipSave: boolean = false): Promise<string> {
-    if (typeof window === 'undefined') {
-      const fs = (await import("fs")).default;
-      const Readable = (await import("stream")).Readable;
+    if (isServer()) {
+      const fs = importDynamic("fs");
+      const Readable = importDynamic("stream").Readable;
       return new Promise((resolve, reject) =>
         Readable.from(stream).pipe(fs.createWriteStream(path))
           .on('error', error => reject(error))
@@ -306,5 +313,5 @@ class StackService extends NodeService<Stack> {
 };
 
 export {
-  StackService
+  StackModule
 }

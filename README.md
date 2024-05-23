@@ -6,6 +6,7 @@ This package can be used in both browser and Node.js environments.
 - [Usage](#usage)
   - [Import](#import)
   - [Quick Start](#quick-start)
+  - [Plugins](#plugins)
   - [Examples](#examples)
 - [Modules](#modules)
   - [Auth](#authentication)
@@ -21,6 +22,7 @@ This package can be used in both browser and Node.js environments.
   - [Contract](#contract)
   - [Profile](#profile)
   - [Batch](#batch)
+  - [Zip](#zip)
 - [Development](#development)
 - [Deployment](#deployment)
 
@@ -42,7 +44,7 @@ const { Akord } = require("@akord/akord-js");
 ```js
 import { Akord, Auth } from "@akord/akord-js";
 const { wallet } = await Auth.signIn(email, password);
-const akord = await Akord.init(wallet);
+const akord = new Akord(wallet);
 ```
 
 #### Create vault
@@ -67,13 +69,27 @@ const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackI
 const vaults = await akord.vault.listAll();
 ```
 
+#### Plugins
+
+Some methods require plugins installation. 
+This design is motivated by bundle size care: increase the package bundle size only if feature is used.
+Official supported plugins can be found at: [plugins](plugins)
+```javascript 
+import { PubSubPlugin } from "@akord/akord-js-pubsub-plugin"
+import { Akord, Auth } from "@akord/akord-js";
+
+const { wallet } = await Auth.signIn('your_username', 'your_password');
+const akord = new Akord(wallet, { plugins: [new PubSubPlugin()] });
+```
+
+
 ### Examples
 - See our [demo app tutorial](https://js.akord.com) and learn how to create,
 contribute and access an Akord Vault from.
 
-- See example flows in our [tests repo](src/__tests__).
+- See example flows under [tests](src/__tests__).
 
-- See different setups on [recipes repo](https://github.com/Akord-com/recipes).
+- See different setups under [examples](examples).
 
 ## Authentication
 Use `Auth` module to handle authentication.
@@ -391,10 +407,47 @@ import { AkordWallet } from "@akord/crypto";
 
 const wallet1 = await AkordWallet.create();
 const wallet2 = await AkordWallet.create();
+const wallet3 = await AkordWallet.create();
+const wallet4 = await AkordWallet.create();
+
+const tomorrowSameHour = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
+const inOneMinute = new Date(new Date().getTime() + 60 * 1000);
 
 await akord.membership.airdrop(vaultId, [
-   { publicSigningKey: wallet1.signingPublicKey(), publicKey: wallet1.publicKey(), role: "VIEWER" },
-   { publicSigningKey: wallet2.signingPublicKey(), publicKey: wallet2.publicKey(), role: "CONTRIBUTOR" }
+   { 
+    publicSigningKey: wallet1.signingPublicKey(), 
+    publicKey: wallet1.publicKey(), 
+    role: "VIEWER", // view only access to vault
+    options: {
+      expirationDate: tomorrowSameHour // access valid for 24 hours
+    }
+   },
+   { 
+    publicSigningKey: wallet2.signingPublicKey(), 
+    publicKey: wallet2.publicKey(), 
+    role: "CONTRIBUTOR", // can edit / add / delete
+    options: {
+      expirationDate: inOneMinute, // access valid for 1 minute
+      allowedStorage: 10 // can use up to 10Mb from host account
+    }
+   },
+   { 
+    publicSigningKey: wallet3.signingPublicKey(), 
+    publicKey: wallet3.publicKey(), 
+    role: "CONTRIBUTOR",
+    options: {
+      expirationDate: null, // valid until manual revoke
+      allowedStorage: 0 // can't upload (but can edit e.g. move, rename)
+    }
+   },
+   { 
+    publicSigningKey: wallet4.signingPublicKey(), 
+    publicKey: wallet4.publicKey(), 
+    role: "CONTRIBUTOR",
+    options: {
+      allowedStorage: null // can upload using full storage balance of the host
+    }
+   }
 ]);
 
 // access the vault as user 1
@@ -1657,6 +1710,28 @@ Update user profile along with all active memberships
 - `items` (`Array<{ email: string, role: `[`RoleType`][role-type]` }>`, required)
 - `options` (`MembershipCreateOptions`, optional) - invitation email message, etc.
 - returns `Promise<`[`BatchMembershipInviteResponse`][batch-membership-invite-response]`>` - Promise with new membership ids & their corresponding transaction ids
+
+### zip
+
+#### `upload(vaultId, file, options)`
+- `vaultId` (`string`, required)
+- `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
+- `options` (`ZipUploadOptions`, optional)
+- returns `Promise<{ sourceId }>` - Promise with corresponding source id, allowing to query corresponding files
+
+<details>
+  <summary>example</summary>
+
+```js
+const { sourceId } = await akord.zip.upload(vaultId, "path to your file");
+```
+</details>
+
+#### `restore(items)`
+
+- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
+- returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
+
 
 ### Development
 > requires Node.js 16

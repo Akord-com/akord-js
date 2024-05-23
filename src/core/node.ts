@@ -1,11 +1,9 @@
-import { Service } from './service';
-import { functions, protocolTags, status } from "../constants";
+import { Service } from './service/service';
+import { functions, status } from "../constants";
 import { NodeCreateOptions, NodeLike, NodeType } from '../types/node';
-import { EncryptedKeys } from '@akord/crypto';
+import { EncryptedKeys, Wallet } from '@akord/crypto';
 import { GetOptions, ListOptions } from '../types/query-options';
-import { ContractInput, Tag, Tags } from '../types/contract';
 import { Paginated } from '../types/paginated';
-import { v4 as uuidv4 } from "uuid";
 import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
 import { BadRequest } from '../errors/bad-request';
 import { handleListErrors, paginate } from './common';
@@ -14,13 +12,17 @@ import { Stack } from '../types/stack';
 import { Memo } from '../types/memo';
 import { NFT } from '../types/nft';
 import { Collection } from '../types/collection';
+import { NodeService } from './service/node';
+import { Api } from '../api/api';
 
-class NodeService<T> extends Service {
-  objectType: NodeType;
+class NodeModule<T> {
+  protected objectType: NodeType;
 
-  parentId?: string;
+  protected service: NodeService<T>;
 
-  defaultListOptions = {
+  protected parentId?: string;
+
+  protected defaultListOptions = {
     shouldDecrypt: true,
     parentId: undefined,
     filter: {
@@ -31,15 +33,20 @@ class NodeService<T> extends Service {
     }
   } as ListOptions;
 
-  defaultGetOptions = {
+  protected defaultGetOptions = {
     shouldDecrypt: true,
   } as GetOptions;
 
-  defaultCreateOptions = {
+  protected defaultCreateOptions = {
     parentId: undefined,
     tags: [],
     arweaveTags: [],
   } as NodeCreateOptions;
+
+  constructor(wallet: Wallet, api: Api, nodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike, objectType: NodeType, service?: Service) {
+    this.service = new NodeService<T>(wallet, api, nodeType, objectType, service);
+    this.objectType = objectType;
+  }
 
   /**
    * @param  {string} nodeId
@@ -50,7 +57,7 @@ class NodeService<T> extends Service {
       ...this.defaultGetOptions,
       ...options
     }
-    const nodeProto = await this.api.getNode<NodeLike>(nodeId, this.objectType, getOptions.vaultId);
+    const nodeProto = await this.service.api.getNode<NodeLike>(nodeId, this.objectType, getOptions.vaultId);
     const node = await this.processNode(nodeProto, !nodeProto.__public__ && getOptions.shouldDecrypt, nodeProto.__keys__);
     return node as T;
   }
@@ -65,7 +72,7 @@ class NodeService<T> extends Service {
       ...this.defaultListOptions,
       ...options
     }
-    const response = await this.api.getNodesByVaultId<T>(vaultId, this.objectType, listOptions);
+    const response = await this.service.api.getNodesByVaultId<T>(vaultId, this.objectType, listOptions);
     const promises = response.items
       .map(async (nodeProto: any) => {
         return await this.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
@@ -96,13 +103,13 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async rename(nodeId: string, name: string): Promise<{ transactionId: string, object: T }> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType);
-    this.setActionRef(this.objectType.toUpperCase() + "_RENAME");
-    this.setFunction(functions.NODE_UPDATE);
+    await this.service.setVaultContextFromNodeId(nodeId, this.objectType);
+    this.service.setActionRef(this.objectType.toUpperCase() + "_RENAME");
+    this.service.setFunction(functions.NODE_UPDATE);
     const state = {
-      name: await this.processWriteString(name)
+      name: await this.service.processWriteString(name)
     };
-    return this.nodeUpdate<T>(state);
+    return this.service.nodeUpdate<T>(state);
   }
 
   /**
@@ -111,10 +118,10 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async move(nodeId: string, parentId?: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_MOVE");
-    this.setFunction(functions.NODE_MOVE);
-    return this.nodeUpdate<T>(null, { parentId });
+    await this.service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.service.setActionRef(this.objectType.toUpperCase() + "_MOVE");
+    this.service.setFunction(functions.NODE_MOVE);
+    return this.service.nodeUpdate<T>(null, { parentId });
   }
 
   /**
@@ -122,10 +129,10 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async revoke(nodeId: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
-    this.setFunction(functions.NODE_REVOKE);
-    return this.nodeUpdate<T>();
+    await this.service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.service.setActionRef(this.objectType.toUpperCase() + "_REVOKE");
+    this.service.setFunction(functions.NODE_REVOKE);
+    return this.service.nodeUpdate<T>();
   }
 
   /**
@@ -133,10 +140,10 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async restore(nodeId: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
-    this.setFunction(functions.NODE_RESTORE);
-    return this.nodeUpdate<T>();
+    await this.service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.service.setActionRef(this.objectType.toUpperCase() + "_RESTORE");
+    this.service.setFunction(functions.NODE_RESTORE);
+    return this.service.nodeUpdate<T>();
   }
 
   /**
@@ -144,93 +151,13 @@ class NodeService<T> extends Service {
    * @returns Promise with corresponding transaction id
    */
   public async delete(nodeId: string, vaultId?: string): Promise<{ transactionId: string, object: T }> {
-    await this.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
-    this.setActionRef(this.objectType.toUpperCase() + "_DELETE");
-    this.setFunction(functions.NODE_DELETE);
-    return this.nodeUpdate<T>();
+    await this.service.setVaultContextFromNodeId(nodeId, this.objectType, vaultId);
+    this.service.setActionRef(this.objectType.toUpperCase() + "_DELETE");
+    this.service.setFunction(functions.NODE_DELETE);
+    return this.service.nodeUpdate<T>();
   }
 
-  async nodeCreate<T>(state?: any, clientInput?: { parentId?: string }, clientTags?: Tags): Promise<{
-    nodeId: string,
-    transactionId: string,
-    object: T
-  }> {
-    const nodeId = uuidv4();
-    this.setObjectId(nodeId);
-    this.setFunction(functions.NODE_CREATE);
-    this.setParentId(clientInput.parentId);
-
-    this.arweaveTags = await this.getTxTags();
-    clientTags?.map((tag: Tag) => this.arweaveTags.push(tag));
-
-    const input = {
-      function: this.function,
-      ...clientInput
-    } as ContractInput;
-
-    if (state) {
-      const id = await this.uploadState(state, this.vault.cloud);
-      input.data = id;
-    }
-
-    const { id, object } = await this.api.postContractTransaction<T>(
-      this.vaultId,
-      input,
-      this.arweaveTags
-    );
-    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
-    return { nodeId, transactionId: id, object: node };
-  }
-
-  protected async nodeUpdate<T>(stateUpdates?: any, clientInput?: { parentId?: string }, metadata?: any): Promise<{ transactionId: string, object: T }> {
-    const input = {
-      function: this.function,
-      ...clientInput
-    } as ContractInput;
-
-    this.setParentId(clientInput?.parentId);
-    this.arweaveTags = await this.getTxTags();
-
-    if (stateUpdates) {
-      const id = await this.mergeAndUploadState(stateUpdates, this.vault.cloud);
-      input.data = id;
-    }
-    const { id, object } = await this.api.postContractTransaction<T>(
-      this.vaultId,
-      input,
-      this.arweaveTags,
-      metadata
-    );
-    const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
-    return { transactionId: id, object: node };
-  }
-
-  setParentId(parentId?: string) {
-    this.parentId = parentId;
-  }
-
-  protected async setVaultContextFromNodeId(nodeId: string, type: NodeType, vaultId?: string) {
-    const object = await this.api.getNode<NodeLike>(nodeId, type, vaultId);
-    const vault = await this.api.getVault(object.vaultId);
-    this.setVault(vault);
-    this.setVaultId(object.vaultId);
-    this.setIsPublic(object.__public__);
-    await this.setMembershipKeys(object);
-    this.setObject(object);
-    this.setObjectId(nodeId);
-    this.setObjectType(type);
-  }
-
-  async getTxTags(): Promise<Tags> {
-    const tags = await super.getTxTags();
-    tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
-    if (this.function === functions.NODE_CREATE || this.function === functions.NODE_MOVE) {
-      tags.push(new Tag(protocolTags.PARENT_ID, this.parentId ? this.parentId : "root"));
-    }
-    return tags;
-  }
-
-  async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
+  private async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
     const node = this.nodeInstance(object, keys);
     if (shouldDecrypt) {
       try {
@@ -263,5 +190,5 @@ class NodeService<T> extends Service {
 }
 
 export {
-  NodeService
+  NodeModule
 }

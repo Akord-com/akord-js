@@ -67,3 +67,9 @@ export type MembershipUpdateResult = {
   transactionId: string,
   object: Membership
 }
+
+export type MembershipAirdropOptions = {
+  name?: string
+  expirationDate?: Date
+  allowedStorage?: number
+}
