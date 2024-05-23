@@ -65,7 +65,7 @@ class ZipModule {
     }
   }
 
-  public async subscribe(next: (notification: Notification) => void | Promise<void>): Promise<void> {
+  public async subscribe(next: (notification: Notification) => void | Promise<void>, error?: (err: any) => void): Promise<void> {
     if (!Plugins.registered.has(PluginKey.PUBSUB)) {
       Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
       return;
@@ -77,7 +77,8 @@ class ZipModule {
         event: { in: this.events },
         toAddress: { eq: address }
       },
-      next: next
+      next,
+      error
     });
   }
 

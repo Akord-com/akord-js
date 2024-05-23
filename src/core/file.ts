@@ -1,6 +1,4 @@
-import * as mime from "mime-types";
 import PQueue, { AbortError } from '@esm2cjs/p-queue';
-import { Readable } from "stream";
 import { AUTH_TAG_LENGTH_IN_BYTES, IV_LENGTH_IN_BYTES, Wallet, base64ToArray, digestRaw, initDigest, signHash } from "@akord/crypto";
 import { Service } from "./service/service";
 import { protocolTags, encryptionTags as encTags, fileTags, dataTags, smartweaveTags } from "../constants";
@@ -17,6 +15,7 @@ import { ListFileOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { Auth } from "@akord/akord-auth";
+import { isServer } from '../util/platform';
 import { Api } from '../api/api';
 
 export const DEFAULT_FILE_TYPE = "text/plain";
@@ -38,10 +37,10 @@ class FileModule {
     this.contentType = contentType;
   }
 
-/**
- * @param  {ListFileOptions} options
- * @returns Promise with list of files per query options
- */
+  /**
+   * @param  {ListFileOptions} options
+   * @returns Promise with list of files per query options
+   */
   public async list(options: ListFileOptions = {}): Promise<Paginated<FileVersion>> {
     const { items, nextToken } = await this.service.api.getFiles(options);
     return {
@@ -50,10 +49,10 @@ class FileModule {
     }
   }
 
-/**
- * @param  {ListFileOptions} options
- * @returns Promise with list of all files per query options
- */
+  /**
+   * @param  {ListFileOptions} options
+   * @returns Promise with list of all files per query options
+   */
   public async listAll(options: ListFileOptions = {}): Promise<Array<FileVersion>> {
     const list = async (listOptions: ListFileOptions) => {
       return await this.list(listOptions);
@@ -293,9 +292,11 @@ class FileModule {
 async function createFileLike(source: FileSource, options: FileOptions = {})
   : Promise<FileLike> {
   const name = options.name || (source as any).name;
-  const mimeType = options.mimeType || mime.lookup(name) || '';
-  if (typeof window !== "undefined") {
-    if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer || source instanceof Blob) {
+  if (!isServer()) {
+    const mimeType = options.mimeType || '';
+    if (source instanceof File) {
+      return source;
+    } else  if (source instanceof Uint8Array || source instanceof ArrayBuffer || source instanceof Blob) {
       if (!name) {
         throw new BadRequest("File name is required, please provide it in the file options.");
       }
@@ -316,16 +317,16 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
     }
   } else {
     const nodeJsFile = (await import("../types/file")).NodeJs.File;
-    if (source instanceof Readable) {
-      return nodeJsFile.fromReadable(source, name, mimeType, options.lastModified);
+    if (typeof source?.read === 'function') {
+      return nodeJsFile.fromReadable(source, name, options.mimeType, options.lastModified);
     } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
-      return new nodeJsFile([source as any], name, mimeType, options.lastModified);
+      return new nodeJsFile([source as any], name, options.mimeType, options.lastModified);
     } else if (source instanceof nodeJsFile) {
       return source;
     } else if (typeof source === "string") {
-      return nodeJsFile.fromPath(source, name, mimeType, options.lastModified);
+      return nodeJsFile.fromPath(source, name, options.mimeType, options.lastModified);
     } else if (source instanceof Array) {
-      return new nodeJsFile(source, name, mimeType, options.lastModified);
+      return new nodeJsFile(source, name, options.mimeType, options.lastModified);
     }
   }
   throw new BadRequest("File source is not supported. Please provide a valid source: web File object, file path, buffer or stream.");

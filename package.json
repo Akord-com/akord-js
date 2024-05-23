@@ -31,14 +31,13 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@akord/akord-auth": "0.30.0",
-    "@akord/crypto": "0.20.4",
+    "@akord/akord-auth": "0.30.33",
+    "@akord/crypto": "0.21.48",
     "@akord/ts-cacheable": "1.0.13",
     "@esm2cjs/p-queue": "^7.3.0",
-    "axios": "^1.6.2",
+    "axios": "0.27.2",
     "cross-fetch": "^4.0.0",
     "lodash": "^4.17.21",
-    "mime-types": "^2.1.35",
     "rxjs": "^7.5.6",
     "uuid": "^8.3.2",
     "web-streams-polyfill": "^3.2.1"
@@ -47,7 +46,6 @@
     "@faker-js/faker": "^6.2.0",
     "@types/jest": "^29.5.5",
     "@types/lodash": "^4.14.202",
-    "@types/mime-types": "^2.1.1",
     "@types/node": "^17.0.8",
     "@types/streamsaver": "^2.0.1",
     "@types/uuid": "^8.3.4",

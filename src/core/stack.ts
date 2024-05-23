@@ -5,8 +5,9 @@ import { FileSource } from "../types/file";
 import { FileVersion, NodeCreateOptions, Stack, StackCreateOptions, StackCreateResult, StackUpdateResult, StorageType, nodeType } from "../types";
 import { StreamConverter } from "../util/stream-converter";
 import { ReadableStream } from 'web-streams-polyfill/ponyfill/es2018';
+import { importDynamic } from "../util/import";
 import { PROXY_DOWNLOAD_URL, Wallet } from "@akord/crypto";
-import { Platform, getPlatform } from "../util/platform";
+import { Platform, getPlatform, isServer } from "../util/platform";
 import { Logger } from "../logger";
 import { BadRequest } from "../errors/bad-request";
 import { ARWEAVE_URL, headFileTx } from "../arweave";
@@ -288,9 +289,9 @@ class StackModule extends NodeModule<Stack> {
   }
 
   private async saveFile(path: string, type: string, stream: ReadableStream, skipSave: boolean = false): Promise<string> {
-    if (typeof window === 'undefined') {
-      const fs = (await import("fs")).default;
-      const Readable = (await import("stream")).Readable;
+    if (isServer()) {
+      const fs = importDynamic("fs");
+      const Readable = importDynamic("stream").Readable;
       return new Promise((resolve, reject) =>
         Readable.from(stream).pipe(fs.createWriteStream(path))
           .on('error', error => reject(error))

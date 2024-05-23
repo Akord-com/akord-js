@@ -6,6 +6,7 @@ This package can be used in both browser and Node.js environments.
 - [Usage](#usage)
   - [Import](#import)
   - [Quick Start](#quick-start)
+  - [Plugins](#plugins)
   - [Examples](#examples)
 - [Modules](#modules)
   - [Auth](#authentication)
@@ -43,7 +44,7 @@ const { Akord } = require("@akord/akord-js");
 ```js
 import { Akord, Auth } from "@akord/akord-js";
 const { wallet } = await Auth.signIn(email, password);
-const akord = await Akord.init(wallet);
+const akord = new Akord(wallet);
 ```
 
 #### Create vault
@@ -68,13 +69,27 @@ const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackI
 const vaults = await akord.vault.listAll();
 ```
 
+#### Plugins
+
+Some methods require plugins installation. 
+This design is motivated by bundle size care: increase the package bundle size only if feature is used.
+Official supported plugins can be found at: [plugins](plugins)
+```javascript 
+import { PubSubPlugin } from "@akord/akord-js-pubsub-plugin"
+import { Akord, Auth } from "@akord/akord-js";
+
+const { wallet } = await Auth.signIn('your_username', 'your_password');
+const akord = new Akord(wallet, { plugins: [new PubSubPlugin()] });
+```
+
+
 ### Examples
 - See our [demo app tutorial](https://js.akord.com) and learn how to create,
 contribute and access an Akord Vault from.
 
-- See example flows in our [tests repo](src/__tests__).
+- See example flows under [tests](src/__tests__).
 
-- See different setups on [recipes repo](https://github.com/Akord-com/recipes).
+- See different setups under [examples](examples).
 
 ## Authentication
 Use `Auth` module to handle authentication.
