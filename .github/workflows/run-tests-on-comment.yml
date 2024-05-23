@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: contains(github.event.comment.body, '/test')
+    if: contains(github.event.comment.body, '/test') && contains(fromJSON('["jarrvis", "wkolod", "kgracki"]'), github.actor)
     steps:
       - name: Get PR branch
         uses: xt0rted/pull-request-comment-branch@v1
