@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@akord/akord-js": "file:../../..",
+    "@akord/akord-js": "^5.4.1",
     "@akord/akord-js-pubsub-plugin": "file:../../../plugins/pubsub",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",

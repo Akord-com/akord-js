@@ -18,7 +18,7 @@ const Home: NextPage = () => {
       throw new Error('Missing pass')
     }
     const {  wallet } = await Auth.signIn(email, pass);
-    const akord = await Akord.init(wallet)
+    const akord = new Akord(wallet)
     setAkord(akord)
   }
 
