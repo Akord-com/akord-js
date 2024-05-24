@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "target": "es6", //default is es5
+    "module": "commonjs", //CommonJs style module in output
+    "rootDir": "src",
+    "outDir": "dist", //change the output directory
+    "skipLibCheck": true,
+    "resolveJsonModule": true, //to import out json database
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}
