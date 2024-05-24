@@ -70,6 +70,27 @@ describe("Testing stack functions", () => {
     expect(data).toEqual(await file.arrayBuffer());
   });
 
+  it("should create stack from file buffer without explicitly provided mime type", async () => {
+    const fileBuffer = fs.readFileSync(testDataPath + firstFileName);
+    const type = "image/png";
+
+    const { stackId, uri } = await akord.stack.create(vaultId, fileBuffer, { name: firstFileName });
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
+
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.status).toEqual("ACTIVE");
+    expect(stack.name).toEqual(firstFileName);
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(stack.versions[0].type).toEqual(type);
+
+    const { data } = await akord.stack.getVersion(stackId, 0);
+    const file = await createFileLike(testDataPath + firstFileName);
+    expect(data).toEqual(await file.arrayBuffer());
+  });
+
   it("should create stack from file stream", async () => {
     const fileStream = fs.createReadStream(testDataPath + firstFileName);
     const type = "image/png";
