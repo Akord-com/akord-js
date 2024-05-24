@@ -292,7 +292,7 @@ class BatchModule {
         if (options.onStackCreated) {
           await options.onStackCreated(stack);
         }
-        data.push({ transactionId: id, object: stack, id: object.id, uri: object.uri });
+        data.push({ transactionId: id, object: stack, id: object.id, uri: stack.uri });
         itemsCreated += 1;
       } catch (error) {
         errors.push({ name: item.file.name, message: error.toString(), error });
