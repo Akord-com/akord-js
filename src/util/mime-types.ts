@@ -1,3 +1,5 @@
+import { DEFAULT_FILE_TYPE } from "../core/file";
+
 export const mimeTypeToExtension = {
   'audio/x-mpeg': 'mpega',
   'application/postscript': 'ps',
@@ -135,3 +137,12 @@ export const mimeTypeToExtension = {
   'application/x-compress': 'z',
   'application/zip': 'zip'
 };
+
+export function getMimeTypeFromFileName(fileName: string) {
+  const extension = fileName.split('.').pop();
+  const extensionToMimeType = {};
+  for (const [mimeType, extension] of Object.entries(mimeTypeToExtension)) {
+    extensionToMimeType[extension] = mimeType;
+  }
+  return extensionToMimeType[extension] || DEFAULT_FILE_TYPE;
+}

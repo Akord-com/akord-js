@@ -17,6 +17,7 @@ import { paginate } from "./common";
 import { Auth } from "@akord/akord-auth";
 import { isServer } from '../util/platform';
 import { Api } from '../api/api';
+import { getMimeTypeFromFileName } from '../util/mime-types';
 
 export const DEFAULT_FILE_TYPE = "text/plain";
 export const BYTES_IN_MB = 1000000;
@@ -293,26 +294,19 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
   : Promise<FileLike> {
   const name = options.name || (source as any).name;
   if (!isServer()) {
-    const mimeType = options.mimeType || '';
     if (source instanceof File) {
       return source;
-    } else  if (source instanceof Uint8Array || source instanceof ArrayBuffer || source instanceof Blob) {
-      if (!name) {
-        throw new BadRequest("File name is required, please provide it in the file options.");
-      }
-      if (!mimeType) {
-        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
-      }
+    }
+    if (!name) {
+      throw new BadRequest("File name is required, please provide it in the file options.");
+    }
+    const mimeType = options.mimeType || getMimeTypeFromFileName(name);
+    if (!mimeType) {
+      console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
+    }
+    if (source instanceof Uint8Array || source instanceof ArrayBuffer || source instanceof Blob) {
       return new File([source as any], name, { type: mimeType, lastModified: options.lastModified });
-    } else if (source instanceof File) {
-      return source;
     } else if (source instanceof Array) {
-      if (!name) {
-        throw new BadRequest("File name is required, please provide it in the file options.");
-      }
-      if (!mimeType) {
-        console.warn("Missing file mime type. If this is unintentional, please provide it in the file options.");
-      }
       return new File(source, name, { type: mimeType, lastModified: options.lastModified });
     }
   } else {
