@@ -44,6 +44,9 @@ export class PubSubPlugin implements Plugin {
                 authToken: 'custom'
             });
 
+            if (this.active.has(params.filter.toString())) {
+                return;
+            }
             const sub = client.graphql({
                 query: subscriptions.onCreateNotification,
                 variables: {
