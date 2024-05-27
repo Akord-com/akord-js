@@ -21,7 +21,7 @@ class ZipModule {
     this.service = new Service(wallet, api);
   }
 
-  private events = [ "UNZIP_FINISHED" ]
+  private events = [ "ZIP_DECOMPRESSED", "ZIP_SIGNED", "ZIP_COMMITTED" ]
 
   public async list(options: ListPaginatedApiOptions = {}): Promise<Paginated<ZipLog>> {
     return await this.service.api.getZipLogs(options);
