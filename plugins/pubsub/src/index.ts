@@ -1,7 +1,6 @@
-import { Amplify } from 'aws-amplify';
-import { generateClient } from 'aws-amplify/api';
+import { Amplify } from '@aws-amplify/core';
+import { generateClient } from '@aws-amplify/api';
 import { Plugin, PluginKey, Notification } from "@akord/akord-js";
-import { Types, subscriptions } from "@akord/gql";
 import { Subscription } from 'rxjs';
 
 const DEV_GQL_API_URL = 'https://7doygkohfjbp7ma6bab5ryxabi.appsync-api.eu-central-1.amazonaws.com/graphql'
@@ -28,9 +27,10 @@ export class PubSubPlugin implements Plugin {
                 }
             }
         });
+        console.log("DEBUG PubSub: Configured ", Amplify.getConfig().API)
         return;
     }
-    s
+    
     unregister() {
         Array.from(this.active.entries()).forEach(entry => entry[1].unsubscribe())
         this.active = new Map();
@@ -47,12 +47,20 @@ export class PubSubPlugin implements Plugin {
             if (this.active.has(params.filter.toString())) {
                 return;
             }
+            console.log("DEBUG PubSub: Subscribing using client ", client)
+            console.log("DEBUG PubSub: Filters ", {
+                and: [
+                    { channels: { contains: 'PUBSUB' } },
+                    { ...params.filter }
+                ]
+            })
+
             const sub = client.graphql({
-                query: subscriptions.onCreateNotification,
+                query: onCreateNotification,
                 variables: {
                     filter: {
                         and: [
-                            { channels: { contains: Types.NotificationChannel.PUBSUB } },
+                            { channels: { contains: 'PUBSUB' } },
                             { ...params.filter }
                         ]
                     }
@@ -90,3 +98,30 @@ export class PubSubPlugin implements Plugin {
         }
     }
 }
+
+const onCreateNotification = /* GraphQL */ `subscription OnCreateNotification(
+    $filter: ModelSubscriptionNotificationFilterInput
+  ) {
+    onCreateNotification(filter: $filter) {
+      id
+      fromAddress
+      toAddress
+      toMemberId
+      toEmail
+      vaultId
+      objectId
+      objectType
+      objectName
+      event
+      channels
+      content
+      status
+      priority
+      activity
+      count
+      host
+      createdAt
+      updatedAt
+    }
+  }
+  `
