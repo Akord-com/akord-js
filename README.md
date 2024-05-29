@@ -27,7 +27,7 @@ This package can be used in both browser and Node.js environments.
 - [Deployment](#deployment)
 
 ## Usage
-> requires Node.js 16
+> requires Node.js >= 18
 
 ### Import
 ```js
@@ -1734,8 +1734,6 @@ const { sourceId } = await akord.zip.upload(vaultId, "path to your file");
 
 
 ### Development
-> requires Node.js 16
-
 ```
 yarn install
 yarn build
