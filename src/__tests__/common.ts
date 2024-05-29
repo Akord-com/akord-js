@@ -1,11 +1,19 @@
 require("dotenv").config();
+import { AkordWallet } from "@akord/crypto";
 import { Akord, Auth } from "../index";
 import faker from '@faker-js/faker';
 
 export async function initInstance(email: string, password: string): Promise<Akord> {
-  Auth.configure({ env: process.env.ENV as any });
-  const { wallet } = await Auth.signIn(email, password);
-  return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+  if (process.env.API_KEY && process.env.BACKUP_PHRASE) {
+    console.log("API KEY FLOW")
+    Auth.configure({ env: process.env.ENV as any, apiKey: process.env.API_KEY });
+    const wallet = await AkordWallet.importFromBackupPhrase(process.env.BACKUP_PHRASE);
+    return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+  } else {
+    Auth.configure({ env: process.env.ENV as any });
+    const { wallet } = await Auth.signIn(email, password);
+    return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+  }
 }
 
 export const vaultCreate = async (akord: Akord, cloud = true) => {
