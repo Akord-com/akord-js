@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.30.42":
-  version "0.30.42"
-  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.42.tgz#8864814eeeac3c6de968a3219ba6e27c77aad083"
-  integrity sha512-cwmA9IGIi/EvllJAGnn9XgKiTXtab4vbBwS3dkXY4XmsTI5xTFiu2AwepBb5QS5tR0Ru5cd/1IuBUMvXixMRbg==
+"@akord/akord-auth@0.30.43":
+  version "0.30.43"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.43.tgz#690ee3124a01d1d7043bb533eb142b5d86d36c97"
+  integrity sha512-0rlUBvgJKZAiMrR50QclXqb+p5kxzDwHSdKm4AyXie/pvjkqGdD/Oa7UGM3NJHpP/i42aS6kZB6AGS+6ha5tWg==
   dependencies:
     "@akord/crypto" "0.21.56"
     amazon-cognito-identity-js "6.1.2"
