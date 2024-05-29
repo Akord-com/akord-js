@@ -70,7 +70,7 @@ class ZipModule {
       Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
       return;
     }
-    const address = await Auth.getAddress();
+    const address = await this.service.wallet.getAddress();
     await Plugins.registered.get(PluginKey.PUBSUB).use({
       action: 'subscribe',
       filter: {
@@ -87,7 +87,7 @@ class ZipModule {
       Logger.warn("PubSub plugins is unregistered. Please install @akord/akord-js-pubsub-plugin and include it in plugins list when initializing SDK");
       return;
     }
-    const address = await Auth.getAddress();
+    const address = await this.service.wallet.getAddress();
     await Plugins.registered.get(PluginKey.PUBSUB).use({
       action: 'unsubscribe',
       filter: {

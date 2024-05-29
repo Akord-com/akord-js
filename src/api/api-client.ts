@@ -587,7 +587,7 @@ export class ApiClient {
 
     const config = {
       method: 'post',
-      url: `${this._apiurl}/files`,
+      url: `${this._uploadsurl}/files`,
       data: this._data,
       headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,

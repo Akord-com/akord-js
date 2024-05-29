@@ -30,7 +30,7 @@ export class PubSubPlugin implements Plugin {
         console.log("DEBUG PubSub: Configured ", Amplify.getConfig().API)
         return;
     }
-    
+
     unregister() {
         Array.from(this.active.entries()).forEach(entry => entry[1].unsubscribe())
         this.active = new Map();
@@ -66,13 +66,13 @@ export class PubSubPlugin implements Plugin {
                     }
                 }
                 // @ts-ignore
-                }).subscribe({
-                    next: async ({ data }) => {
-                        const notificationProto = data.onCreateNotification;
-                        if (notificationProto && params.next) {
-                            await params.next(new Notification(notificationProto));
-                        }
-                    },
+            }).subscribe({
+                next: async ({ data }) => {
+                    const notificationProto = data.onCreateNotification;
+                    if (notificationProto && params.next) {
+                        await params.next(new Notification(notificationProto));
+                    }
+                },
                 error: (e) => {
                     if (params.error) {
                         params.error(e);
@@ -80,16 +80,14 @@ export class PubSubPlugin implements Plugin {
                 }
             });
             if (sub) {
-                this.active.set(params.filter.toString(), sub);
+                this.active.set(JSON.stringify(params.filter), sub);
             }
         } else if (params.action === 'unsubscribe') {
             if (params.filter) {
-                if (this.active.has(params.filter.toString())) {
-                    console.warn("No active subscription with given filter criteria")
-                } else {
-                    const sub = this.active.get(params.filter.toString())
+                if (this.active.has(JSON.stringify(params.filter))) {
+                    const sub = this.active.get(JSON.stringify(params.filter))
                     sub.unsubscribe()
-                    this.active.delete(params.filter.toString())
+                    this.active.delete(JSON.stringify(params.filter))
                 }
             } else {
                 Array.from(this.active.entries()).forEach(entry => entry[1].unsubscribe())
