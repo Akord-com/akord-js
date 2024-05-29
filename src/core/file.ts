@@ -82,7 +82,7 @@ class FileModule {
 
   public async newVersion(file: FileLike, uploadResult: FileUploadResult): Promise<FileVersion> {
     const version = new FileVersion({
-      owner: await Auth.getAddress(),
+      owner: await this.service.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
       name: await this.service.processWriteString(file.name),
       type: file.type,
