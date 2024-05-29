@@ -2,29 +2,29 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.30.41":
-  version "0.30.41"
-  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.41.tgz#34cbc34c6b6e4a042c01ff1f9338e00b2f5fe3db"
-  integrity sha512-wSowUTlZzpRhxlABikPFKbBbdcjFooxLcLWfKOFcGccTpQgSsEy+MrF6+XMVpzrH+axi3rxxr0e2dlzwd761nw==
+"@akord/akord-auth@0.30.43":
+  version "0.30.43"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.43.tgz#690ee3124a01d1d7043bb533eb142b5d86d36c97"
+  integrity sha512-0rlUBvgJKZAiMrR50QclXqb+p5kxzDwHSdKm4AyXie/pvjkqGdD/Oa7UGM3NJHpP/i42aS6kZB6AGS+6ha5tWg==
   dependencies:
     "@akord/crypto" "0.21.56"
     amazon-cognito-identity-js "6.1.2"
     memorystorage "^0.12.0"
 
-"@akord/akord-js-pubsub-plugin@0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@akord/akord-js-pubsub-plugin/-/akord-js-pubsub-plugin-0.3.0.tgz#e5d75a517f600d46e093d66fe85b444dbcb3ab0f"
-  integrity sha512-9Qp5eBhkHYSRubqsQdgCIrQs53ntnW+cCw/g/mV+l3zfmNZetTFSQhpbbGMJalmafg+e/K10Y3VZrliiqi8JkA==
+"@akord/akord-js-pubsub-plugin@0.3.4":
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/@akord/akord-js-pubsub-plugin/-/akord-js-pubsub-plugin-0.3.4.tgz#16e2e00e07eeb476920eabd6c601202f7d9680cc"
+  integrity sha512-ebUyNTQezKDN42rPp0rvbo2a8dIPzTZTyvnB1ZxOnPon/urGEsW+dJl/50ACHGNyK1cqYJbpMSyHdkuTvuLMJQ==
   dependencies:
     "@aws-amplify/api" "^6.0.35"
     "@aws-amplify/core" "^6.3.1"
 
-"@akord/akord-js@^5.6.2":
-  version "5.6.2"
-  resolved "https://registry.yarnpkg.com/@akord/akord-js/-/akord-js-5.6.2.tgz#7397faacd88703b8655ac775adf97cdb8749d168"
-  integrity sha512-eO5AiqsR8CUJ0ZwHSGnfzAfhm/mqnctv7vqkQlEkAveYsg5vTJggVm/OTTiRpE5zXoW6LbA9yOEu3ktg/mC0Dw==
+"@akord/akord-js@^5.7.1":
+  version "5.7.1"
+  resolved "https://registry.yarnpkg.com/@akord/akord-js/-/akord-js-5.7.1.tgz#70cb2bd96a2403272cfb8fe2c733f79f02c1b0ca"
+  integrity sha512-+bdBPFol9VGkCuAq7x4x46ZuI5YpZmVCtcoZmgshJRdPBm/jQkGQqhPtHhL2keczSNmZsBFyYHEmpyLav16mdA==
   dependencies:
-    "@akord/akord-auth" "0.30.41"
+    "@akord/akord-auth" "0.30.43"
     "@akord/crypto" "0.21.56"
     "@akord/ts-cacheable" "1.0.13"
     "@esm2cjs/p-queue" "^7.3.0"

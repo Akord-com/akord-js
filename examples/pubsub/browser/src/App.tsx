@@ -14,6 +14,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       const { wallet } = await Auth.signIn(USERNAME, PASSWORD);
+      console.log(await wallet.getAddress())
       setAkord(new Akord(wallet, { plugins: [new PubSubPlugin()] }));
     }
     init();
