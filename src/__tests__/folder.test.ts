@@ -56,4 +56,17 @@ describe("Testing folder functions", () => {
     const subFolder = await akord.folder.get(subFolderId);
     expect(subFolder.status).toEqual("ACTIVE");
   });
+
+  it("should list all root folders", async () => {
+    const folders = await akord.folder.listAll(vaultId, { parentId: "null" });
+    expect(folders?.length).toEqual(1);
+    expect(folders[0]?.id).toEqual(rootFolderId);
+  });
+
+  it("should list all sub-folders of the root folder", async () => {
+    const folders = await akord.folder.listAll(vaultId, { parentId: rootFolderId });
+    expect(folders?.length).toEqual(1);
+    expect(folders[0]?.id).toEqual(subFolderId);
+    expect(folders[0]?.parentId).toEqual(rootFolderId);
+  });
 });
