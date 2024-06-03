@@ -17,8 +17,6 @@ import { Api } from '../../api/api';
 class NodeService<T> extends Service {
   objectType: NodeType;
 
-  protected parentId?: string;
-
   defaultListOptions = {
     shouldDecrypt: true,
     parentId: undefined,

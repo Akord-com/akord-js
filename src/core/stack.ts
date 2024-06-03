@@ -41,6 +41,7 @@ class StackModule extends NodeModule<Stack> {
   public async create(vaultId: string, file: FileSource, options: StackCreateOptions = this.stackCreateDefaultOptions):
     Promise<StackCreateResult> {
     await this.service.setVaultContext(vaultId);
+    this.service.setParentId(options.parentId);
     this.service.setActionRef(actionRefs.STACK_CREATE);
     this.service.setFunction(functions.NODE_CREATE);
 
