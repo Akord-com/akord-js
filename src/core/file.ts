@@ -271,7 +271,10 @@ class FileModule {
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.service.vaultId));
-
+    if (this.service.parentId) {
+      tags.push(new Tag(protocolTags.PARENT_ID, this.service.parentId));
+    }
+    
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     if (options.udl) {
       const udlTags = udlToTags(options.udl);
