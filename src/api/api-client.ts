@@ -15,6 +15,7 @@ import { FileVersion, StorageType } from "../types";
 import fetch from 'cross-fetch';
 import { jsonToBase64 } from "@akord/crypto";
 import { ZipLog } from "../types/zip";
+import { Storage } from "../types/storage";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -729,5 +730,15 @@ export class ApiClient {
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
+  }
+
+  async getStorageBalance(): Promise<Storage> {
+    const data = await this.get(`${this._apiurl}/storage-balance`);
+    return new Storage(data);
+  }
+
+  async postPayments(): Promise<any> {
+    const data = await this.post(`${this._apiurl}/payments`);
+    return data;
   }
 }

@@ -11,6 +11,7 @@ import { FileGetOptions, FileUploadOptions } from "../core/file";
 import { ZipLog, ZipUploadApiOptions } from "../types/zip";
 import { FileLike } from "../types/file";
 import { FileVersion } from "../types";
+import { Storage } from "../types/storage";
 
 abstract class Api {
   config: ApiConfig
@@ -36,6 +37,10 @@ abstract class Api {
   abstract getFiles(options?: ListApiOptions): Promise<Paginated<FileVersion>>
 
   abstract downloadFile(id: string, options?: FileGetOptions): Promise<{ fileData: ArrayBuffer | ReadableStream, metadata: EncryptionMetadata }>
+
+  abstract getStorageBalance(): Promise<Storage>
+
+  abstract simulatePayment(storageInGbs: number): Promise<any>
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 
