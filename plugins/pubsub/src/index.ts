@@ -27,7 +27,6 @@ export class PubSubPlugin implements Plugin {
                 }
             }
         });
-        console.log("DEBUG PubSub: Configured ", Amplify.getConfig().API)
         return;
     }
 
@@ -44,17 +43,9 @@ export class PubSubPlugin implements Plugin {
                 authToken: 'custom'
             });
 
-            if (this.active.has(params.filter.toString())) {
+            if (this.active.has(JSON.stringify(params.filter))) {
                 return;
             }
-            console.log("DEBUG PubSub: Subscribing using client ", client)
-            console.log("DEBUG PubSub: Filters ", {
-                and: [
-                    { channels: { contains: 'PUBSUB' } },
-                    { ...params.filter }
-                ]
-            })
-
             const sub = client.graphql({
                 query: onCreateNotification,
                 variables: {
