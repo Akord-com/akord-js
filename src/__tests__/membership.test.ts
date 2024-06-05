@@ -1,6 +1,6 @@
-import { Akord } from "../index";
+import { Akord, Auth } from "../index";
 import { email, email2, password, password2 } from './data/test-credentials';
-import { initInstance, vaultCreate } from './common';
+import { cleanup, vaultCreate } from './common';
 import { Membership } from "../types/membership";
 import { BadRequest } from "../errors/bad-request";
 
@@ -18,13 +18,19 @@ type Member = {
   membership?: Membership
 }
 
+const initFromEmail = async (email: string, password: string) => {
+  Auth.configure({ env: process.env.ENV as any });
+  const { wallet } = await Auth.signIn(email, password);
+  return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+}
+
 describe("Testing membership functions", () => {
   let vaultId: string;
   let owner: Member;
   let invitee: Member;
 
   beforeAll(async () => {
-    inviteeAkordInstance = await initInstance(email2, password2);
+    inviteeAkordInstance = await initFromEmail(email2, password2);
     const inviteeProfileDetails = await inviteeAkordInstance.profile.get();
     invitee = {
       publicSigningKey: inviteeProfileDetails.publicSigningKey,
@@ -33,7 +39,7 @@ describe("Testing membership functions", () => {
       profileName: inviteeProfileDetails.profileName,
       membershipId: ""
     };
-    ownerAkordInstance = await initInstance(email, password);
+    ownerAkordInstance = await initFromEmail(email, password);
     const ownerProfileDetails = await ownerAkordInstance.profile.get();
     owner = {
       publicSigningKey: ownerProfileDetails.publicSigningKey,
@@ -47,8 +53,12 @@ describe("Testing membership functions", () => {
     owner.membershipId = vaultResult.membershipId;
   });
 
+  afterAll(async () => {
+    await cleanup(ownerAkordInstance, vaultId);
+  });
+
   it("should invite new member", async () => {
-    ownerAkordInstance = await initInstance(email, password);
+    ownerAkordInstance = await initFromEmail(email, password);
 
     invitee.membershipId = (await ownerAkordInstance.membership.invite(vaultId, email2, "CONTRIBUTOR")).membershipId;
 
@@ -70,7 +80,7 @@ describe("Testing membership functions", () => {
   });
 
   it("should accept the invite", async () => {
-    inviteeAkordInstance = await initInstance(email2, password2);
+    inviteeAkordInstance = await initFromEmail(email2, password2);
     await inviteeAkordInstance.membership.accept(invitee.membershipId);
 
     invitee.membership = await inviteeAkordInstance.membership.get(invitee.membershipId);
@@ -85,14 +95,14 @@ describe("Testing membership functions", () => {
   });
 
   it("should fail inviting the same member twice", async () => {
-    ownerAkordInstance = await initInstance(email, password);
+    ownerAkordInstance = await initFromEmail(email, password);
     await expect(async () =>
       ownerAkordInstance.membership.invite(vaultId, email2, "VIEWER")
     ).rejects.toThrow(BadRequest);
   });
 
   it("should change access", async () => {
-    ownerAkordInstance = await initInstance(email, password);
+    ownerAkordInstance = await initFromEmail(email, password);
     await ownerAkordInstance.membership.changeRole(invitee.membershipId, "VIEWER");
 
     const membership = await ownerAkordInstance.membership.get(invitee.membershipId);
@@ -105,7 +115,7 @@ describe("Testing membership functions", () => {
   });
 
   it("should revoke the invite", async () => {
-    ownerAkordInstance = await initInstance(email, password);
+    ownerAkordInstance = await initFromEmail(email, password);
     await ownerAkordInstance.membership.revoke(invitee.membershipId);
 
     const membership = await ownerAkordInstance.membership.get(invitee.membershipId);

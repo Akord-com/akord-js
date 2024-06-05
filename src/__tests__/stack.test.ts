@@ -1,7 +1,6 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, testDataPath, testDataOutPath, vaultCreate } from './common';
-import { email, password } from './data/test-credentials';
+import { initInstance, testDataPath, testDataOutPath, setupVault, cleanup } from './common';
 import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
 import { createFileLike } from "../core/file";
@@ -18,12 +17,15 @@ describe("Testing stack functions", () => {
   let stackId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should create stack from path", async () => {

@@ -1,6 +1,5 @@
-import { Akord } from "../index";
-import { initInstance, testDataPath, vaultCreate } from './common';
-import { email, password } from './data/test-credentials';
+import { Akord, Auth } from "../index";
+import { initInstance, testDataPath } from './common';
 import { zipFileName } from './data/content';
 import faker from "@faker-js/faker";
 
@@ -12,12 +11,17 @@ describe("Testing zip functions", () => {
   let vaultId: string;
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
     vaultId = (await akord.vault.create(faker.random.words(), {
       public: true,
       cloud: true
     })).vaultId;
     console.log("vaultId: " + vaultId)
+  });
+
+  afterAll(async () => {
+    await akord.vault.delete(vaultId);
+    await Auth.signOut();
   });
 
   it("should upload zip from path", async () => {

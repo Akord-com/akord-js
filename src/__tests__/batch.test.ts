@@ -1,6 +1,6 @@
 import { Akord } from "../index";
-import { initInstance, folderCreate, noteCreate, testDataPath, vaultCreate } from './common';
-import { email, email2, email3, password } from './data/test-credentials';
+import { initInstance, folderCreate, noteCreate, testDataPath, setupVault, cleanup } from './common';
+import { email2, email3 } from './data/test-credentials';
 import { firstFileName } from "./data/content";
 import { createFileLike } from "../core/file";
 import { StackCreateItem } from "../core/batch";
@@ -19,12 +19,15 @@ describe("Testing batch actions", () => {
   let stackIds: string[];
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   describe("Batch revoke/restore actions", () => {
@@ -94,8 +97,8 @@ describe("Testing batch actions", () => {
 
     it(`should try to upload 2 files (the empty one should be skipped)`, async () => {
       const { data, errors } = await akord.batch.stackCreate(vaultId, [
-         { file: await createFileLike(testDataPath + firstFileName) },
-         { file: testDataPath + "empty-file.md" }
+        { file: await createFileLike(testDataPath + firstFileName) },
+        { file: testDataPath + "empty-file.md" }
       ]);
 
       expect(errors.length).toEqual(1);
