@@ -124,7 +124,7 @@ class ManifestModule {
         });
         // process the children
         if (folder['children']) {
-          let pathName = folder['name'];
+          let pathName = this.encode(folder['name']);
           if (path) pathName = [path, this.encode(folder['name'])].join("/");
           const children = computePaths(folder['children'], pathName);
           paths.push(...children);
