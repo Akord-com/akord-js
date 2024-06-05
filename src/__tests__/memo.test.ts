@@ -1,8 +1,7 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, vaultCreate } from './common';
+import { cleanup, initInstance, setupVault } from './common';
 import { reactionEmoji } from '../constants';
-import { email, password } from './data/test-credentials';
 
 let akord: Akord;
 
@@ -13,12 +12,15 @@ describe("Testing memo functions", () => {
   let memoId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should create new memo", async () => {

@@ -1,7 +1,6 @@
 import { Akord, CollectionMetadata, NFTMetadata, StorageType, UDL, UDL_LICENSE_TX_ID } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath } from './common';
-import { email, password } from './data/test-credentials';
 import { NodeJs } from "../types/file";
 import { DEFAULT_FRACTION_PARTS } from "../core/nft";
 
@@ -13,11 +12,11 @@ describe("Testing NFT functions", () => {
   let vaultId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
     vaultId = (await akord.vault.create(faker.random.words(), {
       public: true,
       cloud: false
