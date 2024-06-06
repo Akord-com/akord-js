@@ -1,6 +1,5 @@
 import { Akord } from "../index";
-import { initInstance } from './common';
-import { email, password } from './data/test-credentials';
+import { cleanup, initInstance } from './common';
 import faker from '@faker-js/faker';
 import { BadRequest } from "../errors/bad-request";
 
@@ -40,15 +39,19 @@ describe("Testing manifest functions", () => {
   let vaultId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
     vaultId = (await akord.vault.create(faker.random.words(), {
       cloud: true,
       public: true
     })).vaultId;
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should upload new file to the vault", async () => {

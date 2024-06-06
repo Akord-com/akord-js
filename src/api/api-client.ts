@@ -16,6 +16,7 @@ import fetch from 'cross-fetch';
 import { jsonToBase64 } from "@akord/crypto";
 import { ZipLog } from "../types/zip";
 import { Storage } from "../types/storage";
+import { Logger } from "../logger";
 
 const CONTENT_RANGE_HEADER = 'Content-Range';
 const CONTENT_LOCATION_HEADER = 'Content-Location';
@@ -396,10 +397,12 @@ export class ApiClient {
 
   async getTransactionTags(): Promise<Tags> {
     try {
-      const response = await axios({
+      const config = {
         method: 'head',
         url: `${this._apiurl}/files/${this._resourceId}`
-      });
+      }
+      Logger.log(`Request ${config.method}: ` + config.url);
+      const response = await axios(config);
       return Object.keys(response.headers)
         .filter(header => header.startsWith(GATEWAY_HEADER_PREFIX))
         .map(header => {
@@ -458,6 +461,7 @@ export class ApiClient {
     if (this._data) {
       config.data = this._data;
     }
+    Logger.log(`Request ${config.method}: ` + config.url);
     try {
       const response = await axios(config);
       if (isPaginated(response)) {
@@ -608,6 +612,7 @@ export class ApiClient {
       }
     } as AxiosRequestConfig;
 
+    Logger.log(`Request ${config.method}: ` + config.url);
 
     try {
       const response = await axios(config);
@@ -674,8 +679,12 @@ export class ApiClient {
       }
     }
 
+    const url = `${this._apiurl}/files/${this._resourceId}`;
+
+    Logger.log(`Request ${config.method}: ` + url);
+
     try {
-      const response = await fetch(`${this._apiurl}/files/${this._resourceId}`, config);
+      const response = await fetch(url, config);
       return { resourceUrl: this._resourceId, response: response };
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
@@ -723,6 +732,8 @@ export class ApiClient {
         }
       }
     } as AxiosRequestConfig;
+
+    Logger.log(`Request ${config.method}: ` + config.url);
 
     try {
       const response = await axios(config);

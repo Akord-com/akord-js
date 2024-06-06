@@ -14,7 +14,6 @@ import { FileVersion } from "../types";
 import { ListFileOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
-import { Auth } from "@akord/akord-auth";
 import { isServer } from '../util/platform';
 import { Api } from '../api/api';
 import { getMimeTypeFromFileName } from '../util/mime-types';
@@ -33,9 +32,12 @@ class FileModule {
 
   protected service: Service;
 
-  constructor(wallet: Wallet, api: Api, service?: Service, contentType?: string) {
+  protected overridedName: string;
+
+  constructor(wallet: Wallet, api: Api, service?: Service, contentType?: string, overridedName?: string) {
     this.service = new Service(wallet, api, service);
     this.contentType = contentType;
+    this.overridedName = overridedName;
   }
 
   /**
@@ -84,7 +86,7 @@ class FileModule {
     const version = new FileVersion({
       owner: await this.service.wallet.getAddress(),
       createdAt: JSON.stringify(Date.now()),
-      name: await this.service.processWriteString(file.name),
+      name: await this.service.processWriteString(this.overridedName || file.name),
       type: file.type,
       size: file.size,
       resourceUri: uploadResult.resourceUri,
@@ -257,7 +259,7 @@ class FileModule {
   private getFileTags(file: FileLike, options: FileUploadOptions = {}): Tags {
     const tags = [] as Tags;
     if (this.service.isPublic) {
-      tags.push(new Tag(fileTags.FILE_NAME, file.name))
+      tags.push(new Tag(fileTags.FILE_NAME, this.overridedName || file.name))
       if (file.lastModified) {
         tags.push(new Tag(fileTags.FILE_MODIFIED_AT, file.lastModified.toString()));
       }
@@ -274,7 +276,7 @@ class FileModule {
     if (this.service.parentId) {
       tags.push(new Tag(protocolTags.PARENT_ID, this.service.parentId));
     }
-    
+
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     if (options.udl) {
       const udlTags = udlToTags(options.udl);
@@ -319,6 +321,7 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
     } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
       return new nodeJsFile([source as any], name, options.mimeType, options.lastModified);
     } else if (source instanceof nodeJsFile) {
+      source.name = name;
       return source;
     } else if (typeof source === "string") {
       return nodeJsFile.fromPath(source, name, options.mimeType, options.lastModified);

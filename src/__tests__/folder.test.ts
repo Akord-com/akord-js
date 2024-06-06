@@ -1,7 +1,6 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, folderCreate, vaultCreate } from './common';
-import { email, password } from './data/test-credentials';
+import { initInstance, folderCreate, setupVault, cleanup } from './common';
 import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
@@ -14,12 +13,15 @@ describe("Testing folder functions", () => {
   let subFolderId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should create root folder", async () => {
