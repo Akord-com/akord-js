@@ -54,9 +54,9 @@ class StackModule extends NodeModule<Stack> {
       ...options
     }
 
-    const fileService = new FileModule(this.service.wallet, this.service.api, this.service, this.contentType);
+    const overridedName = createOptions.overrideFileName ? options.name : undefined;
 
-    const fileLike = await createFileLike(file, { ...options, name: createOptions.overrideFileName ? options.name : undefined });
+    const fileLike = await createFileLike(file, { ...options, name: overridedName });
 
     if (fileLike.size === 0) {
       throw new BadRequest(EMPTY_FILE_ERROR_MESSAGE);
@@ -65,6 +65,8 @@ class StackModule extends NodeModule<Stack> {
     const stackName = options.name || fileLike.name;
 
     this.service.setAkordTags((this.service.isPublic ? [stackName] : []).concat(createOptions.tags));
+
+    const fileService = new FileModule(this.service.wallet, this.service.api, this.service, this.contentType, overridedName);
 
     const fileUploadResult = await fileService.create(fileLike, createOptions);
     const version = await fileService.newVersion(fileLike, fileUploadResult);
