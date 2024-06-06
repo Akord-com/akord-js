@@ -1,7 +1,6 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, vaultCreate } from './common';
-import { email, password } from './data/test-credentials';
+import { cleanup, initInstance, setupVault } from './common';
 import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
@@ -14,12 +13,15 @@ describe("Testing vault functions", () => {
   let vaultTag2: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should add new vault tags", async () => {

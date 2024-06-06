@@ -271,6 +271,9 @@ class FileModule {
     tags.push(new Tag(protocolTags.TIMESTAMP, JSON.stringify(Date.now())));
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.service.vaultId));
+    if (this.service.parentId) {
+      tags.push(new Tag(protocolTags.PARENT_ID, this.service.parentId));
+    }
 
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     if (options.udl) {
@@ -295,7 +298,10 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
   const name = options.name || (source as any).name;
   if (!isServer()) {
     if (source instanceof File) {
-      return source;
+      return {
+        ...source,
+        name: name
+      };
     }
     if (!name) {
       throw new BadRequest("File name is required, please provide it in the file options.");
@@ -316,6 +322,7 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
     } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
       return new nodeJsFile([source as any], name, options.mimeType, options.lastModified);
     } else if (source instanceof nodeJsFile) {
+      source.name = name;
       return source;
     } else if (typeof source === "string") {
       return nodeJsFile.fromPath(source, name, options.mimeType, options.lastModified);

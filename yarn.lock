@@ -2,14 +2,15 @@
 # yarn lockfile v1
 
 
-"@akord/akord-auth@0.30.43":
-  version "0.30.43"
-  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.43.tgz#690ee3124a01d1d7043bb533eb142b5d86d36c97"
-  integrity sha512-0rlUBvgJKZAiMrR50QclXqb+p5kxzDwHSdKm4AyXie/pvjkqGdD/Oa7UGM3NJHpP/i42aS6kZB6AGS+6ha5tWg==
+"@akord/akord-auth@0.30.44":
+  version "0.30.44"
+  resolved "https://registry.yarnpkg.com/@akord/akord-auth/-/akord-auth-0.30.44.tgz#5de854e6d96514ce9014aa565434a7184ad2dc34"
+  integrity sha512-OWcJat3q3o6kv8/9FgG3egk2/ZLx0bzHRT45Lpu5Dio3RL+/bupCNEt0nm/GOZbHl5MKhb8xy1kWtD5AyQxHfA==
   dependencies:
     "@akord/crypto" "0.21.56"
     amazon-cognito-identity-js "6.1.2"
     memorystorage "^0.12.0"
+    ts-retry "^4.2.5"
 
 "@akord/browser-level@^1.0.2":
   version "1.0.2"
@@ -801,6 +802,13 @@
   version "17.0.45"
   resolved "https://registry.npmjs.org/@types/node/-/node-17.0.45.tgz"
   integrity sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==
+
+"@types/pngjs@^6.0.5":
+  version "6.0.5"
+  resolved "https://registry.yarnpkg.com/@types/pngjs/-/pngjs-6.0.5.tgz#6dec2f7eb8284543ca4e423f3c09b119fa939ea3"
+  integrity sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==
+  dependencies:
+    "@types/node" "*"
 
 "@types/prettier@^2.1.5":
   version "2.7.3"
@@ -2322,6 +2330,11 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
+pngjs@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-7.0.0.tgz#a8b7446020ebbc6ac739db6c5415a65d17090e26"
+  integrity sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==
+
 pretty-format@^28.1.3:
   version "28.1.3"
   resolved "https://registry.npmjs.org/pretty-format/-/pretty-format-28.1.3.tgz"
@@ -2605,6 +2618,11 @@ ts-jest@^28.0.5:
     make-error "1.x"
     semver "7.x"
     yargs-parser "^21.0.1"
+
+ts-retry@^4.2.5:
+  version "4.2.5"
+  resolved "https://registry.yarnpkg.com/ts-retry/-/ts-retry-4.2.5.tgz#ee4638e66c68bb49da975aa4994d5f16bfb61bc2"
+  integrity sha512-dFBa4pxMBkt/bjzdBio8EwYfbAdycEAwe0KZgzlUKKwU9Wr1WErK7Hg9QLqJuDDYJXTW4KYZyXAyqYKOdO/ehA==
 
 tslib@^1.11.1:
   version "1.14.1"

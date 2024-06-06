@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js-pubsub-plugin",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Plugin for akord-js enabling subscribe() on modules",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",

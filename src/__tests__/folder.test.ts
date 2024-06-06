@@ -1,7 +1,6 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, folderCreate, vaultCreate } from './common';
-import { email, password } from './data/test-credentials';
+import { initInstance, folderCreate, setupVault, cleanup } from './common';
 import { BadRequest } from "../errors/bad-request";
 
 let akord: Akord;
@@ -14,12 +13,15 @@ describe("Testing folder functions", () => {
   let subFolderId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should create root folder", async () => {
@@ -55,5 +57,18 @@ describe("Testing folder functions", () => {
 
     const subFolder = await akord.folder.get(subFolderId);
     expect(subFolder.status).toEqual("ACTIVE");
+  });
+
+  it("should list all root folders", async () => {
+    const folders = await akord.folder.listAll(vaultId, { parentId: "null" });
+    expect(folders?.length).toEqual(1);
+    expect(folders[0]?.id).toEqual(rootFolderId);
+  });
+
+  it("should list all sub-folders of the root folder", async () => {
+    const folders = await akord.folder.listAll(vaultId, { parentId: rootFolderId });
+    expect(folders?.length).toEqual(1);
+    expect(folders[0]?.id).toEqual(subFolderId);
+    expect(folders[0]?.parentId).toEqual(rootFolderId);
   });
 });

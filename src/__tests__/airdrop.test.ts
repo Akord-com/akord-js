@@ -1,8 +1,8 @@
 import { StackCreateItem } from "../core/batch";
 import { NotEnoughStorage } from "../errors/not-enough-storage";
 import { Akord, Auth } from "../index";
-import { initInstance, testDataPath, vaultCreate } from './common';
-import { email, email2, email3, password } from './data/test-credentials';
+import { cleanup, initInstance, setupVault, testDataPath } from './common';
+import { email2, email3, password } from './data/test-credentials';
 import { AkordWallet } from "@akord/crypto";
 import fs from "fs";
 import { firstFileName } from "./data/content";
@@ -16,12 +16,15 @@ describe("Testing airdrop actions", () => {
   let airdropee: AkordWallet;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   describe("Airdrop access tests", () => {

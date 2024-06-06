@@ -34,6 +34,7 @@ class Service {
   keys: Array<EncryptedKeys>
 
   vaultId: string
+  parentId: string
   objectId: string
   objectType: ObjectType
   isPublic: boolean
@@ -60,6 +61,7 @@ class Service {
       this.setRawDataEncryptionPublicKey(service.dataEncrypter.publicKey);
       this.setFunction(service.function);
       this.setActionRef(service.actionRef);
+      this.setParentId(service.parentId);
       this.setObjectId(service.objectId);
       this.setObject(service.object);
       this.setGroupRef(service.groupRef);
@@ -74,6 +76,10 @@ class Service {
 
   setVaultId(vaultId: string) {
     this.vaultId = vaultId;
+  }
+
+  setParentId(parentId: string) {
+    this.parentId = parentId;
   }
 
   setObjectId(objectId: string) {

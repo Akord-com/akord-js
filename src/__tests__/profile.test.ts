@@ -1,7 +1,6 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath } from './common';
-import { email, password } from './data/test-credentials';
 import { firstFileName } from "./data/content";
 import { createFileLike } from "../core/file";
 
@@ -11,7 +10,7 @@ jest.setTimeout(3000000);
 
 describe("Testing profile functions", () => {
   beforeAll(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   it("should get the profile", async () => {

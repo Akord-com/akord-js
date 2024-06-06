@@ -1,12 +1,12 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, testDataPath, testDataOutPath, vaultCreate } from './common';
-import { email, password } from './data/test-credentials';
+import { initInstance, testDataPath, testDataOutPath, setupVault, cleanup } from './common';
 import { getTxData } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
 import { createFileLike } from "../core/file";
 import fs from "fs";
 import { BadRequest } from "../errors/bad-request";
+import { PNG } from "pngjs";
 
 let akord: Akord;
 
@@ -17,12 +17,15 @@ describe("Testing stack functions", () => {
   let stackId: string;
 
   beforeEach(async () => {
-    akord = await initInstance(email, password);
+    akord = await initInstance();
   });
 
   beforeAll(async () => {
-    akord = await initInstance(email, password);
-    vaultId = (await vaultCreate(akord)).vaultId;
+    vaultId = await setupVault();
+  });
+
+  afterAll(async () => {
+    await cleanup(akord, vaultId);
   });
 
   it("should create stack from path", async () => {
@@ -208,4 +211,62 @@ describe("Testing stack functions", () => {
     const { data } = await akord.stack.getVersion(stackId);
     expect(data).toEqual(await getTxData(arweaveImportFileTx));
   });
+
+  it("should upload large file (bigger than chunk size)", async () => {
+    const name = "pixels.png";
+    const type = "image/png";
+
+    // generate & save 11 MB pixel png file
+    await generateAndSavePixelFile(11, testDataPath + name);
+
+    const { stackId, uri } = await akord.stack.create(vaultId, testDataPath + name);
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
+
+    const stack = await akord.stack.get(stackId);
+    expect(stack.uri).toBeTruthy();
+    expect(stack.status).toEqual("ACTIVE");
+    expect(stack.name).toEqual(name);
+    expect(stack.versions.length).toEqual(1);
+    expect(stack.versions[0].name).toEqual(name);
+    expect(stack.versions[0].type).toEqual(type);
+    expect(stack.versions[0].numberOfChunks).toBeGreaterThan(1);
+
+    const { data } = await akord.stack.getVersion(stackId, 0);
+    const pixelFile = await createFileLike(testDataPath + name);
+    expect(data).toEqual(await pixelFile.arrayBuffer());
+  });
 });
+
+const generateAndSavePixelFile = async (fileSizeMB: number, filePath: string) => {
+  const totalBytes = fileSizeMB * 1024 * 1024;
+  const totalPixels = totalBytes / 4; // each pixel is 4 bytes (RGBA)
+  const imageSize = Math.sqrt(totalPixels);
+  let buffer = new Uint8Array(totalBytes);
+
+  // fill the buffer with random pixel data
+  for (let i = 0; i < totalBytes; i++) {
+    buffer[i] = Math.floor(Math.random() * 256);
+  }
+
+  // create a PNG object
+  const png = new PNG({
+    width: imageSize,
+    height: imageSize
+  });
+
+  // copy buffer data into the PNG data
+  png.data = Buffer.from(buffer);
+
+  // pack & save the PNG buffer
+  await new Promise<void>((resolve, reject) => {
+    const writeStream = fs.createWriteStream(filePath);
+    png.pack().pipe(writeStream)
+      .on('finish', () => {
+        resolve();
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
+  });
+}

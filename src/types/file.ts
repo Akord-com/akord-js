@@ -39,7 +39,7 @@ export namespace NodeJs {
         const stats = fs.statSync(filePath);
 
         const fileName = name || path.basename(filePath);
-        const fileType = mimeType || mime.lookup(name) || DEFAULT_FILE_TYPE;
+        const fileType = mimeType || mime.lookup(fileName) || DEFAULT_FILE_TYPE;
         const fileLastModified = lastModified || stats.ctime.getTime();
 
         const file = new File([fs.readFileSync(filePath)], fileName, fileType, fileLastModified) as NodeJs.File;
