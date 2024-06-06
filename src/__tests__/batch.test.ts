@@ -74,7 +74,11 @@ describe("Testing batch actions", () => {
       const items = [] as StackCreateItem[];
 
       for (let i = 0; i < batchSize; i++) {
-        items.push({ file });
+        if (i % 2 === 0) {
+          items.push({ file });
+        } else {
+          items.push({ file, options: { name: "override-name.png" } });
+        }
       }
 
       const { data, errors } = await akord.batch.stackCreate(vaultId, items);
@@ -82,13 +86,18 @@ describe("Testing batch actions", () => {
       expect(errors.length).toEqual(0);
       expect(data.length).toEqual(batchSize);
       stackIds = data.map((item) => item.stackId);
+      let nameCount = 0;
       for (let index in items) {
         const stack = await akord.stack.get(data[index].stackId);
         expect(stack.status).toEqual("ACTIVE");
         expect(stack.name).toEqual(data[index].object.name);
         expect(stack.versions.length).toEqual(1);
-        expect(stack.versions[0].name).toEqual(firstFileName);
+        expect([firstFileName, "override-name.png"]).toContain(stack.versions[0].name);
+        if (stack.versions[0].name === firstFileName) {
+          nameCount++;
+        }
       }
+      expect(nameCount).toEqual(batchSize / 2);
     });
 
     it("should revoke the previously uploaded batch", async () => {
