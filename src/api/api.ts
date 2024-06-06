@@ -9,9 +9,8 @@ import { EncryptionMetadata } from "../types/encryption";
 import { ApiConfig } from "./config";
 import { FileGetOptions, FileUploadOptions } from "../core/file";
 import { ZipLog, ZipUploadApiOptions } from "../types/zip";
-import { FileLike } from "../types/file";
 import { FileVersion } from "../types";
-import { Storage } from "../types/storage";
+import { Storage, StorageBuyOptions, StorageBuyResponse } from "../types/storage";
 
 abstract class Api {
   config: ApiConfig
@@ -39,8 +38,10 @@ abstract class Api {
   abstract downloadFile(id: string, options?: FileGetOptions): Promise<{ fileData: ArrayBuffer | ReadableStream, metadata: EncryptionMetadata }>
 
   abstract getStorageBalance(): Promise<Storage>
+  
+  abstract initPayment(amountInGbs: number, options: StorageBuyOptions): Promise<StorageBuyResponse>
 
-  abstract simulatePayment(storageInGbs: number): Promise<any>
+  abstract confirmPayment(paymentId: string): Promise<StorageBuyResponse>
 
   abstract getMembershipKeys(vaultId: string): Promise<MembershipKeys>
 

@@ -12,10 +12,31 @@ export class Storage {
     }
 }
 
+export enum CurrencyCode {
+    USD, EUR, GBP
+}
+
 export type StorageBuyOptions = {
+    /**
+     * Currency code used in payment.
+     */
+    currencyCode?: CurrencyCode
+    /**
+     * If true, there is no real payment done. Use this flag to check the price of storage.
+     */
     simulate?: boolean
+    /**
+     * If true, payment is done in single step. Otherwise the payment requires confirmation (execute same method, providing paymentId).
+     */
+    confirm?: boolean 
+    /**
+     * Provide it to confirm initiated payment. 
+     */
+    paymentId?: string
 }
 
 export type StorageBuyResponse = {
-    simulate?: boolean,
+    paymentId?: string
+    amount: number
+    currencyCode: CurrencyCode
 }

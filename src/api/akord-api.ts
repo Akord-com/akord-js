@@ -14,9 +14,9 @@ import { User, UserPublicInfo } from "../types/user";
 import { EncryptionMetadata } from "../types/encryption";
 import { FileUploadOptions, FileGetOptions } from "../core/file";
 import { StreamConverter } from "../util/stream-converter";
-import { ZipLog, ZipUploadApiOptions, ZipUploadOptions } from "../types/zip";
+import { ZipLog, ZipUploadApiOptions } from "../types/zip";
 import { FileVersion } from "../types";
-import { Storage } from "../types/storage";
+import { Storage, StorageBuyOptions, StorageBuyResponse } from "../types/storage";
 
 export const defaultFileUploadOptions = {
   storage: StorageType.ARWEAVE,
@@ -190,12 +190,17 @@ export default class AkordApi extends Api {
       .getStorageBalance();
   }
 
-  public async simulatePayment(storageInGbs: number): Promise<any> {
+  public async initPayment(amountInGbs: number, options: StorageBuyOptions = {}): Promise<StorageBuyResponse> {
     return await new ApiClient()
       .env(this.config)
-      .queryParams({ storage: storageInGbs })
-      .data({ simulate: true })
+      .data({ quantity: amountInGbs, ...options })
       .postPayments();
+  }
+
+  public async confirmPayment(paymentId: string): Promise<StorageBuyResponse> {
+    return await new ApiClient()
+      .env(this.config)
+      .confirmPayment(paymentId);
   }
 
   public async existsUser(email: string): Promise<Boolean> {
