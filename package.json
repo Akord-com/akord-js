@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js",
-  "version": "5.7.1",
+  "version": "5.8.0",
   "description": "A set of core js functions to interact with Akord",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
