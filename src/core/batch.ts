@@ -28,6 +28,8 @@ class BatchModule {
 
   protected service: Service;
 
+  protected overridedName: string;
+
   constructor(wallet: Wallet, api: Api, service?: Service) {
     this.service = new Service(wallet, api, service);
   }
@@ -230,6 +232,14 @@ class BatchModule {
     const uploadItem = async (item: UploadItem) => {
       let service: NodeService<NFT | Stack>;
       const isStackService = !item.metadata;
+
+      const createOptions = {
+        ...options,
+        ...(item.options || {})
+      } as StackCreateOptions;
+
+      const name = createOptions.name ? createOptions.name : item.file.name;
+
       if (isStackService) {
         service = new NodeService<Stack>(this.service.wallet, this.service.api, Stack, objectType.STACK, this.service);
       } else {
@@ -239,40 +249,35 @@ class BatchModule {
       const nodeId = uuidv4();
       service.setObjectId(nodeId);
 
-      const createOptions = {
-        ...options,
-        ...(item.options || {})
-      } as StackCreateOptions;
-
       if (isStackService) {
-        service.setAkordTags((service.isPublic ? [item.file.name] : []).concat(createOptions.tags));
+        service.setAkordTags((service.isPublic ? [name] : []).concat(createOptions.tags));
         service.setParentId(createOptions.parentId);
         service.arweaveTags = await service.getTxTags();
       } else {
         service.arweaveTags = createOptions.arweaveTags;
       }
 
-      const fileService = new FileModule(this.service.wallet, this.service.api, service);
+      const fileService = new FileModule(this.service.wallet, this.service.api, service, undefined, name);
       try {
         const fileUploadResult = await fileService.create(item.file, createOptions);
         const version = await fileService.newVersion(item.file, fileUploadResult);
 
         if (isStackService) {
-          postTxQ.add(() => postStackTx(service as NodeService<Stack>, item, version, options), { signal: options.cancelHook?.signal })
+          postTxQ.add(() => postStackTx(service as NodeService<Stack>, item, version, options, name), { signal: options.cancelHook?.signal })
         } else {
-          postTxQ.add(() => postMintTx(service as NodeService<NFT>, item, version, options), { signal: options.cancelHook?.signal })
+          postTxQ.add(() => postMintTx(service as NodeService<NFT>, item, version, options, name), { signal: options.cancelHook?.signal })
         }
       } catch (error) {
         if (!(error instanceof AbortError) && !options.cancelHook?.signal?.aborted) {
-          errors.push({ name: item.file.name, message: error.toString(), error });
+          errors.push({ name: name, message: error.toString(), error });
         }
       }
     }
 
-    const postStackTx = async (service: NodeService<Stack>, item: StackUploadItem, version: FileVersion, options: BatchStackCreateOptions) => {
+    const postStackTx = async (service: NodeService<Stack>, item: StackUploadItem, version: FileVersion, options: BatchStackCreateOptions, name: string) => {
       try {
         const state = {
-          name: await service.processWriteString(item.file.name),
+          name: await service.processWriteString(name),
           versions: [version],
           tags: service.tags
         };
@@ -295,11 +300,11 @@ class BatchModule {
         data.push({ transactionId: id, object: stack, id: object.id, uri: stack.uri });
         itemsCreated += 1;
       } catch (error) {
-        errors.push({ name: item.file.name, message: error.toString(), error });
+        errors.push({ name: name, message: error.toString(), error });
       };
     }
 
-    const postMintTx = async (service: NodeService<NFT>, item: UploadItem, version: FileVersion, options: BatchNFTMintOptions) => {
+    const postMintTx = async (service: NodeService<NFT>, item: UploadItem, version: FileVersion, options: BatchNFTMintOptions, name: string) => {
       try {
         const state = JSON.parse(service.arweaveTags.find((tag: Tag) => tag.name === "Init-State").value);
         state.asset = version;
@@ -311,7 +316,7 @@ class BatchModule {
         data.push({ transactionId: transactionId, object: object, id: object.id, uri: object.uri });
         itemsCreated += 1;
       } catch (error) {
-        errors.push({ name: item.file.name, message: error.toString(), error });
+        errors.push({ name: name, message: error.toString(), error });
       };
     }
 
