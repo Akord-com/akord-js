@@ -321,7 +321,6 @@ async function createFileLike(source: FileSource, options: FileOptions = {})
     } else if (source instanceof Uint8Array || source instanceof Buffer || source instanceof ArrayBuffer) {
       return new nodeJsFile([source as any], name, options.mimeType, options.lastModified);
     } else if (source instanceof nodeJsFile) {
-      source.name = name;
       return source;
     } else if (typeof source === "string") {
       return nodeJsFile.fromPath(source, name, options.mimeType, options.lastModified);
