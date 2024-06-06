@@ -12,9 +12,8 @@ export class Storage {
     }
 }
 
-export enum CurrencyCode {
-    USD, EUR, GBP
-}
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP'
+
 
 export type StorageBuyOptions = {
     /**
