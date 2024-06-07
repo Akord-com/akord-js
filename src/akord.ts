@@ -73,7 +73,6 @@ export class Akord {
   get zip(): ZipModule {
     return new ZipModule(this.wallet, this.api);
   }
-
   get storage(): StorageModule {
     return new StorageModule(this.wallet, this.api);
   }
