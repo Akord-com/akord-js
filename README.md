@@ -23,6 +23,7 @@ This package can be used in both browser and Node.js environments.
   - [Profile](#profile)
   - [Batch](#batch)
   - [Zip](#zip)
+  - [Storage](#storage)
 - [Development](#development)
 - [Deployment](#deployment)
 
@@ -1713,6 +1714,40 @@ Update user profile along with all active memberships
 
 ### zip
 
+#### `list(options)`
+
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated zips uploaded by user
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 100 zips for given user
+const { items } = await akord.zip.list();
+
+// retrieve first 20 zips for given user
+const { items, nextToken } = await akord.zip.list({ limit: 20 });
+// retrieve next 10 zips for given user
+const { items } = await akord.zip.list({ limit: 10, nextToken: nextToken });
+
+```
+</details>
+
+
+#### `listAll(options)`
+
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<Array<ZipLog>>` - Promise with all zip logs for given account
+
+<details>
+  <summary>example</summary>
+
+```js
+const zips = await akord.zip.listAll();
+```
+</details>
+
 #### `upload(vaultId, file, options)`
 - `vaultId` (`string`, required)
 - `file` ([`FileSource`][file-source], required) - file source: web File object, file path, buffer or stream
@@ -1727,11 +1762,50 @@ const { sourceId } = await akord.zip.upload(vaultId, "path to your file");
 ```
 </details>
 
-#### `restore(items)`
 
-- `items` (`Array<{ id: string, type: `[`NodeType`][node-type]` }>`, required)
-- returns `Promise<Array<{ transactionId }>>` - Promise with corresponding transaction ids
+### storage
 
+#### `get()`
+- returns `Promise<Storage>` - Promise with user storage balance
+
+<details>
+  <summary>example</summary>
+
+```js
+const storage = await akord.storage.get();
+```
+</details>
+
+#### `buy()`
+Pay for storage. Increases Permanent Storage balance 
+- returns `Promise<StorageBuyResponse>` - Promise with price `amount` & `currencyCode`. Contains `paymentId` for non sumulated payments.
+
+<details>
+  <summary>example</summary>
+
+```js
+const gigabytesToBuy = 2;
+const { amount, currencyCode } = await akord.storage.buy(gigabytesToBuy, { simulate: true }); // no actual payment, just check price
+```
+</details>
+
+<details>
+  <summary>example</summary>
+
+```js
+const { paymentId, amount, currencyCode } = await akord.storage.buy(3); // initiate payment for 3 GB's: no storage increase yet, no payment yet
+
+await akord.storage.buy({ paymentId }); // confirm the payment: storage increase after successful payment
+```
+</details>
+
+<details>
+  <summary>example</summary>
+
+```js
+const { paymentId, amount, currencyCode } = await akord.storage.buy(3, { currencyCode: 'EUR', confirm: true }); // auto-confirm payment for 3 GB's: storage increase after successful payment
+```
+</details>
 
 ### Development
 ```

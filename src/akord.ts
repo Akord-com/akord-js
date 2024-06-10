@@ -20,6 +20,7 @@ import { CollectionModule } from "./core/collection";
 import { ZipModule } from "./core/zip";
 import { FileModule } from "./core/file";
 import { Plugins } from "./plugin";
+import { StorageModule } from "./core/storage";
 
 export class Akord {
   static readonly reactionEmoji = reactionEmoji;
@@ -71,6 +72,9 @@ export class Akord {
   }
   get zip(): ZipModule {
     return new ZipModule(this.wallet, this.api);
+  }
+  get storage(): StorageModule {
+    return new StorageModule(this.wallet, this.api);
   }
 
   /**
