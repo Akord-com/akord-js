@@ -1785,7 +1785,7 @@ Pay for storage. Increases Permanent Storage balance
 
 ```js
 const gigabytesToBuy = 2;
-const { amount, currnecyCode } = await akord.storage.buy(gigabytesToBuy, { simulate: true }); // no actual payment, just check price
+const { amount, currencyCode } = await akord.storage.buy(gigabytesToBuy, { simulate: true }); // no actual payment, just check price
 ```
 </details>
 
@@ -1793,7 +1793,7 @@ const { amount, currnecyCode } = await akord.storage.buy(gigabytesToBuy, { simul
   <summary>example</summary>
 
 ```js
-const { paymentId, amount, currnecyCode } = await akord.storage.buy(3); // initiate payment for 3 GB's: no storage increase yet, no payment yet
+const { paymentId, amount, currencyCode } = await akord.storage.buy(3); // initiate payment for 3 GB's: no storage increase yet, no payment yet
 
 await akord.storage.buy({ paymentId }); // confirm the payment: storage increase after successful payment
 ```
@@ -1803,7 +1803,7 @@ await akord.storage.buy({ paymentId }); // confirm the payment: storage increase
   <summary>example</summary>
 
 ```js
-const { paymentId, amount, currnecyCode } = await akord.storage.buy(3, { currencyCode: 'EUR', confirm: true }); // auto-confirm payment for 3 GB's: storage increase after successful payment
+const { paymentId, amount, currencyCode } = await akord.storage.buy(3, { currencyCode: 'EUR', confirm: true }); // auto-confirm payment for 3 GB's: storage increase after successful payment
 ```
 </details>
 
