@@ -45,6 +45,7 @@ class Service {
   function: functions
   tags: string[] // akord tags for easier search
   arweaveTags: Tags // arweave tx tags
+  userAgent: string // client name
 
   constructor(config: ServiceConfig) {
     this.signer = config.signer;
@@ -63,6 +64,7 @@ class Service {
     this.groupRef = config.groupRef;
     this.tags = config.tags || [];
     this.arweaveTags = config.arweaveTags || [];
+    this.userAgent = config.userAgent;
   }
 
   setKeys(keys: EncryptedKeys[]) {
@@ -179,6 +181,9 @@ class Service {
     } else if (this.objectType !== objectType.VAULT) {
       tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
     }
+    if (this.userAgent) {
+      tags.push(new Tag(smartweaveTags.APP_NAME, this.userAgent));
+    }
     const ids = await this.api.uploadData([{ data: state, tags }], cloud);
     return ids[0];
   }
@@ -197,6 +202,9 @@ class Service {
     }
     if (this.actionRef) {
       tags.push(new Tag(protocolTags.ACTION_REF, this.actionRef));
+    }
+    if (this.userAgent) {
+      tags.push(new Tag(smartweaveTags.APP_NAME, this.userAgent));
     }
     this.tags
       ?.filter(tag => tag)
@@ -299,7 +307,8 @@ export type ServiceConfig = {
   groupRef?: string,
   tags?: string[], // akord tags for easier search
   arweaveTags?: Tags // arweave tx tags,
-  contentType?: string
+  contentType?: string,
+  userAgent?: string
 }
 
 export { Service };

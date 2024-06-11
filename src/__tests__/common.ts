@@ -5,7 +5,7 @@ import faker from '@faker-js/faker';
 export async function initInstance(email: string, password: string): Promise<Akord> {
   Auth.configure({ env: process.env.ENV as any });
   const { wallet } = await Auth.signIn(email, password);
-  return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+  return new Akord({ encrypter: wallet, signer: wallet, debug: true, env: process.env.ENV as any, userAgent: "Tests" });
 }
 
 export const vaultCreate = async (akord: Akord, cloud = true) => {

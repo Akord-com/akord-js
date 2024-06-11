@@ -271,6 +271,10 @@ class FileModule {
     tags.push(new Tag(dataTags.DATA_TYPE, "File"));
     tags.push(new Tag(protocolTags.VAULT_ID, this.service.vaultId));
 
+    if (this.service.userAgent) {
+      tags.push(new Tag(smartweaveTags.APP_NAME, this.service.userAgent));
+    }
+
     options.arweaveTags?.map((tag: Tag) => tags.push(tag));
     if (options.udl) {
       const udlTags = udlToTags(options.udl);
