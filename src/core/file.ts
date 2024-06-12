@@ -291,7 +291,11 @@ class FileModule {
       base64ToArray(resourceHash),
       privateKeyRaw
     );
-    return [new Tag(protocolTags.SIGNATURE, signature), new Tag(fileTags.FILE_HASH, resourceHash)];
+    return [
+      new Tag(protocolTags.SIGNER_ADDRESS, await this.service.wallet.getAddress()),
+      new Tag(protocolTags.SIGNATURE, signature), 
+      new Tag(fileTags.FILE_HASH, resourceHash)
+    ];
   }
 };
 
