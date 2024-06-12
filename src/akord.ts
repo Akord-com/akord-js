@@ -29,6 +29,7 @@ export class Akord {
   private signer: Signer;
   private encrypter: Encrypter;
   private env: 'dev' | 'v2';
+  private userAgent: string;
 
   public static init: (wallet: Wallet, config?: ClientConfig) => Promise<Akord>;
 
@@ -79,7 +80,8 @@ export class Akord {
     return {
       api: this.api,
       signer: this.signer,
-      encrypter: this.encrypter
+      encrypter: this.encrypter,
+      userAgent: this.userAgent
     }
   }
 
@@ -102,6 +104,7 @@ export class Akord {
     this.encrypter = encrypter ? new Encrypter(encrypter, null, null) : null;
     this.env = clientConfig?.env || 'v2';
     this.api = clientConfig?.api ? clientConfig.api : new AkordApi(clientConfig);
+    this.userAgent = clientConfig?.userAgent;
     Crypto.configure({ wallet: encrypter });
     Plugins.register(clientConfig?.plugins, this.env);
     Logger.debug = clientConfig?.debug;
