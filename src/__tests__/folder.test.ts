@@ -1,7 +1,8 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
-import { initInstance, folderCreate, setupVault, cleanup } from './common';
+import { initInstance, folderCreate, setupVault, cleanup, testDataPath } from './common';
 import { BadRequest } from "../errors/bad-request";
+import { firstFileName } from "./data/content";
 
 let akord: Akord;
 
@@ -30,6 +31,28 @@ describe("Testing folder functions", () => {
 
   it("should create a sub folder", async () => {
     subFolderId = await folderCreate(akord, vaultId, rootFolderId);
+  });
+
+  it("should create stacks in different folder levels and list them correctly", async () => {
+    const { stackId } = await akord.stack.create(vaultId, testDataPath + firstFileName);
+    expect(stackId).toBeTruthy();
+
+    const { stackId: rootFolderStackId } = await akord.stack.create(vaultId, testDataPath + firstFileName, { parentId: rootFolderId });
+    expect(rootFolderStackId).toBeTruthy();
+
+    const { stackId: subFolderStackId } = await akord.stack.create(vaultId, testDataPath + firstFileName, { parentId: subFolderId });
+    expect(subFolderStackId).toBeTruthy();
+
+    const allStacks = await akord.stack.listAll(vaultId);
+    expect(allStacks?.length).toEqual(3);
+
+    const rootFolderStacks = await akord.stack.listAll(vaultId, { parentId: rootFolderId });
+    expect(rootFolderStacks?.length).toEqual(1);
+    expect(rootFolderStacks[0].id).toEqual(rootFolderStackId);
+
+    const subFolderStacks = await akord.stack.listAll(vaultId, { parentId: subFolderId });
+    expect(subFolderStacks?.length).toEqual(1);
+    expect(subFolderStacks[0].id).toEqual(subFolderStackId);
   });
 
   it("should revoke root folder", async () => {
