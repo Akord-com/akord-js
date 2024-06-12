@@ -140,8 +140,6 @@ class ZipModule {
     options: ZipUploadOptions
   ): Promise<{ sourceId: string }> {
     const { chunkSize, chunksConcurrency, ...initOptions } = options;
-    const totalChunks = Math.ceil(file.size / chunkSize);
-    let resp;
     const { multipartToken } = await this.service.api.uploadZip(null, vaultId, {
       ...initOptions,
       multipartInit: true,
@@ -166,7 +164,6 @@ class ZipModule {
         this.service.api.uploadZip(buffer, vaultId, {
           ...apiOptions,
           partNumber: currentPart,
-          totalChunks: totalChunks,
           multipartToken: multipartToken,
         })
       );
@@ -174,7 +171,7 @@ class ZipModule {
       partNumber += 1;
     }
     try {
-      resp = await chunksQ.addAll(chunks, {
+      await chunksQ.addAll(chunks, {
         signal: options.cancelHook?.signal,
       });
     } catch (error) {
