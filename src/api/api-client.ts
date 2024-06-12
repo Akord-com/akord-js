@@ -10,6 +10,7 @@ import { Unauthorized } from "../errors/unauthorized";
 import { throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
+import { NetworkError } from "../errors/network-error";
 import { User, UserPublicInfo } from "../types/user";
 import { FileVersion, StorageType } from "../types";
 import fetch from "cross-fetch";
@@ -510,15 +511,20 @@ export class ApiClient {
       config.data = this._data;
     }
     Logger.log(`Request ${config.method}: ` + config.url);
-    try {
-      const response = await axios(config);
-      if (isPaginated(response)) {
-        return { items: response.data, nextToken: nextToken(response) };
-      }
-      return response.data;
-    } catch (error) {
-      throwError(error.response?.status, error.response?.data?.msg, error);
-    }
+
+    return await retry(
+      async () => {
+        try {
+          const response = await axios(config);
+          if (isPaginated(response)) {
+            return { items: response.data, nextToken: nextToken(response) }
+          }
+          return response.data;
+        } catch (error) {
+          throwError(error.response?.status, error.response?.data?.msg, error);
+        }
+      })
+
   }
 
   addQueryParams = function (url: string, params: any) {
@@ -686,17 +692,20 @@ export class ApiClient {
 
     Logger.log(`Request ${config.method}: ` + config.url);
 
-    try {
-      const response = await axios(config);
-      return {
-        resourceUri: response.data.resourceUri,
-        resourceLocation:
-          response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
-        resourceSize: this._data.byteLength,
-      };
-    } catch (error) {
-      throwError(error.response?.status, error.response?.data?.msg, error);
-    }
+    return await retry(
+      async () => {
+        try {
+          const response = await axios(config);
+          return {
+            resourceUri: response.data.resourceUri,
+            resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
+            resourceSize: this._data.byteLength
+          };
+        } catch (error) {
+          throwError(error.response?.status, error.response?.data?.msg, error);
+        }
+      }
+    );
   }
 
   async getUploadState(): Promise<{ resourceUri: string[] }> {
@@ -862,4 +871,34 @@ export class ApiClient {
     );
     return data;
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function retry<T>(
+  fn: () => Promise<T>,
+  retries: number = 5,
+  delayMs: number = 1000
+): Promise<T> {
+  let attempt = 0;
+
+  while (attempt < retries) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error instanceof NetworkError) {
+        attempt++;
+        console.log(`Retry attempt ${attempt} failed. Retrying...`);
+        if (attempt >= retries) {
+          throw error;
+        }
+        await delay(delayMs);
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error("Retry attempts exceeded");
 }

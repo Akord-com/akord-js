@@ -1,6 +1,7 @@
 import { BadRequest } from "./bad-request";
 import { Forbidden } from "./forbidden";
 import { InternalError } from "./internal-error";
+import { NetworkError } from "./network-error";
 import { NotEnoughStorage } from "./not-enough-storage";
 import { NotFound } from "./not-found";
 import { TooManyRequests } from "./too-many-requests";
@@ -21,6 +22,9 @@ export const throwError = (status: number, message?: string, error?: Error) => {
     case 429:
       throw new TooManyRequests(message, error);
     default:
+      if (error['code'] && (error['code'] === 'ENOTFOUND' || error['code'] ==='ECONNRESET')) {
+        throw new NetworkError(error['code'], error);
+      }
       throw new InternalError("Internal error. Please try again or contact Akord support.", error);
   }
 }
