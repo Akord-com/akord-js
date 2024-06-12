@@ -154,8 +154,8 @@ describe("Testing batch actions", () => {
 
   describe("Batch upload - stress testing", () => {
     const batchSize = 1000;
-    it.skip(`should upload a batch of ${batchSize} files`, async () => {
-      const fileName = "screenshot.png"
+    it(`should upload a batch of ${batchSize} files`, async () => {
+      const fileName = "logo.png"
       const file = await createFileLike(testDataPath + fileName);
 
       const items = [] as StackCreateItem[];
