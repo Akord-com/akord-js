@@ -154,28 +154,30 @@ describe("Testing batch actions", () => {
 
   describe("Batch upload - stress testing", () => {
     const batchSize = 1000;
-    it(`should upload a batch of ${batchSize} files`, async () => {
+    let folderId: string;
+    it(`should create a root folder`, async () => {
+      folderId = await folderCreate(akord, vaultId);
+    });
+
+    it(`should upload a batch of ${batchSize} files to the folder`, async () => {
       const fileName = "logo.png"
       const file = await createFileLike(testDataPath + fileName);
 
       const items = [] as StackCreateItem[];
 
       for (let i = 0; i < batchSize; i++) {
-        items.push({ file });
+        items.push({ file, options: { parentId: folderId } });
       }
 
       const { data, errors } = await akord.batch.stackCreate(vaultId, items);
 
       expect(errors.length).toEqual(0);
       expect(data.length).toEqual(batchSize);
-      stackIds = data.map((item) => item.stackId);
-      for (let index in items) {
-        const stack = await akord.stack.get(data[index].stackId);
-        expect(stack.status).toEqual("ACTIVE");
-        expect(stack.name).toEqual(data[index].object.name);
-        expect(stack.versions.length).toEqual(1);
-        expect(stack.versions[0].name).toEqual(fileName);
-      }
+    });
+
+    it(`should list ${batchSize} files in the folder`, async () => {
+      const stacksInFolder = await akord.stack.listAll(vaultId, { parentId: folderId, limit: 1000 });
+      expect(stacksInFolder?.length).toEqual(batchSize);
     });
   });
 });

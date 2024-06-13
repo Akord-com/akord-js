@@ -3,16 +3,20 @@ import lodash from "lodash";
 import { EncryptedPayload } from "@akord/crypto/lib/types";
 import { base64ToArray } from "@akord/crypto";
 import { EncryptionMetadata } from "../types/encryption";
+import PQueue from "@esm2cjs/p-queue";
+import { InternalError } from "../errors/internal-error";
 
-export const handleListErrors = async <T>(originalItems: Array<T>, promises: Array<Promise<T>>)
-  : Promise<{ items: Array<T>, errors: Array<{ id: string, error: Error }> }> => {
-  const results = await Promise.all(promises.map(p => p.catch(e => e)));
-  const items = results.filter(result => !(result instanceof Error));
-  const errors = results
-    .map((result, index) => ({ result, index }))
-    .filter((mapped) => mapped.result instanceof Error)
-    .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result }));
-  return { items, errors };
+const DECRYPTION_CONCURRENCY = 1;
+
+export const processListItems = async <T>(items: Array<T>, processItem: any)
+  : Promise<void> => {
+    const decryptionQ = new PQueue({ concurrency: DECRYPTION_CONCURRENCY });
+    try {
+      await decryptionQ.addAll(items.map(item => () => processItem(item)))
+    } catch (error) {
+      throw new InternalError(error.toString(), error);
+    }
+    await decryptionQ.onIdle();
 }
 
 export const paginate = async <T>(apiCall: any, listOptions: ListOptions & { vaultId?: string }): Promise<Array<T>> => {

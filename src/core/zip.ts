@@ -4,7 +4,7 @@ import { BadRequest } from "../errors/bad-request";
 import { ZipLog, ZipUploadOptions } from "../types/zip";
 import { BYTES_IN_MB, CHUNKS_CONCURRENCY, DEFAULT_CHUNK_SIZE_IN_BYTES, FileOptions, MINIMAL_CHUNK_SIZE_IN_BYTES, createFileLike } from "./file";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
-import { ListPaginatedApiOptions } from "../types/query-options";
+import { ListPaginatedApiOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { PluginKey, Plugins } from "../plugin";
@@ -21,9 +21,10 @@ class ZipModule {
     this.service = new Service(wallet, api);
   }
 
-  private events = [ "ZIP_DECOMPRESSED", "ZIP_SIGNED", "ZIP_COMMITTED" ]
+  private events = ["ZIP_DECOMPRESSED", "ZIP_SIGNED", "ZIP_COMMITTED"]
 
   public async list(options: ListPaginatedApiOptions = {}): Promise<Paginated<ZipLog>> {
+    validateListPaginatedApiOptions(options);
     return await this.service.api.getZipLogs(options);
   }
 
