@@ -2,16 +2,9 @@ import { Service } from './service/service';
 import { functions, status } from "../constants";
 import { NodeCreateOptions, NodeLike, NodeType } from '../types/node';
 import { EncryptedKeys, Wallet } from '@akord/crypto';
-import { GetOptions, ListOptions } from '../types/query-options';
+import { GetOptions, ListOptions, validateListPaginatedApiOptions } from '../types/query-options';
 import { Paginated } from '../types/paginated';
-import { IncorrectEncryptionKey } from '../errors/incorrect-encryption-key';
-import { BadRequest } from '../errors/bad-request';
-import { handleListErrors, paginate } from './common';
-import { Folder } from '../types/folder';
-import { Stack } from '../types/stack';
-import { Memo } from '../types/memo';
-import { NFT } from '../types/nft';
-import { Collection } from '../types/collection';
+import { paginate, processListItems } from './common';
 import { NodeService } from './service/node';
 import { Api } from '../api/api';
 
@@ -58,7 +51,7 @@ class NodeModule<T> {
       ...options
     }
     const nodeProto = await this.service.api.getNode<NodeLike>(nodeId, this.objectType, getOptions.vaultId);
-    const node = await this.processNode(nodeProto, !nodeProto.__public__ && getOptions.shouldDecrypt, nodeProto.__keys__);
+    const node = await this.service.processNode(nodeProto, !nodeProto.__public__ && getOptions.shouldDecrypt, nodeProto.__keys__);
     return node as T;
   }
 
@@ -68,16 +61,23 @@ class NodeModule<T> {
    * @returns Promise with paginated nodes within given vault
    */
   public async list(vaultId: string, options: ListOptions = this.defaultListOptions = this.defaultListOptions): Promise<Paginated<T>> {
+    validateListPaginatedApiOptions(options);
     const listOptions = {
       ...this.defaultListOptions,
       ...options
     }
     const response = await this.service.api.getNodesByVaultId<T>(vaultId, this.objectType, listOptions);
-    const promises = response.items
-      .map(async (nodeProto: any) => {
-        return await this.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
-      });
-    const { items, errors } = await handleListErrors<T>(response.items, promises);
+    const items = [];
+    const errors = [];
+    const processItem = async (nodeProto: any) => {
+      try {
+        const node = await this.service.processNode(nodeProto, !nodeProto.__public__ && listOptions.shouldDecrypt, nodeProto.__keys__);
+        items.push(node);
+      } catch (error) {
+        errors.push({ id: nodeProto.id, error });
+      };
+    }
+    await processListItems(response.items, processItem);
     return {
       items,
       nextToken: response.nextToken,
@@ -157,36 +157,7 @@ class NodeModule<T> {
     return this.service.nodeUpdate<T>();
   }
 
-  private async processNode(object: NodeLike, shouldDecrypt: boolean, keys?: EncryptedKeys[]): Promise<T> {
-    const node = this.nodeInstance(object, keys);
-    if (shouldDecrypt) {
-      try {
-        await node.decrypt();
-      } catch (error) {
-        throw new IncorrectEncryptionKey(error);
-      }
-    }
-    return node as T;
-  }
-
   protected NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
-
-  private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
-    // TODO: use a generic NodeLike constructor
-    if (this.objectType === "Folder") {
-      return new Folder(nodeProto, keys);
-    } else if (this.objectType === "Stack") {
-      return new Stack(nodeProto, keys);
-    } else if (this.objectType === "Memo") {
-      return new Memo(nodeProto, keys);
-    } else if (this.objectType === "Collection") {
-      return new Collection(nodeProto);
-    } else if (this.objectType === "NFT") {
-      return new NFT(nodeProto);
-    } else {
-      throw new BadRequest("Given type is not supported: " + this.objectType);
-    }
-  }
 }
 
 export {

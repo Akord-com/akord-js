@@ -4,7 +4,7 @@ import { Wallet, arrayToString } from "@akord/crypto";
 import { Paginated } from "../types/paginated";
 import { NoteCreateOptions, NoteCreateResult, NoteOptions, NoteTypes, NoteUpdateResult } from "../types/note";
 import { Api } from "../api/api";
-import { ListOptions } from "../types/query-options";
+import { ListOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { NodeModule } from "./node";
 import { objectType } from "../constants";
 
@@ -37,7 +37,8 @@ class NoteModule extends NodeModule<Stack> {
    * @param  {string} vaultId
    * @returns Promise with all notes within given vault
    */
-  public async list(vaultId: string, options?: ListOptions): Promise<Paginated<Stack>> {
+  public async list(vaultId: string, options: ListOptions = {}): Promise<Paginated<Stack>> {
+    validateListPaginatedApiOptions(options);
     const stacks = await this.stackModule.list(vaultId, options) as Paginated<Stack>;
     const notes = stacks.items.filter((stack: Stack) => this.isValidNoteType(stack.getVersion().type));
     return { items: notes, nextToken: stacks.nextToken }
