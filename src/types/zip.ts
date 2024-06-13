@@ -12,7 +12,6 @@ export type ZipUploadApiOptions = Hooks & {
     skipHidden?: boolean, 
     multipartToken?: string,
     partNumber?: number   
-    totalChunks?: number   
     multipartInit?: boolean   
     multipartComplete?: boolean,
 }
