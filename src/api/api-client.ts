@@ -7,10 +7,9 @@ import { nextToken, isPaginated, Paginated } from "../types/paginated";
 import { Vault } from "../types/vault";
 import { Auth } from "@akord/akord-auth";
 import { Unauthorized } from "../errors/unauthorized";
-import { throwError } from "../errors/error-factory";
+import { retryableErrors, throwError } from "../errors/error-factory";
 import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
-import { NetworkError } from "../errors/network-error";
 import { User, UserPublicInfo } from "../types/user";
 import { FileVersion, StorageType } from "../types";
 import fetch from 'cross-fetch';
@@ -783,7 +782,7 @@ async function retry<T>(
     try {
       return await fn();
     } catch (error) {
-      if (error instanceof NetworkError) {
+      if (retryableErrors.some(type => error instanceof type)) {
         attempt++;
         console.log(`Retry attempt ${attempt} failed. Retrying...`);
         if (attempt >= retries) {

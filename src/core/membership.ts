@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Membership, MembershipAirdropOptions, MembershipCreateOptions, MembershipCreateResult, MembershipUpdateResult, RoleType } from "../types/membership";
 import { deriveAddress, base64ToArray, Wallet } from "@akord/crypto";
 import { Service } from "./service/service";
-import { GetOptions, ListOptions } from "../types/query-options";
+import { GetOptions, ListOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { MembershipInput, Tag, Tags } from "../types/contract";
 import { Paginated } from "../types/paginated";
 import { BadRequest } from "../errors/bad-request";
@@ -51,6 +51,7 @@ class MembershipModule {
    * @returns Promise with paginated memberships within given vault
    */
   public async list(vaultId: string, options: ListOptions = this.defaultListOptions): Promise<Paginated<Membership>> {
+    validateListPaginatedApiOptions(options);
     const listOptions = {
       ...this.defaultListOptions,
       ...options
