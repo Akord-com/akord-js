@@ -802,11 +802,8 @@ export class ApiClient {
     } as Record<string, string>;
 
     const form = new FormData();
-    const stream = new Readable();
     const buffer = this._data ? Buffer.from(this._data) : Buffer.alloc(0);
-    stream.push(buffer);
-    stream.push(null);
-    form.append("file", stream, {
+    form.append("file", buffer, {
       filename: "file",
       contentType: "application/octet-stream",
     });
