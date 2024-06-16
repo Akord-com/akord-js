@@ -4,11 +4,11 @@ import { EncryptedKeys, Wallet } from "@akord/crypto";
 import { Vault, VaultCreateOptions, VaultCreateResult, VaultUpdateOptions, VaultUpdateResult } from "../types/vault";
 import { Service } from "./service/service";
 import { Tag } from "../types/contract";
-import { ListOptions, VaultGetOptions } from "../types/query-options";
+import { ListOptions, VaultGetOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import lodash from "lodash";
 import { BadRequest } from "../errors/bad-request";
-import { handleListErrors, paginate } from "./common";
+import { paginate, processListItems } from "./common";
 import { Api } from "../api/api";
 import { MembershipService } from "./service/membership";
 import { VaultService } from "./service/vault";
@@ -57,16 +57,23 @@ class VaultModule {
    * @returns Promise with paginated user vaults
    */
   public async list(options: ListOptions = this.defaultListOptions): Promise<Paginated<Vault>> {
+    validateListPaginatedApiOptions(options);
     const listOptions = {
       ...this.defaultListOptions,
       ...options
     }
     const response = await this.service.api.getVaults(listOptions);
-    const promises = response.items
-      .map(async (vaultProto: Vault) => {
-        return await this.service.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
-      }) as Promise<Vault>[];
-    const { items, errors } = await handleListErrors<Vault>(response.items, promises);
+    const items = [];
+    const errors = [];
+    const processVault = async (vaultProto: Vault) => {
+      try {
+        const node = await this.service.processVault(vaultProto, listOptions.shouldDecrypt, vaultProto.keys);
+        items.push(node);
+      } catch (error) {
+        errors.push({ id: vaultProto.id, error });
+      };
+    }
+    await processListItems(response.items, processVault);
     return {
       items,
       nextToken: response.nextToken,

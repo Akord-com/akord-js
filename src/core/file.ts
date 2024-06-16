@@ -11,7 +11,7 @@ import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
 import { FileVersion } from "../types";
-import { ListFileOptions } from "../types/query-options";
+import { ListFileOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { isServer } from '../util/platform';
@@ -45,6 +45,7 @@ class FileModule {
    * @returns Promise with list of files per query options
    */
   public async list(options: ListFileOptions = {}): Promise<Paginated<FileVersion>> {
+    validateListPaginatedApiOptions(options);
     const { items, nextToken } = await this.service.api.getFiles(options);
     return {
       items: items?.map((item: any) => new FileVersion(item)),

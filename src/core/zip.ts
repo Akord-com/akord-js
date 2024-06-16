@@ -11,7 +11,7 @@ import {
   createFileLike,
 } from "./file";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
-import { ListPaginatedApiOptions } from "../types/query-options";
+import { ListPaginatedApiOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { PluginKey, Plugins } from "../plugin";
