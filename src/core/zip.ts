@@ -80,7 +80,6 @@ class ZipModule {
     if (file.size > chunkSize) {
       options.chunkSize = chunkSize;
       return await this.multipartUpload(file, vaultId, options);
-      // return await this.chunkUpload(file, vaultId, options);
     } else {
       return await this.simpleUpload(file, vaultId, options);
     }
