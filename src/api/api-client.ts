@@ -17,7 +17,6 @@ import { jsonToBase64 } from "@akord/crypto";
 import { ZipLog } from "../types/zip";
 import { Storage } from "../types/storage";
 import { Logger } from "../logger";
-import { Readable } from "stream";
 import FormData from "form-data";
 
 const CONTENT_RANGE_HEADER = "Content-Range";

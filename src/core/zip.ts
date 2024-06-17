@@ -1,7 +1,7 @@
 import { Service } from "./service/service";
 import { FileLike, FileSource } from "../types/file";
 import { BadRequest } from "../errors/bad-request";
-import { ZipLog, ZipUploadApiOptions, ZipUploadOptions } from "../types/zip";
+import { ZipLog, ZipUploadOptions } from "../types/zip";
 import {
   BYTES_IN_MB,
   CHUNKS_CONCURRENCY,
@@ -11,13 +11,12 @@ import {
   createFileLike,
 } from "./file";
 import PQueue, { AbortError } from "@esm2cjs/p-queue";
-import { ListPaginatedApiOptions, validateListPaginatedApiOptions } from "../types/query-options";
+import { ListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { PluginKey, Plugins } from "../plugin";
 import { Logger } from "../logger";
 import { Notification } from "../types/notification";
-import { Auth } from "@akord/akord-auth";
 import { Wallet } from "@akord/crypto";
 import { Api } from "../api/api";
 
