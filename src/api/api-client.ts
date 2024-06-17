@@ -798,13 +798,15 @@ export class ApiClient {
       "Content-Type": "multipart/form-data",
     } as Record<string, string>;
 
-    const form = new FormData();
+    let form;
     const buffer = this._data ? Buffer.from(this._data) : Buffer.alloc(0);
     const blob = new Blob([buffer], { type: "application/octet-stream" });
 
     try {
+      form = new FormData();
       form.append("file", blob, "file");
     } catch (e) {
+      form = new FormData();
       form.append("file", buffer, {
         filename: "file",
         contentType: "application/octet-stream",
@@ -814,7 +816,8 @@ export class ApiClient {
 
     const config = {
       method: "post",
-      url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
+      url: `http://localhost:3000/${this._zipsUri}?${new URLSearchParams(
+        // url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
         this._queryParams
       ).toString()}`,
       data: form,
