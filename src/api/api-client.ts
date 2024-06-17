@@ -18,6 +18,7 @@ import { ZipLog } from "../types/zip";
 import { Storage } from "../types/storage";
 import { Logger } from "../logger";
 import FormData from "form-data";
+import { Buffer } from "buffer";
 
 const CONTENT_RANGE_HEADER = "Content-Range";
 const CONTENT_LOCATION_HEADER = "Content-Location";
@@ -510,19 +511,17 @@ export class ApiClient {
     }
     Logger.log(`Request ${config.method}: ` + config.url);
 
-    return await retry(
-      async () => {
-        try {
-          const response = await axios(config);
-          if (isPaginated(response)) {
-            return { items: response.data, nextToken: nextToken(response) }
-          }
-          return response.data;
-        } catch (error) {
-          throwError(error.response?.status, error.response?.data?.msg, error);
+    return await retry(async () => {
+      try {
+        const response = await axios(config);
+        if (isPaginated(response)) {
+          return { items: response.data, nextToken: nextToken(response) };
         }
-      })
-
+        return response.data;
+      } catch (error) {
+        throwError(error.response?.status, error.response?.data?.msg, error);
+      }
+    });
   }
 
   addQueryParams = function (url: string, params: any) {
@@ -690,20 +689,19 @@ export class ApiClient {
 
     Logger.log(`Request ${config.method}: ` + config.url);
 
-    return await retry(
-      async () => {
-        try {
-          const response = await axios(config);
-          return {
-            resourceUri: response.data.resourceUri,
-            resourceLocation: response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
-            resourceSize: this._data.byteLength
-          };
-        } catch (error) {
-          throwError(error.response?.status, error.response?.data?.msg, error);
-        }
+    return await retry(async () => {
+      try {
+        const response = await axios(config);
+        return {
+          resourceUri: response.data.resourceUri,
+          resourceLocation:
+            response.headers[CONTENT_LOCATION_HEADER.toLocaleLowerCase()],
+          resourceSize: this._data.byteLength,
+        };
+      } catch (error) {
+        throwError(error.response?.status, error.response?.data?.msg, error);
       }
-    );
+    });
   }
 
   async getUploadState(): Promise<{ resourceUri: string[] }> {
@@ -801,10 +799,9 @@ export class ApiClient {
 
     const form = new FormData();
     const buffer = this._data ? Buffer.from(this._data) : Buffer.alloc(0);
-    form.append("file", buffer, {
-      filename: "file",
-      contentType: "application/octet-stream",
-    });
+    const blob = new Blob([buffer], { type: "application/octet-stream" });
+
+    form.append("file", blob, "file");
 
     const config = {
       method: "post",
@@ -812,7 +809,7 @@ export class ApiClient {
         this._queryParams
       ).toString()}`,
       data: form,
-      headers: { ...headers, ...form.getHeaders() },
+      headers: { ...headers },
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onUploadProgress(progressEvent) {
         if (me._progressHook) {
@@ -863,7 +860,7 @@ export class ApiClient {
 }
 
 function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function retry<T>(
@@ -877,7 +874,7 @@ async function retry<T>(
     try {
       return await fn();
     } catch (error) {
-      if (retryableErrors.some(type => error instanceof type)) {
+      if (retryableErrors.some((type) => error instanceof type)) {
         attempt++;
         console.log(`Retry attempt ${attempt} failed. Retrying...`);
         if (attempt >= retries) {

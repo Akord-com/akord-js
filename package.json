@@ -36,6 +36,7 @@
     "@akord/ts-cacheable": "1.0.13",
     "@esm2cjs/p-queue": "^7.3.0",
     "axios": "0.27.2",
+    "buffer": "^6.0.3",
     "cross-fetch": "^4.0.0",
     "form-data": "^4.0.0",
     "lodash": "^4.17.21",
