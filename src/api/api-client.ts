@@ -12,15 +12,16 @@ import { BadRequest } from "../errors/bad-request";
 import { NotFound } from "../errors/not-found";
 import { User, UserPublicInfo } from "../types/user";
 import { FileVersion, StorageType } from "../types";
-import fetch from 'cross-fetch';
+import fetch from "cross-fetch";
 import { jsonToBase64 } from "@akord/crypto";
 import { ZipLog } from "../types/zip";
 import { Storage } from "../types/storage";
 import { Logger } from "../logger";
+import FormData from "form-data";
 
-const CONTENT_RANGE_HEADER = 'Content-Range';
-const CONTENT_LOCATION_HEADER = 'Content-Location';
-const GATEWAY_HEADER_PREFIX = 'x-amz-meta-';
+const CONTENT_RANGE_HEADER = "Content-Range";
+const CONTENT_LOCATION_HEADER = "Content-Location";
+const GATEWAY_HEADER_PREFIX = "x-amz-meta-";
 
 export class ApiClient {
   private _gatewayurl: string;
@@ -52,17 +53,21 @@ export class ApiClient {
   // axios config
   private _data: AxiosRequestConfig["data"];
   private _queryParams: any = {};
-  private _progressId: string
-  private _progressHook: (percentageProgress: number, bytesProgress?: number, id?: string) => void
-  private _cancelHook: AbortController
+  private _progressId: string;
+  private _progressHook: (
+    percentageProgress: number,
+    bytesProgress?: number,
+    id?: string
+  ) => void;
+  private _cancelHook: AbortController;
 
   // auxiliar
   private _isPublic: boolean;
-  private _totalBytes: number
-  private _uploadedBytes: number
+  private _totalBytes: number;
+  private _uploadedBytes: number;
   private _storage: StorageType;
 
-  constructor() { }
+  constructor() {}
 
   clone(): ApiClient {
     const clone = new ApiClient();
@@ -88,7 +93,11 @@ export class ApiClient {
     return clone;
   }
 
-  env(config: { apiurl: string, gatewayurl: string, uploadsurl: string }): ApiClient {
+  env(config: {
+    apiurl: string;
+    gatewayurl: string;
+    uploadsurl: string;
+  }): ApiClient {
     this._apiurl = config.apiurl;
     this._gatewayurl = config.gatewayurl;
     this._uploadsurl = config.uploadsurl;
@@ -106,7 +115,7 @@ export class ApiClient {
   }
 
   cloud(cloud: boolean): ApiClient {
-    this.queryParams({ cloud: cloud })
+    this.queryParams({ cloud: cloud });
     return this;
   }
 
@@ -133,7 +142,7 @@ export class ApiClient {
   metadata(metadata: any): ApiClient {
     this._metadata = metadata;
     if (metadata?.cloud) {
-      this.cloud(metadata.cloud)
+      this.cloud(metadata.cloud);
     }
     return this;
   }
@@ -150,7 +159,7 @@ export class ApiClient {
       );
       this._queryParams = { ...this._queryParams, ...params };
     } else {
-      this._queryParams = {}
+      this._queryParams = {};
     }
     return this;
   }
@@ -170,7 +179,14 @@ export class ApiClient {
     return this;
   }
 
-  progressHook(hook: (percentageProgress: number, bytesProgress?: number, id?: string) => void, id?: string): ApiClient {
+  progressHook(
+    hook: (
+      percentageProgress: number,
+      bytesProgress?: number,
+      id?: string
+    ) => void,
+    id?: string
+  ): ApiClient {
     this._progressHook = hook;
     this._progressId = id || uuidv4();
     return this;
@@ -199,7 +215,7 @@ export class ApiClient {
    * @returns {Promise<string>}
    */
   async contract(): Promise<string> {
-    this.data({ tags: this._tags, state: this._state })
+    this.data({ tags: this._tags, state: this._state });
     const response = await this.post(`${this._apiurl}/${this._vaultUri}`);
     return response.id;
   }
@@ -212,9 +228,13 @@ export class ApiClient {
    */
   async getContract(): Promise<Contract> {
     if (!this._vaultId) {
-      throw new BadRequest("Missing vault id to get contract state. Use ApiClient#vaultId() to add it");
+      throw new BadRequest(
+        "Missing vault id to get contract state. Use ApiClient#vaultId() to add it"
+      );
     }
-    return await this.public(true).get(`${this._gatewayurl}/${this._contractUri}/${this._vaultId}`);
+    return await this.public(true).get(
+      `${this._gatewayurl}/${this._contractUri}/${this._vaultId}`
+    );
   }
 
   /**
@@ -278,7 +298,9 @@ export class ApiClient {
    * @returns {Promise<Array<Membership>>}
    */
   async getMembers(): Promise<Array<Membership>> {
-    return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members`);
+    return await this.get(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/members`
+    );
   }
 
   /**
@@ -308,7 +330,9 @@ export class ApiClient {
    * @returns {Promise<MembershipKeys>}
    */
   async getMembershipKeys(): Promise<MembershipKeys> {
-    return await this.public(true).get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/keys`);
+    return await this.public(true).get(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/keys`
+    );
   }
 
   /**
@@ -319,7 +343,9 @@ export class ApiClient {
    * @returns {Promise<Paginated<T>>}
    */
   async getNodesByVaultId<T>(): Promise<Paginated<T>> {
-    return await this.public(true).get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._nodeUri}`);
+    return await this.public(true).get(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._nodeUri}`
+    );
   }
 
   /**
@@ -330,7 +356,9 @@ export class ApiClient {
    * @returns {Promise<Paginated<Membership>>}
    */
   async getMembershipsByVaultId(): Promise<Paginated<Membership>> {
-    return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._membershipUri}`);
+    return await this.get(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._membershipUri}`
+    );
   }
 
   /**
@@ -341,7 +369,9 @@ export class ApiClient {
    * @returns {Promise<T>}
    */
   async getNode<T>(): Promise<T> {
-    return await this.public(true).get(`${this._apiurl}/${this._nodeUri}/${this._resourceId}`);
+    return await this.public(true).get(
+      `${this._apiurl}/${this._nodeUri}/${this._resourceId}`
+    );
   }
 
   /**
@@ -351,7 +381,9 @@ export class ApiClient {
    * @returns {Promise<Membership>}
    */
   async getMembership(): Promise<Membership> {
-    return await this.get(`${this._apiurl}/${this._membershipUri}/${this._resourceId}`);
+    return await this.get(
+      `${this._apiurl}/${this._membershipUri}/${this._resourceId}`
+    );
   }
 
   /**
@@ -362,7 +394,9 @@ export class ApiClient {
    * @returns {Promise<Vault>}
    */
   async getVault(): Promise<Vault> {
-    return await this.public(true).get(`${this._apiurl}/${this._vaultUri}/${this._resourceId}`);
+    return await this.public(true).get(
+      `${this._apiurl}/${this._vaultUri}/${this._resourceId}`
+    );
   }
 
   /**
@@ -372,7 +406,9 @@ export class ApiClient {
    * @returns {Promise<Array<Transaction>>}
    */
   async getTransactions(): Promise<Array<Transaction>> {
-    return await this.get(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
+    return await this.get(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`
+    );
   }
 
   /**
@@ -398,33 +434,42 @@ export class ApiClient {
   async getTransactionTags(): Promise<Tags> {
     try {
       const config = {
-        method: 'head',
-        url: `${this._apiurl}/files/${this._resourceId}`
-      }
+        method: "head",
+        url: `${this._apiurl}/files/${this._resourceId}`,
+      };
       Logger.log(`Request ${config.method}: ` + config.url);
       const response = await axios(config);
       return Object.keys(response.headers)
-        .filter(header => header.startsWith(GATEWAY_HEADER_PREFIX))
-        .map(header => {
-          return new Tag(header.replace(GATEWAY_HEADER_PREFIX, ''), response.headers[header])
-        })
+        .filter((header) => header.startsWith(GATEWAY_HEADER_PREFIX))
+        .map((header) => {
+          return new Tag(
+            header.replace(GATEWAY_HEADER_PREFIX, ""),
+            response.headers[header]
+          );
+        });
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
   }
 
   async invite(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members`);
+    const response = await this.post(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/members`
+    );
     return response.id;
   }
 
   async inviteResend(): Promise<{ id: string }> {
-    const response = await this.post(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members/${this._resourceId}`);
+    const response = await this.post(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/members/${this._resourceId}`
+    );
     return response.id;
   }
 
   async revokeInvite(): Promise<{ id: string }> {
-    const response = await this.delete(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/members/${this._resourceId}`);
+    const response = await this.delete(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/members/${this._resourceId}`
+    );
     return response.id;
   }
 
@@ -445,18 +490,20 @@ export class ApiClient {
   }
 
   async fetch(method: string, url: string): Promise<any> {
-    const auth = await Auth.getAuthorization()
+    const auth = await Auth.getAuthorization();
     if (!auth && !this._isPublic) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
 
     const config = {
       method,
-      url: this._queryParams ? this.addQueryParams(url, this._queryParams) : url,
+      url: this._queryParams
+        ? this.addQueryParams(url, this._queryParams)
+        : url,
       headers: {
-        'Authorization': auth,
-        'Content-Type': 'application/json'
-      }
+        Authorization: auth,
+        "Content-Type": "application/json",
+      },
     } as AxiosRequestConfig;
     if (this._data) {
       config.data = this._data;
@@ -475,13 +522,14 @@ export class ApiClient {
           throwError(error.response?.status, error.response?.data?.msg, error);
         }
       })
+
   }
 
   addQueryParams = function (url: string, params: any) {
     const queryParams = new URLSearchParams(JSON.parse(JSON.stringify(params)));
     url += "?" + queryParams.toString();
     return url;
-  }
+  };
 
   /**
    *
@@ -493,23 +541,31 @@ export class ApiClient {
    * - metadata()
    * @returns {Promise<{ id: string, object: T }>}
    */
-  async transaction<T>(): Promise<{ id: string; object: T; }> {
+  async transaction<T>(): Promise<{ id: string; object: T }> {
     if (!this._vaultId) {
-      throw new BadRequest("Missing vault id to post transaction. Use ApiClient#vaultId() to add it");
+      throw new BadRequest(
+        "Missing vault id to post transaction. Use ApiClient#vaultId() to add it"
+      );
     }
     if (!this._input) {
-      throw new BadRequest("Missing input to post transaction. Use ApiClient#input() to add it");
+      throw new BadRequest(
+        "Missing input to post transaction. Use ApiClient#input() to add it"
+      );
     }
     if (!this._tags) {
-      throw new BadRequest("Missing tags to post transaction. Use ApiClient#tags() to add it");
+      throw new BadRequest(
+        "Missing tags to post transaction. Use ApiClient#tags() to add it"
+      );
     }
 
     this.data({
       input: this._input,
       tags: this._tags,
-      metadata: this._metadata
+      metadata: this._metadata,
     });
-    const { id, object } = await this.post(`${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`);
+    const { id, object } = await this.post(
+      `${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`
+    );
     return { id, object };
   }
 
@@ -524,14 +580,16 @@ export class ApiClient {
    */
   async asyncTransaction() {
     if (!this._resourceId) {
-      throw new BadRequest("Missing resource id to schedule transaction posting. Use ApiClient#resourceId() to add it");
+      throw new BadRequest(
+        "Missing resource id to schedule transaction posting. Use ApiClient#resourceId() to add it"
+      );
     }
 
     this.data({
       resourceUrl: this._resourceId,
       tags: this._tags,
       async: true,
-      numberOfChunks: this._numberOfChunks
+      numberOfChunks: this._numberOfChunks,
     });
     await this.post(`${this._apiurl}/${this._transactionUri}/${this._fileUri}`);
   }
@@ -547,10 +605,12 @@ export class ApiClient {
    */
   async uploadState(): Promise<string> {
     if (!this._state) {
-      throw new BadRequest("Missing state to upload. Use ApiClient#state() to add it");
+      throw new BadRequest(
+        "Missing state to upload. Use ApiClient#state() to add it"
+      );
     }
 
-    this.data({ data: this._state, tags: this._tags })
+    this.data({ data: this._state, tags: this._tags });
     const response = await this.post(`${this._apiurl}/states`);
     return response.id;
   }
@@ -568,25 +628,33 @@ export class ApiClient {
    * - cancelHook()
    * @returns {Promise<string[]>}
    */
-  async uploadFile(): Promise<{ resourceUri: string[], resourceLocation: string, resourceSize: number }> {
+  async uploadFile(): Promise<{
+    resourceUri: string[];
+    resourceLocation: string;
+    resourceSize: number;
+  }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._data) {
-      throw new BadRequest("Missing data to upload. Use ApiClient#data() to add it");
+      throw new BadRequest(
+        "Missing data to upload. Use ApiClient#data() to add it"
+      );
     }
 
     const me = this;
     const headers = {
-      'Authorization': auth,
-      'Tags': jsonToBase64(this._tags),
-      'Storage-Class': this._storage?.replace(":", ""),
-      'Content-Type': 'application/octet-stream'
-    } as Record<string, string>
+      Authorization: auth,
+      Tags: jsonToBase64(this._tags),
+      "Storage-Class": this._storage?.replace(":", ""),
+      "Content-Type": "application/octet-stream",
+    } as Record<string, string>;
 
     if (this._numberOfChunks > 1) {
-      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength}/${this._totalBytes}`;
+      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${
+        this._uploadedBytes + (this._data as ArrayBuffer).byteLength
+      }/${this._totalBytes}`;
     }
     if (this._resourceId) {
       headers[CONTENT_LOCATION_HEADER] = this._resourceId;
@@ -595,7 +663,7 @@ export class ApiClient {
     this._progressId = uuidv4();
 
     const config = {
-      method: 'post',
+      method: "post",
       url: `${this._uploadsurl}/files`,
       data: this._data,
       headers: headers,
@@ -605,15 +673,19 @@ export class ApiClient {
           let percentageProgress;
           let bytesProgress;
           if (me._totalBytes) {
-            bytesProgress = progressEvent.loaded
-            percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
+            bytesProgress = progressEvent.loaded;
+            percentageProgress = Math.round(
+              (bytesProgress / me._totalBytes) * 100
+            );
           } else {
-            bytesProgress = progressEvent.loaded
-            percentageProgress = Math.round(bytesProgress / progressEvent.total * 100);
+            bytesProgress = progressEvent.loaded;
+            percentageProgress = Math.round(
+              (bytesProgress / progressEvent.total) * 100
+            );
           }
           me._progressHook(percentageProgress, bytesProgress, me._progressId);
         }
-      }
+      },
     } as AxiosRequestConfig;
 
     Logger.log(`Request ${config.method}: ` + config.url);
@@ -636,12 +708,16 @@ export class ApiClient {
 
   async getUploadState(): Promise<{ resourceUri: string[] }> {
     if (!this._resourceId) {
-      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
+      throw new BadRequest(
+        "Missing resource id to download. Use ApiClient#resourceId() to add it"
+      );
     }
-    const data = await this.get(`${this._apiurl}/files/uploader/${this._resourceId}`);
+    const data = await this.get(
+      `${this._apiurl}/files/uploader/${this._resourceId}`
+    );
     return {
-      resourceUri: data.resourceUri
-    }
+      resourceUri: data.resourceUri,
+    };
   }
 
   /**
@@ -651,7 +727,9 @@ export class ApiClient {
    */
   async downloadState() {
     if (!this._resourceId) {
-      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
+      throw new BadRequest(
+        "Missing resource id to download. Use ApiClient#resourceId() to add it"
+      );
     }
     return await this.get(`${this._apiurl}/states/${this._resourceId}`);
   }
@@ -673,18 +751,20 @@ export class ApiClient {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
     if (!this._resourceId) {
-      throw new BadRequest("Missing resource id to download. Use ApiClient#resourceId() to add it");
+      throw new BadRequest(
+        "Missing resource id to download. Use ApiClient#resourceId() to add it"
+      );
     }
 
     const config = {
-      method: 'get',
+      method: "get",
       signal: this._cancelHook ? this._cancelHook.signal : null,
-    } as RequestInit
+    } as RequestInit;
 
     if (!this._isPublic) {
       config.headers = {
-        'Authorization': auth,
-      }
+        Authorization: auth,
+      };
     }
 
     const url = `${this._apiurl}/files/${this._resourceId}`;
@@ -700,52 +780,65 @@ export class ApiClient {
   }
 
   /**
-     *
-     * @requires:
-     * - data()
-     * @uses:
-     * - progressHook()
-     * - cancelHook()
-     * @returns {Promise<string[]>}
-     */
-  async uploadZip(): Promise<{ sourceId: string, multipartToken?: string }> {
+   *
+   * @requires:
+   * - data()
+   * @uses:
+   * - progressHook()
+   * - cancelHook()
+   * @returns {Promise<string[]>}
+   */
+  async uploadZip(): Promise<{ sourceId: string; multipartToken?: string }> {
     const auth = await Auth.getAuthorization();
     if (!auth) {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
     const me = this;
     const headers = {
-      'Authorization': auth,
-      'Content-Type': 'application/zip'
-    } as Record<string, string>
+      Authorization: auth,
+      "Content-Type": "multipart/form-data",
+    } as Record<string, string>;
+
+    const form = new FormData();
+    const buffer = this._data ? Buffer.from(this._data) : Buffer.alloc(0);
+    form.append("file", buffer, {
+      filename: "file",
+      contentType: "application/octet-stream",
+    });
 
     const config = {
-      method: 'post',
-      url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(this._queryParams).toString()}`,
-      data: this._data,
-      headers: headers,
+      method: "post",
+      url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
+        this._queryParams
+      ).toString()}`,
+      data: form,
+      headers: { ...headers, ...form.getHeaders() },
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onUploadProgress(progressEvent) {
         if (me._progressHook) {
           let percentageProgress;
           let bytesProgress;
           if (me._totalBytes) {
-            bytesProgress = progressEvent.loaded
-            percentageProgress = Math.round(bytesProgress / me._totalBytes * 100);
+            bytesProgress = progressEvent.loaded;
+            percentageProgress = Math.round(
+              (bytesProgress / me._totalBytes) * 100
+            );
           } else {
-            bytesProgress = progressEvent.loaded
-            percentageProgress = Math.round(bytesProgress / progressEvent.total * 100);
+            bytesProgress = progressEvent.loaded;
+            percentageProgress = Math.round(
+              (bytesProgress / progressEvent.total) * 100
+            );
           }
           me._progressHook(percentageProgress, bytesProgress, me._progressId);
         }
-      }
+      },
     } as AxiosRequestConfig;
 
     Logger.log(`Request ${config.method}: ` + config.url);
 
     try {
       const response = await axios(config);
-      return response.data
+      return response.data;
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
     }
@@ -762,7 +855,9 @@ export class ApiClient {
   }
 
   async confirmPayment(paymentId: string): Promise<any> {
-    const data = await this.post(`${this._apiurl}/payments/${paymentId}/confirm`);
+    const data = await this.post(
+      `${this._apiurl}/payments/${paymentId}/confirm`
+    );
     return data;
   }
 }
