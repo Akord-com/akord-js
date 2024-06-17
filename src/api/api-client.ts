@@ -816,8 +816,7 @@ export class ApiClient {
 
     const config = {
       method: "post",
-      url: `http://localhost:3000/${this._zipsUri}?${new URLSearchParams(
-        // url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
+        url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
         this._queryParams
       ).toString()}`,
       data: form,
