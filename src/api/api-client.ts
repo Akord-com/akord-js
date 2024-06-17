@@ -805,12 +805,6 @@ export class ApiClient {
       filename: "file",
       contentType: "application/octet-stream",
     });
-    if (this._queryParams.totalChunks) {
-      form.append("totalChunks", this._queryParams.totalChunks);
-    }
-    if (this._queryParams.partNumber) {
-      form.append("currentChunk", this._queryParams.partNumber);
-    }
 
     const config = {
       method: "post",
