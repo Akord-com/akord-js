@@ -792,7 +792,8 @@ export class ApiClient {
       throw new Unauthorized("Authentication is required to use Akord API");
     }
     const me = this;
-    const headers = {
+    let headers;
+    headers = {
       Authorization: auth,
       "Content-Type": "multipart/form-data",
     } as Record<string, string>;
@@ -801,7 +802,15 @@ export class ApiClient {
     const buffer = this._data ? Buffer.from(this._data) : Buffer.alloc(0);
     const blob = new Blob([buffer], { type: "application/octet-stream" });
 
-    form.append("file", blob, "file");
+    try {
+      form.append("file", blob, "file");
+    } catch (e) {
+      form.append("file", buffer, {
+        filename: "file",
+        contentType: "application/octet-stream",
+      });
+      headers = { ...headers, ...form.getHeaders() };
+    }
 
     const config = {
       method: "post",
@@ -809,7 +818,7 @@ export class ApiClient {
         this._queryParams
       ).toString()}`,
       data: form,
-      headers: { ...headers },
+      headers: headers,
       signal: this._cancelHook ? this._cancelHook.signal : null,
       onUploadProgress(progressEvent) {
         if (me._progressHook) {
