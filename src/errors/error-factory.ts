@@ -31,7 +31,7 @@ export const throwError = (status: number, message?: string, error?: Error) => {
     case 504:
       throw new GatewayTimeout(message, error);
     default:
-      if (error && error['code'] && (error['code'] === 'ENOTFOUND' || error['code'] ==='ECONNRESET')) {
+      if (error && error['code'] && (error['code'] === 'ENOTFOUND' || error['code'] ==='ECONNRESET' || error['code'] ==='ETIMEDOUT')) {
         throw new NetworkError(error['code'], error);
       }
       throw new InternalError("Internal error. Please try again or contact Akord support.", error);
