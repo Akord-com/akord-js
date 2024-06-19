@@ -66,7 +66,7 @@ export type MembershipInput = {
   id: string,
   address: string,
   role: string,
-  data: string
+  data?: string
 }
 
 export type DataInput =

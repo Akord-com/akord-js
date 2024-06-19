@@ -55,12 +55,13 @@ class MemoModule extends NodeModule<Memo> {
     const currentState = await this.service.getCurrentState();
     const newState = lodash.cloneDeepWith(currentState);
     newState.versions[newState.versions.length - 1].reactions.push(await this.memoReaction(reaction));
-    const dataTxId = await this.service.uploadState(newState, this.service.vault.cloud);
 
     const { id, object } = await this.service.api.postContractTransaction<Memo>(
       this.service.vaultId,
-      { function: this.service.function, data: dataTxId },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      newState,
+      true
     );
     const memo = await this.processMemo(object, !this.service.isPublic, this.service.keys);
     return { transactionId: id, object: memo };
@@ -78,12 +79,13 @@ class MemoModule extends NodeModule<Memo> {
     this.service.arweaveTags = await this.service.getTxTags();
 
     const state = await this.deleteReaction(reaction);
-    const dataTxId = await this.service.uploadState(state, this.service.vault.cloud);
 
     const { id, object } = await this.service.api.postContractTransaction<Memo>(
       this.service.vaultId,
-      { function: this.service.function, data: dataTxId },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      state,
+      true
     );
     const memo = await this.processMemo(object, !this.service.isPublic, this.service.keys);
     return { transactionId: id, object: memo };
@@ -120,7 +122,7 @@ class MemoModule extends NodeModule<Memo> {
     return new MemoReaction(reaction);
   }
 
-  private async deleteReaction(reaction: string) {
+  private async deleteReaction(reaction: string, ) {
     const currentState = await this.service.getCurrentState();
     const index = await this.getReactionIndex(currentState.versions[currentState.versions.length - 1].reactions, reaction);
     const newState = lodash.cloneDeepWith(currentState);

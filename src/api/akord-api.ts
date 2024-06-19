@@ -37,24 +37,7 @@ export default class AkordApi extends Api {
     this.config = apiConfig(config.env);
   }
 
-  public async uploadData(items: { data: any, tags: Tags }[], cloud = false)
-    : Promise<Array<string>> {
-    const resources = [];
-
-    await Promise.all(items.map(async (item, index) => {
-      const resource = await new ApiClient()
-        .env(this.config)
-        .tags(item.tags)
-        .state(item.data)
-        .cloud(cloud)
-        .uploadState()
-      Logger.log("Uploaded state with id: " + resource);
-      resources[index] = resource;
-    }));
-    return resources;
-  };
-
-  public async postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }> {
+  public async postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, state?: any, overrideState?: boolean, metadata?: any): Promise<{ id: string, object: T }> {
     let retryCount = 0;
     let lastError: Error;
     while (retryCount < RETRY_MAX) {
@@ -64,6 +47,7 @@ export default class AkordApi extends Api {
           .vaultId(vaultId)
           .metadata(metadata)
           .input(input)
+          .state(state, overrideState)
           .tags(tags)
           .transaction<T>()
         Logger.log("Uploaded contract interaction with id: " + id);
