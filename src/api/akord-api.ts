@@ -70,16 +70,16 @@ export default class AkordApi extends Api {
         return { id, object };
       } catch (error: any) {
         lastError = error;
-        Logger.log(error);
-        Logger.log(error.message);
+        Logger.error(error);
+        Logger.error(error.message);
         if (error?.statusCode >= 400 && error?.statusCode < 500) {
           retryCount = RETRY_MAX;
           throw error;
         } else {
           await new Promise(r => setTimeout(r, RETRY_AFTER));
-          Logger.log("Retrying...");
+          Logger.warn("Retrying...");
           retryCount++;
-          Logger.log("Retry count: " + retryCount);
+          Logger.warn("Retry count: " + retryCount);
         }
       }
     }

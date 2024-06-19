@@ -9,14 +9,14 @@ export async function initInstance(): Promise<Akord> {
     console.log("API KEY FLOW")
     Auth.configure({ env: process.env.ENV as any, apiKey: process.env.API_KEY });
     const wallet = await AkordWallet.importFromBackupPhrase(process.env.BACKUP_PHRASE);
-    return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+    return new Akord(wallet, { debug: true, logToFile: true, env: process.env.ENV as any });
   } else {
     if (!password || !email) {
       throw new Error("Please configure Akord credentials: email, password.");
     }
     Auth.configure({ env: process.env.ENV as any });
     const { wallet } = await Auth.signIn(email, password);
-    return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+    return new Akord(wallet, { debug: true, logToFile: true, env: process.env.ENV as any });
   }
 }
 

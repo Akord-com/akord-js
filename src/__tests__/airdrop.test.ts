@@ -77,7 +77,7 @@ describe("Testing airdrop actions", () => {
     it("should upload files to the vault by airdropee", async () => {
       Auth.configure({ env: process.env.ENV as any });
       await Auth.signInWithWallet(airdropee);
-      const airdropeeAkordInstance = new Akord(airdropee, { env: process.env.ENV as any, debug: true });
+      const airdropeeAkordInstance = new Akord(airdropee, { env: process.env.ENV as any, debug: true, logToFile: true });
 
       const type = "image/png";
       const fileName = "logo.png";
@@ -140,7 +140,7 @@ describe("Testing airdrop actions", () => {
 
       Auth.configure({ env: process.env.ENV as any });
       await Auth.signInWithWallet(airdropee);
-      const airdropeeAkordInstance = new Akord(airdropee, { env: process.env.ENV as any, debug: true });
+      const airdropeeAkordInstance = new Akord(airdropee, { env: process.env.ENV as any, debug: true, logToFile: true });
 
       const { data, errors } = await airdropeeAkordInstance.batch.stackCreate(vaultId, items);
 

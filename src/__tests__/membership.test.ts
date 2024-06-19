@@ -21,7 +21,7 @@ type Member = {
 const initFromEmail = async (email: string, password: string) => {
   Auth.configure({ env: process.env.ENV as any });
   const { wallet } = await Auth.signIn(email, password);
-  return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+  return new Akord(wallet, { debug: true, env: process.env.ENV as any, logToFile: true });
 }
 
 describe("Testing membership functions", () => {
