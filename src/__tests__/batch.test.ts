@@ -176,7 +176,7 @@ describe("Testing batch actions", () => {
     });
 
     it(`should list ${batchSize} files in the folder`, async () => {
-      const stacksInFolder = await akord.stack.listAll(vaultId, { parentId: folderId, limit: 1000 });
+      const stacksInFolder = await akord.stack.listAll(vaultId, { parentId: folderId });
       expect(stacksInFolder?.length).toEqual(batchSize);
     });
   });
