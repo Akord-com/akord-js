@@ -1,7 +1,7 @@
 import { BadRequest } from "../errors/bad-request"
 
 export type ListPaginatedApiOptions = {
-  limit?: number, // the limit of the number of items in a query (default to 100, max value: 1000)
+  limit?: number, // the limit of the number of items in a query (default to 1000, max value: 1000)
   nextToken?: string,
 }
 

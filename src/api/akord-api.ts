@@ -26,6 +26,8 @@ export const defaultFileUploadOptions = {
 const RETRY_MAX = 3;
 const RETRY_AFTER = 1000;
 
+const DEFAULT_LIMIT = 1000;
+
 export default class AkordApi extends Api {
 
   public config!: ApiConfig;
@@ -324,7 +326,7 @@ export default class AkordApi extends Api {
     return await new ApiClient()
       .env(this.config)
       .queryParams({
-        limit: options.limit,
+        limit: options.limit || DEFAULT_LIMIT,
         nextToken: options.nextToken
       })
       .getMemberships();
@@ -336,7 +338,7 @@ export default class AkordApi extends Api {
       .queryParams({
         tags: JSON.stringify(options.tags ? options.tags : {}),
         filter: JSON.stringify(options.filter ? options.filter : {}),
-        limit: options.limit,
+        limit: options.limit || DEFAULT_LIMIT,
         nextToken: options.nextToken
       })
       .getVaults();
@@ -351,7 +353,7 @@ export default class AkordApi extends Api {
         parentId: options.parentId,
         tags: JSON.stringify(options.tags ? options.tags : {}),
         filter: JSON.stringify(options.filter ? options.filter : {}),
-        limit: options.limit,
+        limit: options.limit || DEFAULT_LIMIT,
         nextToken: options.nextToken
       })
       .getNodesByVaultId<T>();
@@ -363,7 +365,7 @@ export default class AkordApi extends Api {
       .vaultId(vaultId)
       .queryParams({
         filter: JSON.stringify(options.filter ? options.filter : {}),
-        limit: options.limit,
+        limit: options.limit || DEFAULT_LIMIT,
         nextToken: options.nextToken
       })
       .getMembershipsByVaultId();
