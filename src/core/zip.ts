@@ -161,6 +161,7 @@ class ZipModule {
       chunks.push(() =>
         this.service.api.uploadZip(buffer, vaultId, {
           ...apiOptions,
+          ...initOptions,
           partNumber: currentPart,
           multipartToken: multipartToken,
         })
@@ -186,6 +187,7 @@ class ZipModule {
     const { sourceId } = await this.service.api.uploadZip(null, vaultId, {
       multipartToken: multipartToken,
       multipartComplete: true,
+      ...initOptions,
     });
     return { sourceId };
   }
