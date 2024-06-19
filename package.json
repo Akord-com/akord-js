@@ -35,6 +35,7 @@
     "@akord/crypto": "0.21.56",
     "@akord/ts-cacheable": "1.0.13",
     "@esm2cjs/p-queue": "^7.3.0",
+    "agentkeepalive": "^4.5.0",
     "axios": "0.27.2",
     "buffer": "^6.0.3",
     "cross-fetch": "^4.0.0",

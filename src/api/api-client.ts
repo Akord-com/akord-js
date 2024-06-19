@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { Contract, ContractInput, Tag, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
@@ -19,6 +19,8 @@ import { Storage } from "../types/storage";
 import { Logger } from "../logger";
 import FormData from "form-data";
 import { Buffer } from "buffer";
+import { httpClient } from "./http";
+
 
 const CONTENT_RANGE_HEADER = "Content-Range";
 const CONTENT_LOCATION_HEADER = "Content-Location";
@@ -51,8 +53,10 @@ export class ApiClient {
   private _metadata: any;
   private _numberOfChunks: number;
 
-  // axios config
+  // axios
   private _data: AxiosRequestConfig["data"];
+  private _httpClient: AxiosInstance;
+
   private _queryParams: any = {};
   private _progressId: string;
   private _progressHook: (
@@ -68,7 +72,9 @@ export class ApiClient {
   private _uploadedBytes: number;
   private _storage: StorageType;
 
-  constructor() {}
+  constructor() {
+    this._httpClient = httpClient;
+  }
 
   clone(): ApiClient {
     const clone = new ApiClient();
@@ -439,7 +445,7 @@ export class ApiClient {
         url: `${this._apiurl}/files/${this._resourceId}`,
       };
       Logger.log(`Request ${config.method}: ` + config.url);
-      const response = await axios(config);
+      const response = await this._httpClient(config);
       return Object.keys(response.headers)
         .filter((header) => header.startsWith(GATEWAY_HEADER_PREFIX))
         .map((header) => {
@@ -513,7 +519,7 @@ export class ApiClient {
 
     return await retry(async () => {
       try {
-        const response = await axios(config);
+        const response = await this._httpClient(config);
         if (isPaginated(response)) {
           return { items: response.data, nextToken: nextToken(response) };
         }
@@ -691,7 +697,7 @@ export class ApiClient {
 
     return await retry(async () => {
       try {
-        const response = await axios(config);
+        const response = await this._httpClient(config);
         return {
           resourceUri: response.data.resourceUri,
           resourceLocation:
@@ -845,7 +851,7 @@ export class ApiClient {
     Logger.log(`Request ${config.method}: ` + config.url);
 
     try {
-      const response = await axios(config);
+      const response = await this._httpClient(config);
       return response.data;
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);
