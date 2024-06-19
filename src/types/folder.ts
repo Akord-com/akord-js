@@ -17,3 +17,5 @@ export type FolderCreateResult = {
   transactionId: string,
   object: Folder
 }
+
+export const ROOT_FOLDER = "null";
