@@ -9,8 +9,16 @@ export const FILE_TYPE = "application/json";
 const FILE_NAME = "manifest.json";
 const MANIFEST_TYPE = "arweave/paths";
 const MANIFEST_VERSION = "0.1.0";
+const MANIFEST_DEFAULT_INDEX_FILE = "index.html";
 import { Api } from "../api/api";
 import { Service } from ".";
+import { ROOT_FOLDER } from "../types/folder";
+
+export type ManifestOptions = {
+  manifest?: JSON | Object, // manually created manifest, by default the manifest will be automatically generated
+  indexName?: string, // index file name, defaults to index.html
+  parentId?: string // parent id, if provided the manifest will be generated for given folder
+}
 
 class ManifestModule {
   private stackModule: StackModule;
@@ -26,8 +34,9 @@ class ManifestModule {
   /**
    * @returns Promise with vault manifest node
    */
-  public async get(vaultId: string): Promise<Stack> {
-    const stacks = await this.stackModule.listAll(vaultId);
+  public async get(vaultId: string, parentId?: string): Promise<Stack> {
+    const byParentId = parentId ? parentId : ROOT_FOLDER;
+    const stacks = await this.stackModule.listAll(vaultId, { parentId: byParentId });
     const manifest = stacks.find((stack) => stack.name === FILE_NAME) as Stack;
     return manifest;
   }
@@ -38,10 +47,10 @@ class ManifestModule {
    * @param  {number} [index] manifest version index
    * @returns Promise with vault manifest JSON data
    */
-  public async getVersion(vaultId: string, index?: number): Promise<JSON> {
-    const manifest = await this.get(vaultId);
+  public async getVersion(vaultId: string, parentId?: string, index?: number): Promise<JSON> {
+    const manifest = await this.get(vaultId, parentId);
     if (!manifest) {
-      throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate(vaultId) to create it.");
+      throw new BadRequest("A vault manifest does not exist yet. Use akord.manifest.generate() to create it.");
     }
     const manifestFile = await this.stackModule.getVersion(manifest.id, index, { responseType: 'arraybuffer' });
     return JSON.parse(arrayToString(manifestFile.data as ArrayBuffer));
@@ -49,26 +58,27 @@ class ManifestModule {
 
   /**
    * @param  {string} vaultId
-   * @param  {JSON} manifest manifest JSON
+   * @param  {ManifestOptions} options index name, parent id, etc.
    * @returns Promise with corresponding transaction id
    */
-  public async generate(vaultId: string, manifest?: JSON | Object, indexName?: string): Promise<{ transactionId: string, object: Stack, uri: string }> {
-    // TODO: this.stackModule.setContentType(CONTENT_TYPE);
+  public async generate(vaultId: string, options: ManifestOptions = {}): Promise<{ transactionId: string, object: Stack, uri: string }> {
     const vault = await this.api.getVault(vaultId);
     if (!vault.public) {
       throw new BadRequest("Manifest applies only to public vaults.")
     }
 
+    let manifest = options?.manifest;
+
     if (!manifest) {
-      manifest = await this.renderManifestJSON(vaultId, indexName);
+      manifest = await this.renderManifestJSON(vaultId, options.parentId, options.indexName);
     }
-    const manifestNode = await this.get(vaultId);
+    const manifestNode = await this.get(vaultId, options.parentId);
     if (manifestNode) {
       // update vault manifest
       return await this.stackModule.uploadRevision(manifestNode.id, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
     } else {
       // create new vault manifest
-      return await this.stackModule.create(vaultId, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE });
+      return await this.stackModule.create(vaultId, [JSON.stringify(manifest)], { name: FILE_NAME, mimeType: FILE_TYPE, parentId: options.parentId });
     }
   }
 
@@ -76,30 +86,34 @@ class ManifestModule {
    * 
    * @returns manifest in json format
    */
-  private async renderManifestJSON(vaultId: string, indexName?: string) {
+  private async renderManifestJSON(vaultId: string, parentId?: string, indexName?: string) {
     // takes a flat list of folders and stacks and generates a tree
-    const treeify = (folders: any, stacks: any) => {
+    const treeify = (folders: any, stacks: any, parentId?: string) => {
       // initalize our treelist with a root folder + stacks
-      var treeList = [{ id: null, parentId: null, name: null, stacks: [] as Stack[] }];
+      const treeList = [{ id: null, parentId: parentId, name: null, stacks: [] as Stack[] }];
       stacks.forEach((s) => {
-        if (!s["parentId"]) treeList[0]["stacks"].push(s);
+        if ((!parentId && !s["parentId"]) || s["parentId"] === parentId) {
+          treeList[0]["stacks"].push(s);
+        }
       });
       // setup a lookup table
-      var lookup = {};
+      const lookup = {};
       folders.forEach(function (obj) {
-        lookup[obj["id"]] = obj;
         obj["children"] = [];
         obj["stacks"] = [];
-        // add the related stacks to this folder
-        stacks.forEach((s) => {
-          if (s["parentId"] === obj["id"]) obj["stacks"].push(s);
-        });
+        if (obj["id"] !== parentId) {
+          lookup[obj["id"]] = obj;
+          // add the related stacks to this folder
+          stacks.forEach((s) => {
+            if (s["parentId"] === obj["id"]) obj["stacks"].push(s);
+          });
+        }
       });
-      // add the folders  to its parent folder (tree)
+      // add the folders to its parent folder (tree)
       folders.forEach((obj) => {
-        if (obj["parentId"] != null) {
+        if (obj["parentId"] && obj["parentId"] !== parentId) {
           lookup[obj["parentId"]]["children"].push(obj);
-        } else {
+        } else if(!parentId || obj["parentId"] === parentId) {
           treeList.push(obj);
         }
       });
@@ -134,18 +148,18 @@ class ManifestModule {
     };
 
     // load and clean list of folders
-    const folders = (await this.folderModule.listAll(vaultId)).map((n) => {
+    const folders = (await this.folderModule.listAll(vaultId, { limit: 1000 })).map((n) => {
       const { id, parentId, name } = n;
       return { id, parentId, name };
     });
 
     // load and clean list of stacks
-    const stacks = (await this.stackModule.listAll(vaultId)).map((s) => {
+    const stacks = (await this.stackModule.listAll(vaultId, { limit: 1000 })).map((s) => {
       const { id, parentId, name, versions } = s;
       return new Stack({ id, parentId, name, versions }, null);
     });
 
-    const tree = treeify(folders, stacks);
+    const tree = treeify(folders, stacks, parentId);
 
     const paths = computePaths(tree, null);
 
@@ -159,7 +173,7 @@ class ManifestModule {
       manifest: MANIFEST_TYPE,
       version: MANIFEST_VERSION,
       index: {
-        path: indexName || "index.html",
+        path: indexName || MANIFEST_DEFAULT_INDEX_FILE,
       },
       paths: manifest,
     };

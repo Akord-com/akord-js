@@ -1332,21 +1332,29 @@ const { name: fileName, data: noteText } = await akord.note.getVersion(noteId, 0
 
 Manifest is a special case of Stack that is unique per vault and follows [Arweave Path Manifest standard](https://github.com/ArweaveTeam/arweave/wiki/Path-Manifests).
 
-#### `generate(vaultId, manifest)`
+#### `generate(vaultId)`
 
 If there is no manifest for the vault, a new manifest stack will be created, otherwise a new version of the manifest will be generated and uploaded.
 
-If no input JSON is provided by the user, manifest will be generated automatically from the current vault state.
+If no input JSON is provided by the user, manifest will be generated automatically from the current vault/folder state.
 
 - `vaultId` (`string`, required)
-- `manifest` (`JSON`, optional) - manifest JSON
+- `options` ([`ManifestOptions`][manifest-options], optional) - parent id, custom index, manually created manifest, etc.
 - returns `Promise<{ transactionId }>` - Promise with corresponding transaction id
 
 <details>
   <summary>example</summary>
 
 ```js
-const { transactionId, uri } = await akord.manifest.generate(vaultId);
+// generate manifest for the entire vault contents
+const { uri } = await akord.manifest.generate(vaultId);
+console.log("Manifest link: https://arweave.net/" + uri);
+```
+
+```js
+// generate manifest for a specific folder
+const { uri } = await akord.manifest.generate(vaultId, { parentId: folderId });
+console.log("Manifest link: https://arweave.net/" + uri);
 ```
 </details>
 
@@ -1842,4 +1850,5 @@ node --inspect node_modules/.bin/jest ./src/__tests__/folder.test.ts
 [node-type]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/node.ts#L11
 [batch-stack-create-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L1
 [batch-membership-invite-response]: https://github.com/Akord-com/akord-js/blob/03e28ffd95224dbfd0a8d891a06a154298619378/src/types/batch-response.ts#L7
-[file-upload-example]:https://github.com/Akord-com/recipes/blob/a2dbc847097973ef08586f32b0ce3192f0581ed4/nextjs-starter/src/pages/index.tsx#L66
+[file-upload-example]: https://github.com/Akord-com/recipes/blob/a2dbc847097973ef08586f32b0ce3192f0581ed4/nextjs-starter/src/pages/index.tsx#L66
+[manifest-options]: https://github.com/Akord-com/akord-js/blob/9ff0febe1362cd2888ff40aacc89ac1a0083db2e/src/core/manifest.ts#L17
