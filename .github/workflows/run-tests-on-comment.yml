@@ -27,7 +27,7 @@ jobs:
           ref: ${{ steps.comment-branch.outputs.head_sha }}
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
       - name: Install dependencies and build 🔧
         run: yarn install && yarn build
       - name: Run tests ⚙️
