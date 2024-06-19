@@ -9,7 +9,7 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: github.actor != 'akord-service'
+    if: "!startsWith(github.event.head_commit.message, 'ci:')"
     permissions:
       contents: write
     steps:
