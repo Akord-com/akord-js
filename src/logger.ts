@@ -13,7 +13,7 @@ export class Logger {
     }
     if (this.logToFile && isServer()) {
       const fs = importDynamic("fs");
-      const logMessage = `${new Date().toISOString()} - ERROR - ${JSON.stringify(error || {}, null, 2)}\n`;
+      const logMessage = `${new Date().toISOString()} - ERROR - ${JSON.stringify(error || {}, (key, value) => key === '_sessionCache' ? undefined : value, 2)}\n`;
       fs.appendFileSync(ERROR_LOG_FILE, logMessage);
     }
   };
