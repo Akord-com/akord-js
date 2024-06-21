@@ -20,7 +20,7 @@ describe("Testing memo functions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   it("should create new memo", async () => {

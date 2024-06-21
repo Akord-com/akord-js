@@ -24,7 +24,7 @@ describe("Testing airdrop actions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   describe("Airdrop access tests", () => {

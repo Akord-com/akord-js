@@ -22,7 +22,7 @@ describe("Testing folder functions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   it("should create root folder", async () => {

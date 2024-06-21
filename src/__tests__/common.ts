@@ -26,8 +26,9 @@ export async function setupVault(cloud = true): Promise<string> {
   return vaultId;
 }
 
-export async function cleanup(akord: Akord, vaultId: string): Promise<void> {
-  if (vaultId && akord) {
+export async function cleanup(vaultId: string): Promise<void> {
+  if (vaultId) {
+    const akord = await initInstance();
     await akord.vault.delete(vaultId);
   }
   await Auth.signOut();
