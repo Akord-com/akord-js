@@ -25,7 +25,7 @@ describe("Testing stack functions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   it("should create stack from path", async () => {

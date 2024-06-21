@@ -54,7 +54,7 @@ describe("Testing membership functions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(ownerAkordInstance, vaultId);
+    await cleanup(vaultId);
   });
 
   it("should invite new member", async () => {

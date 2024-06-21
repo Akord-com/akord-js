@@ -27,7 +27,7 @@ describe("Testing batch actions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   describe("Batch revoke/restore actions", () => {
