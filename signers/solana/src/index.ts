@@ -44,8 +44,7 @@ export default class SolanaSigner {
         throw new Error("The injected wallet is missing signMessage() method.");
       }
       const signedMessage = await this.injectedWallet.signMessage(encodedMessage);
-      return signedMessage;
-      // return uint8ArrayToBase58(signedMessage);
+      return base58.encode(signedMessage as any);
     } else {
       const signature = nacl.sign.detached(encodedMessage, this.keypair.secretKey);
       return base58.encode(signature);

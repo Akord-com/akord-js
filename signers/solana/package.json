@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-js-solana-signer",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.3",
   "description": "Solana signer for akord-js",
   "main": "lib/index.js",
   "repository": "git@github.com:Akord-com/akord-js.git",
@@ -28,7 +28,7 @@
   "author": "Akord Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "@akord/akord-js": "file:../../",
@@ -37,13 +37,10 @@
     "@types/jest": "^29.5.5",
     "jest": "^28.1.1",
     "ts-jest": "^28.0.5",
-    "jwt-decode": "4.0.0"
-  },
-  "peerDependencies": {
-    "@akord/akord-js": ">=5.4.0"
+    "jwt-decode": "4.0.0",
+    "@solana/web3.js": "^1.58.0"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.58.0",
     "bs58": "^4.0.1",
     "tweetnacl": "^1.0.3"
   }

@@ -28,7 +28,7 @@
   "author": "Akord Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "@akord/akord-js": "file:../../",
@@ -37,9 +37,6 @@
     "jest": "^28.1.1",
     "ts-jest": "^28.0.5",
     "jwt-decode": "4.0.0"
-  },
-  "peerDependencies": {
-    "@akord/akord-js": ">=5.4.0"
   },
   "dependencies": {
     "arconnect": "1.0.3",
