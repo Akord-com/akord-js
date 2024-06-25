@@ -76,3 +76,10 @@ export type VaultUpdateResult = {
   transactionId: string,
   object: Vault
 }
+
+export enum DefaultVaults {
+  DEFAULT_PRIVATE_CLOUD = "Private cloud",
+  DEFAULT_PRIVATE_PERMA = "Private perma",
+  DEFAULT_PUBLIC_CLOUD = "Public cloud",
+  DEFAULT_PUBLIC_PERMA = "Public perma"
+}

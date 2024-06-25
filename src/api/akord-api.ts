@@ -127,7 +127,7 @@ export default class AkordApi extends Api {
       .getFiles();
   }
 
-  public async downloadFile(id: string, options: FileGetOptions = {}): Promise<{ fileData: ArrayBuffer | ReadableStream<Uint8Array>, metadata: EncryptionMetadata }> {
+  public async downloadFile(id: string, options: FileGetOptions = {}): Promise<{ fileData: ArrayBuffer | ReadableStream<Uint8Array>, metadata: EncryptionMetadata & { vaultId?: string } }> {
     const { response } = await new ApiClient()
       .env(this.config)
       .resourceId(id)
@@ -146,9 +146,11 @@ export default class AkordApi extends Api {
         fileData = StreamConverter.fromAsyncIterable(response.body as unknown as AsyncIterable<Uint8Array>);
       }
     }
+    console.log(response.headers)
     const metadata = {
       encryptedKey: response.headers.get("x-amz-meta-encrypted-key") || response.headers.get("x-amz-meta-encryptedkey"),
-      iv: response.headers.get("x-amz-meta-initialization-vector") || response.headers.get("x-amz-meta-iv")
+      iv: response.headers.get("x-amz-meta-initialization-vector") || response.headers.get("x-amz-meta-iv"),
+      vaultId: response.headers.get("x-amz-meta-vault-id")
     };
     return { fileData, metadata };
   };

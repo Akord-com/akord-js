@@ -13,6 +13,10 @@ import { Memo } from '../../types/memo';
 import { NFT } from '../../types/nft';
 import { Collection } from '../../types/collection';
 import { Api } from '../../api/api';
+import { Logger } from '../../logger';
+import { DefaultVaults } from '../../types';
+import { VaultModule } from '../vault';
+import { FileUploadOptions } from '../file';
 
 class NodeService<T> extends Service {
   objectType: NodeType;
@@ -130,6 +134,37 @@ class NodeService<T> extends Service {
     return node as T;
   }
 
+  async validateOrCreateDefaultVault(options: VaultOptions = {}): Promise<string> {
+    let vaultId: string;
+    if (options.vaultId) {
+      const vault = await this.api.getVault(options.vaultId);
+      if (vault.cloud && !options.cloud) {
+        throw new BadRequest("Context mismatch. Cloud option colliding with vault provided in the vault id option.")
+      }
+      vaultId = options.vaultId;
+    } else {
+      if (!options.public) {
+        // const { items: defaultVaults } = await this.service.api.getVaults({ default: true });
+        const defaultVaults = [];
+        if (options.cloud) {
+          const defaultPrivateCloudVault = defaultVaults.find((vault) => vault.private && vault.cloud);
+          vaultId = defaultPrivateCloudVault?.id;
+        } else {
+          const defaultPrivatePermaVault = defaultVaults.find((vault) => vault.private && !vault.cloud);
+          vaultId = defaultPrivatePermaVault?.id;
+        }
+        if (!vaultId) {
+          Logger.log("Creating vault...")
+          const vaultModule = new VaultModule(this.wallet, this.api);
+          const vaultResult = await vaultModule.create(options.cloud ? DefaultVaults.DEFAULT_PRIVATE_CLOUD : DefaultVaults.DEFAULT_PRIVATE_PERMA, { public: false, cloud: options.cloud })
+          console.log(vaultResult.object)
+          vaultId = vaultResult.vaultId;
+        }
+      }
+    }
+    return vaultId;
+  }
+
   NodeType: new (arg0: any, arg1: EncryptedKeys[]) => NodeLike
 
   private nodeInstance(nodeProto: any, keys: Array<EncryptedKeys>): NodeLike {
@@ -148,6 +183,12 @@ class NodeService<T> extends Service {
       throw new BadRequest("Given type is not supported: " + this.objectType);
     }
   }
+}
+
+export type VaultOptions = {
+  vaultId?: string,
+  cloud?: boolean,
+  public?: boolean
 }
 
 export {

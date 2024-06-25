@@ -48,6 +48,7 @@ class StackModule extends NodeModule<Stack> {
     const optionsFromVault = {
       storage: this.service.vault.cloud ? StorageType.S3 : StorageType.ARWEAVE
     }
+    console.log(optionsFromVault)
     const createOptions = {
       ...this.stackCreateDefaultOptions,
       ...optionsFromVault,

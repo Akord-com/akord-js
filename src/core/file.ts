@@ -10,13 +10,17 @@ import { formatUDL, udlToTags } from "./udl";
 import { BadRequest } from "../errors/bad-request";
 import { StorageType } from "../types/node";
 import { StreamConverter } from "../util/stream-converter";
-import { FileVersion } from "../types";
+import { FileVersion, Stack } from "../types";
 import { ListFileOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
 import { paginate } from "./common";
 import { isServer } from '../util/platform';
 import { Api } from '../api/api';
 import { getMimeTypeFromFileName } from '../util/mime-types';
+import { StackModule } from './stack';
+import { Logger } from '../logger';
+import { NodeService } from './service/node';
+import { BatchModule } from './batch';
 
 export const DEFAULT_FILE_TYPE = "text/plain";
 export const BYTES_IN_MB = 1000000;
@@ -79,7 +83,51 @@ class FileModule {
       return await this.uploadChunked(file, tags, options);
     } else {
       const tags = this.getFileTags(file, options);
-      return await this.upload(file, tags, options);
+      return await this.uploadInternal(file, tags, options);
+    }
+  }
+
+
+  /**
+   * Upload file - will create a stack for file & vault if vaultId not provided in options
+   * @param  {FileSource} file file source: web File object, file path, buffer or stream
+   * @param  {FileUploadOptions} options cloud/permanent, public/private, parent id, vault id, etc.
+   * @returns Promise with file id & uri
+   */
+  public async upload(
+    file: FileSource,
+    options: FileUploadOptions = {}
+  ): Promise<{ uri: string, fileId: string }> {
+    // validate vault or use/create default one
+    options.vaultId = await new NodeService<Stack>(this.service.wallet, this.service.api, Stack, "Stack").validateOrCreateDefaultVault(options);
+
+    if (!options.public) {
+      Logger.log("Creating stack...")
+      const stackModule = new StackModule(this.service.wallet, this.service.api);
+      const { object, uri } = await stackModule.create(options.vaultId, file, { parentId: options.parentId });
+      console.log(uri)
+      return { uri, fileId: object.versions[0].id };
+    }
+  }
+
+  /**
+   * Upload batch of files - will create a stack per file & vault if vaultId not provided in options
+   * @param  {{ file: FileSource, options:FileUploadOptions }[] } items files array
+   * @param  {FileUploadOptions} options cloud/permanent, public/private, parent id, vault id, etc.
+   * @returns Promise with array of data response & errors if any
+   */
+  public async batchUpload(items: {
+    file: FileSource,
+    options?: FileUploadOptions
+  }[], options: FileUploadOptions = {}): Promise<{ data: { uri: string, fileId: string }[], errors: any[] }> {
+    // validate vault or use/create default one
+    const vaultId = await new NodeService<Stack>(this.service.wallet, this.service.api, Stack, "Stack").validateOrCreateDefaultVault(options);
+
+    if (!options.public) {
+      Logger.log("Creating stacks...")
+      const batchModule = new BatchModule(this.service.wallet, this.service.api);
+      const { data, errors } = await batchModule.stackCreate(vaultId, items);
+      return { data: data.map((stackResponse) => ({ fileId: stackResponse.object.versions[0].id, uri: stackResponse.uri })), errors: errors };
     }
   }
 
@@ -100,7 +148,7 @@ class FileModule {
   }
 
   public async download(fileUri: string, options: FileChunkedGetOptions = { responseType: 'arraybuffer' }): Promise<ReadableStream<Uint8Array> | ArrayBuffer> {
-    const file = await this.service.api.downloadFile(fileUri, { responseType: 'stream', public: this.service.isPublic });
+    const file = await this.service.api.downloadFile(fileUri, { responseType: 'stream', public: false });
     let stream: ReadableStream<Uint8Array>;
     if (this.service.isPublic) {
       stream = file.fileData as ReadableStream<Uint8Array>;
@@ -108,6 +156,11 @@ class FileModule {
       const encryptedKey = file.metadata.encryptedKey;
       const iv = file.metadata.iv?.split(',');
       const streamChunkSize = options.chunkSize ? options.chunkSize + AUTH_TAG_LENGTH_IN_BYTES + (iv ? 0 : IV_LENGTH_IN_BYTES) : null;
+      console.log("FILE METADATA")
+      console.log(file.metadata)
+      if (!this.service.keys) {
+        await this.service.setVaultContext(file.metadata.vaultId);
+      }
       stream = await this.service.dataEncrypter.decryptStream(file.fileData as ReadableStream, encryptedKey, streamChunkSize, iv);
     }
 
@@ -117,14 +170,13 @@ class FileModule {
     return stream;
   }
 
-  private async upload(
+  private async uploadInternal(
     file: FileLike,
     tags: Tags,
-    options: FileUploadOptions
+    options: FileUploadOptions = {}
   ): Promise<FileUploadResult> {
-    const isPublic = options.public || this.service.isPublic
-    let encryptedKey: string
-
+    const isPublic = options.public || this.service.isPublic;
+    let encryptedKey: string;
     const { processedData, encryptionTags } = await this.service.processWriteRaw(await file.arrayBuffer(), { prefixCiphertextWithIv: true, encode: false });
     const resourceHash = await digestRaw(new Uint8Array(processedData));
     const fileSignatureTags = await this.getFileSignatureTags(resourceHash)
@@ -294,7 +346,7 @@ class FileModule {
     );
     return [
       new Tag(protocolTags.SIGNER_ADDRESS, await this.service.wallet.getAddress()),
-      new Tag(protocolTags.SIGNATURE, signature), 
+      new Tag(protocolTags.SIGNATURE, signature),
       new Tag(fileTags.FILE_HASH, resourceHash)
     ];
   }
@@ -362,10 +414,12 @@ export type FileUploadOptions = Hooks & FileOptions & {
   public?: boolean,
   storage?: StorageType,
   arweaveTags?: Tags,
-  chunkSize?: number
+  chunkSize?: number,
   cloud?: boolean,
   udl?: UDL,
-  ucm?: boolean
+  ucm?: boolean,
+  parentId?: string,
+  vaultId?: string
 }
 
 export type FileDownloadOptions = Hooks & {

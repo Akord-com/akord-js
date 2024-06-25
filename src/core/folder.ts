@@ -5,6 +5,12 @@ import { NodeModule } from "./node";
 import { Wallet } from "@akord/crypto";
 import { Api } from "../api/api";
 import { Service } from ".";
+import { isServer } from "../util/platform";
+import { importDynamic } from "../util/import";
+import { BadRequest } from "../errors/bad-request";
+import { Logger } from "../logger";
+import { Tags } from "../types";
+import { FileModule } from "./file";
 
 class FolderModule extends NodeModule<Folder> {
 
@@ -30,7 +36,53 @@ class FolderModule extends NodeModule<Folder> {
     const { nodeId, transactionId, object } = await this.service.nodeCreate<Folder>(state, { parentId: options.parentId }, options.arweaveTags);
     return { folderId: nodeId, transactionId, object };
   }
+
+  /**
+   * @param  {FolderSource} folder folder source: folder path, file system entry
+   * @param  {FolderUploadOptions} [options] parent id, etc.
+   * @returns Promise with new folder id
+   */
+  public async upload(
+    folder: FolderSource,
+    options: FolderUploadOptions = {}
+  ): Promise<any> {
+    // validate vault or use/create default one
+    options.vaultId = await this.service.validateOrCreateDefaultVault(options);
+    if (typeof folder === "string") {
+      if (!isServer()) {
+        throw new BadRequest("Folder path supported only for node.");
+      }
+      const fs = importDynamic("fs");
+      const path = importDynamic("path");
+      const files = fs.readdirSync(folder);
+      for (let file of files) {
+        const fullPath = path.join(folder, file);
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+          const { folderId } = await this.create(options.vaultId, file, { parentId: options.parentId });
+          Logger.log("Created folder: " + file);
+          // recursively process the subdirectory
+          await this.upload(fullPath, { ...options, parentId: folderId });
+        } else {
+          // upload file
+          const fileModule = new FileModule(this.service.wallet, this.service.api);
+          await fileModule.upload(fullPath, options);
+          Logger.log("Uploaded file: " + fullPath + " to folder: " + options.parentId);
+        }
+      }
+    }
+    return {} as any;
+  }
 };
+
+export type FolderSource = string | FileSystemEntry
+
+export type FolderUploadOptions = {
+  cloud?: boolean,
+  arweaveTags?: Tags,
+  parentId?: string,
+  vaultId?: string,
+}
 
 export {
   FolderModule

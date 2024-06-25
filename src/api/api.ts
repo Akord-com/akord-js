@@ -33,7 +33,7 @@ abstract class Api {
 
   abstract getFiles(options?: ListApiOptions): Promise<Paginated<FileVersion>>
 
-  abstract downloadFile(id: string, options?: FileGetOptions): Promise<{ fileData: ArrayBuffer | ReadableStream, metadata: EncryptionMetadata }>
+  abstract downloadFile(id: string, options?: FileGetOptions): Promise<{ fileData: ArrayBuffer | ReadableStream, metadata: EncryptionMetadata & { vaultId?: string } }>
 
   abstract getStorageBalance(): Promise<Storage>
   

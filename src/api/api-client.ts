@@ -427,7 +427,7 @@ export class ApiClient {
    * @returns {Promise<Paginated<FileVersion>>}
    */
   async getFiles(): Promise<Paginated<FileVersion>> {
-    return await this.get(`${this._apiurl}/${this._fileUri}`);
+    return await this.get(`${this._uploadsurl}/${this._fileUri}`);
   }
 
   /**
@@ -680,6 +680,7 @@ export class ApiClient {
     return await retry(async () => {
       try {
         const response = await this._httpClient(config);
+        console.log(response.data)
         return {
           resourceUri: response.data.resourceUri,
           resourceLocation:

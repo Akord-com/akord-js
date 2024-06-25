@@ -10,6 +10,7 @@ This package can be used in both browser and Node.js environments.
   - [Examples](#examples)
 - [Modules](#modules)
   - [Auth](#authentication)
+  - [File](#file)
   - [Vault](#vault)
   - [Membership](#membership)
   - [Memo](#memo)
@@ -48,21 +49,15 @@ const { wallet } = await Auth.signIn(email, password);
 const akord = new Akord(wallet);
 ```
 
-#### Create vault
+#### Upload file to Arweave
 ```js
-const { vaultId } = await akord.vault.create("my first vault");
+const path = "/path/to/my/file.jpg";
+const { uri, fileId } = await akord.file.upload(path, { cloud: false });
 ```
 
-#### Upload file to the vault by creating new stack
+#### Download the file
 ```js
-const { stackId, uri } = await akord.stack.create(vaultId, file);
-// Once the transaction is accepted on Arweave network (it takes 5-15 minutes on average),
-// you can access your file on ViewBlock by visiting the following URL: https://viewblock.io/arweave/tx/{uri}
-```
-
-#### Download latest file version of the stack
-```js
-const { data: fileBuffer, name: fileName } = await akord.stack.getVersion(stackId);
+const file = await akord.file.download(uri);
 ```
 
 #### Query user vaults
@@ -1006,6 +1001,92 @@ This method can be used for downloading the binary or previewing it in browser (
 ```
 </details>
 
+### file
+
+Shorcut method for dealing with file uploads.
+Will create stack/vault under the hood when needed.
+
+#### `upload(file, options)`
+
+- `file` (`FileSource`, required)
+- `options` (`FileUploadOptions`, optional) - cloud/permanent, private/public, vault id, parent id, etc.
+- returns `Promise<{ uri, fileId }>` - Promise with file id & uri
+
+<details>
+  <summary>example</summary>
+
+```js
+const path = "/path/to/my/file.jpg";
+const { uri, fileId } = await akord.file.upload(path);
+```
+</details>
+
+#### `batchUpload(items)`
+
+- `items` (`FileSource`, required)
+- returns `Promise<{ uri, fileId }>` - Promise with file id & uri
+
+<details>
+  <summary>example</summary>
+
+```js
+const { data, errors } = await akord.file.batchUpload(file);
+```
+</details>
+
+#### `get(fileId, options)`
+
+- `fileId` (`string`, required)
+- `options` ([`GetOptions`][get-options], optional)
+- returns `Promise<FileVersion>` - Promise with the file object
+
+<details>
+  <summary>example</summary>
+
+```js
+const file = await akord.file.get(fileId);
+```
+</details>
+
+#### `listAll(options)`
+
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<Array<FileVersion>>` - Promise with all user files
+
+<details>
+  <summary>example</summary>
+
+```js
+const files = await akord.file.listAll();
+```
+</details>
+
+#### `list(options)`
+
+- `options` ([`ListOptions`][list-options], optional)
+- returns `Promise<{ items, nextToken }>` - Promise with paginated user files
+
+<details>
+  <summary>example</summary>
+
+```js
+// retrieve first 1000 files
+const { items } = await akord.file.list();
+
+// retrieve first 20 files
+const { items } = await akord.file.list({ limit: 20 });
+
+// iterate through all user files
+let token = null;
+let files = [];
+do {
+  const { items, nextToken } = await akord.file.list({ nextToken: token });
+  files = files.concat(items);
+  token = nextToken;
+} while (token);
+```
+</details>
+
 ### folder
 
 #### `create(vaultId, name)`
@@ -1020,6 +1101,23 @@ This method can be used for downloading the binary or previewing it in browser (
 
 ```js
 const { folderId } = await akord.folder.create(vaultId, "my first folder");
+```
+</details>
+
+#### `upload(folder, options)`
+
+upload folder and all its content
+
+- `file` (`FolderSource`, required) folder path / browser folder entry
+- `options` (`FolderUploadOptions`, optional) - cloud/permanent, private/public, skip hidden files flag, vault id, parent id, etc.
+- returns `Promise<{ folderId }>` - Promise with folder id
+
+<details>
+  <summary>example</summary>
+
+```js
+const path = "/path/to/my/folder";
+const { folderId } = await akord.folder.upload(path);
 ```
 </details>
 
