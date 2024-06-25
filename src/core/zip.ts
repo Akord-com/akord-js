@@ -185,7 +185,6 @@ class ZipModule {
       throw new AbortError();
     }
     const { sourceId } = await this.service.api.uploadZip(null, vaultId, {
-      multipartToken: multipartToken,
       multipartComplete: true,
       ...initOptions,
     });
