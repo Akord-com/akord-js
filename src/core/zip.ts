@@ -27,7 +27,7 @@ class ZipModule {
     this.service = new Service(wallet, api);
   }
 
-  private events = ["ZIP_DECOMPRESSED", "ZIP_SIGNED", "ZIP_COMMITTED"];
+  private events = ["ZIP_DECOMPRESSED", "ZIP_SIGNED", "ZIP_COMMITTED", "ZIP_FAILED"];
 
   public async list(
     options: ListPaginatedApiOptions = {}
