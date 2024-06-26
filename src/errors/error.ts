@@ -7,6 +7,10 @@ export class AkordError extends Error {
   constructor(message: string, error?: Error) {
     super(message);
     this.requestId = (<any>error)?.response?.headers?.['request-id'];
-    Logger.error(error);
+    Logger.error(this);
+    Logger.error("Failed request id: " + this.requestId);
+    if (error) {
+      Logger.error(error);
+    }
   }
 }
