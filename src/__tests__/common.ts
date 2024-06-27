@@ -78,5 +78,7 @@ export const noteCreate = async (akord: Akord, vaultId: string) => {
   return noteId;
 }
 
+export const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 export const testDataPath = "./src/__tests__/data/";
 export const testDataOutPath = "./src/__tests__/data/out";
