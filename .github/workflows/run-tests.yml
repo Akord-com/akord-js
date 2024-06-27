@@ -5,6 +5,7 @@ on: workflow_dispatch
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, '/test') && contains(fromJSON('["jarrvis", "wkolod", "kgracki"]'), github.actor)
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
