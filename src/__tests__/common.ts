@@ -9,14 +9,14 @@ export async function initInstance(): Promise<Akord> {
     console.log("API KEY FLOW")
     Auth.configure({ env: process.env.ENV as any, apiKey: process.env.API_KEY });
     const wallet = await AkordWallet.importFromBackupPhrase(process.env.BACKUP_PHRASE);
-    return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+    return new Akord(wallet, { debug: true, logToFile: true, env: process.env.ENV as any });
   } else {
     if (!password || !email) {
       throw new Error("Please configure Akord credentials: email, password.");
     }
     Auth.configure({ env: process.env.ENV as any });
     const { wallet } = await Auth.signIn(email, password);
-    return new Akord(wallet, { debug: true, env: process.env.ENV as any });
+    return new Akord(wallet, { debug: true, logToFile: true, env: process.env.ENV as any });
   }
 }
 
@@ -26,8 +26,9 @@ export async function setupVault(cloud = true): Promise<string> {
   return vaultId;
 }
 
-export async function cleanup(akord: Akord, vaultId: string): Promise<void> {
-  if (vaultId && akord) {
+export async function cleanup(vaultId: string): Promise<void> {
+  if (vaultId) {
+    const akord = await initInstance();
     await akord.vault.delete(vaultId);
   }
   await Auth.signOut();
@@ -76,6 +77,8 @@ export const noteCreate = async (akord: Akord, vaultId: string) => {
   expect(fileName).toEqual(name);
   return noteId;
 }
+
+export const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export const testDataPath = "./src/__tests__/data/";
 export const testDataOutPath = "./src/__tests__/data/out";

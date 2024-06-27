@@ -21,7 +21,7 @@ describe("Testing vault functions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   it("should add new vault tags", async () => {

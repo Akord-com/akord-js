@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { Contract, ContractInput, Tag, Tags } from "../types/contract";
 import { Membership, MembershipKeys } from "../types/membership";
@@ -19,6 +19,8 @@ import { Storage } from "../types/storage";
 import { Logger } from "../logger";
 import FormData from "form-data";
 import { Buffer } from "buffer";
+import { httpClient } from "./http";
+
 
 const CONTENT_RANGE_HEADER = "Content-Range";
 const CONTENT_LOCATION_HEADER = "Content-Location";
@@ -47,12 +49,15 @@ export class ApiClient {
   // request body
   private _tags: Tags;
   private _state: any; // vault/node/membership json state
+  private _overrideState: boolean // if true, the state will be overwritten instead of being merged
   private _input: ContractInput;
   private _metadata: any;
   private _numberOfChunks: number;
 
-  // axios config
+  // axios
   private _data: AxiosRequestConfig["data"];
+  private _httpClient: AxiosInstance;
+
   private _queryParams: any = {};
   private _progressId: string;
   private _progressHook: (
@@ -68,7 +73,9 @@ export class ApiClient {
   private _uploadedBytes: number;
   private _storage: StorageType;
 
-  constructor() {}
+  constructor() {
+    this._httpClient = httpClient;
+  }
 
   clone(): ApiClient {
     const clone = new ApiClient();
@@ -148,8 +155,9 @@ export class ApiClient {
     return this;
   }
 
-  state(state: any): ApiClient {
+  state(state: any, override?: boolean): ApiClient {
     this._state = state;
+    this._overrideState = override;
     return this;
   }
 
@@ -439,7 +447,7 @@ export class ApiClient {
         url: `${this._apiurl}/files/${this._resourceId}`,
       };
       Logger.log(`Request ${config.method}: ` + config.url);
-      const response = await axios(config);
+      const response = await this._httpClient(config);
       return Object.keys(response.headers)
         .filter((header) => header.startsWith(GATEWAY_HEADER_PREFIX))
         .map((header) => {
@@ -513,7 +521,7 @@ export class ApiClient {
 
     return await retry(async () => {
       try {
-        const response = await axios(config);
+        const response = await this._httpClient(config);
         if (isPaginated(response)) {
           return { items: response.data, nextToken: nextToken(response) };
         }
@@ -561,6 +569,8 @@ export class ApiClient {
       input: this._input,
       tags: this._tags,
       metadata: this._metadata,
+      state: this._state,
+      overrideState: this._overrideState
     });
     const { id, object } = await this.post(
       `${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`
@@ -591,27 +601,6 @@ export class ApiClient {
       numberOfChunks: this._numberOfChunks,
     });
     await this.post(`${this._apiurl}/${this._transactionUri}/${this._fileUri}`);
-  }
-
-  /**
-   *
-   * @requires:
-   * - state()
-   * @uses:
-   * - tags()
-   * - cloud()
-   * @returns {Promise<string>}
-   */
-  async uploadState(): Promise<string> {
-    if (!this._state) {
-      throw new BadRequest(
-        "Missing state to upload. Use ApiClient#state() to add it"
-      );
-    }
-
-    this.data({ data: this._state, tags: this._tags });
-    const response = await this.post(`${this._apiurl}/states`);
-    return response.id;
   }
 
   /**
@@ -651,9 +640,8 @@ export class ApiClient {
     } as Record<string, string>;
 
     if (this._numberOfChunks > 1) {
-      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${
-        this._uploadedBytes + (this._data as ArrayBuffer).byteLength
-      }/${this._totalBytes}`;
+      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength
+        }/${this._totalBytes}`;
     }
     if (this._resourceId) {
       headers[CONTENT_LOCATION_HEADER] = this._resourceId;
@@ -691,7 +679,7 @@ export class ApiClient {
 
     return await retry(async () => {
       try {
-        const response = await axios(config);
+        const response = await this._httpClient(config);
         return {
           resourceUri: response.data.resourceUri,
           resourceLocation:
@@ -816,7 +804,7 @@ export class ApiClient {
 
     const config = {
       method: "post",
-        url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
+      url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
         this._queryParams
       ).toString()}`,
       data: form,
@@ -845,7 +833,7 @@ export class ApiClient {
     Logger.log(`Request ${config.method}: ` + config.url);
 
     try {
-      const response = await axios(config);
+      const response = await this._httpClient(config);
       return response.data;
     } catch (error) {
       throwError(error.response?.status, error.response?.data?.msg, error);

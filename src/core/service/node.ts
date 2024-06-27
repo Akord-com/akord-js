@@ -62,15 +62,11 @@ class NodeService<T> extends Service {
       ...clientInput
     } as ContractInput;
 
-    if (state) {
-      const id = await this.uploadState(state, this.vault.cloud);
-      input.data = id;
-    }
-
     const { id, object } = await this.api.postContractTransaction<T>(
       this.vaultId,
       input,
-      this.arweaveTags
+      this.arweaveTags,
+      state
     );
     const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;
     return { nodeId, transactionId: id, object: node };
@@ -85,14 +81,12 @@ class NodeService<T> extends Service {
     this.setParentId(clientInput?.parentId);
     this.arweaveTags = await this.getTxTags();
 
-    if (stateUpdates) {
-      const id = await this.mergeAndUploadState(stateUpdates, this.vault.cloud);
-      input.data = id;
-    }
     const { id, object } = await this.api.postContractTransaction<T>(
       this.vaultId,
       input,
       this.arweaveTags,
+      stateUpdates,
+      false,
       metadata
     );
     const node = await this.processNode(object as any, !this.isPublic, this.keys) as any;

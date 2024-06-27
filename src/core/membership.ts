@@ -99,19 +99,18 @@ class MembershipModule {
     this.service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.service.getTxTags());
 
-    const dataTxId = await this.service.uploadState(state, this.service.vault.cloud);
-
     const input = {
       function: this.service.function,
       address,
       role,
-      data: dataTxId
     }
 
     const { id, object } = await this.service.api.postContractTransaction<Membership>(
       this.service.vaultId,
       input,
       this.service.arweaveTags,
+      state,
+      false,
       { message: options.message }
     );
     return { membershipId, transactionId: id, object: object };
@@ -135,7 +134,7 @@ class MembershipModule {
     this.service.setFunction(functions.MEMBERSHIP_ADD);
     const memberArray = [] as MembershipInput[];
     const membersMetadata = [];
-    const dataArray = [] as { id: string, data: string }[];
+    const dataArray = [] as { id: string, data: any }[];
     const memberTags = [] as Tags;
     for (const member of members) {
       const membershipId = uuidv4();
@@ -150,10 +149,9 @@ class MembershipModule {
         encPublicSigningKey: await this.service.processWriteString(member.publicSigningKey),
       };
 
-      const data = await this.service.uploadState(state, this.service.vault.cloud);
       dataArray.push({
         id: membershipId,
-        data
+        data: state
       })
       membersMetadata.push({
         address: memberAddress,
@@ -161,7 +159,7 @@ class MembershipModule {
         publicSigningKey: member.publicSigningKey,
         ...member.options
       })
-      memberArray.push({ address: memberAddress, id: membershipId, role: member.role, data });
+      memberArray.push({ address: memberAddress, id: membershipId, role: member.role });
       memberTags.push(new Tag(protocolTags.MEMBER_ADDRESS, memberAddress));
       memberTags.push(new Tag(protocolTags.MEMBERSHIP_ID, membershipId));
     }
@@ -177,6 +175,8 @@ class MembershipModule {
       this.service.vaultId,
       input,
       this.service.arweaveTags,
+      dataArray,
+      false,
       { members: membersMetadata }
     );
     return { members: input.members, transactionId: id };
@@ -194,11 +194,11 @@ class MembershipModule {
     this.service.setActionRef(actionRefs.MEMBERSHIP_ACCEPT);
     this.service.setFunction(functions.MEMBERSHIP_ACCEPT);
 
-    const data = await this.service.mergeAndUploadState(state, this.service.vault.cloud);
     const { id, object } = await this.service.api.postContractTransaction<Membership>(
       this.service.vaultId,
-      { function: this.service.function, data },
-      await this.service.getTxTags()
+      { function: this.service.function },
+      await this.service.getTxTags(),
+      state
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -221,19 +221,17 @@ class MembershipModule {
     this.service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
       .concat(await this.service.getTxTags());
 
-    const dataTxId = await this.service.uploadState(state, this.service.vault.cloud);
-
     const input = {
       function: this.service.function,
       address,
-      data: dataTxId,
       role: this.service.object.role
     }
 
     const { id, object } = await this.service.api.postContractTransaction<Membership>(
       this.service.vaultId,
       input,
-      this.service.arweaveTags
+      this.service.arweaveTags,
+      state
     );
     return { transactionId: id, object: new Membership(object) };
   }
@@ -283,7 +281,7 @@ class MembershipModule {
 
     this.service.arweaveTags = await this.service.getTxTags();
 
-    let data: { id: string, value: string }[];
+    let data: { id: string, value: any }[];
     if (!this.service.isPublic) {
       const memberships = await this.listAll(this.service.vaultId, { shouldDecrypt: false });
 
@@ -306,15 +304,15 @@ class MembershipModule {
         memberService.setVaultId(this.service.vaultId);
         memberService.setObjectId(member.id);
         memberService.setObject(member);
-        const dataTx = await memberService.mergeAndUploadState({ keys: memberKeys.get(member.id) }, this.service.vault.cloud);
-        data.push({ id: member.id, value: dataTx });
+        data.push({ id: member.id, value: { keys: memberKeys.get(member.id) } });
       }));
     }
 
     const { id, object } = await this.service.api.postContractTransaction<Membership>(
       this.service.vaultId,
-      { function: this.service.function, data },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      data
     );
     return { transactionId: id, object: new Membership(object) };
   }

@@ -72,7 +72,7 @@ describe("Testing manifest functions", () => {
   });
 
   afterAll(async () => {
-    await cleanup(akord, vaultId);
+    await cleanup(vaultId);
   });
 
   it("should upload new file to the vault", async () => {

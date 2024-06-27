@@ -281,16 +281,15 @@ class BatchModule {
           versions: [version],
           tags: service.tags
         };
-        const dataTx = await service.uploadState(state, service.vault.cloud);
         const input = {
           function: service.function,
-          data: dataTx,
           parentId: item.options?.parentId
         };
         const { id, object } = await service.api.postContractTransaction<Stack>(
           service.vaultId,
           input,
-          service.arweaveTags
+          service.arweaveTags,
+          state
         );
         const stack = await new NodeService<Stack>(service.wallet, service.api, Stack, objectType.STACK, service)
           .processNode(object, !service.isPublic, service.keys);
@@ -382,12 +381,11 @@ class BatchModule {
           service.arweaveTags = [new Tag(protocolTags.MEMBER_ADDRESS, address)]
             .concat(await service.getTxTags());
 
-          const dataTxId = await service.uploadState(state, service.vault.cloud);
-
           transactions.push({
             vaultId,
-            input: { function: service.function, address, role, data: dataTxId },
+            input: { function: service.function, address, role },
             tags: service.arweaveTags,
+            state: state,
             item: item
           });
         } else {
@@ -412,7 +410,7 @@ class BatchModule {
 
     for (let tx of transactions) {
       try {
-        const { id, object } = await this.service.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags, { message: options.message });
+        const { id, object } = await this.service.api.postContractTransaction<Membership>(vaultId, tx.input, tx.tags, tx.state, false, { message: options.message });
         data.push({ membershipId: object.id, transactionId: id, object: new Membership(object) });
       } catch (error: any) {
         errors.push({
@@ -508,7 +506,8 @@ export type ItemToMint = {
 export type TransactionPayload = {
   vaultId: string,
   input: ContractInput,
-  tags: Tags
+  tags: Tags,
+  state?: any
 }
 
 export type StackCreateTransaction = TransactionPayload & {

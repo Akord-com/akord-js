@@ -88,6 +88,7 @@ export class Akord {
     Crypto.configure({ wallet: wallet });
     Plugins.register(config.plugins, this.env);
     Logger.debug = config.debug;
+    Logger.logToFile = config.logToFile;
     CacheBusters.cache = config.cache;
   }
 }

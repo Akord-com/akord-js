@@ -6,12 +6,12 @@ import { Service } from "./service/service";
 import { Tag } from "../types/contract";
 import { ListOptions, VaultGetOptions, validateListPaginatedApiOptions } from "../types/query-options";
 import { Paginated } from "../types/paginated";
-import lodash from "lodash";
 import { BadRequest } from "../errors/bad-request";
 import { paginate, processListItems } from "./common";
 import { Api } from "../api/api";
 import { MembershipService } from "./service/membership";
 import { VaultService } from "./service/vault";
+import lodash from "lodash";
 
 class VaultModule {
   protected service: VaultService;
@@ -148,21 +148,20 @@ class VaultModule {
       description: createOptions.description ? await this.service.processWriteString(createOptions.description) : undefined,
       tags: createOptions.tags || []
     }
-    const vaultStateTx = await this.service.uploadState(vaultState, createOptions.cloud);
 
     const memberState = {
       keys,
       encPublicSigningKey: await memberService.processWriteString(this.service.wallet.signingPublicKey())
     }
 
-    const memberStateTx = await memberService.uploadState(memberState, createOptions.cloud);
-
-    const data = { vault: vaultStateTx, membership: memberStateTx };
+    const data = { vault: vaultState, membership: memberState };
 
     const { id, object } = await this.service.api.postContractTransaction<Vault>(
       this.service.vaultId,
-      { function: this.service.function, data },
+      { function: this.service.function },
       this.service.arweaveTags,
+      data,
+      false,
       { cloud: createOptions.cloud }
     );
     const vault = await this.service.processVault(object, true, this.service.keys);
@@ -197,11 +196,12 @@ class VaultModule {
     this.service.setAkordTags((options.name && this.service.isPublic ? [options.name] : []).concat(options.tags));
     this.service.arweaveTags = await this.service.getTxTags();
 
-    const dataTxId = await this.service.uploadState(newState, this.service.vault.cloud);
     const { id, object } = await this.service.api.postContractTransaction<Vault>(
       this.service.vaultId,
-      { function: this.service.function, data: dataTxId },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      newState,
+      true
     );
     const vault = await this.service.processVault(object, true, this.service.keys);
     return { transactionId: id, object: vault };
@@ -219,14 +219,15 @@ class VaultModule {
     const state = {
       name: await this.service.processWriteString(name)
     };
-    const data = await this.service.mergeAndUploadState(state, this.service.vault.cloud);
+
     this.service.setAkordTags(this.service.isPublic ? [name] : []);
     this.service.arweaveTags = await this.service.getTxTags();
 
     const { id, object } = await this.service.api.postContractTransaction<Vault>(
       this.service.vaultId,
-      { function: this.service.function, data },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      state
     );
     const vault = await this.service.processVault(object, true, this.service.keys);
     return { transactionId: id, object: vault };
@@ -255,12 +256,13 @@ class VaultModule {
         newState.tags.push(tag);
       }
     }
-    const dataTxId = await this.service.uploadState(newState, this.service.vault.cloud);
 
     const { id, object } = await this.service.api.postContractTransaction<Vault>(
       this.service.vaultId,
-      { function: this.service.function, data: dataTxId },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      newState,
+      true
     );
     const vault = await this.service.processVault(object, true, this.service.keys);
     return { transactionId: id, object: vault };
@@ -286,12 +288,13 @@ class VaultModule {
       const index = this.service.getTagIndex(newState.tags, tag);
       newState.tags.splice(index, 1);
     }
-    const dataTxId = await this.service.uploadState(newState, this.service.vault.cloud);
 
     const { id, object } = await this.service.api.postContractTransaction<Vault>(
       this.service.vaultId,
-      { function: this.service.function, data: dataTxId },
-      this.service.arweaveTags
+      { function: this.service.function },
+      this.service.arweaveTags,
+      newState,
+      true
     );
     const vault = await this.service.processVault(object, true, this.service.keys);
     return { transactionId: id, object: vault };
