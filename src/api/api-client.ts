@@ -49,6 +49,7 @@ export class ApiClient {
   // request body
   private _tags: Tags;
   private _state: any; // vault/node/membership json state
+  private _overrideState: boolean // if true, the state will be overwritten instead of being merged
   private _input: ContractInput;
   private _metadata: any;
   private _numberOfChunks: number;
@@ -154,8 +155,9 @@ export class ApiClient {
     return this;
   }
 
-  state(state: any): ApiClient {
+  state(state: any, override?: boolean): ApiClient {
     this._state = state;
+    this._overrideState = override;
     return this;
   }
 
@@ -567,6 +569,8 @@ export class ApiClient {
       input: this._input,
       tags: this._tags,
       metadata: this._metadata,
+      state: this._state,
+      overrideState: this._overrideState
     });
     const { id, object } = await this.post(
       `${this._apiurl}/${this._vaultUri}/${this._vaultId}/${this._transactionUri}`
@@ -597,27 +601,6 @@ export class ApiClient {
       numberOfChunks: this._numberOfChunks,
     });
     await this.post(`${this._apiurl}/${this._transactionUri}/${this._fileUri}`);
-  }
-
-  /**
-   *
-   * @requires:
-   * - state()
-   * @uses:
-   * - tags()
-   * - cloud()
-   * @returns {Promise<string>}
-   */
-  async uploadState(): Promise<string> {
-    if (!this._state) {
-      throw new BadRequest(
-        "Missing state to upload. Use ApiClient#state() to add it"
-      );
-    }
-
-    this.data({ data: this._state, tags: this._tags });
-    const response = await this.post(`${this._apiurl}/states`);
-    return response.id;
   }
 
   /**
@@ -657,9 +640,8 @@ export class ApiClient {
     } as Record<string, string>;
 
     if (this._numberOfChunks > 1) {
-      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${
-        this._uploadedBytes + (this._data as ArrayBuffer).byteLength
-      }/${this._totalBytes}`;
+      headers[CONTENT_RANGE_HEADER] = `bytes ${this._uploadedBytes}-${this._uploadedBytes + (this._data as ArrayBuffer).byteLength
+        }/${this._totalBytes}`;
     }
     if (this._resourceId) {
       headers[CONTENT_LOCATION_HEADER] = this._resourceId;
@@ -822,7 +804,7 @@ export class ApiClient {
 
     const config = {
       method: "post",
-        url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
+      url: `${this._uploadsurl}/${this._zipsUri}?${new URLSearchParams(
         this._queryParams
       ).toString()}`,
       data: form,

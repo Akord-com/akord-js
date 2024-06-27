@@ -12,7 +12,7 @@ import {
   deriveAddress,
   EncryptedKeys
 } from "@akord/crypto";
-import { objectType, protocolTags, functions, dataTags, encryptionTags, smartweaveTags } from '../../constants';
+import { protocolTags, functions, encryptionTags } from '../../constants';
 import { Vault } from "../../types/vault";
 import { Tag, Tags } from "../../types/contract";
 import { NodeLike } from "../../types/node";
@@ -20,7 +20,7 @@ import { Membership } from "../../types/membership";
 import { Object, ObjectType } from "../../types/object";
 import { EncryptOptions, EncryptedPayload } from "@akord/crypto/lib/types";
 import { IncorrectEncryptionKey } from "../../errors/incorrect-encryption-key";
-import { getEncryptedPayload, mergeState } from "../common";
+import { getEncryptedPayload } from "../common";
 import { EncryptionMetadata } from "../../types/encryption";
 import { assetTags } from "../../types";
 
@@ -168,25 +168,6 @@ class Service {
     }
   }
 
-  async uploadState(state: any, cloud = true): Promise<string> {
-    const signature = await this.signData(state);
-    const tags = [
-      new Tag(dataTags.DATA_TYPE, "State"),
-      new Tag(smartweaveTags.CONTENT_TYPE, STATE_CONTENT_TYPE),
-      new Tag(protocolTags.SIGNATURE, signature),
-      new Tag(protocolTags.SIGNER_ADDRESS, await this.wallet.getAddress()),
-      new Tag(protocolTags.VAULT_ID, this.vaultId),
-      new Tag(protocolTags.NODE_TYPE, this.objectType),
-    ]
-    if (this.objectType === objectType.MEMBERSHIP) {
-      tags.push(new Tag(protocolTags.MEMBERSHIP_ID, this.objectId))
-    } else if (this.objectType !== objectType.VAULT) {
-      tags.push(new Tag(protocolTags.NODE_ID, this.objectId))
-    }
-    const ids = await this.api.uploadData([{ data: state, tags }], cloud);
-    return ids[0];
-  }
-
   async getTxTags(): Promise<Tags> {
     const tags = [
       new Tag(protocolTags.FUNCTION_NAME, this.function),
@@ -273,12 +254,6 @@ class Service {
     return this.object?.data?.length > 0
       ? await this.api.getNodeState(this.object.data[this.object.data.length - 1])
       : {};
-  }
-
-  async mergeAndUploadState(stateUpdates: any, cloud = true): Promise<string> {
-    const currentState = await this.getCurrentState();
-    const mergedState = mergeState(currentState, stateUpdates);
-    return this.uploadState(mergedState, cloud);
   }
 
   private async signData(data: any): Promise<string> {

@@ -13,7 +13,7 @@ export class Logger {
     }
     if (this.logToFile && isServer()) {
       const fs = importDynamic("fs");
-      const logMessage = `${new Date().toISOString()} - ERROR - ${JSON.stringify(error || {}, (key, value) => key === '_sessionCache' ? undefined : value, 2)}\n`;
+      const logMessage = `${new Date().toISOString()} - ERROR - ${formatErrorLog(error)}\n`;
       fs.appendFileSync(ERROR_LOG_FILE, logMessage);
     }
   };
@@ -27,4 +27,12 @@ export class Logger {
       console.warn(message);
     }
   };
+}
+
+const formatErrorLog = (error: any) => {
+  const replacer = (key, value) => key === '_sessionCache' ? undefined : value;
+  const stringifiedError = JSON.stringify(error || {}, replacer, 2);
+  return stringifiedError.length === 0
+    ? stringifiedError
+    : error;
 }

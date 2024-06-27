@@ -1,7 +1,7 @@
 import { StackCreateItem } from "../core/batch";
 import { NotEnoughStorage } from "../errors/not-enough-storage";
 import { Akord, Auth } from "../index";
-import { cleanup, initInstance, setupVault, testDataPath } from './common';
+import { cleanup, delay, initInstance, setupVault, testDataPath } from './common';
 import { email2, email3, password } from './data/test-credentials';
 import { AkordWallet } from "@akord/crypto";
 import fs from "fs";
@@ -75,6 +75,7 @@ describe("Testing airdrop actions", () => {
     });
 
     it("should upload files to the vault by airdropee", async () => {
+      await delay(500); // wait for storage assignment
       Auth.configure({ env: process.env.ENV as any });
       await Auth.signInWithWallet(airdropee);
       const airdropeeAkordInstance = new Akord(airdropee, { env: process.env.ENV as any, debug: true, logToFile: true });

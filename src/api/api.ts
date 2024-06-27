@@ -17,15 +17,13 @@ abstract class Api {
 
   constructor() { }
 
-  abstract postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, metadata?: any): Promise<{ id: string, object: T }>
+  abstract postContractTransaction<T>(vaultId: string, input: ContractInput, tags: Tags, state?: any, overrideState?: boolean, metadata?: any): Promise<{ id: string, object: T }>
 
   abstract initContractId(tags: Tags, state?: any): Promise<string>
 
   abstract uploadFile(file: ArrayBuffer, tags: Tags, options?: FileUploadOptions): Promise<{ resourceUri: string[], resourceLocation: string }>
 
   abstract getUploadState(id: string): Promise<{ resourceUri: string[] }>
-
-  abstract uploadData(items: { data: any, tags: Tags }[], cloud?: boolean): Promise<Array<string>>
 
   abstract getZipLogs(options?: ListPaginatedApiOptions): Promise<Paginated<ZipLog>>
 
