@@ -1,7 +1,7 @@
 import { Akord } from "../index";
 import faker from '@faker-js/faker';
 import { initInstance, testDataPath, testDataOutPath, setupVault, cleanup } from './common';
-import { getTxData } from "../arweave";
+import { getTxData, isArweaveId } from "../arweave";
 import { firstFileName, secondFileName, arweaveImportFileTx } from './data/content';
 import { createFileLike } from "../core/file";
 import fs from "fs";
@@ -39,6 +39,9 @@ describe("Testing stack functions", () => {
     expect(stack.name).toEqual(firstFileName);
     expect(stack.versions.length).toEqual(1);
     expect(stack.versions[0].name).toEqual(firstFileName);
+    expect(isArweaveId(uri)).toEqual(false);
+    expect(stack.data?.length).toEqual(1);
+    expect(isArweaveId(stack.data?.[0] as string)).toEqual(false);
 
     const { data } = await akord.stack.getVersion(stack.id, 0);
     const file = await createFileLike(testDataPath + firstFileName);
@@ -50,6 +53,16 @@ describe("Testing stack functions", () => {
     await expect(async () => {
       await akord.stack.create(vaultId, testDataPath + "empty-file.md");
     }).rejects.toThrow(BadRequest);
+  });
+
+  it("should upload file in permanent vault", async () => {
+    const permaVaultId = await setupVault(false);
+    const { stackId, uri, object } = await akord.stack.create(permaVaultId, testDataPath + firstFileName);
+    expect(stackId).toBeTruthy();
+    expect(uri).toBeTruthy();
+    expect(isArweaveId(uri)).toEqual(true);
+    expect(object.data?.length).toEqual(1);
+    expect(isArweaveId(object.data?.[0] as string)).toEqual(true);
   });
 
   it("should create stack from file buffer", async () => {
