@@ -3,6 +3,7 @@ import { AkordWallet } from "@akord/crypto";
 import { Akord, Auth } from "../index";
 import faker from '@faker-js/faker';
 import { email, password } from './data/test-credentials';
+import { isArweaveId } from "../arweave";
 
 export async function initInstance(): Promise<Akord> {
   if (process.env.API_KEY && process.env.BACKUP_PHRASE) {
@@ -42,10 +43,14 @@ export const vaultCreate = async (akord: Akord, cloud = true) => {
   const membership = await akord.membership.get(membershipId);
   expect(membership.status).toEqual("ACCEPTED");
   expect(membership.role).toEqual("OWNER");
+  expect(membership.data?.length).toEqual(1);
+  expect(isArweaveId(membership.data?.[0] as string)).toEqual(cloud ? false : true);
 
   const vault = await akord.vault.get(vaultId);
   expect(vault.status).toEqual("ACTIVE");
   expect(vault.name).toEqual(name);
+  expect(vault.data?.length).toEqual(1);
+  expect(isArweaveId(vault.data?.[0] as string)).toEqual(cloud ? false : true);
   return { vaultId, membershipId };
 }
 
@@ -54,6 +59,9 @@ export const folderCreate = async (akord: Akord, vaultId: string, parentId?: str
   const { folderId } = await akord.folder.create(vaultId, name, { parentId: parentId });
 
   const folder = await akord.folder.get(folderId);
+  expect(folder.data?.length).toEqual(1);
+  const vault = await akord.vault.get(vaultId);
+  expect(isArweaveId(folder.data?.[0] as string)).toEqual(vault.cloud ? false : true);
   expect(folder.status).toEqual("ACTIVE");
   if (parentId) {
     expect(folder.parentId).toEqual(parentId);

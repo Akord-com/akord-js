@@ -90,4 +90,8 @@ describe("Testing vault functions", () => {
     const vault = await akord.vault.get(vaultId);
     expect(vault.status).toEqual("ACTIVE");
   });
+
+  it("should create a permanent vault", async () => {
+    await setupVault(false);
+  });
 });
